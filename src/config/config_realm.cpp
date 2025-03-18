@@ -140,7 +140,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_AuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "auth_ignore_version_error", false);
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
 
-  m_AuthWar3Version        = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
+  m_GameVersion        = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
   m_AuthExeVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
   if (m_AuthUseCustomVersionData) CFG.FailIfErrorLast();
   m_AuthExeVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version_hash", 4);
@@ -261,7 +261,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_AuthIgnoreVersionError(nRootConfig->m_AuthIgnoreVersionError),
     m_AuthPasswordHashType(nRootConfig->m_AuthPasswordHashType),
 
-    m_AuthWar3Version(nRootConfig->m_AuthWar3Version),
+    m_GameVersion(nRootConfig->m_GameVersion),
     m_AuthExeVersion(nRootConfig->m_AuthExeVersion),
     m_AuthExeVersionHash(nRootConfig->m_AuthExeVersionHash),
     m_AuthExeInfo(nRootConfig->m_AuthExeInfo),
@@ -382,7 +382,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_AuthPasswordHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_AuthPasswordHashType);
 
   optional<Version> authWar3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
-  if (authWar3Version.has_value()) m_AuthWar3Version = authWar3Version.value();
+  if (authWar3Version.has_value()) m_GameVersion = authWar3Version.value();
 
   // These are optional, since they can be figured out with bncsutil.
   optional<vector<uint8_t>> authExeVersion = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "auth_exe_version", 4);
@@ -401,8 +401,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_AuthExeInfo.clear();
   }
 
-  if (m_AuthExeVersion.has_value() && m_AuthWar3Version.has_value()) {
-    if (m_AuthWar3Version->first != m_AuthExeVersion.value()[3] || m_AuthWar3Version->second != m_AuthExeVersion.value()[2]) {
+  if (m_AuthExeVersion.has_value() && m_GameVersion.has_value()) {
+    if (m_GameVersion->first != m_AuthExeVersion.value()[3] || m_GameVersion->second != m_AuthExeVersion.value()[2]) {
       Print("[CONFIG] Error - mismatch between <" + m_CFGKeyPrefix + "game_version> and <" + m_CFGKeyPrefix + "auth_exe_version>");
       CFG.SetFailed();
     }

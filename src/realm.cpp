@@ -913,8 +913,8 @@ optional<Version> CRealm::GetExpectedGameVersion() const
   optional<Version> result;
   if (m_GameVersion >= GAMEVER(1u, 0u)) {
     result = m_GameVersion;
-  } else if (m_Config.m_AuthWar3Version.has_value()) {
-    result = m_Config.m_AuthWar3Version.value();
+  } else if (m_Config.m_GameVersion.has_value()) {
+    result = m_Config.m_GameVersion.value();
   }
   return result;
 }
@@ -922,8 +922,8 @@ optional<Version> CRealm::GetExpectedGameVersion() const
 optional<Version> CRealm::ResolveGameVersion() const
 {
   optional<Version> result;
-  if (m_Config.m_AuthWar3Version.has_value()) {
-    result = m_Config.m_AuthWar3Version.value();
+  if (m_Config.m_GameVersion.has_value()) {
+    result = m_Config.m_GameVersion.value();
   } else {
     const CGame* lobby = m_Aura->GetMostRecentLobby();
     if (lobby) {
