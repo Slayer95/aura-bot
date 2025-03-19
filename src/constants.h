@@ -278,6 +278,25 @@ constexpr uint8_t MAP_ALLOW_LUA_AUTO = 2u;
 constexpr int MAX_SLOTS_MODERN = 24;
 constexpr int MAX_SLOTS_LEGACY = 12;
 
+// connection.h
+
+constexpr uint8_t JOIN_RESULT_FAIL = 0u;
+constexpr uint8_t JOIN_RESULT_PLAYER = 1u;
+constexpr uint8_t JOIN_RESULT_OBSERVER = 2u;
+
+constexpr uint8_t INCON_UPDATE_OK = 0u;
+constexpr uint8_t INCON_UPDATE_DESTROY = 1u;
+constexpr uint8_t INCON_UPDATE_PROMOTED = 2u;
+constexpr uint8_t INCON_UPDATE_PROMOTED_PASSTHROUGH = 3u;
+constexpr uint8_t INCON_UPDATE_RECONNECTED = 4u;
+
+constexpr uint8_t INCON_TYPE_NONE = 0u;
+constexpr uint8_t INCON_TYPE_UDP_TUNNEL = 1u;
+constexpr uint8_t INCON_TYPE_PLAYER = 2u;
+constexpr uint8_t INCON_TYPE_KICKED_PLAYER = 3u;
+constexpr uint8_t INCON_TYPE_VLAN = 4u;
+constexpr uint8_t INCON_TYPE_OBSERVER = 5u;
+
 // game_user.h
 
 #define CONSISTENT_PINGS_COUNT 3u
@@ -302,8 +321,12 @@ constexpr int MAX_SLOTS_LEGACY = 12;
 
 // game_async_observer.h
 
-#define ASYNC_OBSERVER_GOAL_OBSERVER 0u
-#define ASYNC_OBSERVER_GOAL_PLAYER 1u
+constexpr uint8_t ASYNC_OBSERVER_GOAL_OBSERVER = 0u;
+constexpr uint8_t ASYNC_OBSERVER_GOAL_PLAYER = 1u;
+
+constexpr uint8_t ASYNC_OBSERVER_OK = 0u;
+constexpr uint8_t ASYNC_OBSERVER_DESTROY = 1u;
+constexpr uint8_t ASYNC_OBSERVER_PROMOTED = 2u;
 
 // game_setup.h
 

@@ -33,9 +33,8 @@
 // CGameVirtualUser
 //
 
-class CGameVirtualUser
+struct CGameVirtualUser
 {
-public:
   CGame*                           m_Game;
   bool                             m_Observer;                     // if the virtual player is an observer
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
@@ -117,6 +116,31 @@ public:
   inline void SetCannotPause() { m_RemainingPauses = 0; }
 
   void RefreshUID();
+};
+
+// CGameVirtualUserReference
+
+struct CGameVirtualUserReference
+{
+  uint8_t m_UID;
+  uint8_t m_SID;
+
+  CGameVirtualUserReference(const uint8_t UID, const uint8_t SID)
+   : m_UID(UID),
+     m_SID(SID)
+  {
+  };
+
+  CGameVirtualUserReference(const CGameVirtualUser& virtualUser)
+   : m_UID(virtualUser.GetUID()),
+     m_SID(virtualUser.GetSID())
+  {
+  };
+
+  ~CGameVirtualUserReference() = default;
+
+  [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
+  [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
 };
 
 #endif // AURA_VIRTUAL_USER_H_

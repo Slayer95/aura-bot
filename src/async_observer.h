@@ -29,10 +29,6 @@
 #include "includes.h"
 #include "connection.h"
 
-#define ASYNC_OBSERVER_OK 0u
-#define ASYNC_OBSERVER_DESTROY 1u
-#define ASYNC_OBSERVER_PROMOTED 2u
-
 //
 // CAsyncObserver
 //
@@ -41,22 +37,43 @@ class CAsyncObserver final : public CConnection
 {
 public:
   CGame*                                                        m_Game;
+  bool                                                          m_MapReady;
   bool                                                          m_Synchronized;
+  uint32_t                                                      m_Offset;
   uint8_t                                                       m_Goal;
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
   uint8_t                                                       m_FrameRate;
-  uint32_t                                                      m_Offset;
+  uint32_t                                                      m_SyncCounter;                  // the number of keepalive packets received from this player
+  std::queue<uint32_t>                                          m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
 
-  CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID);
+  /*
+  std::vector<uint32_t>                                         m_RTTValues;                    // store the last few (10) pings received so we can take an average
+  OptionalTimedUint32                                           m_MeasuredRTT;
+  */
+
+  bool                                                          m_DownloadStarted;
+  bool                                                          m_DownloadFinished;
+  int64_t                                                       m_FinishedDownloadingTime;
+
+  bool                                                          m_FinishedLoading;
+  int64_t                                                       m_FinishedLoadingTicks;
+
+  std::string                                                   m_Name;
+
+  CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID, const std::string& nName);
   ~CAsyncObserver();
 
   // processing functions
 
   void SetTimeout(const int64_t nTicks);
-  void CloseConnection();
+  bool CloseConnection();
   void Init();
   [[nodiscard]] uint8_t Update(void* fd, void* send_fd, int64_t timeout);
+
+  [[nodiscard]] inline const std::string& GetName() { return m_Name; }
+  [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
+  [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
 
   // other functions
 

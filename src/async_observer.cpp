@@ -45,15 +45,23 @@ using namespace std;
 // CAsyncObserver
 //
 
-CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID)
+CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID, const string& nName)
   : CConnection(*nConnection),
     m_Game(nGame),
+    m_MapReady(false),
     m_Synchronized(false),
+    m_Offset(0),
     m_Goal(ASYNC_OBSERVER_GOAL_OBSERVER),
     m_UID(nUID),
     m_SID(nGame->GetSIDFromUID(nUID)),
     m_FrameRate(1),
-    m_Offset(0)
+    m_SyncCounter(0),
+    m_DownloadStarted(false),
+    m_DownloadFinished(false),
+    m_FinishedDownloadingTime(0),
+    m_FinishedLoading(false),
+    m_FinishedLoadingTicks(0),
+    m_Name(nName)
 {
 }
 
@@ -66,9 +74,11 @@ void CAsyncObserver::SetTimeout(const int64_t delta)
   m_TimeoutTicks = GetTicks() + delta;
 }
 
-void CAsyncObserver::CloseConnection()
+bool CAsyncObserver::CloseConnection()
 {
+  if (!m_Socket->GetConnected()) return false;
   m_Socket->Close();
+  return true;
 }
 
 void CAsyncObserver::Init()
@@ -103,6 +113,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
       // bytes 2 and 3 contain the length of the packet
       const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
+        m_Game->EventObserverDisconnectProtocolError(this);
         Abort = true;
         break;
       }
@@ -111,36 +122,87 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
 
       switch (Bytes[0]) {
         case GameProtocol::Magic::W3GS_HEADER:
-          if (m_Type != INCON_TYPE_UDP_TUNNEL || !m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
-            Abort = true;
-            break;
-          }
-          if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
-            CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
-            if (!joinRequest) {
+          switch (Bytes[1]) {
+            case GameProtocol::Magic::LEAVEGAME: {
+              if (ValidateLength(Data) && Data.size() >= 8) {
+                const uint32_t reason = ByteArrayToUInt32(Data, false, 4);
+                m_Game->EventObserverLeft(this, reason);
+                m_Socket->SetLogErrors(false);
+              } else {
+                m_Game->EventObserverDisconnectProtocolError(this);
+              }
               Abort = true;
               break;
             }
-            CGame* targetLobby = m_Aura->GetLobbyByHostCounter(joinRequest->GetHostCounter());
-            if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || targetLobby->GetExiting()) {
-              delete joinRequest;
+
+            case GameProtocol::Magic::GAMELOADED_SELF: {
+              if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
+                if (!m_FinishedLoading) {
+                  m_FinishedLoading      = true;
+                  m_FinishedLoadingTicks = GetTicks();
+                  m_Game->EventObserverLoaded(this);
+                }
+              }
+
               break;
             }
-            joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
-            if (targetLobby->EventRequestJoin(this, joinRequest)) {
-              result = ASYNC_OBSERVER_PROMOTED;
-              m_Type = INCON_TYPE_PLAYER;
-              m_Socket = nullptr;
+
+            case GameProtocol::Magic::OUTGOING_ACTION: {
+              // Ignore all actions performed by observers,
+              // and let's see how this turns out.
+              break;
             }
-            delete joinRequest;
-          } else {
-            Abort = true;
-            break;
+
+            case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
+              //m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+              ++m_SyncCounter;
+              m_Game->EventObserverKeepAlive(this);
+              break;
+            }
+
+            case GameProtocol::Magic::CHAT_TO_HOST: {
+              CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
+
+              if (ChatPlayer) {
+                m_Game->LogApp("[" + this->GetName() + "] (observer): " + ChatPlayer->GetMessage(), LOG_C);
+                delete ChatPlayer;
+              }
+              break;
+            }
+
+            case GameProtocol::Magic::MAPSIZE: {
+              if (m_MapReady) {
+                // Protection against rogue clients
+                break;
+              }
+
+              CIncomingMapSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
+
+              if (MapSize) {
+                m_Game->EventObserverMapSize(this, MapSize);
+              }
+
+              delete MapSize;
+              break;
+            }
+
+            case GameProtocol::Magic::DROPREQ:
+            case GameProtocol::Magic::PONG_TO_HOST: {
+              // ignore these
+              break;
+            }
           }
           break;
 
-         default:
+
+        case GPSProtocol::Magic::GPS_HEADER: {
+          // GProxy unsupported for observers
+          break;
+        }
+
+        default: {
           Abort = true;
+        }
       }
 
       LengthProcessed += Length;

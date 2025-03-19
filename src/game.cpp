@@ -324,7 +324,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
     m_DisplayMode(nGameSetup->m_RealmsDisplayMode),
     m_IsAutoVirtualPlayers(false),
-    m_JoinInProgressSID(0xFF),
     m_VirtualHostUID(0xFF),
     m_Exiting(false),
     m_ExitingSoon(false),
@@ -479,7 +478,7 @@ void CGame::ClearActions()
 void CGame::Reset()
 {
   m_PauseUser = nullptr;
-  m_JoinInProgressSID = 0xFF;
+  m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
 
   for (auto& entry : m_SyncPlayers) {
@@ -2068,6 +2067,10 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
   for (auto& user : m_Users) {
     user->Send(data);
   }
+
+  for (auto& observer : m_Observers) {
+    observer->Send(data);
+  }
 }
 
 void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) const
@@ -3137,7 +3140,7 @@ void CGame::SendFakeUsersInfo(CConnection* user) const
   }
 
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-    if (fakeUser.GetSID() == m_JoinInProgressSID) {
+    if (m_JoinInProgressVirtualUser.has_value() && fakeUser.GetUID() == m_JoinInProgressVirtualUser->GetUID()) {
       continue;
     }
     Send(user, fakeUser.GetPlayerInfoBytes());
@@ -4720,24 +4723,62 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   return Player;
 }
 
-void CGame::SimulateJoinAndStart(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm)
+void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm)
 {
-  if (m_JoinInProgressSID == 0xFF) return;
-  const uint8_t UID = m_Slots[m_JoinInProgressSID].GetUID();
+  // This leaves no chance for GProxy handshake
+
+  if (!m_JoinInProgressVirtualUser.has_value()) return;
   const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
 
-  connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(UID, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
-  SendFakeUsersInfo(connection);
-  SendJoinedPlayersInfo(connection);
-  SendMapAndVersionCheck(connection, gameVersion);
-  connection->Send(GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+  CAsyncObserver* observer = new CAsyncObserver(connection, this, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
+  m_Observers.push_back(observer);
+  connection->SetSocket(nullptr);
+  connection->SetDeleteMe(true);
+
+  Send(observer, GameProtocol::SEND_W3GS_SLOTINFOJOIN(observer->GetUID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+  SendFakeUsersInfo(observer);
+  SendJoinedPlayersInfo(observer);
+  SendMapAndVersionCheck(observer, gameVersion);
+  Send(observer, GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   string notice = "Simulating join and start for user [" + joinRequest->GetName() + "]";
-  SendAsChat(connection, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(GetHostUID(), CreateByteArray(UID), 16, vector<uint8_t>(), notice));
+  SendAsChat(connection, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(GetHostUID(), CreateByteArray(observer->GetUID()), 16, vector<uint8_t>(), notice));
   LOG_APP_IF(LOG_LEVEL_NOTICE, notice)
 
-  connection->Send(GameProtocol::SEND_W3GS_COUNTDOWN_START());
-  connection->Send(GameProtocol::SEND_W3GS_COUNTDOWN_END());
+  Send(observer, GameProtocol::SEND_W3GS_COUNTDOWN_START());
+  Send(observer, GameProtocol::SEND_W3GS_COUNTDOWN_END());
+}
+
+void CGame::EventObserverLoaded(CAsyncObserver* user)
+{
+  Send(user, m_LoadingRealBuffer);
+  Send(user, m_LoadingVirtualBuffer);
+}
+
+void CGame::EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason)
+{
+  if (!user->CloseConnection()) {
+    return;
+  }
+  LOG_APP_IF(LOG_LEVEL_NOTICE, "Observer [" + user->GetName() + "] left voluntarily.")
+  user->SetDeleteMe(true);
+}
+
+void CGame::EventObserverKeepAlive(CAsyncObserver* user)
+{
+}
+
+void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapSize* mapSize)
+{
+}
+
+void CGame::EventObserverDisconnectProtocolError(CAsyncObserver* user)
+{
+  if (!user->CloseConnection()) {
+    return;
+  }
+  LOG_APP_IF(LOG_LEVEL_NOTICE, "Observer [" + user->GetName() + "] left due to a protocol error.")
+  user->SetDeleteMe(true);
 }
 
 bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAddress) const
@@ -4769,21 +4810,21 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
   return true;
 }
 
-bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest)
+uint8_t CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest)
 {
   if (!GetIsStageAcceptingJoins()) {
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_STARTED));
-    return false;
+    return JOIN_RESULT_FAIL;
   }
   if (joinRequest->GetName().empty() || joinRequest->GetName().size() > 15) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   }
   if (joinRequest->GetIsCensored() && m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_DENY) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetOriginalName() + "] unsafe name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   }
 
   // identify their joined realm
@@ -4811,7 +4852,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     // check if the user joining via LAN knows the entry key
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest->GetEntryKey()) + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
-    return false;
+    return JOIN_RESULT_FAIL;
   }
 
   // Odd host counters are information requests
@@ -4821,14 +4862,14 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     SendVirtualHostPlayerInfo(connection);
     SendFakeUsersInfo(connection);
     SendJoinedPlayersInfo(connection);
-    return false;
+    return JOIN_RESULT_FAIL;
   }
 
   if (HostCounterID < 0x10 && HostCounterID != 0) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     if (HostCounterID > 0x2) {
       connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
-      return false;
+      return JOIN_RESULT_FAIL;
     }
   }
 
@@ -4843,25 +4884,25 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     }
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   } else if (joinRequest->GetName() == GetLobbyVirtualHostName()) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] spoofer (matches host name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   } else if (joinRequest->GetName().length() >= 7 && joinRequest->GetName().substr(0, 5) == "User[") {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] spoofer (matches fake users) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   } else if (GetHMCEnabled() && joinRequest->GetName() == m_Map->GetHMCPlayerName()) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] spoofer (matches HMC name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   } else if (joinRequest->GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   }
 
   if (CheckScopeBanned(joinRequest->GetName(), JoinedRealm, connection->GetIPStringStrict()) ||
@@ -4871,7 +4912,12 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
     // this causes them to be kicked back to the chat channel on battle.net
     const vector<CGameSlot>& Slots = m_Map->InspectSlots();
     connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
-    return false;
+    return JOIN_RESULT_FAIL;
+  }
+
+  if (m_GameLoaded) {
+    JoinObserver(connection, joinRequest, matchingRealm);
+    return JOIN_RESULT_OBSERVER;
   }
 
   matchingRealm = nullptr;
@@ -4882,14 +4928,14 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
   if (m_CheckReservation && !isReserved) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest->GetName() + "] missing reservation - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   }
 
   if (!GetAllowsIPFlood()) {
     if (!CheckIPFlood(joinRequest->GetName(), &(connection->GetSocket()->m_RemoteHost))) {
       LOG_APP_IF(LOG_LEVEL_WARNING, "ipflood rejected from " + AddressToStringStrict(connection->GetSocket()->m_RemoteHost))
       connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-      return false;
+      return JOIN_RESULT_FAIL;
     }
   }
 
@@ -4966,7 +5012,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 
   if (SID >= static_cast<uint8_t>(m_Slots.size())) {
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return false;
+    return JOIN_RESULT_FAIL;
   }
 
   // we have a slot for the new user
@@ -4977,7 +5023,7 @@ bool CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* join
 
   EventBeforeJoin(connection);
   JoinPlayer(connection, joinRequest, SID, UID, HostCounterID, JoinedRealm, isReserved, IsUnverifiedAdmin);
-  return true;
+  return JOIN_RESULT_PLAYER;
 }
 
 void CGame::EventBeforeJoin(CConnection* connection)
@@ -5057,9 +5103,9 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   return isBanned;
 }
 
-bool CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason)
+void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason)
 {
-  if (user->GetDisconnected()) return false;
+  if (user->GetDisconnected()) return;
   if (m_GameLoading || m_GameLoaded || clientReason == PLAYERLEAVE_GPROXY) {
     LOG_APP_IF(LOG_LEVEL_INFO, "user [" + user->GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
   }
@@ -5087,7 +5133,7 @@ bool CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
     user->CloseConnection();
   }
   TrySaveOnDisconnect(user, true);
-  return true;
+  return;
 }
 
 void CGame::EventUserLoaded(GameUser::CGameUser* user)
@@ -5967,7 +6013,8 @@ void CGame::EventGameStartedLoading()
         continue;
       }
       if (!isCustomForces || fakeUser.GetIsObserver()) {
-        m_JoinInProgressSID = fakeUser.GetSID();
+        m_JoinInProgressVirtualUser = CGameVirtualUserReference(fakeUser);
+        break;
       }
     }
   }
@@ -6530,7 +6577,7 @@ void CGame::Remake()
   m_CustomLayout = 0;
 
   m_IsAutoVirtualPlayers = false;
-  m_JoinInProgressSID = 0xFF;
+  m_JoinInProgressVirtualUser.reset();
   m_VirtualHostUID = 0xFF;
   m_ExitingSoon = false;
   m_SlotInfoChanged = 0;
@@ -9331,8 +9378,8 @@ bool CGame::DeleteFakeUser(uint8_t SID)
       }
       // Ensure this is sent before virtual host rejoins
       SendAll(it->GetGameQuitBytes(PLAYERLEAVE_LOBBY));
-      if (it->GetSID() == m_JoinInProgressSID) {
-        m_JoinInProgressSID = 0xFF;
+      if (m_JoinInProgressVirtualUser.has_value() && it->GetUID() == m_JoinInProgressVirtualUser->GetUID()) {
+        m_JoinInProgressVirtualUser.reset();
       }
       it = m_FakeUsers.erase(it);
       CreateVirtualHost();
@@ -9402,7 +9449,7 @@ void CGame::DeleteFakeUsersLobby()
     SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_LOBBY));
   }
 
-  m_JoinInProgressSID = 0xFF;
+  m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   CreateVirtualHost();
   m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -9417,7 +9464,7 @@ void CGame::DeleteFakeUsersLoaded()
     SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_DISCONNECT));
   }
 
-  m_JoinInProgressSID = 0xFF;
+  m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
 }
 

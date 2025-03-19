@@ -295,9 +295,9 @@ bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
   return m_Game->GetSyncCounter() > GetNormalSyncCounter() && m_Game->GetSyncCounter() - GetNormalSyncCounter() >= frameLimit;
 }
 
-void CGameUser::CloseConnection(bool fromOpen)
+bool CGameUser::CloseConnection(bool fromOpen)
 {
-  if (m_Disconnected) return;
+  if (m_Disconnected) return false;
   if (!m_Game->GetGameLoaded() || !m_GProxy) {
     TrySetEnding();
     DisableReconnect();
@@ -305,7 +305,8 @@ void CGameUser::CloseConnection(bool fromOpen)
   m_LastDisconnectTicks = GetTicks();
   m_Disconnected = true;
   m_Socket->Close();
-  m_Game->EventUserAfterDisconnect(this, fromOpen);  
+  m_Game->EventUserAfterDisconnect(this, fromOpen);
+  return true;
 }
 
 void CGameUser::UnrefConnection(bool deferred)
@@ -421,11 +422,15 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             break;
           }
 
-          case GameProtocol::Magic::OUTGOING_KEEPALIVE:
+          case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
+            if (m_SyncCounter >= m_Game->GetSyncCounter()) {
+              m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] incorrectly ahead of sync", LOG_C | LOG_P);
+            }
             m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
             ++m_SyncCounter;
             m_Game->EventUserKeepAlive(this);
             break;
+          }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {
             CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
@@ -456,10 +461,9 @@ bool CGameUser::Update(void* fd, int64_t timeout)
             }
 
             CIncomingMapSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
-
-            if (MapSize)
+            if (MapSize) {
               m_Game->EventUserMapSize(this, MapSize);
-
+            }
             delete MapSize;
             break;
           }

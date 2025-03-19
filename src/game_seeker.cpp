@@ -66,9 +66,11 @@ void CGameSeeker::SetTimeout(const int64_t delta)
   m_TimeoutTicks = GetTicks() + delta;
 }
 
-void CGameSeeker::CloseConnection()
+bool CGameSeeker::CloseConnection()
 {
+  if (!m_Socket->GetConnected()) return false;
   m_Socket->Close();
+  return true;
 }
 
 void CGameSeeker::Init()

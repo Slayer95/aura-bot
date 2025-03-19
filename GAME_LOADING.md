@@ -61,5 +61,4 @@ EventUserLoaded:
 ```c++
   Send(user, m_LoadingRealBuffer);
   Send(user, m_LoadingVirtualBuffer);
-  SendAll(packet);
 ```

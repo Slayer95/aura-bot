@@ -48,9 +48,11 @@
 
 #include "includes.h"
 #include "list.h"
+#include "async_observer.h"
 #include "game_seeker.h"
 #include "game_slot.h"
 #include "game_setup.h"
+#include "game_virtual_user.h"
 #include "save_game.h"
 #include "socket.h"
 #include "config/config_game.h"
@@ -219,7 +221,7 @@ protected:
   uint16_t                                               m_PublicHostPort;
   uint8_t                                                m_DisplayMode;                   // game state, public or private
   bool                                                   m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
-  uint8_t                                                m_JoinInProgressSID;
+  std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser;
   uint8_t                                                m_VirtualHostUID;                // virtual host's UID - note that they don't get a SID
   uint8_t                                                m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                                                   m_Exiting;                       // set to true and this instance will be deleted next update
@@ -533,9 +535,9 @@ public:
   void                      EventUserKickHandleQueued(GameUser::CGameUser* user);
   void                      EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen);
   void                      EventUserCheckStatus(GameUser::CGameUser* user);
-  bool                      EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
+  uint8_t                   EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
   void                      EventBeforeJoin(CConnection* connection);
-  bool                      EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason);
+  void                      EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason);
   void                      EventUserLoaded(GameUser::CGameUser* user);
   bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
@@ -612,10 +614,17 @@ public:
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
   GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
-  void                      SimulateJoinAndStart(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm);
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;
+
+  // Observer features
+  void                      JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm);
+  void                      EventObserverLoaded(CAsyncObserver* connection);
+  void                      EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason);
+  void                      EventObserverKeepAlive(CAsyncObserver* connection);
+  void                      EventObserverMapSize(CAsyncObserver* connection, CIncomingMapSize* mapSize);
+  void                      EventObserverDisconnectProtocolError(CAsyncObserver* user);
 
   // Map transfer
   inline SharedByteArray    GetLoadedMapChunk() { return m_LoadedMapChunk; }

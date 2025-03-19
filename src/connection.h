@@ -29,18 +29,6 @@
 #include "includes.h"
 #include "socket.h"
 
-#define INCON_UPDATE_OK 0u
-#define INCON_UPDATE_DESTROY 1u
-#define INCON_UPDATE_PROMOTED 2u
-#define INCON_UPDATE_PROMOTED_PASSTHROUGH 3u
-#define INCON_UPDATE_RECONNECTED 4u
-
-#define INCON_TYPE_NONE 0u
-#define INCON_TYPE_UDP_TUNNEL 1u
-#define INCON_TYPE_PLAYER 2u
-#define INCON_TYPE_KICKED_PLAYER 3u
-#define INCON_TYPE_VLAN 4u
-
 //
 // CConnection
 //
@@ -80,7 +68,7 @@ public:
 
   void SetTimeout(const int64_t nTicks);
 
-  void CloseConnection();
+  bool CloseConnection();
   [[nodiscard]] uint8_t Update(void* fd, void* send_fd, int64_t timeout);
 
   // other functions

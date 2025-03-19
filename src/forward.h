@@ -52,7 +52,6 @@ class CGame;
 class CGameSeeker;
 class CGameSetup;
 class CGameSlot;
-class CGameVirtualUser;
 class CIncomingAction;
 class CIncomingChatEvent;
 class CIncomingChatPlayer;
@@ -98,6 +97,8 @@ struct CQueuedActionsFrame;
 
 struct CIncomingVLanGameInfo;
 struct CIncomingVLanSearchGame;
+struct CGameVirtualUser;
+struct CGameVirtualUserReference;
 
 struct AppAction;
 struct FileChunkCached;

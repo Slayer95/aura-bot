@@ -53,7 +53,7 @@ public:
   // processing functions
 
   void SetTimeout(const int64_t nTicks);
-  void CloseConnection();
+  bool CloseConnection();
   void Init();
   [[nodiscard]] uint8_t Update(void* fd, void* send_fd, int64_t timeout);
 

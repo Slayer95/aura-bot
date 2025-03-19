@@ -369,7 +369,7 @@ namespace GameUser
     void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
     void EventGProxyReconnectInvalid();
     void RotateGProxyReconnectKey() const;
-    void CloseConnection(bool fromOpen = false);
+    bool CloseConnection(bool fromOpen = false);
     void UnrefConnection(bool deferred = false);
 
     void InitGProxy(const uint32_t version);

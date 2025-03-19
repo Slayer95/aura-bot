@@ -73,9 +73,11 @@ void CConnection::SetTimeout(const int64_t delta)
   m_TimeoutTicks = GetTicks() + delta;
 }
 
-void CConnection::CloseConnection()
+bool CConnection::CloseConnection()
 {
+  if (!m_Socket->GetConnected()) return false;
   m_Socket->Close();
+  return true;
 }
 
 uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
@@ -132,10 +134,14 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
               break;
             }
             joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
-            if (targetLobby->EventRequestJoin(this, joinRequest)) {
+            const uint8_t joinResult = targetLobby->EventRequestJoin(this, joinRequest);
+            if (joinResult == JOIN_RESULT_PLAYER) {
               result = INCON_UPDATE_PROMOTED;
               m_Type = INCON_TYPE_PLAYER;
               m_Socket = nullptr;
+            } else if (joinResult == JOIN_RESULT_OBSERVER) {
+              result = INCON_UPDATE_PROMOTED;
+              m_Type = INCON_TYPE_OBSERVER;
             }
             Abort = true;
           } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
