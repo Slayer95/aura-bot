@@ -28,6 +28,7 @@
 
 #include "includes.h"
 #include "connection.h"
+#include "game.h"
 
 //
 // CAsyncObserver
@@ -37,14 +38,15 @@ class CAsyncObserver final : public CConnection
 {
 public:
   CGame*                                                        m_Game;
+  std::shared_ptr<GameHistory>                                  m_GameHistory;
   bool                                                          m_MapReady;
-  bool                                                          m_Synchronized;
+  bool                                                          m_Desynchronized;
   uint32_t                                                      m_Offset;
   uint8_t                                                       m_Goal;
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
   uint8_t                                                       m_FrameRate;
-  uint32_t                                                      m_SyncCounter;                  // the number of keepalive packets received from this player
+  size_t                                                        m_SyncCounter;                  // the number of keepalive packets received from this player
   std::queue<uint32_t>                                          m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
 
   /*
@@ -71,13 +73,22 @@ public:
   void Init();
   [[nodiscard]] uint8_t Update(void* fd, void* send_fd, int64_t timeout);
 
-  [[nodiscard]] inline const std::string& GetName() { return m_Name; }
+  [[nodiscard]] inline const std::string&       GetName() { return m_Name; }
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
+
+  void OnUnrefGame(CGame* nGame);
+  void UpdateGameState(const uint32_t checkSum);
+  void CheckGameState();
+  void OnDesync();
+  void EventGameLoaded();
+  void EventLeft(const uint32_t clientReason);
+  void EventProtocolError();
 
   // other functions
 
   void Send(const std::vector<uint8_t>& data) final;
+  std::string GetLogPrefix() const;
 };
 
 #endif // AURA_ASYNC_OBSERVER_H_

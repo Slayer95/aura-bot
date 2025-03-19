@@ -103,6 +103,7 @@ struct CGameVirtualUserReference;
 struct AppAction;
 struct FileChunkCached;
 struct FileChunkTransient;
+struct GameHistory;
 struct LazyCommandContext;
 struct UDPPkt;
 

@@ -124,6 +124,29 @@ struct CQueuedActionsFrame
   void Reset();
 };
 
+struct GameHistory
+{
+  bool                                                   m_Desynchronized;
+  std::vector<uint32_t>                                  m_CheckSums;
+  std::vector<uint8_t>                                   m_LobbyBuffer;
+  std::vector<uint8_t>                                   m_SlotsBuffer;
+  std::vector<uint8_t>                                   m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
+  std::vector<uint8_t>                                   m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
+  std::vector<std::vector<uint8_t>>                      m_PlayingBuffer;
+
+  GameHistory()
+   : m_Desynchronized(false)
+  {};
+
+  ~GameHistory() = default;
+
+  void AddCheckSum(const uint32_t checkSum) { m_CheckSums.push_back(checkSum); }
+  inline uint32_t GetCheckSum(const size_t index) { return m_CheckSums[index]; }
+  inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
+  void SetDesynchronized(const bool nDesynchronized) { m_Desynchronized = nDesynchronized; }
+  inline bool GetDesynchronized() { return m_Desynchronized; }
+};
+
 class CGame
 {
 public:
@@ -145,7 +168,7 @@ protected:
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>                            m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players
-  std::vector<CConnection*>                              m_Observers;
+  std::vector<CAsyncObserver*>                           m_Observers;
   CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;            // actions to be sent
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
   std::vector<std::string>                               m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
@@ -155,7 +178,7 @@ protected:
   uint32_t                                               m_GameFlags;
   GameUser::CGameUser*                                   m_PauseUser;
   std::string                                            m_GameName;                      // game name
-  uint64_t                                               m_GameHistoryId;
+  uint64_t                                               m_PersistentId;
   std::string                                            m_LastOwner;                     // name of the player who was owner last time the owner was released
   bool                                                   m_FromAutoReHost;
   bool                                                   m_OwnerLess;
@@ -200,8 +223,8 @@ protected:
   uint32_t                                               m_RandomSeed;                    // the random seed sent to the Warcraft III clients
   uint32_t                                               m_HostCounter;                   // a unique game number
   uint32_t                                               m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
-  uint32_t                                               m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
-  uint32_t                                               m_SyncCounterChecked;            // the number of verified keepalive packets
+  size_t                                                 m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
+  size_t                                                 m_SyncCounterChecked;            // the number of verified keepalive packets
   uint8_t                                                m_MaxPingEqualizerDelayFrames;
   int64_t                                                m_LastPingEqualizerGameTicks;    // m_GameTicks when ping equalizer was last run
 
@@ -245,7 +268,6 @@ protected:
   bool                                                   m_LobbyLoading;                  // if the lobby is being setup asynchronously
   bool                                                   m_Lagging;                       // if the lag screen is active or not
   bool                                                   m_Paused;                        // if the game is paused or not
-  bool                                                   m_Desynced;                      // if the game has desynced or not
   bool                                                   m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
   bool                                                   m_IsHiddenPlayerNames;           // if players names are to be obfuscated in most circumstances
   bool                                                   m_HadLeaver;                     // if the game had a leaver after it started
@@ -260,11 +282,7 @@ protected:
   uint32_t                                               m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
 
   SharedByteArray                                        m_LoadedMapChunk;
-  std::vector<uint8_t>                                   m_LobbyBuffer;
-  std::vector<uint8_t>                                   m_SlotsBuffer;
-  std::vector<uint8_t>                                   m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
-  std::vector<uint8_t>                                   m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
-  std::vector<std::vector<uint8_t>>                      m_PlayingBuffer;
+  std::shared_ptr<GameHistory>                           m_GameHistory;
 
   std::bitset<128>                                       m_SupportedGameVersions;
   Version                                                m_SupportedGameVersionsMin;
@@ -308,7 +326,7 @@ public:
   inline uint8_t                                         GetDisplayMode() const { return m_DisplayMode; }
   inline uint8_t                                         GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string                                     GetGameName() const { return m_GameName; }
-  inline uint64_t                                        GetGameID() const { return m_GameHistoryId; }
+  inline uint64_t                                        GetGameID() const { return m_PersistentId; }
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
@@ -619,12 +637,11 @@ public:
   bool                      GetHasPvPGNPlayers() const;
 
   // Observer features
-  void                      JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm);
-  void                      EventObserverLoaded(CAsyncObserver* connection);
-  void                      EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason);
-  void                      EventObserverKeepAlive(CAsyncObserver* connection);
-  void                      EventObserverMapSize(CAsyncObserver* connection, CIncomingMapSize* mapSize);
-  void                      EventObserverDisconnectProtocolError(CAsyncObserver* user);
+  inline std::shared_ptr<GameHistory> GetGameHistory() { return m_GameHistory; }
+  void                                JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm);
+  void                                EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason);
+  void                                EventObserverMapSize(CAsyncObserver* connection, CIncomingMapSize* mapSize);
+  void                                EventObserverDisconnectProtocolError(CAsyncObserver* user);
 
   // Map transfer
   inline SharedByteArray    GetLoadedMapChunk() { return m_LoadedMapChunk; }

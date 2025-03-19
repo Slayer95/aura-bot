@@ -48,8 +48,9 @@ using namespace std;
 CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID, const string& nName)
   : CConnection(*nConnection),
     m_Game(nGame),
+    m_GameHistory(nGame->GetGameHistory()),
     m_MapReady(false),
-    m_Synchronized(false),
+    m_Desynchronized(false),
     m_Offset(0),
     m_Goal(ASYNC_OBSERVER_GOAL_OBSERVER),
     m_UID(nUID),
@@ -66,7 +67,8 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t n
 }
 
 CAsyncObserver::~CAsyncObserver()
-{  
+{
+  m_GameHistory.reset();
 }
 
 void CAsyncObserver::SetTimeout(const int64_t delta)
@@ -113,7 +115,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
       // bytes 2 and 3 contain the length of the packet
       const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
-        m_Game->EventObserverDisconnectProtocolError(this);
+        EventProtocolError();
         Abort = true;
         break;
       }
@@ -126,10 +128,10 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
             case GameProtocol::Magic::LEAVEGAME: {
               if (ValidateLength(Data) && Data.size() >= 8) {
                 const uint32_t reason = ByteArrayToUInt32(Data, false, 4);
-                m_Game->EventObserverLeft(this, reason);
+                EventLeft(reason);
                 m_Socket->SetLogErrors(false);
               } else {
-                m_Game->EventObserverDisconnectProtocolError(this);
+                EventProtocolError();
               }
               Abort = true;
               break;
@@ -140,7 +142,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
                 if (!m_FinishedLoading) {
                   m_FinishedLoading      = true;
                   m_FinishedLoadingTicks = GetTicks();
-                  m_Game->EventObserverLoaded(this);
+                  EventGameLoaded();
                 }
               }
 
@@ -154,9 +156,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
             }
 
             case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
-              //m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
-              ++m_SyncCounter;
-              m_Game->EventObserverKeepAlive(this);
+              UpdateGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
               break;
             }
 
@@ -164,7 +164,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
               CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
               if (ChatPlayer) {
-                m_Game->LogApp("[" + this->GetName() + "] (observer): " + ChatPlayer->GetMessage(), LOG_C);
+                Print(GetLogPrefix() + "[" + this->GetName() + "] (observer): " + ChatPlayer->GetMessage());
                 delete ChatPlayer;
               }
               break;
@@ -178,7 +178,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
 
               CIncomingMapSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
 
-              if (MapSize) {
+              if (MapSize && m_Game) {
                 m_Game->EventObserverMapSize(this, MapSize);
               }
 
@@ -235,9 +235,91 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
   return result;
 }
 
+void CAsyncObserver::OnUnrefGame(CGame* nGame)
+{
+  if (m_Game == nGame) {
+    m_Game = nullptr;
+  }
+}
+
+void CAsyncObserver::UpdateGameState(const uint32_t checkSum)
+{
+  if (m_Desynchronized) return;
+
+  if (m_Game && m_Game->GetSyncCounter() <= m_SyncCounter) {
+    string text = GetLogPrefix() + "observer [" + m_Name + "] incorrectly ahead of sync";
+    Print(text);
+    m_Aura->LogPersistent(text);
+    return;
+  }
+  if (m_GameHistory->GetDesynchronized() && m_SyncCounter >= m_GameHistory->GetNumCheckSums()) {
+    return;
+  }
+
+  m_CheckSums.push(checkSum);
+  ++m_SyncCounter;
+  CheckGameState();
+}
+
+void CAsyncObserver::CheckGameState()
+{
+  if (m_Desynchronized) return;
+
+  size_t nextCheckSumIndex = m_SyncCounter - m_CheckSums.size();
+  while (!m_CheckSums.empty() && nextCheckSumIndex < m_GameHistory->GetNumCheckSums()) {
+    uint32_t nextCheckSum = m_CheckSums.front();
+    if (nextCheckSum != m_GameHistory->GetCheckSum(nextCheckSumIndex)) {
+      m_Desynchronized = true; // how? idfk
+      OnDesync();
+    }
+    ++nextCheckSumIndex;
+    m_CheckSums.pop();
+  }
+}
+
+void CAsyncObserver::OnDesync()
+{
+  while (!m_CheckSums.empty()) {
+    m_CheckSums.pop();
+  }
+  string text = GetLogPrefix() + "observer [" + m_Name + "] desynchronized";
+  Print(text);
+  m_Aura->LogPersistent(text);
+}
+
+void CAsyncObserver::EventGameLoaded()
+{
+  Send(m_GameHistory->m_LoadingRealBuffer);
+  Send(m_GameHistory->m_LoadingVirtualBuffer);
+}
+
+void CAsyncObserver::EventLeft(const uint32_t clientReason)
+{
+  if (!CloseConnection()) {
+    return;
+  }
+  Print("Observer [" + GetName() + "] left voluntarily");
+  SetDeleteMe(true);
+}
+
+void CAsyncObserver::EventProtocolError()
+{
+  if (!CloseConnection()) {
+    return;
+  }
+  Print("Observer [" + GetName() + "] disconnected due to protocol error");
+  SetDeleteMe(true);
+}
+
 void CAsyncObserver::Send(const std::vector<uint8_t>& data)
 {
   if (m_Socket && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);
   }
+}
+
+string CAsyncObserver::GetLogPrefix() const
+{
+  if (m_Game) return m_Game->GetLogPrefix();
+  return "[OBSERVER] ";
 }

@@ -269,7 +269,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameFlags(0),
     m_PauseUser(nullptr),
     m_GameName(nGameSetup->m_Name),
-    m_GameHistoryId(nAura->NextHistoryGameID()),
+    m_PersistentId(nAura->NextHistoryGameID()),
     m_FromAutoReHost(nGameSetup->m_LobbyAutoRehosted),
     m_OwnerLess(nGameSetup->m_OwnerLess),
     m_OwnerName(nGameSetup->m_Owner.first),
@@ -346,7 +346,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LobbyLoading(false),
     m_Lagging(false),
     m_Paused(false),
-    m_Desynced(false),
     m_IsDraftMode(false),
     m_IsHiddenPlayerNames(false),
     m_HadLeaver(false),
@@ -359,6 +358,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_BeforePlayingEmptyActions(0),
+    m_GameHistory(make_shared<GameHistory>()),
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
     m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
     m_GameDiscoveryInfoChanged(false),
@@ -480,6 +480,12 @@ void CGame::Reset()
   m_PauseUser = nullptr;
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
+  m_GameHistory.reset();
+
+  for (auto& observer : m_Observers) {
+    observer->OnUnrefGame(this);
+  }
+  m_Observers.clear();
 
   for (auto& entry : m_SyncPlayers) {
     entry.second.clear();
@@ -3430,7 +3436,7 @@ void CGame::SendGProxyEmptyActions()
   }
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_PlayingBuffer.emplace_back();
+    m_GameHistory->m_PlayingBuffer.emplace_back();
   }
 }
 
@@ -3449,7 +3455,7 @@ void CGame::SendAllActions()
   SendAll(actions);
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_PlayingBuffer.push_back(std::move(actions));
+    m_GameHistory->m_PlayingBuffer.push_back(std::move(actions));
   }
 
   SendAllActionsCallback();
@@ -4239,8 +4245,8 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
 
   if (m_GameLoading && !user->GetFinishedLoading() && !m_Config.m_LoadInGame) {
     const vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
-    m_LoadingVirtualBuffer.reserve(m_LoadingVirtualBuffer.size() + packet.size());
-    AppendByteArrayFast(m_LoadingVirtualBuffer, packet);
+    m_GameHistory->m_LoadingVirtualBuffer.reserve(m_GameHistory->m_LoadingVirtualBuffer.size() + packet.size());
+    AppendByteArrayFast(m_GameHistory->m_LoadingVirtualBuffer, packet);
     SendAll(packet);
   }
 }
@@ -4749,36 +4755,8 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   Send(observer, GameProtocol::SEND_W3GS_COUNTDOWN_END());
 }
 
-void CGame::EventObserverLoaded(CAsyncObserver* user)
-{
-  Send(user, m_LoadingRealBuffer);
-  Send(user, m_LoadingVirtualBuffer);
-}
-
-void CGame::EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason)
-{
-  if (!user->CloseConnection()) {
-    return;
-  }
-  LOG_APP_IF(LOG_LEVEL_NOTICE, "Observer [" + user->GetName() + "] left voluntarily.")
-  user->SetDeleteMe(true);
-}
-
-void CGame::EventObserverKeepAlive(CAsyncObserver* user)
-{
-}
-
 void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapSize* mapSize)
 {
-}
-
-void CGame::EventObserverDisconnectProtocolError(CAsyncObserver* user)
-{
-  if (!user->CloseConnection()) {
-    return;
-  }
-  LOG_APP_IF(LOG_LEVEL_NOTICE, "Observer [" + user->GetName() + "] left due to a protocol error.")
-  user->SetDeleteMe(true);
 }
 
 bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAddress) const
@@ -5151,14 +5129,14 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   if (!m_Config.m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
-      AppendByteArrayFast(m_LoadingRealBuffer, packet);
+      AppendByteArrayFast(m_GameHistory->m_LoadingRealBuffer, packet);
     }
     SendAll(packet);
   } else { // load-in-game
-    Send(user, m_LoadingRealBuffer);
-    if (!m_LoadingVirtualBuffer.empty()) {
+    Send(user, m_GameHistory->m_LoadingRealBuffer);
+    if (!m_GameHistory->m_LoadingVirtualBuffer.empty()) {
       // CGame::EventUserLoaded - Fake users loaded
-      Send(user, m_LoadingVirtualBuffer);
+      Send(user, m_GameHistory->m_LoadingVirtualBuffer);
     }
     // GProxy sends m_GProxyEmptyActions additional empty actions for every action received.
     // So we need to match it, to avoid desyncs.
@@ -5355,7 +5333,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     }
   }
   if (DesyncDetected) {
-    m_Desynced = true;
+    m_GameHistory->SetDesynchronized(true);
     string syncListText = ToNameListSentence(m_SyncPlayers[user]);
     string desyncListText = ToNameListSentence(DesyncedPlayers);
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
@@ -5380,6 +5358,8 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
         StopDesynchronized("was automatically dropped after desync");
       }
     }
+  } else if ((m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) && !m_GameHistory->GetDesynchronized()) {
+    m_GameHistory->AddCheckSum(MyCheckSum);
   }
 }
 
@@ -6070,10 +6050,10 @@ void CGame::EventGameStartedLoading()
   // When load-in-game is disabled, m_LoadingVirtualBuffer also includes
   // load messages for disconnected real players, but we let automatic resizing handle that.
 
-  m_LoadingVirtualBuffer.reserve(5 * m_FakeUsers.size());
+  m_GameHistory->m_LoadingVirtualBuffer.reserve(5 * m_FakeUsers.size());
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
     // send a game loaded packet for each fake user
-    AppendByteArrayFast(m_LoadingVirtualBuffer, fakeUser.GetGameLoadedBytes());
+    AppendByteArrayFast(m_GameHistory->m_LoadingVirtualBuffer, fakeUser.GetGameLoadedBytes());
   }
 
   if (GetAnyUsingGProxy()) {
@@ -6155,13 +6135,13 @@ void CGame::EventGameStartedLoading()
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
     // Preallocate memory for all SEND_W3GS_GAMELOADED_OTHERS packets
-    m_LoadingRealBuffer.reserve(5 * m_Users.size());
+    m_GameHistory->m_LoadingRealBuffer.reserve(5 * m_Users.size());
   }
 
   if (m_Config.m_LoadInGame) {
     for (const auto& user : m_Users) {
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
-      AppendByteArray(m_LoadingRealBuffer, packet);
+      AppendByteArray(m_GameHistory->m_LoadingRealBuffer, packet);
     }
 
     // Only when load-in-game is enabled, initialize everyone's m_Lagging flag to true
@@ -6331,15 +6311,15 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
 
 void CGame::EventGameBeforeLoaded()
 {
-  if (!m_Config.m_LoadInGame && !m_LoadingVirtualBuffer.empty()) {
+  if (!m_Config.m_LoadInGame && !m_GameHistory->m_LoadingVirtualBuffer.empty()) {
     // CGame::UpdateLoading: Fake users loaded
-    if (m_LoadingVirtualBuffer.size() == 5 * m_FakeUsers.size()) {
-      SendAll(m_LoadingVirtualBuffer);
+    if (m_GameHistory->m_LoadingVirtualBuffer.size() == 5 * m_FakeUsers.size()) {
+      SendAll(m_GameHistory->m_LoadingVirtualBuffer);
     } else {
       // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
       // it will also contain load packets for real users who didn't actually load the game,
       // but these packets were already sent to real users
-      vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_LoadingVirtualBuffer.begin(), m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
+      vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_GameHistory->m_LoadingVirtualBuffer.begin(), m_GameHistory->m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
       SendAll(onlyFakeUsersLoaded);
     }
   }
@@ -6434,8 +6414,8 @@ void CGame::EventGameLoaded()
 
   if (!(m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
     // These buffers serve no purpose anymore.
-    m_LoadingRealBuffer = vector<uint8_t>();
-    m_LoadingVirtualBuffer = vector<uint8_t>();
+    m_GameHistory->m_LoadingRealBuffer = vector<uint8_t>();
+    m_GameHistory->m_LoadingVirtualBuffer = vector<uint8_t>();
   }
 
   // move the game to the games in progress vector
@@ -6481,10 +6461,10 @@ void CGame::HandleGameLoadedStats()
     LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to begin transaction for game loaded data")
     return;
   }
-  m_Aura->m_DB->UpdateLatestHistoryGameId(m_GameHistoryId);
+  m_Aura->m_DB->UpdateLatestHistoryGameId(m_PersistentId);
 
   m_Aura->m_DB->GameAdd(
-    m_GameHistoryId,
+    m_PersistentId,
     m_CreatorText,
     m_Map->GetClientPath(),
     PathToString(m_Map->GetServerPath()),
@@ -6503,7 +6483,7 @@ void CGame::HandleGameLoadedStats()
       dbPlayer->GetName(),
       dbPlayer->GetServer(),
       dbPlayer->GetIP(),
-      m_GameHistoryId
+      m_PersistentId
     );
   }
   if (!m_Aura->m_DB->Commit()) {
@@ -6593,7 +6573,6 @@ void CGame::Remake()
   m_GameLoading = false;
   m_GameLoaded = false;
   m_Lagging = false;
-  m_Desynced = false;
   m_IsDraftMode = false;
   m_IsHiddenPlayerNames = false;
   m_HadLeaver = false;

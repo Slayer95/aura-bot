@@ -85,8 +85,8 @@ namespace GameUser
     uint8_t                          m_PingEqualizerOffset;          // how many frames are actions sent by this player offset by ping equalizer
     QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
     uint32_t                         m_PongCounter;
-    uint32_t                         m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
-    uint32_t                         m_SyncCounter;                  // the number of keepalive packets received from this player
+    size_t                           m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
+    size_t                           m_SyncCounter;                  // the number of keepalive packets received from this player
     int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
     uint32_t                         m_LastMapPartSentOffsetEnd;     // the last mappart sent to the player (for sending more than one part at a time)
     uint32_t                         m_LastMapPartAcked;             // the last mappart acknowledged by the player
@@ -203,8 +203,8 @@ namespace GameUser
       }
     }
     [[nodiscard]] inline bool                  IsRealmVerified() const { return m_Verified; }
-    [[nodiscard]] inline uint32_t              GetSyncCounter() const { return m_SyncCounter; }
-    [[nodiscard]] inline uint32_t              GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
+    [[nodiscard]] inline size_t                GetSyncCounter() const { return m_SyncCounter; }
+    [[nodiscard]] inline size_t                GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
     [[nodiscard]] bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
     [[nodiscard]] inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
     [[nodiscard]] inline uint32_t              GetLastMapPartSentOffsetEnd() const { return m_LastMapPartSentOffsetEnd; }
@@ -285,8 +285,8 @@ namespace GameUser
     bool AddDelayPingEqualizerFrame();
     bool SubDelayPingEqualizerFrame();
     void SetPingEqualizerFrameNode(QueuedActionsFrameNode* nFrame) { m_PingEqualizerFrameNode = nFrame; }
-    inline void SetSyncCounter(uint32_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
-    inline void AddSyncCounterOffset(const uint32_t nOffset) { m_SyncCounterOffset += nOffset; }
+    inline void SetSyncCounter(const size_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
+    inline void AddSyncCounterOffset(const size_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
     inline void SetLastMapPartSentOffsetEnd(uint32_t nLastMapPartSentOffsetEnd) { m_LastMapPartSentOffsetEnd = nLastMapPartSentOffsetEnd; }
     inline void SetLastMapPartAcked(uint32_t nLastMapPartAcked) { m_LastMapPartAcked = nLastMapPartAcked; }
