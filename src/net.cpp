@@ -530,10 +530,125 @@ uint32_t CNet::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds)
     ++NumFDs;
   }
 
+  for (const auto& server : m_GameServers) {
+    server.second->SetFD(fd, send_fd, nfds);
+    ++NumFDs;
+  }
+
+  for (const auto& serverConnections : m_IncomingConnections) {
+    // std::pair<uint16_t, vector<CConnection*>>
+    for (const auto& connection : serverConnections.second) {
+      NumFDs += connection->SetFD(fd, send_fd, nfds);;
+    }
+  }
+
+  for (const auto& serverConnections : m_GameSeekers) {
+    // std::pair<uint16_t, vector<CGameSeeker*>>
+    for (const auto& connection : serverConnections.second) {
+      NumFDs += connection->SetFD(fd, send_fd, nfds);;
+    }
+  }
+
+  for (const auto& serverConnections : m_GameObservers) {
+    // std::pair<uint16_t, vector<CAsyncObserver*>>
+    for (const auto& connection : serverConnections.second) {
+      NumFDs += connection->SetFD(fd, send_fd, nfds);;
+    }
+  }  
+
   return NumFDs;
 }
 
-void CNet::Update(fd_set* fd, fd_set* send_fd)
+void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
+{
+  // if hosting a lobby, accept new connections to its game server
+
+  for (const auto& server : m_GameServers) {
+    if (m_Aura->m_ExitingSoon) {
+      server.second->Discard(&fd);
+      continue;
+    }
+    uint16_t localPort = server.first;
+    if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
+      server.second->Discard(&fd);
+      continue;
+    }
+    CStreamIOSocket* socket = server.second->Accept(&fd);
+    if (socket) {
+      if (m_Config.m_ProxyReconnect > 0) {
+        CConnection* incomingConnection = new CConnection(this, localPort, socket);
+        DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+        m_IncomingConnections[localPort].push_back(incomingConnection);
+      } else if (m_Aura->m_Lobbies.empty() && m_Aura->m_JoinInProgressGames.empty()) {
+        DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] connection to port " + to_string(localPort) + " rejected.")
+        delete socket;
+      } else {
+        CConnection* incomingConnection = new CConnection(this, localPort, socket);
+        DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+        m_IncomingConnections[localPort].push_back(incomingConnection);
+      }
+      if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
+        PRINT_IF(LOG_LEVEL_WARNING, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections")
+      }
+    }
+
+    if (server.second->HasError()) {
+      m_Aura->m_Exiting = true;
+    }
+  }
+
+  for (auto& serverConnections : m_IncomingConnections) {
+    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
+    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
+      // *i is a pointer to a CConnection
+      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
+      if (result == INCON_UPDATE_OK) {
+        ++i;
+        continue;
+      }
+      if ((*i)->GetSocket()) {
+        (*i)->GetSocket()->DoSend(&send_fd); // flush the socket
+      }
+      delete *i;
+      i = serverConnections.second.erase(i);
+    }
+  }
+
+  for (auto& serverConnections : m_GameSeekers) {
+    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
+    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
+      // *i is a pointer to a CConnection
+      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
+      if (result == GAMESEEKER_OK) {
+        ++i;
+        continue;
+      }
+      if ((*i)->GetSocket()) {
+        (*i)->GetSocket()->DoSend(&send_fd); // flush the socket
+      }
+      delete *i;
+      i = serverConnections.second.erase(i);
+    }
+  }
+
+  for (auto& serverConnections : m_GameObservers) {
+    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
+      // *i is a pointer to a CConnection
+      uint8_t result = (*i)->Update(&fd, &send_fd, GAME_USER_CONNECTION_MAX_TIMEOUT);
+      if (result == ASYNC_OBSERVER_OK) {
+        ++i;
+        continue;
+      }
+      if ((*i)->GetSocket()) {
+        (*i)->GetSocket()->DoSend(&send_fd); // flush the socket
+      }
+      delete *i;
+      i = serverConnections.second.erase(i);
+    }
+  }
+}
+
+void CNet::UpdateAfterGames(fd_set* fd, fd_set* send_fd)
 {
   if (m_HealthCheckInProgress) {
     bool anyPending = false;
@@ -1548,6 +1663,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
   m_GameServers[assignedPort] = gameServer;
   m_IncomingConnections[assignedPort] = vector<CConnection*>();
   m_GameSeekers[assignedPort] = vector<CGameSeeker*>();
+  m_GameObservers[assignedPort] = vector<CAsyncObserver*>();
 
   Print("[TCP] " + name + " listening on port " + to_string(assignedPort));
   return gameServer;
@@ -1650,6 +1766,13 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
   seeker->Init();
 }
 
+void CNet::OnGameReset(CGame* game)
+{
+  for (auto& observer : m_GameObservers) {
+    observer->OnGameReset(game);
+  }
+}
+
 void CNet::GracefulExit()
 {
   ResetHealthCheck();
@@ -1670,6 +1793,37 @@ void CNet::GracefulExit()
       connection->GetSocket()->ClearRecvBuffer();
     }
   }
+
+  for (auto& serverConnections : m_GameObservers) {
+    for (auto& connection : serverConnections.second) {
+      connection->SetType(INCON_TYPE_KICKED_PLAYER);
+      connection->SetTimeout(2000);
+      connection->GetSocket()->ClearRecvBuffer();
+    }
+  }  
+}
+
+bool CNet::CheckGracefulExit()
+{
+  for (auto& serverConnections : m_IncomingConnections) {
+    if (!serverConnections.second.empty()) {
+      return false;
+    }
+  }
+  for (auto& serverConnections : m_GameSeekers) {
+    if (!serverConnections.second.empty()) {
+      return false;
+    }
+  }
+  for (auto& serverConnections : m_GameObservers) {
+    if (!serverConnections.second.empty()) {
+      return false;
+    }
+  }
+  if (!m_DownGradedConnections.empty()) {
+    return false;
+  }
+  return true;  
 }
 
 CNet::~CNet()

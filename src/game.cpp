@@ -482,11 +482,6 @@ void CGame::Reset()
   m_FakeUsers.clear();
   m_GameHistory.reset();
 
-  for (auto& observer : m_Observers) {
-    observer->OnUnrefGame(this);
-  }
-  m_Observers.clear();
-
   for (auto& entry : m_SyncPlayers) {
     entry.second.clear();
   }
@@ -561,6 +556,8 @@ void CGame::Reset()
   for (auto& realm : m_Aura->m_Realms) {
     realm->ResetGameChatAnnouncement();
   }
+
+  m_Aura->m_Net.OnGameReset(this);
 }
 
 void CGame::ReleaseMapBusyTimedLock() const
@@ -2072,10 +2069,6 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
 {
   for (auto& user : m_Users) {
     user->Send(data);
-  }
-
-  for (auto& observer : m_Observers) {
-    observer->Send(data);
   }
 }
 
@@ -4743,7 +4736,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
 
   CAsyncObserver* observer = new CAsyncObserver(connection, this, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
-  m_Observers.push_back(observer);
+  m_Aura->m_Net.m_GameObservers.push_back(observer);
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
 

@@ -1108,61 +1108,30 @@ bool CAura::Update()
   FD_ZERO(&fd);
   FD_ZERO(&send_fd);
 
-  // 2. all running game servers
-
-  for (const auto& server : m_Net.m_GameServers) {
-    server.second->SetFD(&fd, &send_fd, &nfds);
-    ++NumFDs;
-  }
-
-  // 3. all unassigned incoming TCP connections
-
-  for (const auto& serverConnections : m_Net.m_IncomingConnections) {
-    // std::pair<uint16_t, vector<CConnection*>>
-    for (const auto& connection : serverConnections.second) {
-      if (connection->GetSocket()) {
-        connection->GetSocket()->SetFD(&fd, &send_fd, &nfds);
-        ++NumFDs;
-      }
-    }
-  }
-
-  // 4. all managed TCP connections
-
-  for (const auto& serverConnections : m_Net.m_GameSeekers) {
-    // std::pair<uint16_t, vector<CConnection*>>
-    for (const auto& connection : serverConnections.second) {
-      if (connection->GetSocket()) {
-        connection->GetSocket()->SetFD(&fd, &send_fd, &nfds);
-        ++NumFDs;
-      }
-    }
-  }
-
-  // 5. the current lobby's player sockets
+  // the current lobby's player sockets
 
   for (const auto& lobby : m_Lobbies) {
     NumFDs += lobby->SetFD(&fd, &send_fd, &nfds);
   }
 
-  // 6. all running games' player sockets
+  // all running games' player sockets
 
   for (const auto& game : m_StartedGames) {
     NumFDs += game->SetFD(&fd, &send_fd, &nfds);
   }
 
-  // 7. all battle.net sockets
+  // all battle.net sockets
 
   for (const auto& realm : m_Realms) {
     NumFDs += realm->SetFD(&fd, &send_fd, &nfds);
   }
 
-  // 8. irc socket
+  // irc socket
   if (m_IRC.GetIsEnabled()) {
     NumFDs += m_IRC.SetFD(&fd, &send_fd, &nfds);
   }
 
-  // 9. UDP sockets, outgoing test connections
+  // UDP sockets, outgoing test connections
   NumFDs += m_Net.SetFD(&fd, &send_fd, &nfds);
 
   // before we call select we need to determine how long to block for
@@ -1207,95 +1176,7 @@ bool CAura::Update()
     }
   }
 
-  // if hosting a lobby, accept new connections to its game server
-
-  for (const auto& server : m_Net.m_GameServers) {
-    if (m_ExitingSoon) {
-      server.second->Discard(&fd);
-      continue;
-    }
-    uint16_t localPort = server.first;
-    if (m_Net.m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-      server.second->Discard(&fd);
-      continue;
-    }
-    CStreamIOSocket* socket = server.second->Accept(&fd);
-    if (socket) {
-      if (m_Net.m_Config.m_ProxyReconnect > 0) {
-        CConnection* incomingConnection = new CConnection(this, localPort, socket);
-#ifdef DEBUG
-        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
-          Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
-        }
-#endif
-        m_Net.m_IncomingConnections[localPort].push_back(incomingConnection);
-      } else if (m_Lobbies.empty() && m_JoinInProgressGames.empty()) {
-#ifdef DEBUG
-        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
-          Print("[AURA] connection to port " + to_string(localPort) + " rejected.");
-        }
-#endif
-        delete socket;
-      } else {
-        CConnection* incomingConnection = new CConnection(this, localPort, socket);
-#ifdef DEBUG
-        if (MatchLogLevel(LOG_LEVEL_TRACE2)) {
-          Print("[AURA] incoming connection from " + incomingConnection->GetIPString());
-        }
-#endif
-        m_Net.m_IncomingConnections[localPort].push_back(incomingConnection);
-      }
-      if (m_Net.m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-        Print("[AURA] " + to_string(m_Net.m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections");
-      }
-    }
-
-    if (server.second->HasError()) {
-      m_Exiting = true;
-    }
-  }
-
-  // update unassigned incoming connections
-
-  for (auto& serverConnections : m_Net.m_IncomingConnections) {
-    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
-    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
-      // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
-      if (result == INCON_UPDATE_OK) {
-        ++i;
-        continue;
-      }
-
-      // flush the socket (e.g. in case a rejection message is queued)
-      if ((*i)->GetSocket()) {
-        (*i)->GetSocket()->DoSend(&send_fd);
-      }
-      delete *i;
-      i = serverConnections.second.erase(i);
-    }
-  }
-
-  // update CGameSeeker incoming connections
-
-  for (auto& serverConnections : m_Net.m_GameSeekers) {
-    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
-    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
-      // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
-      if (result == INCON_UPDATE_OK) {
-        ++i;
-        continue;
-      }
-
-      // flush the socket (e.g. in case a rejection message is queued)
-      if ((*i)->GetSocket()) {
-        (*i)->GetSocket()->DoSend(&send_fd);
-      }
-      delete *i;
-      i = serverConnections.second.erase(i);
-    }
-  }
+  m_Net.UpdateBeforeGames(&fd, &send_fd);
 
   // update games, starting from lobbies
 
@@ -1340,7 +1221,7 @@ bool CAura::Update()
   m_Discord.Update();
 
   // UDP sockets, outgoing test connections
-  m_Net.Update(&fd, &send_fd);
+  m_Net.UpdateAfterGames(&fd, &send_fd);
 
   // move stuff from pending vectors to their intended places
   m_Net.MergeDownGradedConnections();
@@ -2069,17 +1950,7 @@ bool CAura::CheckGracefulExit()
       return false;
     }
   }
-  for (auto& serverConnections : m_Net.m_IncomingConnections) {
-    if (!serverConnections.second.empty()) {
-      return false;
-    }
-  }
-  for (auto& serverConnections : m_Net.m_GameSeekers) {
-    if (!serverConnections.second.empty()) {
-      return false;
-    }
-  }
-  if (!m_Net.m_DownGradedConnections.empty()) {
+  if (!m_Net.CheckGracefulExit()) {
     return false;
   }
   return true;

@@ -43,7 +43,8 @@ public:
   ~CGameTestConnection();
 
   [[nodiscard]] uint32_t  SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
-  [[nodiscard]] bool      Update(fd_set* fd, fd_set* send_fd);
+  [[nodiscard]] bool      UpdateBeforeGames(fd_set* fd, fd_set* send_fd);
+  [[nodiscard]] bool      UpdateAfterGames(fd_set* fd, fd_set* send_fd);
   [[nodiscard]] bool      QueryGameInfo();
   [[nodiscard]] bool      GetIsRealmOnline() const;
   [[nodiscard]] bool      GetIsRealmListed() const;
@@ -119,7 +120,8 @@ public:
 
   std::map<uint16_t, CTCPServer*>                             m_GameServers;
   std::map<uint16_t, std::vector<CConnection*>>               m_IncomingConnections;        // connections that haven't identified their protocol yet
-  std::map<uint16_t, std::vector<CGameSeeker*>>               m_GameSeekers;         // connections that use complementary protocols, such as VLAN, or UDP over TCP
+  std::map<uint16_t, std::vector<CGameSeeker*>>               m_GameSeekers;                // connections that use complementary protocols, such as VLAN, or UDP over TCP
+  std::map<uint16_t, std::vector<CAsyncObserver*>>            m_GameObservers;              // connections that are CAsyncObserver
   std::queue<std::pair<uint16_t, CConnection*>>               m_DownGradedConnections;      // connections that are waiting for insertion into m_IncomingConnections, built from a stale CStreamIOSocket
   std::map<std::pair<uint16_t, uint16_t>, TimedUint8>         m_UPnPTCPCache;
   std::map<std::pair<uint16_t, uint16_t>, TimedUint8>         m_UPnPUDPCache;
@@ -197,7 +199,9 @@ public:
   void                                   OnConfigReload();
   void                                   OnUserKicked(GameUser::CGameUser* user, bool deferred = false);
   void                                   RegisterGameSeeker(CConnection* connection, uint8_t nType);
+  void                                   OnGameReset(const CGame* nGame);
   void                                   GracefulExit();
+  bool                                   CheckGracefulExit();
 
   [[nodiscard]] bool                                   IsIgnoredDatagramSource(std::string sourceIp);
   [[nodiscard]] bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }

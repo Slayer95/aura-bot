@@ -193,7 +193,6 @@ protected:
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
   std::vector<CDBGamePlayer*>                            m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players
-  std::vector<CAsyncObserver*>                           m_Observers;
   CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;            // actions to be sent
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
   std::vector<std::string>                               m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)

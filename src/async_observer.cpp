@@ -108,7 +108,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
   uint8_t result = ASYNC_OBSERVER_OK;
   bool Abort = false;
-  if (m_Socket->DoRecv(fd)) {
+  if (m_Type == INCON_TYPE_KICKED_PLAYER) {
+    m_Socket->Discard(fd);
+  } else if (m_Socket->DoRecv(fd)) {
     // extract as many packets as possible from the socket's receive buffer and process them
     string*              RecvBuffer         = m_Socket->GetBytes();
     std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
@@ -268,7 +270,7 @@ void CAsyncObserver::SendUpdates(fd_set* send_fd)
   m_Socket->DoSend(send_fd);
 }
 
-void CAsyncObserver::OnUnrefGame(CGame* nGame)
+void CAsyncObserver::OnGameReset(CGame* nGame)
 {
   if (m_Game == nGame) {
     m_Game = nullptr;

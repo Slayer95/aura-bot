@@ -68,6 +68,13 @@ CConnection::~CConnection()
   m_Socket = nullptr;
 }
 
+uint32_t CConnection::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
+{
+  if (!m_Socket) return 0;
+  m_Socket->SetFD(fd, send_fd, nfds);
+  return 1;
+}
+
 void CConnection::SetTimeout(const int64_t delta)
 {
   m_TimeoutTicks = GetTicks() + delta;
