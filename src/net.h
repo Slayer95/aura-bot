@@ -43,8 +43,7 @@ public:
   ~CGameTestConnection();
 
   [[nodiscard]] uint32_t  SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
-  [[nodiscard]] bool      UpdateBeforeGames(fd_set* fd, fd_set* send_fd);
-  [[nodiscard]] bool      UpdateAfterGames(fd_set* fd, fd_set* send_fd);
+  [[nodiscard]] bool      Update(fd_set* fd, fd_set* send_fd);
   [[nodiscard]] bool      QueryGameInfo();
   [[nodiscard]] bool      GetIsRealmOnline() const;
   [[nodiscard]] bool      GetIsRealmListed() const;
@@ -145,7 +144,8 @@ public:
   void InitPersistentConfig();
   bool Init();
   [[nodiscard]] uint32_t SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
-  void Update(fd_set* fd, fd_set* send_fd);
+  void UpdateBeforeGames(fd_set* fd, fd_set* send_fd);
+  void UpdateAfterGames(fd_set* fd, fd_set* send_fd);
   bool SendBroadcast(const std::vector<uint8_t>& packet);
   void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet) const;
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet) const;

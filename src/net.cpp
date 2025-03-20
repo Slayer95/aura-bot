@@ -565,25 +565,25 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
 
   for (const auto& server : m_GameServers) {
     if (m_Aura->m_ExitingSoon) {
-      server.second->Discard(&fd);
+      server.second->Discard(fd);
       continue;
     }
     uint16_t localPort = server.first;
     if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-      server.second->Discard(&fd);
+      server.second->Discard(fd);
       continue;
     }
-    CStreamIOSocket* socket = server.second->Accept(&fd);
+    CStreamIOSocket* socket = server.second->Accept(fd);
     if (socket) {
       if (m_Config.m_ProxyReconnect > 0) {
-        CConnection* incomingConnection = new CConnection(this, localPort, socket);
+        CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
         DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
         m_IncomingConnections[localPort].push_back(incomingConnection);
       } else if (m_Aura->m_Lobbies.empty() && m_Aura->m_JoinInProgressGames.empty()) {
         DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] connection to port " + to_string(localPort) + " rejected.")
         delete socket;
       } else {
-        CConnection* incomingConnection = new CConnection(this, localPort, socket);
+        CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
         DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
         m_IncomingConnections[localPort].push_back(incomingConnection);
       }
@@ -601,13 +601,13 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
     int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
+      uint8_t result = (*i)->Update(fd, send_fd, timeout);
       if (result == INCON_UPDATE_OK) {
         ++i;
         continue;
       }
       if ((*i)->GetSocket()) {
-        (*i)->GetSocket()->DoSend(&send_fd); // flush the socket
+        (*i)->GetSocket()->DoSend(send_fd); // flush the socket
       }
       delete *i;
       i = serverConnections.second.erase(i);
@@ -618,13 +618,13 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
     int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(&fd, &send_fd, timeout);
+      uint8_t result = (*i)->Update(fd, send_fd, timeout);
       if (result == GAMESEEKER_OK) {
         ++i;
         continue;
       }
       if ((*i)->GetSocket()) {
-        (*i)->GetSocket()->DoSend(&send_fd); // flush the socket
+        (*i)->GetSocket()->DoSend(send_fd); // flush the socket
       }
       delete *i;
       i = serverConnections.second.erase(i);
@@ -634,13 +634,13 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
   for (auto& serverConnections : m_GameObservers) {
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(&fd, &send_fd, GAME_USER_CONNECTION_MAX_TIMEOUT);
+      uint8_t result = (*i)->Update(fd, send_fd, GAME_USER_CONNECTION_MAX_TIMEOUT);
       if (result == ASYNC_OBSERVER_OK) {
         ++i;
         continue;
       }
       if ((*i)->GetSocket()) {
-        (*i)->GetSocket()->DoSend(&send_fd); // flush the socket
+        (*i)->GetSocket()->DoSend(send_fd); // flush the socket
       }
       delete *i;
       i = serverConnections.second.erase(i);
@@ -1766,10 +1766,12 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
   seeker->Init();
 }
 
-void CNet::OnGameReset(CGame* game)
+void CNet::OnGameReset(const CGame* game)
 {
-  for (auto& observer : m_GameObservers) {
-    observer->OnGameReset(game);
+  for (auto& serverConnections : m_GameObservers) {
+    for (auto& connection : serverConnections.second) {
+      connection->OnGameReset(game);
+    }
   }
 }
 

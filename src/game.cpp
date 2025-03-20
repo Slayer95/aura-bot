@@ -4736,7 +4736,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
 
   CAsyncObserver* observer = new CAsyncObserver(connection, this, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
-  m_Aura->m_Net.m_GameObservers.push_back(observer);
+  m_Aura->m_Net.m_GameObservers[connection->GetPort()].push_back(observer);
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
 

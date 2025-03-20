@@ -246,7 +246,7 @@ void CAsyncObserver::SendUpdates(fd_set* send_fd)
 {
   size_t pendingUpdates = 1;
   if (m_LastFrameTicks.has_value()) {
-    pendingUpdates = (static_cast<int64_t>(m_FrameRate) * (GetTicks() - m_LastFrameTicks.value())) / static_cast<int64_t>(m_GameHistory->GetLatency());
+    pendingUpdates = static_cast<size_t>((int64_t)(m_FrameRate) * (GetTicks() - m_LastFrameTicks.value()) / (int64_t)(m_GameHistory->GetLatency()));
   }
 
   bool anyUpdated = false;
@@ -270,7 +270,7 @@ void CAsyncObserver::SendUpdates(fd_set* send_fd)
   m_Socket->DoSend(send_fd);
 }
 
-void CAsyncObserver::OnGameReset(CGame* nGame)
+void CAsyncObserver::OnGameReset(const CGame* nGame)
 {
   if (m_Game == nGame) {
     m_Game = nullptr;

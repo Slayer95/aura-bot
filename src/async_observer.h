@@ -80,7 +80,7 @@ public:
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
 
   void SendUpdates(fd_set* send_fd);
-  void OnGameReset(CGame* nGame);
+  void OnGameReset(const CGame* nGame);
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();
   void OnDesync();
