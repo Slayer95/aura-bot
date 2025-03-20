@@ -71,11 +71,11 @@ CGameTestConnection::~CGameTestConnection()
   delete m_Socket;
 }
 
-uint32_t CGameTestConnection::SetFD(void* fd, void* send_fd, int32_t* nfds) const
+uint32_t CGameTestConnection::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 {
   if (!m_Socket->HasError() && m_Socket->GetConnected())
   {
-    m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    m_Socket->SetFD(fd, send_fd, nfds);
     return 1;
   }
 
@@ -151,7 +151,7 @@ bool CGameTestConnection::QueryGameInfo()
   return true;
 }
 
-bool CGameTestConnection::Update(void* fd, void* send_fd)
+bool CGameTestConnection::Update(fd_set* fd, fd_set* send_fd)
 {
   static optional<sockaddr_storage> emptyBindAddress;
 
@@ -166,7 +166,7 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
     m_Socket->Reset();
   } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
     bool gotJoinedMessage = false;
-    if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+    if (m_Socket->DoRecv(fd)) {
       string* RecvBuffer = m_Socket->GetBytes();
       std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
       gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == GameProtocol::Magic::W3GS_HEADER && Bytes[1] == GameProtocol::Magic::SLOTINFOJOIN;
@@ -174,7 +174,7 @@ bool CGameTestConnection::Update(void* fd, void* send_fd)
     }
     if (!m_SentJoinRequest) {
       if (QueryGameInfo()) {
-        m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+        m_Socket->DoSend(send_fd);
       }
     } else if (gotJoinedMessage) {
       m_Socket->Reset();
@@ -217,11 +217,11 @@ CIPAddressAPIConnection::~CIPAddressAPIConnection()
   delete m_Socket;
 }
 
-uint32_t CIPAddressAPIConnection::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CIPAddressAPIConnection::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds)
 {
   if (!m_Socket->HasError() && m_Socket->GetConnected())
   {
-    m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    m_Socket->SetFD(fd, send_fd, nfds);
     return 1;
   }
 
@@ -315,7 +315,7 @@ bool CIPAddressAPIConnection::QueryIPAddress()
   return true;
 }
 
-bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
+bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
 {
   static optional<sockaddr_storage> emptyBindAddress;
 
@@ -330,7 +330,7 @@ bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
     m_Socket->Reset();
   } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
     bool gotAddress = false;
-    if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+    if (m_Socket->DoRecv(fd)) {
       string* RecvBuffer = m_Socket->GetBytes();
       std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
       uint16_t size = static_cast<uint16_t>(Bytes.size());
@@ -358,7 +358,7 @@ bool CIPAddressAPIConnection::Update(void* fd, void* send_fd)
     }
     if (!m_SentQuery) {
       if (QueryIPAddress()) {
-        m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+        m_Socket->DoSend(send_fd);
       }
     } else if (gotAddress) {
       m_Socket->Reset();
@@ -512,7 +512,7 @@ bool CNet::Init()
   return true;
 }
 
-uint32_t CNet::SetFD(void* fd, void* send_fd, int32_t* nfds)
+uint32_t CNet::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds)
 {
   uint32_t NumFDs = 0;
 
@@ -523,17 +523,17 @@ uint32_t CNet::SetFD(void* fd, void* send_fd, int32_t* nfds)
     NumFDs += connection->SetFD(fd, send_fd, nfds);
 
   if (m_UDPMainServerEnabled) {
-    m_UDPMainServer->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    m_UDPMainServer->SetFD(fd, send_fd, nfds);
     ++NumFDs;
   } else if (m_UDPDeafSocket) {
-    m_UDPDeafSocket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    m_UDPDeafSocket->SetFD(fd, send_fd, nfds);
     ++NumFDs;
   }
 
   return NumFDs;
 }
 
-void CNet::Update(void* fd, void* send_fd)
+void CNet::Update(fd_set* fd, fd_set* send_fd)
 {
   if (m_HealthCheckInProgress) {
     bool anyPending = false;
@@ -560,9 +560,9 @@ void CNet::Update(void* fd, void* send_fd)
 
   if (m_UDPMainServerEnabled) {
     if (m_Aura->m_ExitingSoon) {
-      m_UDPMainServer->Discard(static_cast<fd_set*>(fd));
+      m_UDPMainServer->Discard(fd);
     } else {
-      UDPPkt* pkt = m_UDPMainServer->Accept(static_cast<fd_set*>(fd));
+      UDPPkt* pkt = m_UDPMainServer->Accept(fd);
       if (pkt != nullptr) {
         HandleUDP(pkt);
         delete pkt->sender;
@@ -570,7 +570,7 @@ void CNet::Update(void* fd, void* send_fd)
       }
     }
   } else if (m_UDPDeafSocket) {
-    m_UDPDeafSocket->Discard(static_cast<fd_set*>(fd));
+    m_UDPDeafSocket->Discard(fd);
   }
 }
 

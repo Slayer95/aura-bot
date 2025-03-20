@@ -96,13 +96,13 @@ bool CIRC::MatchHostName(const string& hostName) const
   return false;
 }
 
-uint32_t CIRC::SetFD(void* fd, void* send_fd, int32_t* nfds) const
+uint32_t CIRC::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 {
   // irc socket
 
   if (!m_Socket->HasError() && !m_Socket->HasFin() && m_Socket->GetConnected())
   {
-    m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    m_Socket->SetFD(fd, send_fd, nfds);
     return 0;
   }
 
@@ -117,7 +117,7 @@ void CIRC::ResetConnection()
   m_LoggedIn = false;
 }
 
-void CIRC::Update(void* fd, void* send_fd)
+void CIRC::Update(fd_set* fd, fd_set* send_fd)
 {
   if (!m_Config.m_Enabled) {
     if (m_Socket && m_Socket->GetConnected()) {
@@ -162,13 +162,13 @@ void CIRC::Update(void* fd, void* send_fd)
       m_LastAntiIdleTime = Time;
     }
 
-    if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+    if (m_Socket->DoRecv(fd)) {
       ExtractPackets();
     }
     if (m_Socket->HasError() || m_Socket->HasFin()) {
       return;
     }
-    m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+    m_Socket->DoSend(send_fd);
     return;
   }
 
@@ -199,7 +199,7 @@ void CIRC::Update(void* fd, void* send_fd)
       Send("NICK " + m_Config.m_NickName);
       Send("USER " + m_Config.m_UserName + " " + m_Config.m_NickName + " " + m_Config.m_UserName + " :aura-bot");
 
-      m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+      m_Socket->DoSend(send_fd);
 
       m_LoggedIn = true;
       Print("[IRC: " + m_Config.m_HostName + "] connected");

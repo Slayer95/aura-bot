@@ -61,6 +61,8 @@ public:
   bool                                                          m_FinishedLoading;
   int64_t                                                       m_FinishedLoadingTicks;
 
+  std::optional<int64_t>                                        m_LastFrameTicks;
+
   std::string                                                   m_Name;
 
   CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID, const std::string& nName);
@@ -71,15 +73,16 @@ public:
   void SetTimeout(const int64_t nTicks);
   bool CloseConnection();
   void Init();
-  [[nodiscard]] uint8_t Update(void* fd, void* send_fd, int64_t timeout);
+  [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
   [[nodiscard]] inline const std::string&       GetName() { return m_Name; }
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
 
+  void SendUpdates(fd_set* send_fd);
   void OnUnrefGame(CGame* nGame);
-  void UpdateGameState(const uint32_t checkSum);
-  void CheckGameState();
+  void UpdateClientGameState(const uint32_t checkSum);
+  void CheckClientGameState();
   void OnDesync();
   void EventGameLoaded();
   void EventLeft(const uint32_t clientReason);

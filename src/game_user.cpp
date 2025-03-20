@@ -331,7 +331,7 @@ void CGameUser::RefreshUID()
   m_UID = m_Game->GetNewUID();
 }
 
-bool CGameUser::Update(void* fd, int64_t timeout)
+bool CGameUser::Update(fd_set* fd, int64_t timeout)
 {
   if (m_Disconnected) {
     if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net.m_Config.m_ReconnectWaitTicks) {
@@ -347,14 +347,14 @@ bool CGameUser::Update(void* fd, int64_t timeout)
 
   if (m_DeleteMe) {
     m_Socket->ClearRecvBuffer(); // in case there are pending bytes from a previous recv
-    m_Socket->Discard(static_cast<fd_set*>(fd));
+    m_Socket->Discard(fd);
     return m_DeleteMe;
   }
 
   const int64_t Ticks = GetTicks();
 
   bool Abort = false;
-  if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+  if (m_Socket->DoRecv(fd)) {
     // extract as many packets as possible from the socket's receive buffer and process them
 
     string*              RecvBuffer         = m_Socket->GetBytes();
@@ -567,7 +567,7 @@ bool CGameUser::Update(void* fd, int64_t timeout)
     m_Game->EventUserDisconnectTimedOut(this);
     if (m_Disconnected) {
       if (m_DeleteMe) {
-        m_Socket->Discard(static_cast<fd_set*>(fd));
+        m_Socket->Discard(fd);
       }
       return m_DeleteMe;
     }

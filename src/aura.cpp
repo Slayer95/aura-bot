@@ -1104,14 +1104,14 @@ bool CAura::Update()
   // take every socket we own and throw it in one giant select statement so we can block on all sockets
 
   int32_t nfds = 0;
-  fd_set  fd, send_fd;
+  fd_set fd, send_fd;
   FD_ZERO(&fd);
   FD_ZERO(&send_fd);
 
   // 2. all running game servers
 
   for (const auto& server : m_Net.m_GameServers) {
-    server.second->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+    server.second->SetFD(&fd, &send_fd, &nfds);
     ++NumFDs;
   }
 
@@ -1121,7 +1121,7 @@ bool CAura::Update()
     // std::pair<uint16_t, vector<CConnection*>>
     for (const auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
-        connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+        connection->GetSocket()->SetFD(&fd, &send_fd, &nfds);
         ++NumFDs;
       }
     }
@@ -1133,7 +1133,7 @@ bool CAura::Update()
     // std::pair<uint16_t, vector<CConnection*>>
     for (const auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
-        connection->GetSocket()->SetFD(static_cast<fd_set*>(&fd), static_cast<fd_set*>(&send_fd), &nfds);
+        connection->GetSocket()->SetFD(&fd, &send_fd, &nfds);
         ++NumFDs;
       }
     }
@@ -1211,15 +1211,15 @@ bool CAura::Update()
 
   for (const auto& server : m_Net.m_GameServers) {
     if (m_ExitingSoon) {
-      server.second->Discard(static_cast<fd_set*>(&fd));
+      server.second->Discard(&fd);
       continue;
     }
     uint16_t localPort = server.first;
     if (m_Net.m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-      server.second->Discard(static_cast<fd_set*>(&fd));
+      server.second->Discard(&fd);
       continue;
     }
-    CStreamIOSocket* socket = server.second->Accept(static_cast<fd_set*>(&fd));
+    CStreamIOSocket* socket = server.second->Accept(&fd);
     if (socket) {
       if (m_Net.m_Config.m_ProxyReconnect > 0) {
         CConnection* incomingConnection = new CConnection(this, localPort, socket);
@@ -1269,7 +1269,7 @@ bool CAura::Update()
 
       // flush the socket (e.g. in case a rejection message is queued)
       if ((*i)->GetSocket()) {
-        (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
+        (*i)->GetSocket()->DoSend(&send_fd);
       }
       delete *i;
       i = serverConnections.second.erase(i);
@@ -1290,7 +1290,7 @@ bool CAura::Update()
 
       // flush the socket (e.g. in case a rejection message is queued)
       if ((*i)->GetSocket()) {
-        (*i)->GetSocket()->DoSend(static_cast<fd_set*>(&send_fd));
+        (*i)->GetSocket()->DoSend(&send_fd);
       }
       delete *i;
       i = serverConnections.second.erase(i);
@@ -1792,7 +1792,7 @@ uint8_t CAura::ExtractScripts()
       return m_GameInstallPath / filesystem::path("War3Patch.mpq");
   }();
 
-  void* MPQ;
+  void* MPQ = nullptr;
   if (OpenMPQArchive(&MPQ, MPQFilePath)) {
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\common.j)", m_Config.m_JASSPath / filesystem::path("common-" + GetScriptsVersionRangeHeadString(m_GameDataVersion.value()) + ".j"));
     FilesExtracted += ExtractMPQFile(MPQ, R"(Scripts\blizzard.j)", m_Config.m_JASSPath / filesystem::path("blizzard-" + GetScriptsVersionRangeHeadString(m_GameDataVersion.value()) + ".j"));

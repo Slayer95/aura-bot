@@ -42,8 +42,8 @@ public:
   CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const std::string& nName);
   ~CGameTestConnection();
 
-  [[nodiscard]] uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds) const;
-  [[nodiscard]] bool      Update(void* fd, void* send_fd);
+  [[nodiscard]] uint32_t  SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
+  [[nodiscard]] bool      Update(fd_set* fd, fd_set* send_fd);
   [[nodiscard]] bool      QueryGameInfo();
   [[nodiscard]] bool      GetIsRealmOnline() const;
   [[nodiscard]] bool      GetIsRealmListed() const;
@@ -70,8 +70,8 @@ public:
   CIPAddressAPIConnection(CAura* nAura, const sockaddr_storage& nTargetHost, const std::string& nEndPoint, const std::string& nHostName);
   ~CIPAddressAPIConnection();
 
-  [[nodiscard]] uint32_t  SetFD(void* fd, void* send_fd, int32_t* nfds);
-  [[nodiscard]] bool      Update(void* fd, void* send_fd);
+  [[nodiscard]] uint32_t  SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
+  [[nodiscard]] bool      Update(fd_set* fd, fd_set* send_fd);
   bool                    QueryIPAddress();
 
   sockaddr_storage                  m_TargetHost;
@@ -142,8 +142,8 @@ public:
 
   void InitPersistentConfig();
   bool Init();
-  [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds);
-  void Update(void* fd, void* send_fd);
+  [[nodiscard]] uint32_t SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
+  void Update(fd_set* fd, fd_set* send_fd);
   bool SendBroadcast(const std::vector<uint8_t>& packet);
   void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet) const;
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet) const;

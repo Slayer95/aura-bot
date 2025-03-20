@@ -75,10 +75,10 @@ public:
   [[nodiscard]] bool MatchHostName(const std::string& hostName) const;
   [[nodiscard]] inline bool GetIsLoggedIn() const { return m_LoggedIn; }
 
-  [[nodiscard]] uint32_t SetFD(void* fd, void* send_fd, int32_t* nfds) const;
+  [[nodiscard]] uint32_t SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
   void ResetConnection();
   void Disable() { m_Config.m_Enabled = false; }
-  void Update(void* fd, void* send_fd);
+  void Update(fd_set* fd, fd_set* send_fd);
   void ExtractPackets();
   void Send(const std::string& message);
   void SendUser(const std::string& message, const std::string& target);

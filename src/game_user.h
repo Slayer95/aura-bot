@@ -360,7 +360,7 @@ namespace GameUser
 
     // processing functions
 
-    [[nodiscard]] bool Update(void* fd, int64_t timeout);
+    [[nodiscard]] bool Update(fd_set* fd, int64_t timeout);
 
     // other functions
 

@@ -154,18 +154,18 @@ CRealm::~CRealm()
   }
 }
 
-uint32_t CRealm::SetFD(void* fd, void* send_fd, int32_t* nfds) const
+uint32_t CRealm::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 {
   if (m_Socket && !m_Socket->HasError() && !m_Socket->HasFin() && m_Socket->GetConnected())
   {
-    m_Socket->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    m_Socket->SetFD(fd, send_fd, nfds);
     return 1;
   }
 
   return 0;
 }
 
-void CRealm::Update(void* fd, void* send_fd)
+void CRealm::Update(fd_set* fd, fd_set* send_fd)
 {
   const int64_t Time = GetTime();
 
@@ -201,7 +201,7 @@ void CRealm::Update(void* fd, void* send_fd)
   {
     // the socket is connected and everything appears to be working properly
 
-    if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+    if (m_Socket->DoRecv(fd)) {
 
       // extract as many packets as possible from the socket's receive buffer and process them
       string*              RecvBuffer         = m_Socket->GetBytes();
@@ -544,7 +544,7 @@ void CRealm::Update(void* fd, void* send_fd)
       TrySendGetGamesList();
     }
 
-    m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+    m_Socket->DoSend(send_fd);
     return;
   }
 
@@ -604,7 +604,7 @@ void CRealm::Update(void* fd, void* send_fd)
       SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
       m_GameVersion = gameVersion.value();
       SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameVersion, m_Config.m_LocaleID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
-      m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+      m_Socket->DoSend(send_fd);
       m_LastGameListTime       = Time;
       return;
     }

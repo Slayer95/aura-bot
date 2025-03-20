@@ -80,7 +80,7 @@ bool CConnection::CloseConnection()
   return true;
 }
 
-uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
+uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 {
   if (m_DeleteMe || !m_Socket || m_Socket->HasError()) {
     return INCON_UPDATE_DESTROY;
@@ -95,8 +95,8 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
   uint8_t result = INCON_UPDATE_OK;
   bool Abort = false;
   if (m_Type == INCON_TYPE_KICKED_PLAYER) {
-    m_Socket->Discard(static_cast<fd_set*>(fd));
-  } else if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+    m_Socket->Discard(fd);
+  } else if (m_Socket->DoRecv(fd)) {
     // extract as many packets as possible from the socket's receive buffer and process them
     string*              RecvBuffer         = m_Socket->GetBytes();
     std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
@@ -242,7 +242,7 @@ uint8_t CConnection::Update(void* fd, void* send_fd, int64_t timeout)
     return INCON_UPDATE_DESTROY;
   }
 
-  m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+  m_Socket->DoSend(send_fd);
 
   if (m_Type == INCON_TYPE_KICKED_PLAYER && !m_Socket->GetIsSendPending()) {
     return INCON_UPDATE_DESTROY;

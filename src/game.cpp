@@ -1224,13 +1224,13 @@ ImmutableUserList CGame::GetWaitingReconnectPlayers() const
   return players;
 }
 
-uint32_t CGame::SetFD(void* fd, void* send_fd, int32_t* nfds) const
+uint32_t CGame::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 {
   uint32_t NumFDs = 0;
 
   for (auto& user : m_Users) {
     if (user->GetDisconnected()) continue;
-    user->GetSocket()->SetFD(static_cast<fd_set*>(fd), static_cast<fd_set*>(send_fd), nfds);
+    user->GetSocket()->SetFD(fd, send_fd, nfds);
     ++NumFDs;
   }
 
@@ -1716,7 +1716,7 @@ void CGame::UpdateLoaded()
   */
 }
 
-bool CGame::Update(void* fd, void* send_fd)
+bool CGame::Update(fd_set* fd, fd_set* send_fd)
 {
   const int64_t Time = GetTime(), Ticks = GetTicks();
 
@@ -1868,7 +1868,7 @@ bool CGame::Update(void* fd, void* send_fd)
   return m_Exiting;
 }
 
-void CGame::UpdatePost(void* send_fd) const
+void CGame::UpdatePost(fd_set* send_fd) const
 {
   // we need to manually call DoSend on each user now because GameUser::CGameUser::Update doesn't do it
   // this is in case user 2 generates a packet for user 1 during the update but it doesn't get sent because user 1 already finished updating
@@ -1876,7 +1876,7 @@ void CGame::UpdatePost(void* send_fd) const
 
   for (const auto& user : m_Users) {
     if (user->GetDisconnected()) continue;
-    user->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
+    user->GetSocket()->DoSend(send_fd);
   }
 }
 
@@ -2095,10 +2095,16 @@ bool CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
     if (user->GetIsInLoadingScreen()) {
       continue;
     }
-    // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
     user->Send(data);
     success = true;
   }
+  if (!success) return success;
+
+  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
+    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + data.size());
+  }
+
   return success;
 }
 
@@ -3436,7 +3442,7 @@ void CGame::SendGProxyEmptyActions()
   }
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_GameHistory->m_PlayingBuffer.emplace_back();
+    m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_GPROXY);
   }
 }
 
@@ -3455,7 +3461,7 @@ void CGame::SendAllActions()
   SendAll(actions);
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_GameHistory->m_PlayingBuffer.push_back(std::move(actions));
+    m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_ACTIONS, actions);
   }
 
   SendAllActionsCallback();
@@ -3950,7 +3956,7 @@ void CGame::SendGameDiscoveryInfo()
  * - StopPlayers
  * - EventUserAfterDisconnect (only in the game lobby)
  */
-void CGame::EventUserDeleted(GameUser::CGameUser* user, void* /*fd*/, void* send_fd)
+void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* send_fd)
 {
   if (m_Exiting) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
@@ -4067,7 +4073,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, void* /*fd*/, void* send
 
   // Flush queued data before the socket is destroyed.
   if (!user->GetDisconnected()) {
-    user->GetSocket()->DoSend(static_cast<fd_set*>(send_fd));
+    user->GetSocket()->DoSend(send_fd);
   }
 }
 
@@ -6412,7 +6418,9 @@ void CGame::EventGameLoaded()
     SendEveryoneElseLeftAndDisconnect("single-player game untracked");
   }
 
-  if (!(m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
+  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    m_GameHistory->SetLatency(GetLatency());
+  } else {
     // These buffers serve no purpose anymore.
     m_GameHistory->m_LoadingRealBuffer = vector<uint8_t>();
     m_GameHistory->m_LoadingVirtualBuffer = vector<uint8_t>();
@@ -9517,7 +9525,6 @@ uint8_t CGame::CalcMaxEqualizerDelayFrames() const
 
 uint16_t CGame::GetLatency() const
 {
-  //if (m_Config.m_LatencyEqualizerEnabled) return m_Config.m_Latency / 2;
   return m_Config.m_Latency;
 }
 

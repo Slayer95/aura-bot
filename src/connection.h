@@ -69,7 +69,7 @@ public:
   void SetTimeout(const int64_t nTicks);
 
   bool CloseConnection();
-  [[nodiscard]] uint8_t Update(void* fd, void* send_fd, int64_t timeout);
+  [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
   // other functions
 

@@ -124,18 +124,38 @@ struct CQueuedActionsFrame
   void Reset();
 };
 
+struct GameFrame
+{
+  uint8_t                                                m_Type;
+  std::vector<uint8_t>                                   m_Bytes;  
+
+  GameFrame(const uint8_t nType)
+   : m_Type(nType),
+     m_Bytes(std::vector<uint8_t>())
+  {};
+
+  GameFrame(const uint8_t nType, std::vector<uint8_t>& nBytes)
+   : m_Type(nType),
+     m_Bytes(std::move(nBytes))
+  {};
+
+  ~GameFrame() = default;
+};
+
 struct GameHistory
 {
   bool                                                   m_Desynchronized;
+  uint32_t                                               m_Latency;
   std::vector<uint32_t>                                  m_CheckSums;
   std::vector<uint8_t>                                   m_LobbyBuffer;
   std::vector<uint8_t>                                   m_SlotsBuffer;
   std::vector<uint8_t>                                   m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
   std::vector<uint8_t>                                   m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
-  std::vector<std::vector<uint8_t>>                      m_PlayingBuffer;
+  std::vector<GameFrame>                                 m_PlayingBuffer;
 
   GameHistory()
-   : m_Desynchronized(false)
+   : m_Desynchronized(false),
+     m_Latency(0)
   {};
 
   ~GameHistory() = default;
@@ -145,6 +165,7 @@ struct GameHistory
   inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
   void SetDesynchronized(const bool nDesynchronized) { m_Desynchronized = nDesynchronized; }
   inline bool GetDesynchronized() { return m_Desynchronized; }
+  void SetLatency(const uint32_t nLatency) { m_Latency = nLatency; }
 };
 
 class CGame
@@ -458,13 +479,13 @@ public:
 
   // processing functions
 
-  uint32_t                                               SetFD(void* fd, void* send_fd, int32_t* nfds) const;
+  uint32_t                                               SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
   void                                                   UpdateJoinable();
   bool                                                   UpdateLobby();
   void                                                   UpdateLoading();
   void                                                   UpdateLoaded();
-  bool                                                   Update(void* fd, void* send_fd);
-  void                                                   UpdatePost(void* send_fd) const;
+  bool                                                   Update(fd_set* fd, fd_set* send_fd);
+  void                                                   UpdatePost(fd_set* send_fd) const;
   void                                                   CheckLobbyTimeouts();
   void                                                   RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
 
@@ -533,7 +554,7 @@ public:
   // note: these are only called while iterating through the m_Potentials or m_Users std::vectors
   // therefore you can't modify those std::vectors and must use the player's m_DeleteMe member to flag for deletion
 
-  void                      EventUserDeleted(GameUser::CGameUser* user, void* fd, void* send_fd);
+  void                      EventUserDeleted(GameUser::CGameUser* user, fd_set* fd, fd_set* send_fd);
   void                      EventLobbyLastPlayerLeaves();
   void                      ReportAllPings() const;
   void                      SetLaggingPlayerAndUpdate(GameUser::CGameUser* user);

@@ -62,6 +62,7 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t n
     m_FinishedDownloadingTime(0),
     m_FinishedLoading(false),
     m_FinishedLoadingTicks(0),
+    m_LastFrameTicks(0),
     m_Name(nName)
 {
 }
@@ -87,10 +88,16 @@ void CAsyncObserver::Init()
 {
 }
 
-uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
+uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 {
-  if (m_DeleteMe || !m_Socket || m_Socket->HasError()) {
+  if (!m_Socket || m_Socket->HasError()) {
     return ASYNC_OBSERVER_DESTROY;
+  }
+
+  if (m_DeleteMe) {
+    m_Socket->ClearRecvBuffer(); // in case there are pending bytes from a previous recv
+    m_Socket->Discard(fd);
+    return m_DeleteMe;
   }
 
   const int64_t Ticks = GetTicks();
@@ -101,9 +108,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
 
   uint8_t result = ASYNC_OBSERVER_OK;
   bool Abort = false;
-  if (m_Type == INCON_TYPE_KICKED_PLAYER) {
-    m_Socket->Discard(static_cast<fd_set*>(fd));
-  } else if (m_Socket->DoRecv(static_cast<fd_set*>(fd))) {
+  if (m_Socket->DoRecv(fd)) {
     // extract as many packets as possible from the socket's receive buffer and process them
     string*              RecvBuffer         = m_Socket->GetBytes();
     std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
@@ -156,7 +161,7 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
             }
 
             case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
-              UpdateGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+              UpdateClientGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
               break;
             }
 
@@ -230,9 +235,14 @@ uint8_t CAsyncObserver::Update(void* fd, void* send_fd, int64_t timeout)
     return ASYNC_OBSERVER_DESTROY;
   }
 
-  m_Socket->DoSend(static_cast<fd_set*>(send_fd));
+  SendUpdates(send_fd);
 
   return result;
+}
+
+void CAsyncObserver::SendUpdates(fd_set* send_fd)
+{
+  m_Socket->DoSend(send_fd);
 }
 
 void CAsyncObserver::OnUnrefGame(CGame* nGame)
@@ -242,7 +252,7 @@ void CAsyncObserver::OnUnrefGame(CGame* nGame)
   }
 }
 
-void CAsyncObserver::UpdateGameState(const uint32_t checkSum)
+void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
 {
   if (m_Desynchronized) return;
 
@@ -258,10 +268,10 @@ void CAsyncObserver::UpdateGameState(const uint32_t checkSum)
 
   m_CheckSums.push(checkSum);
   ++m_SyncCounter;
-  CheckGameState();
+  CheckClientGameState();
 }
 
-void CAsyncObserver::CheckGameState()
+void CAsyncObserver::CheckClientGameState()
 {
   if (m_Desynchronized) return;
 
