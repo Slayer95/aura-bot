@@ -242,6 +242,29 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
 void CAsyncObserver::SendUpdates(fd_set* send_fd)
 {
+  size_t pendingUpdates = 1;
+  if (m_LastFrameTicks.has_value()) {
+    pendingUpdates = (static_cast<int64_t>(m_FrameRate) * (GetTicks() - m_LastFrameTicks.value())) / static_cast<int64_t>(m_GameHistory->GetLatency());
+  }
+
+  bool anyUpdated = false;
+  if (pendingUpdates >= 1) {
+    auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
+    auto itEnd = end(m_GameHistory->m_PlayingBuffer);
+    while (it != itEnd) {
+      anyUpdated = true;
+      ++m_Offset;
+      Send(it->GetBytes());
+      if (it->GetType() == GAME_FRAME_TYPE_ACTIONS && (--pendingUpdates == 0)) {
+        break;
+      }
+    }
+  }
+
+  if (anyUpdated) {
+    m_LastFrameTicks = GetTicks();
+  }
+
   m_Socket->DoSend(send_fd);
 }
 

@@ -140,6 +140,9 @@ struct GameFrame
   {};
 
   ~GameFrame() = default;
+
+  inline uint8_t                     GetType() const { return m_Type; }
+  inline const std::vector<uint8_t>& GetBytes() const { return m_Bytes; }
 };
 
 struct GameHistory
@@ -166,6 +169,7 @@ struct GameHistory
   void SetDesynchronized(const bool nDesynchronized) { m_Desynchronized = nDesynchronized; }
   inline bool GetDesynchronized() { return m_Desynchronized; }
   void SetLatency(const uint32_t nLatency) { m_Latency = nLatency; }
+  inline uint32_t GetLatency() { return m_Latency; }
 };
 
 class CGame
