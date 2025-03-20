@@ -1129,7 +1129,7 @@ bool CAura::Update()
 
   // 4. all managed TCP connections
 
-  for (const auto& serverConnections : m_Net.m_ManagedConnections) {
+  for (const auto& serverConnections : m_Net.m_GameSeekers) {
     // std::pair<uint16_t, vector<CConnection*>>
     for (const auto& connection : serverConnections.second) {
       if (connection->GetSocket()) {
@@ -1278,7 +1278,7 @@ bool CAura::Update()
 
   // update CGameSeeker incoming connections
 
-  for (auto& serverConnections : m_Net.m_ManagedConnections) {
+  for (auto& serverConnections : m_Net.m_GameSeekers) {
     int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
@@ -2074,7 +2074,7 @@ bool CAura::CheckGracefulExit()
       return false;
     }
   }
-  for (auto& serverConnections : m_Net.m_ManagedConnections) {
+  for (auto& serverConnections : m_Net.m_GameSeekers) {
     if (!serverConnections.second.empty()) {
       return false;
     }

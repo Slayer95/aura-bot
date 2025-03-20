@@ -691,7 +691,7 @@ void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const vector<sockadd
   }
 
   if (m_Config.m_EnableTCPWrapUDP || m_Config.m_VLANEnabled) {
-    for (auto& serverConnections : m_ManagedConnections) {
+    for (auto& serverConnections : m_GameSeekers) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsUDPTunnel()) {
@@ -1547,7 +1547,7 @@ CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
   uint16_t assignedPort = gameServer->GetPort();
   m_GameServers[assignedPort] = gameServer;
   m_IncomingConnections[assignedPort] = vector<CConnection*>();
-  m_ManagedConnections[assignedPort] = vector<CGameSeeker*>();
+  m_GameSeekers[assignedPort] = vector<CGameSeeker*>();
 
   Print("[TCP] " + name + " listening on port " + to_string(assignedPort));
   return gameServer;
@@ -1645,7 +1645,7 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
   CStreamIOSocket* socket = connection->GetSocket();
   if (!socket) return;
   CGameSeeker* seeker = new CGameSeeker(connection, nType);
-  m_ManagedConnections[seeker->GetPort()].push_back(seeker);
+  m_GameSeekers[seeker->GetPort()].push_back(seeker);
   connection->SetSocket(nullptr);
   seeker->Init();
 }
@@ -1663,7 +1663,7 @@ void CNet::GracefulExit()
     }
   }
 
-  for (auto& serverConnections : m_ManagedConnections) {
+  for (auto& serverConnections : m_GameSeekers) {
     for (auto& connection : serverConnections.second) {
       connection->SetType(INCON_TYPE_KICKED_PLAYER);
       connection->SetTimeout(2000);

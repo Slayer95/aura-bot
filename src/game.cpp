@@ -3866,7 +3866,7 @@ void CGame::SendGameDiscoveryRefresh() const
 
   // Send to active VLAN connections
   if (m_Aura->m_Net.m_Config.m_VLANEnabled) {
-    for (auto& serverConnections : m_Aura->m_Net.m_ManagedConnections) {
+    for (auto& serverConnections : m_Aura->m_Net.m_GameSeekers) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsVLAN() && connection->HasGameVersion() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
@@ -3898,7 +3898,7 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 
   // Send to active UDP in TCP tunnels and VLAN connections
   if (m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP || m_Aura->m_Net.m_Config.m_VLANEnabled) {
-    for (auto& serverConnections : m_Aura->m_Net.m_ManagedConnections) {
+    for (auto& serverConnections : m_Aura->m_Net.m_GameSeekers) {
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsUDPTunnel()) {
