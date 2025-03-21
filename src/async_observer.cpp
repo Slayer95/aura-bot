@@ -194,6 +194,11 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               }
 
               delete MapSize;
+
+              if (!m_Socket->GetConnected()) {
+                Abort = true;
+              }
+
               break;
             }
 
