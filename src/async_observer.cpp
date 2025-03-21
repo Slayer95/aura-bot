@@ -60,11 +60,15 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t n
     m_DownloadStarted(false),
     m_DownloadFinished(false),
     m_FinishedDownloadingTime(0),
+    m_StartedLoading(false),
+    m_StartedLoadingTicks(0),
     m_FinishedLoading(false),
     m_FinishedLoadingTicks(0),
-    m_LastFrameTicks(0),
+    m_PlaybackEnded(false),
+    m_LastPingTime(0),
     m_Name(nName)
 {
+  m_Socket->SetLogErrors(true);
 }
 
 CAsyncObserver::~CAsyncObserver()
@@ -130,7 +134,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
 
       switch (Bytes[0]) {
-        case GameProtocol::Magic::W3GS_HEADER:
+        case GameProtocol::Magic::W3GS_HEADER: {
           switch (Bytes[1]) {
             case GameProtocol::Magic::LEAVEGAME: {
               if (ValidateLength(Data) && Data.size() >= 8) {
@@ -146,7 +150,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
             case GameProtocol::Magic::GAMELOADED_SELF: {
               if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
-                if (!m_FinishedLoading) {
+                if (m_StartedLoading && !m_FinishedLoading) {
                   m_FinishedLoading      = true;
                   m_FinishedLoadingTicks = GetTicks();
                   EventGameLoaded();
@@ -200,7 +204,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
           }
           break;
-
+        }
 
         case GPSProtocol::Magic::GPS_HEADER: {
           // GProxy unsupported for observers
@@ -234,37 +238,65 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
   // At this point, m_Socket may have been transferred to GameUser::CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
+    if (m_DeleteMe) {
+      Print("ASYNC_OBSERVER_DESTROY L246");
+    } else {
+      Print("ASYNC_OBSERVER_DESTROY L248");
+      if (!m_Socket->GetConnected()) Print("ASYNC_OBSERVER_DESTROY L249");
+      if (m_Socket->HasError()) Print("ASYNC_OBSERVER_DESTROY L250");
+      if (m_Socket->HasFin()) Print("ASYNC_OBSERVER_DESTROY L251");
+    }
     return ASYNC_OBSERVER_DESTROY;
   }
 
   SendUpdates(send_fd);
+
+  if (!m_PlaybackEnded && !m_Game && m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
+    m_PlaybackEnded = true;
+    Print("[CAsyncObserver] Sent entire game to [" + GetName() + "]");
+    if (!m_TimeoutTicks.has_value()) {
+      SetTimeout(3000);
+    }
+  }
 
   return result;
 }
 
 void CAsyncObserver::SendUpdates(fd_set* send_fd)
 {
-  size_t pendingUpdates = 1;
-  if (m_LastFrameTicks.has_value()) {
-    pendingUpdates = static_cast<size_t>((int64_t)(m_FrameRate) * (GetTicks() - m_LastFrameTicks.value()) / (int64_t)(m_GameHistory->GetLatency()));
-  }
+  int64_t Time = GetTime();
+  if (m_FinishedLoading) {
+    int64_t prevTicks = m_LastFrameTicks.has_value() ? m_LastFrameTicks.value() : m_FinishedLoadingTicks;
+    const size_t totalPendingUpdates = static_cast<size_t>((int64_t)(m_FrameRate) * (GetTicks() - prevTicks) / (int64_t)(m_GameHistory->GetLatency()));
+    size_t pendingUpdates = totalPendingUpdates;
 
-  bool anyUpdated = false;
-  if (pendingUpdates >= 1) {
-    auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
-    auto itEnd = end(m_GameHistory->m_PlayingBuffer);
-    while (it != itEnd) {
-      anyUpdated = true;
-      ++m_Offset;
-      Send(it->GetBytes());
-      if (it->GetType() == GAME_FRAME_TYPE_ACTIONS && (--pendingUpdates == 0)) {
-        break;
+    bool anyUpdated = false;
+    if (pendingUpdates >= 1) {
+      auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
+      auto itEnd = end(m_GameHistory->m_PlayingBuffer);
+      while (it != itEnd) {
+        anyUpdated = true;
+        ++m_Offset;
+        if (it->GetType() == GAME_FRAME_TYPE_GPROXY) {
+          Send(GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GameHistory->GetGProxyEmptyActions()));
+        } else {
+          Send(it->GetBytes());
+        }
+        if (it->GetType() == GAME_FRAME_TYPE_ACTIONS && (--pendingUpdates == 0)) {
+          break;
+        }
+        ++it;
       }
+    }
+
+    if (anyUpdated) {
+      m_LastFrameTicks = GetTicks();
     }
   }
 
-  if (anyUpdated) {
-    m_LastFrameTicks = GetTicks();
+  if (Time - m_LastPingTime >= 5) {
+    Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
+    m_LastPingTime = Time;
   }
 
   m_Socket->DoSend(send_fd);
@@ -322,8 +354,17 @@ void CAsyncObserver::OnDesync()
   m_Aura->LogPersistent(text);
 }
 
+void CAsyncObserver::EventMapReady()
+{
+  if (m_StartedLoading) return;
+  Send(GameProtocol::SEND_W3GS_COUNTDOWN_START());
+  Send(GameProtocol::SEND_W3GS_COUNTDOWN_END());
+  m_StartedLoading = true;
+}
+
 void CAsyncObserver::EventGameLoaded()
 {
+  Print("Observer [" + GetName() + "] finished loading");
   Send(m_GameHistory->m_LoadingRealBuffer);
   Send(m_GameHistory->m_LoadingVirtualBuffer);
 }
@@ -333,7 +374,7 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
   if (!CloseConnection()) {
     return;
   }
-  Print("Observer [" + GetName() + "] left voluntarily");
+  Print("Observer [" + GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
   SetDeleteMe(true);
 }
 

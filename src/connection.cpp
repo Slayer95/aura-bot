@@ -131,13 +131,15 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               break;
             }
             DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
-            CGame* targetLobby = m_Aura->GetLobbyByHostCounter(joinRequest->GetHostCounter());
+            CGame* targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
             if (!targetLobby) {
+              delete joinRequest;
               break;
             }
             if (targetLobby->GetIsMirror() || targetLobby->GetHostPort() != m_Port) {
               DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
               Abort = true;
+              delete joinRequest;
               break;
             }
             joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
@@ -151,6 +153,7 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               m_Type = INCON_TYPE_OBSERVER;
             }
             Abort = true;
+            delete joinRequest;
           } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
             if (Length > 1024) {
               Abort = true;

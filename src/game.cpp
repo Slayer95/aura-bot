@@ -1243,7 +1243,7 @@ void CGame::UpdateJoinable()
   if (m_LastRefreshTime + 3 <= Time) {
     // send a game refresh packet to each battle.net connection
 
-    if (m_DisplayMode == GAME_PUBLIC && HasSlotsOpen()) {
+    if (m_DisplayMode == GAME_PUBLIC && (HasSlotsOpen() || m_JoinInProgressVirtualUser.has_value()) && GetIsLobbyStrict()) {
       for (auto& realm : m_Aura->m_Realms) {
         if (!realm->GetLoggedIn()) {
           continue;
@@ -1321,11 +1321,11 @@ void CGame::UpdateJoinable()
         // in addition to this, the throughput is limited by the configuration value bot_maxdownloadspeed
         // in summary: the actual throughput is MIN( 1.4 * 1000 / ping, 1400, bot_maxdownloadspeed ) in KB/sec assuming only one user is downloading the map
 
-        const uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+        const uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
         if (user->GetLastMapPartSentOffsetEnd() == 0 && (
             user->GetLastMapPartSentOffsetEnd() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
-            user->GetLastMapPartSentOffsetEnd() < MapSize
+            user->GetLastMapPartSentOffsetEnd() < mapSize
           )
         ) {
           // overwrite the "started download ticks" since this is the first time we've sent any map data to the user
@@ -1335,7 +1335,7 @@ void CGame::UpdateJoinable()
         }
         while (
           user->GetLastMapPartSentOffsetEnd() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
-          user->GetLastMapPartSentOffsetEnd() < MapSize &&
+          user->GetLastMapPartSentOffsetEnd() < mapSize &&
           !mapIsInvalid
         ) {
           if (m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024) {
@@ -1366,7 +1366,7 @@ void CGame::UpdateJoinable()
             user->GetLastMapPartCRC32()
           ));
 
-          bool fullySent = user->GetLastMapPartSentOffsetEnd() == MapSize;
+          bool fullySent = user->GetLastMapPartSentOffsetEnd() == mapSize;
           m_DownloadCounter += chunkSendSize;
           Send(user, packet);
           if (fullySent && user->GetLastMapPartCRC32() != ByteArrayToUInt32(m_Map->GetMapCRC32(), false)) {
@@ -3876,7 +3876,7 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 
   if (!m_Aura->m_Net.SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(AF_INET)))) {
     // Ensure the game is available at loopback.
-    DLOG_APP_IF(LOG_LEVEL_TRACE2, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
     m_Aura->m_Net.SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
   }
 
@@ -4483,7 +4483,13 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
     }
   }
   LogRemote("[" + user->GetExtendedName() + "] " + user->GetLeftReason());
-  SendAll(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode()));
+
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode());
+  SendAll(packet);
+  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
+  }
+
   user->SetLeftMessageSent(true);
   user->SetStatus(USERSTATUS_ENDED);
 }
@@ -4511,6 +4517,10 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     if (p1->GetGProxyAny()) {
       // Let GProxy know that it should give up at reconnecting.
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
+    }
+    if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+      vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT);
+      m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
     }
     p1->CloseConnection();
     p1->SetStatus(USERSTATUS_ENDED);
@@ -4740,22 +4750,27 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
 
-  Send(observer, GameProtocol::SEND_W3GS_SLOTINFOJOIN(observer->GetUID(), connection->GetSocket()->GetPortLE(), connection->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+  Send(observer, GameProtocol::SEND_W3GS_SLOTINFOJOIN(observer->GetUID(), observer->GetSocket()->GetPortLE(), observer->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
   SendFakeUsersInfo(observer);
   SendJoinedPlayersInfo(observer);
   SendMapAndVersionCheck(observer, gameVersion);
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
-  string notice = "Simulating join and start for user [" + joinRequest->GetName() + "]";
-  SendAsChat(connection, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(GetHostUID(), CreateByteArray(observer->GetUID()), 16, vector<uint8_t>(), notice));
+  string notice = "Simulating join for user [" + joinRequest->GetName() + "] (" + observer->GetIPString() + ")";
+  SendAsChat(observer, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(GetHostUID(), CreateByteArray(observer->GetUID()), 16, vector<uint8_t>(), notice));
   LOG_APP_IF(LOG_LEVEL_NOTICE, notice)
-
-  Send(observer, GameProtocol::SEND_W3GS_COUNTDOWN_START());
-  Send(observer, GameProtocol::SEND_W3GS_COUNTDOWN_END());
 }
 
 void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapSize* mapSize)
 {
+  const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != expectedMapSize) {
+    LOG_APP_IF(LOG_LEVEL_NOTICE, "Observer [" + user->GetName() + "] does not have the map.")
+    user->CloseConnection();
+    user->SetDeleteMe(true);
+  } else {
+    user->EventMapReady();
+  }
 }
 
 bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAddress) const
@@ -5692,16 +5707,16 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
   }
 
   int64_t Time = GetTime();
-  uint32_t MapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
 
   CRealm* JoinedRealm = user->GetRealm(false);
   uint32_t MaxUploadSize = m_Aura->m_Net.m_Config.m_MaxUploadSize;
   if (JoinedRealm)
     MaxUploadSize = JoinedRealm->GetMaxUploadSize();
 
-  if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != MapSize) {
+  if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != expectedMapSize) {
     // the user doesn't have the map
-    bool IsMapTooLarge = MapSize > MaxUploadSize * 1024;
+    bool IsMapTooLarge = expectedMapSize > MaxUploadSize * 1024;
     bool ShouldTransferMap = (
       m_Map->GetMapFileIsValid() && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
       (user->GetDownloadAllowed() || (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
@@ -5750,7 +5765,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
   } else if (user->GetDownloadStarted()) {
     // calculate download rate
     const double Seconds = static_cast<double>(GetTicks() - user->GetStartedDownloadingTicks()) / 1000.f;
-    //const double Rate    = static_cast<double>(MapSize) / 1024.f / Seconds;
+    //const double Rate    = static_cast<double>(expectedMapSize) / 1024.f / Seconds;
     LOG_APP_IF(LOG_LEVEL_DEBUG, "map download finished for user [" + user->GetName() + "] in " + ToFormattedString(Seconds) + " seconds")
     SendAllChat("Player [" + user->GetDisplayName() + "] downloaded the map in " + ToFormattedString(Seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
     user->SetDownloadFinished(true);
@@ -5760,7 +5775,7 @@ bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSiz
     EventUserMapReady(user);
   }
 
-  uint8_t NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / MapSize * 100.f);
+  uint8_t NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / expectedMapSize * 100.f);
   if (NewDownloadStatus > 100) {
     NewDownloadStatus = 100;
   }
@@ -5972,7 +5987,7 @@ void CGame::EventGameStartedLoading()
         virtualHostIsObserver = true;
       }
     } else {
-      if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() > 0 && GetNumFakeObservers() == 0) {
+      if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && (m_Config.m_EnableJoinObserversInProgress || (GetNumJoinedObservers() > 0 && GetNumFakeObservers() == 0))) {
         if (CreateFakeObserver(true)) {
           ++m_JoinedVirtualHosts;
           virtualHostIsObserver = true;
@@ -6148,8 +6163,10 @@ void CGame::EventGameStartedLoading()
     SetEveryoneLagging();
   }
 
-  // and finally reenter battle.net chat
-  AnnounceDecreateToRealms();
+  if (!m_Config.m_EnableJoinObserversInProgress && !m_Config.m_EnableJoinPlayersInProgress) {
+    // and finally reenter battle.net chat
+    AnnounceDecreateToRealms();
+  }
 
   ClearBannableUsers();
   UpdateBannableUsers();
@@ -6413,6 +6430,7 @@ void CGame::EventGameLoaded()
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
     m_GameHistory->SetLatency(GetLatency());
+    m_GameHistory->SetGProxyEmptyActions(m_GProxyEmptyActions);
   } else {
     // These buffers serve no purpose anymore.
     m_GameHistory->m_LoadingRealBuffer = vector<uint8_t>();

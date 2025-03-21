@@ -218,7 +218,6 @@ optional<Version> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
 
 bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, const filesystem::path& war3Path, const string& valueStringFormula, const string& mpqFileName)
 {
-  Print("ExtractEXEFeatures()");
   if (war3Path.empty()) {
     return false;
   }

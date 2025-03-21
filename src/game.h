@@ -143,11 +143,21 @@ struct GameFrame
 
   inline uint8_t                     GetType() const { return m_Type; }
   inline const std::vector<uint8_t>& GetBytes() const { return m_Bytes; }
+  inline std::string GetTypeName() {
+    switch (m_Type) {
+      case GAME_FRAME_TYPE_ACTIONS: return "actions";
+      case GAME_FRAME_TYPE_LEAVER: return "leaver";
+      case GAME_FRAME_TYPE_CHAT: return "chat";
+      case GAME_FRAME_TYPE_GPROXY: return "gproxy";
+      default: return "unknown";
+    }
+  };
 };
 
 struct GameHistory
 {
   bool                                                   m_Desynchronized;
+  uint8_t                                                m_GProxyEmptyActions;
   uint32_t                                               m_Latency;
   std::vector<uint32_t>                                  m_CheckSums;
   std::vector<uint8_t>                                   m_LobbyBuffer;
@@ -158,6 +168,7 @@ struct GameHistory
 
   GameHistory()
    : m_Desynchronized(false),
+     m_GProxyEmptyActions(0),
      m_Latency(0)
   {};
 
@@ -170,6 +181,8 @@ struct GameHistory
   inline bool GetDesynchronized() { return m_Desynchronized; }
   void SetLatency(const uint32_t nLatency) { m_Latency = nLatency; }
   inline uint32_t GetLatency() { return m_Latency; }
+  void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
+  inline uint32_t GetGProxyEmptyActions() { return m_GProxyEmptyActions; }
 };
 
 class CGame

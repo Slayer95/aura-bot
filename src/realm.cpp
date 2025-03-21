@@ -138,12 +138,7 @@ CRealm::~CRealm()
     }
   }
 
-  for (auto& lobby: m_Aura->m_Lobbies) {
-    if (lobby->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
-      lobby->RemoveCreator();
-    }
-  }
-  for (auto& game : m_Aura->m_StartedGames) {
+  for (auto& game : m_Aura->GetAllGames()) {
     if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
       game->RemoveCreator();
     }

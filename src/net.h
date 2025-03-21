@@ -201,7 +201,8 @@ public:
   void                                   RegisterGameSeeker(CConnection* connection, uint8_t nType);
   void                                   OnGameReset(const CGame* nGame);
   void                                   GracefulExit();
-  bool                                   CheckGracefulExit();
+  bool                                   CheckGracefulExit() const;
+  bool                                   GetIsStandby() const;
 
   [[nodiscard]] bool                                   IsIgnoredDatagramSource(std::string sourceIp);
   [[nodiscard]] bool                                   GetIsFetchingIPAddresses() const { return m_IPAddressFetchInProgress; }

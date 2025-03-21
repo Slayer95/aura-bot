@@ -642,6 +642,7 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
       if ((*i)->GetSocket()) {
         (*i)->GetSocket()->DoSend(send_fd); // flush the socket
       }
+      Print("[NET] Destroying CAsyncObserver [" + (*i)->GetName() + "]");
       delete *i;
       i = serverConnections.second.erase(i);
     }
@@ -889,17 +890,17 @@ void CNet::HandleUDP(UDPPkt* pkt)
 
   DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
 
-  for (const auto& lobby : m_Aura->m_Lobbies) {
-    if (!lobby->GetUDPEnabled() || !lobby->GetIsStageAcceptingJoins()) {
+  for (const auto& game : m_Aura->GetJoinableGames()) {
+    if (!game->GetUDPEnabled() || !game->GetIsStageAcceptingJoins()) {
       continue;
     }
-    if (pkt->buf[8] == 0 || lobby->GetIsSupportedGameVersion(requestVersion)) {
+    if (pkt->buf[8] == 0 || game->GetIsSupportedGameVersion(requestVersion)) {
       DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
-      lobby->ReplySearch(pkt->sender, pkt->socket, requestVersion);
+      game->ReplySearch(pkt->sender, pkt->socket, requestVersion);
 
       // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.
       if (remotePort != m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
-        lobby->AnnounceToAddress(ipAddress, requestVersion);
+        game->AnnounceToAddress(ipAddress, requestVersion);
       }
     }
   }
@@ -1805,27 +1806,40 @@ void CNet::GracefulExit()
   }  
 }
 
-bool CNet::CheckGracefulExit()
+bool CNet::CheckGracefulExit() const
 {
-  for (auto& serverConnections : m_IncomingConnections) {
+  for (const auto& serverConnections : m_IncomingConnections) {
     if (!serverConnections.second.empty()) {
       return false;
     }
   }
-  for (auto& serverConnections : m_GameSeekers) {
+
+  for (const auto& serverConnections : m_GameSeekers) {
     if (!serverConnections.second.empty()) {
       return false;
     }
   }
-  for (auto& serverConnections : m_GameObservers) {
-    if (!serverConnections.second.empty()) {
-      return false;
-    }
-  }
+
+  // m_GameObservers are already checked in GetIsStandby()
+
   if (!m_DownGradedConnections.empty()) {
     return false;
   }
+
   return true;  
+}
+
+bool CNet::GetIsStandby() const
+{
+  if (m_HealthCheckInProgress) return false;
+
+  for (const auto& serverConnections : m_GameObservers) {
+    if (!serverConnections.second.empty()) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 CNet::~CNet()

@@ -134,8 +134,8 @@ uint8_t CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               Abort = true;
               break;
             }
-            CGame* targetLobby = m_Aura->GetLobbyByHostCounter(joinRequest->GetHostCounter());
-            if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || targetLobby->GetExiting()) {
+            CGame* targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
+            if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || (targetLobby->GetIsLobbyStrict() && targetLobby->GetExiting())) {
               delete joinRequest;
               break;
             }
@@ -172,14 +172,9 @@ uint8_t CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             CIncomingVLanSearchGame vlanSearch = VLANProtocol::RECEIVE_VLAN_SEARCHGAME(Data);
             if (vlanSearch.isValid) {
               m_GameVersion = GAMEVER(1, vlanSearch.gameVersion);
-              for (const auto& lobby : m_Aura->m_Lobbies) {
-                if (!lobby->GetIsMirror() && lobby->GetIsStageAcceptingJoins()) {
-                  lobby->SendGameDiscoveryInfoVLAN(this);
-                }
-              }
-              for (const auto& joinableGame : m_Aura->m_JoinInProgressGames) {
-                if (!joinableGame->GetIsMirror() && joinableGame->GetIsStageAcceptingJoins()) {
-                  joinableGame->SendGameDiscoveryInfoVLAN(this);
+              for (const auto& game : m_Aura->GetJoinableGames()) {
+                if (!game->GetIsMirror() && game->GetIsStageAcceptingJoins()) {
+                  game->SendGameDiscoveryInfoVLAN(this);
                 }
               }
             }

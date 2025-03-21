@@ -237,8 +237,9 @@ constexpr uint8_t MAP_ALLOW_LUA_AUTO = 2u;
 #define BUFFERING_ENABLED_ALL 15u
 
 constexpr uint8_t GAME_FRAME_TYPE_ACTIONS = 0u;
-constexpr uint8_t GAME_FRAME_TYPE_CHAT = 1u;
-constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 2u;
+constexpr uint8_t GAME_FRAME_TYPE_LEAVER = 1u;
+constexpr uint8_t GAME_FRAME_TYPE_CHAT = 2u;
+constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 3u;
 
 // game_slot.h
 

@@ -6913,11 +6913,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       vector<string> currentGames;
-      for (const auto& game : m_Aura->m_Lobbies) {
-        currentGames.push_back(string("Lobby#")+ to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
-      }
-      for (const auto& game : m_Aura->m_StartedGames) {
-        currentGames.push_back(string("Game#") + to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
+      for (const auto& game : m_Aura->GetAllGames()) {
+        if (game->GetIsLobbyStrict()) {
+          currentGames.push_back(string("Lobby#")+ to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
+        } else {
+          currentGames.push_back(string("Game#") + to_string(game->GetGameID()) + ": " + game->GetStatusDescription());
+        }
       }
       if (currentGames.empty()) {
         SendReply("No games hosted.");

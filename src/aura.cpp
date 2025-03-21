@@ -820,13 +820,7 @@ CAura::~CAura()
     delete realm;
   }
 
-  for (const auto& lobby : m_LobbiesPending) {
-    delete lobby;
-  }
-  for (const auto& lobby : m_Lobbies) {
-    delete lobby;
-  }
-  for (const auto& game : m_StartedGames) {
+  for (const auto& game : GetAllGames()) {
     delete game;
   }
 
@@ -861,17 +855,6 @@ CGame* CAura::GetMostRecentLobbyFromCreator(const string& fromName) const
   return nullptr;
 }
 
-CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
-{
-  hostCounter = hostCounter & 0x00FFFFFF;
-  for (const auto& lobby : m_Lobbies) {
-    if (lobby->GetHostCounter() == hostCounter) {
-      return lobby;
-    }
-  }
-  return nullptr;
-}
-
 CGame* CAura::GetLobbyByHostCounterExact(uint32_t hostCounter) const
 {
   for (const auto& lobby : m_Lobbies) {
@@ -882,14 +865,29 @@ CGame* CAura::GetLobbyByHostCounterExact(uint32_t hostCounter) const
   return nullptr;
 }
 
-CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
+CGame* CAura::GetLobbyOrObservableByHostCounterExact(uint32_t hostCounter) const
 {
-  for (const auto& lobby : m_Lobbies) {
-    if (lobby->GetGameID() == gameIdentifier) {
-      return lobby;
+  for (const auto& game : GetJoinableGames()) {
+    if (game->GetHostCounter() == hostCounter) {
+      return game;
     }
   }
-  for (const auto& game : m_StartedGames) {
+  return nullptr;
+}
+
+CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
+{
+  return GetLobbyByHostCounterExact(hostCounter & 0x00FFFFFF);
+}
+
+CGame* CAura::GetLobbyOrObservableByHostCounter(uint32_t hostCounter) const
+{
+  return GetLobbyOrObservableByHostCounterExact(hostCounter & 0x00FFFFFF);
+}
+
+CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
+{
+  for (const auto& game : GetAllGames()) {
     if (game->GetGameID() == gameIdentifier) {
       return game;
     }
@@ -982,6 +980,25 @@ uint8_t CAura::FindServiceFromHostName(const string& hostName, void*& location) 
     }
   }
   return SERVICE_TYPE_INVALID;
+}
+
+vector<CGame*> CAura::GetAllGames() const
+{
+  vector<CGame*> joinables;
+  joinables.reserve(m_Lobbies.size() + m_StartedGames.size() + m_LobbiesPending.size());
+  joinables.insert(joinables.end(), m_Lobbies.begin(), m_Lobbies.end());
+  joinables.insert(joinables.end(), m_StartedGames.begin(), m_StartedGames.end());
+  joinables.insert(joinables.end(), m_LobbiesPending.begin(), m_LobbiesPending.end());
+  return joinables;
+}
+
+vector<CGame*> CAura::GetJoinableGames() const
+{
+  vector<CGame*> joinables;
+  joinables.reserve(m_Lobbies.size() + m_JoinInProgressGames.size());
+  joinables.insert(joinables.end(), m_Lobbies.begin(), m_Lobbies.end());
+  joinables.insert(joinables.end(), m_JoinInProgressGames.begin(), m_JoinInProgressGames.end());
+  return joinables;
 }
 
 uint8_t CAura::HandleAction(const AppAction& action)
@@ -1089,7 +1106,7 @@ bool CAura::Update()
 
   bool isStandby = (
     m_Lobbies.empty() && m_StartedGames.empty() &&
-    !m_Net.m_HealthCheckInProgress &&
+    m_Net.GetIsStandby() &&
     !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
     m_PendingActions.empty() &&
     !m_AutoRehostGameSetup

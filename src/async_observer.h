@@ -58,10 +58,14 @@ public:
   bool                                                          m_DownloadFinished;
   int64_t                                                       m_FinishedDownloadingTime;
 
+  bool                                                          m_StartedLoading;
+  int64_t                                                       m_StartedLoadingTicks;
   bool                                                          m_FinishedLoading;
   int64_t                                                       m_FinishedLoadingTicks;
 
+  bool                                                          m_PlaybackEnded;
   std::optional<int64_t>                                        m_LastFrameTicks;
+  int64_t                                                       m_LastPingTime;
 
   std::string                                                   m_Name;
 
@@ -84,6 +88,7 @@ public:
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();
   void OnDesync();
+  void EventMapReady();
   void EventGameLoaded();
   void EventLeft(const uint32_t clientReason);
   void EventProtocolError();

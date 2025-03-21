@@ -152,6 +152,8 @@ public:
   [[nodiscard]] CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
   [[nodiscard]] CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
   [[nodiscard]] CGame* GetLobbyByHostCounterExact(uint32_t hostCounter) const;
+  [[nodiscard]] CGame* GetLobbyOrObservableByHostCounter(uint32_t hostCounter) const;
+  [[nodiscard]] CGame* GetLobbyOrObservableByHostCounterExact(uint32_t hostCounter) const;
   [[nodiscard]] CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
   [[nodiscard]] CGame* GetGameByString(const std::string& targetGame) const;
 
@@ -159,6 +161,9 @@ public:
   [[nodiscard]] CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   [[nodiscard]] CRealm* GetRealmByHostName(const std::string& hostName) const;
   [[nodiscard]] uint8_t FindServiceFromHostName(const std::string& hostName, void*& location) const;
+
+  [[nodiscard]] std::vector<CGame*> GetAllGames() const;
+  [[nodiscard]] std::vector<CGame*> GetJoinableGames() const;
 
   [[nodiscard]] bool MergePendingLobbies();
   void TrackGameJoinInProgress(CGame* game);
