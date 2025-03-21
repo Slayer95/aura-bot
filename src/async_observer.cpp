@@ -342,14 +342,14 @@ void CAsyncObserver::CheckClientGameState()
     uint32_t nextCheckSum = m_CheckSums.front();
     if (nextCheckSum != m_GameHistory->GetCheckSum(nextCheckSumIndex)) {
       m_Desynchronized = true; // how? idfk
-      OnDesync();
+      EventDesync();
     }
     ++nextCheckSumIndex;
     m_CheckSums.pop();
   }
 }
 
-void CAsyncObserver::OnDesync()
+void CAsyncObserver::EventDesync()
 {
   while (!m_CheckSums.empty()) {
     m_CheckSums.pop();
@@ -360,6 +360,13 @@ void CAsyncObserver::OnDesync()
 }
 
 void CAsyncObserver::EventMapReady()
+{
+  m_MapReady = true;
+
+  StartLoading();
+}
+
+void CAsyncObserver::StartLoading()
 {
   if (m_StartedLoading) return;
   Send(GameProtocol::SEND_W3GS_COUNTDOWN_START());

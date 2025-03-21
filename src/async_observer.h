@@ -87,8 +87,9 @@ public:
   void OnGameReset(const CGame* nGame);
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();
-  void OnDesync();
+  void EventDesync();
   void EventMapReady();
+  void StartLoading();
   void EventGameLoaded();
   void EventLeft(const uint32_t clientReason);
   void EventProtocolError();
