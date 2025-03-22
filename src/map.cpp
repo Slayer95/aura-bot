@@ -92,8 +92,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     //m_MapLoadingImageSize(0),
     m_MapMPQ(nullptr),
     m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
-    m_JASSValid(false),
-    m_HMCMode(W3HMC_MODE_DISABLED)
+    m_JASSValid(false)
 {
   m_MapSize.fill(0);
   m_MapWidth.fill(0);
@@ -1558,6 +1557,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   // Maps supporting observer slots enable them by default.
+  m_MapCustomizableObserverTeam = m_MapVersionMaxSlots + 1;
   if (m_Slots.size() + m_MapNumDisabled < m_MapVersionMaxSlots) {
     SetMapObservers(MAPOBS_ALLOWED);
   }
@@ -2121,19 +2121,110 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_MapURL = CFG.GetString("map.meta.url");
 
   m_MapType = CFG.GetString("map.type");
-  m_MapMetaDataEnabled = CFG.GetBool("map.meta_data.enabled", m_MapType == "dota" || m_MapType == "evergreen");
-  m_MapDefaultHCL = CFG.GetString("map.default_hcl");
-  if (!CheckIsValidHCL(m_MapDefaultHCL).empty()) {
-    Print("[MAP] HCL string [" + m_MapDefaultHCL + "] is not valid.");
-    CFG.SetFailed();
+
+  if (m_MapOptions & MAPOPT_CUSTOMFORCES) {
+    m_MapCustomizableObserverTeam = CFG.GetUint8("map.custom_forces.observer_team", m_MapCustomizableObserverTeam);
+    if (m_MapCustomizableObserverTeam != 0 && m_MapNumTeams < m_MapCustomizableObserverTeam  && m_MapCustomizableObserverTeam != m_MapVersionMaxSlots + 1) {
+      Print("[MAP] <map.custom_forces.observer_team> invalid team number");
+      CFG.SetFailed();
+    }
+  }
+
+  // HostBot Command Library (HCL)
+  //
+  // https://gist.github.com/Slayer95/a15fc75f38d0b3fdf356613ede96cf7f
+
+  m_HCL.supported = CFG.GetBool("map.hcl.supported", false);
+  m_HCL.aboutVirtualPlayers = CFG.GetBool("map.hcl.info.virtual_players", false);
+  m_HCL.toggle = CFG.GetStringIndex("map.hcl.toggle", {"disabled", "optional", "required"}, MAP_FEATURE_TOGGLE_DISABLED);
+  m_HCL.defaultValue = ToLowerCase(CFG.GetString("map.hcl.default", 1, m_MapVersionMaxSlots, string()));
+
+  if (m_HCL.aboutVirtualPlayers) {
+    if (!CheckIsValidHCLSmall(m_HCL.defaultValue).empty()) {
+      // short HCL may be a misnomer
+      // the charset is short, which means we need longer strings for the same amount of information
+      Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid virtual HCL (hexadecimal or in -\" \\).");
+      CFG.SetFailed();
+    }
+  } else {
+    if (!CheckIsValidHCLStandard(m_HCL.defaultValue).empty()) {
+      Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid standard HCL (alphanumeric or in -= .,).");
+      CFG.SetFailed();
+    }
+  }
+
+  // Warcraft 3 map metadata (W3MMD)
+  //
+  // https://wc3stats.com/docs/w3mmd
+
+  m_MMD.supported = CFG.GetBool("map.w3mmd.supported", m_MapType == "dota" || m_MapType == "evergreen");
+  m_MMD.enabled = CFG.GetBool("map.w3mmd.enabled", m_MMD.supported);
+  // W3MMD v1 does not support attaching data to computer-controlled players
+  m_MMD.aboutComputers = CFG.GetBool("map.w3mmd.subjects.computers.enabled", m_MapType == "evergreen");
+  // W3MMD v1 has no way of distinguishing virtual from real players, so it expects some frames to be sent by virtual players
+  m_MMD.emitSkipsVirtualPlayers = CFG.GetBool("map.w3mmd.features.virtual_players", false);
+
+  if (m_MMD.enabled) {
+    if (!m_MMD.supported) {
+      Print("[MAP] W3MMD cannot be enabled - map does not support it.");
+      CFG.SetFailed();
+    }
   }
 
   // Host to bot map communication (W3HMC)
-  m_HMCMode = CFG.GetStringIndex("map.w3hmc.mode", {"disabled", "optional", "required"}, W3HMC_MODE_DISABLED);
-  m_HMCTrigger1 = CFG.GetUint8("map.w3hmc.trigger_1", 0);
-  m_HMCTrigger2 = CFG.GetUint8("map.w3hmc.trigger_2", 0);
-  m_HMCSlot = CFG.GetUint8("map.w3hmc.slot", 1);
-  m_HMCPlayerName = CFG.GetString("map.w3hmc.player_name", 1, 15, "[HMC]Aura");
+  //
+  // https://github.com/cipherxof/th-ghost/wiki/1.-W3HMC
+  // https://www.hiveworkshop.com/pastebin/41be696537187bb3b209c20dafeb2a81.16058
+
+  m_HMC.supported = CFG.GetBool("map.w3hmc.supported", false);
+  m_HMC.toggle = CFG.GetStringIndex("map.w3hmc.toggle", {"disabled", "optional", "required"}, MAP_FEATURE_TOGGLE_DISABLED);
+  m_HMC.trigger = CFG.GetUint16("map.w3hmc.trigger", 0);
+  m_HMC.slot = CFG.GetSlot("map.w3hmc.slot", 0xFF); // cannot be observer
+  m_HMC.playerName = CFG.GetString("map.w3hmc.player_name", 1, 15, "[HMC]Aura");
+  m_HMC.fileName = CFG.GetString("map.w3hmc.file_name", 1, 15, "W3HMC");
+  m_HMC.secret = CFG.GetString("map.w3hmc.secret", 1, 15, string());
+
+  if (m_HMC.toggle != MAP_FEATURE_TOGGLE_DISABLED) {
+    if (!m_HMC.supported) {
+      Print("[MAP] W3HMC cannot be enabled - map does not support it.");
+      CFG.SetFailed();
+    } else if (m_HMC.slot == 0xFF || m_MapVersionMaxSlots <= m_HMC.slot) {
+      // We want a slot specified even if custom forces is not set,
+      // in order to solve conflicts with other virtual-player systems.
+      Print("[MAP] <map.w3hmc.slot> is not properly configured.");
+      CFG.SetFailed();
+    } else if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && (m_Slots.size() <= m_HMC.slot || m_Slots[m_HMC.slot].GetTeam() == m_MapVersionMaxSlots)) {
+      Print("[MAP] <map.w3hmc.slot> cannot use an observer slot.");
+      CFG.SetFailed();
+    }
+  }
+
+  // AHCL
+  //
+  // http://web.archive.org/web/20230204221729/https://community.w3gh.ru/threads/%D0%9F%D1%80%D0%BE%D0%B4%D0%B2%D0%B8%D0%BD%D1%83%D1%82%D1%8B%D0%B9-hcl-beta.6241/
+
+  m_AHCL.supported = CFG.GetBool("map.ahcl.supported", false);
+  m_AHCL.toggle = CFG.GetStringIndex("map.ahcl.toggle", {"disabled", "optional", "required"}, MAP_FEATURE_TOGGLE_DISABLED);
+  m_AHCL.slot = CFG.GetSlot("map.ahcl.slot", 0xFF); // cannot be observer
+  m_AHCL.playerName = CFG.GetString("map.ahcl.player_name", 1, 15, "HostBot");
+  m_AHCL.fileName = CFG.GetString("map.ahcl.file_name", 1, 15, "Asuna.Dat");
+  m_AHCL.mission = CFG.GetString("map.ahcl.mission", 1, 15, "HostBot");
+  m_AHCL.charset = CFG.GetString("map.ahcl.charset");
+
+  if (m_AHCL.toggle != MAP_FEATURE_TOGGLE_DISABLED) {
+    if (!m_AHCL.supported) {
+      Print("[MAP] AHCL cannot be enabled - map does not support it.");
+      CFG.SetFailed();
+    } else if (m_AHCL.slot == 0xFF || m_MapVersionMaxSlots <= m_AHCL.slot) {
+      // We want a slot specified even if custom forces is not set,
+      // in order to solve conflicts with other virtual-player systems.
+      Print("[MAP] <map.ahcl.slot> is not properly configured.");
+      CFG.SetFailed();
+    } else if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && (m_Slots.size() <= m_AHCL.slot || m_Slots[m_AHCL.slot].GetTeam() == m_MapVersionMaxSlots)) {
+      Print("[MAP] <map.ahcl.slot> cannot use an observer slot.");
+      CFG.SetFailed();
+    }
+  }
 
   CFG.SetStrictMode(wasStrict);
 }

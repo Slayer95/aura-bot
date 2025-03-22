@@ -55,8 +55,10 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t n
     m_Goal(ASYNC_OBSERVER_GOAL_OBSERVER),
     m_UID(nUID),
     m_SID(nGame->GetSIDFromUID(nUID)),
+    m_Color(nGame->GetColorFromUID(nUID)),
     m_FrameRate(1),
     m_SyncCounter(0),
+    m_ActionFrameCounter(0),
     m_DownloadStarted(false),
     m_DownloadFinished(false),
     m_FinishedDownloadingTime(0),
@@ -272,8 +274,11 @@ void CAsyncObserver::SendUpdates(fd_set* send_fd)
   int64_t Time = GetTime();
   if (m_FinishedLoading) {
     int64_t prevTicks = m_LastFrameTicks.has_value() ? m_LastFrameTicks.value() : m_FinishedLoadingTicks;
-    const size_t totalPendingUpdates = static_cast<size_t>((int64_t)(m_FrameRate) * (GetTicks() - prevTicks) / (int64_t)(m_GameHistory->GetLatency()));
-    size_t pendingUpdates = totalPendingUpdates;
+    size_t pendingUpdates = static_cast<size_t>((int64_t)(m_FrameRate) * (GetTicks() - prevTicks) / (int64_t)(m_GameHistory->GetLatency()));
+    if (m_GameHistory->GetNumActionFrames() < m_ActionFrameCounter + pendingUpdates) {
+      // We probably need to count GProxy frames as if they were regular actions in the entire algo.
+      pendingUpdates = m_GameHistory->GetNumActionFrames() - m_ActionFrameCounter;
+    }
 
     bool anyUpdated = false;
     if (pendingUpdates >= 1) {
@@ -287,8 +292,9 @@ void CAsyncObserver::SendUpdates(fd_set* send_fd)
         } else {
           Send(it->GetBytes());
         }
-        if (it->GetType() == GAME_FRAME_TYPE_ACTIONS && (--pendingUpdates == 0)) {
-          break;
+        if (it->GetType() == GAME_FRAME_TYPE_ACTIONS) {
+          ++m_ActionFrameCounter;
+          if (--pendingUpdates == 0) break;
         }
         ++it;
       }
@@ -379,6 +385,21 @@ void CAsyncObserver::EventGameLoaded()
   Print("Observer [" + GetName() + "] finished loading");
   Send(m_GameHistory->m_LoadingRealBuffer);
   Send(m_GameHistory->m_LoadingVirtualBuffer);
+
+  int64_t ss, mm, hh;
+  ss = (GetTicks() - m_GameHistory->GetStartedTicks()) / 1000;
+
+  mm = ss / 60;
+  ss = ss % 60;
+  hh = mm / 60;
+  mm = mm % 60;
+
+  if (m_Game && !m_Game->GetIsGameOver()) {
+    SendChat("Running spectator mode (delay is " + ToDurationString(hh, mm, ss) + ")");
+  } else {
+    SendChat("Watching replay");
+    SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago");
+  }
 }
 
 void CAsyncObserver::EventLeft(const uint32_t clientReason)
@@ -403,6 +424,25 @@ void CAsyncObserver::Send(const std::vector<uint8_t>& data)
 {
   if (m_Socket && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);
+  }
+}
+
+void CAsyncObserver::SendChat(const string& message)
+{
+  if (m_StartedLoading && !m_FinishedLoading) {
+    return;
+  }
+  if (m_StartedLoading) {
+    if (message.size() > 254)
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message.substr(0, 254)));
+    else
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message));
+  } else {
+    uint8_t extraFlags[] = {3 + m_Color, 0, 0, 0};
+    if (message.size() > 127)
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
+    else
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 32, CreateByteArray(extraFlags, 4), message));
   }
 }
 

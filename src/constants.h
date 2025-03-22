@@ -153,9 +153,9 @@ constexpr uint8_t CACHE_REVALIDATION_NEVER = 0;
 constexpr uint8_t CACHE_REVALIDATION_ALWAYS = 1u;
 constexpr uint8_t CACHE_REVALIDATION_MODIFIED = 2u;
 
-constexpr uint8_t W3HMC_MODE_DISABLED = 0u;
-constexpr uint8_t W3HMC_MODE_OPTIONAL = 1u;
-constexpr uint8_t W3HMC_MODE_REQUIRED = 2u;
+constexpr uint8_t MAP_FEATURE_TOGGLE_DISABLED = 0u;
+constexpr uint8_t MAP_FEATURE_TOGGLE_OPTIONAL = 1u;
+constexpr uint8_t MAP_FEATURE_TOGGLE_REQUIRED = 2u;
 
 // Load map fragments in memory max 8 MB at a time.
 constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;
@@ -171,6 +171,11 @@ constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_FS = 2u;
 constexpr uint8_t MAP_ALLOW_LUA_NEVER = 0u;
 constexpr uint8_t MAP_ALLOW_LUA_ALWAYS = 1u;
 constexpr uint8_t MAP_ALLOW_LUA_AUTO = 2u;
+
+constexpr const char* HCL_CHARSET_STANDARD = "abcdefghijklmnopqrstuvwxyz0123456789 -=,."; // 41 characters
+constexpr const char* HCL_CHARSET_SMALL = "0123456789abcdef-\" \\"; // 20 characters
+
+constexpr const char* AHCL_DEFAULT_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ -=,.!?*_+=|:;"; // 142 characters 
 
 // game.h
 #define SLOTS_ALIGNMENT_CHANGED (1 << 0)

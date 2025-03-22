@@ -2281,6 +2281,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }*/
 
+      if (!m_TargetGame->GetMap()->GetHCLEnabled()) {
+        SendReply("Game mode feature (HCL) is disabled.");
+        break;
+      }
+
       if (Payload.empty()) {
         SendReply("Game mode (HCL) is [" + m_TargetGame->m_HCLCommandString + "]");
         break;
@@ -2291,12 +2296,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->GetMap()->GetHCLRequired()) {
+        ErrorReply("Game mode (HCL) cannot be reconfigured.");
+        break;
+      }
+
       if (Payload.size() > m_TargetGame->m_Slots.size()) {
         ErrorReply("Unable to set mode (HCL) because it's too long - it must not exceed the amount of occupied game slots");
         break;
       }
 
-      const string checkResult = CheckIsValidHCL(Payload);
+      const string checkResult = m_TargetGame->CheckIsValidHCL(Payload);
       if (!checkResult.empty()) {
         ErrorReply(checkResult);
         break;
@@ -3998,6 +4008,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
+      if (m_TargetGame->GetMap()->GetHCLRequired()) {
+        ErrorReply("Game mode cannot be reconfigured.");
+        break;
+      }
+
       m_TargetGame->m_HCLCommandString.clear();
       SendAll("Game mode reset");
       break;
@@ -5380,9 +5395,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "fp <ON|OFF>");
         break;
       }
+      if (isToggle && !m_TargetGame->GetIsRestored()) {
+        ErrorReply("Usage: " + cmdToken + "fp");
+        break;
+      }
 
       m_TargetGame->SetAutoVirtualPlayers(inputLower == "enable");
-      if (!isToggle && !m_TargetGame->CreateFakeUser(false)) {
+      if (!isToggle && !m_TargetGame->CreateFakeUser(nullopt)) {
         ErrorReply("Cannot add another virtual user");
       } else if (isToggle) {
         if (m_TargetGame->GetIsAutoVirtualPlayers()) {
@@ -5450,7 +5469,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool Success = false;
-      while (m_TargetGame->CreateFakeUser(false)) {
+      while (m_TargetGame->CreateFakeUser(nullopt)) {
         Success = true;
       }
 

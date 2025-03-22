@@ -89,6 +89,41 @@
 }
 #endif
 
+[[nodiscard]] inline std::string ToDecStringPadded(const int64_t num, const std::string::size_type padding)
+{
+  std::string numeral = std::to_string(num);
+  if (numeral.size() >= padding) return numeral;
+  std::string padded = std::string(padding, '0');
+  padded.replace(padded.end() - numeral.size(), padded.end(), numeral);
+  return padded;
+}
+
+[[nodiscard]] inline std::string TrimString(const std::string& str) {
+  if (str.empty()) return std::string();
+
+  size_t firstNonSpace = str.find_first_not_of(" ");
+  size_t lastNonSpace = str.find_last_not_of(" ");
+
+  if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
+    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  } else {
+    return std::string();
+  }
+}
+
+[[nodiscard]] inline std::string TrimStringExtended(const std::string& str) {
+  if (str.empty()) return std::string();
+
+  size_t firstNonSpace = str.find_first_not_of(" \r\n");
+  size_t lastNonSpace = str.find_last_not_of(" \r\n");
+
+  if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
+    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  } else {
+    return std::string();
+  }
+}
+
 [[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString)
 {
   if (hexString.empty() || hexString.size() > 8) {
@@ -124,6 +159,21 @@
 {
   if (hostName.empty()) return "@@LAN/VPN";
   return hostName;
+}
+
+[[nodiscard]] inline std::string ToFormattedTimeStamp(const int64_t hh, const int64_t mm, const int64_t ss)
+{
+  if (hh > 0) return ToDecStringPadded(hh, 2) + ":" + ToDecStringPadded(mm, 2) + ":" + ToDecStringPadded(ss, 2);
+  return ToDecStringPadded(mm, 2) + ":" + ToDecStringPadded(ss, 2);
+}
+
+[[nodiscard]] inline std::string ToDurationString(const int64_t hh, const int64_t mm, const int64_t ss)
+{
+  std::string result;
+  if (hh > 0) result.append(std::to_string(hh) + " h ");
+  if (mm > 0) result.append(std::to_string(mm) + " min ");
+  if (ss > 0) result.append(std::to_string(ss) + " s ");
+  return TrimString(result);
 }
 
 [[nodiscard]] inline std::string ToVersionString(const Version& version)
@@ -634,32 +684,6 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
   return Output;
 }
 
-[[nodiscard]] inline std::string TrimString(const std::string& str) {
-  if (str.empty()) return std::string();
-
-  size_t firstNonSpace = str.find_first_not_of(" ");
-  size_t lastNonSpace = str.find_last_not_of(" ");
-
-  if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
-    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
-  } else {
-    return std::string();
-  }
-}
-
-[[nodiscard]] inline std::string TrimStringExtended(const std::string& str) {
-  if (str.empty()) return std::string();
-
-  size_t firstNonSpace = str.find_first_not_of(" \r\n");
-  size_t lastNonSpace = str.find_last_not_of(" \r\n");
-
-  if (firstNonSpace != std::string::npos && lastNonSpace != std::string::npos) {
-    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
-  } else {
-    return std::string();
-  }
-}
-
 [[nodiscard]] inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;
@@ -932,10 +956,18 @@ inline void AssignLength(std::vector<uint8_t>& content)
   return dp[m][n];
 }
 
-[[nodiscard]] inline std::string CheckIsValidHCL(const std::string& s) {
-  std::string HCLChars = "abcdefghijklmnopqrstuvwxyz0123456789 -=,.";
+[[nodiscard]] inline std::string CheckIsValidHCLStandard(const std::string& s) {
+  std::string HCLChars = HCL_CHARSET_STANDARD;
   if (s.find_first_not_of(HCLChars) != std::string::npos) {
-    return "[" + s + "] is not a valid HCL string.";
+    return "[" + s + "] is not a standard HCL string.";
+  }
+  return std::string();
+}
+
+[[nodiscard]] inline std::string CheckIsValidHCLSmall(const std::string& s) {
+  std::string HCLChars = HCL_CHARSET_SMALL;
+  if (s.find_first_not_of(HCLChars) != std::string::npos) {
+    return "[" + s + "] is not a short HCL string.";
   }
   return std::string();
 }

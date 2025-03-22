@@ -159,6 +159,8 @@ struct GameHistory
   bool                                                   m_Desynchronized;
   uint8_t                                                m_GProxyEmptyActions;
   uint32_t                                               m_Latency;
+  std::optional<int64_t>                                 m_StartedTicks;
+  size_t                                                 m_NumActionFrames;
   std::vector<uint32_t>                                  m_CheckSums;
   std::vector<uint8_t>                                   m_LobbyBuffer;
   std::vector<uint8_t>                                   m_SlotsBuffer;
@@ -169,7 +171,8 @@ struct GameHistory
   GameHistory()
    : m_Desynchronized(false),
      m_GProxyEmptyActions(0),
-     m_Latency(0)
+     m_Latency(0),
+     m_NumActionFrames(0)
   {};
 
   ~GameHistory() = default;
@@ -177,12 +180,17 @@ struct GameHistory
   void AddCheckSum(const uint32_t checkSum) { m_CheckSums.push_back(checkSum); }
   inline uint32_t GetCheckSum(const size_t index) { return m_CheckSums[index]; }
   inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
-  void SetDesynchronized(const bool nDesynchronized) { m_Desynchronized = nDesynchronized; }
+  inline void SetDesynchronized(const bool nDesynchronized) { m_Desynchronized = nDesynchronized; }
   inline bool GetDesynchronized() { return m_Desynchronized; }
-  void SetLatency(const uint32_t nLatency) { m_Latency = nLatency; }
+  inline void SetLatency(const uint32_t nLatency) { m_Latency = nLatency; }
   inline uint32_t GetLatency() { return m_Latency; }
-  void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
+  inline void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
   inline uint32_t GetGProxyEmptyActions() { return m_GProxyEmptyActions; }
+  inline void AddActionFrameCounter() { ++m_NumActionFrames; }
+  inline size_t GetNumActionFrames() { return m_NumActionFrames; }
+  inline void SetStartedTicks(const int64_t nStartedTicks) { m_StartedTicks = nStartedTicks; }
+  inline bool GetIsStarted() { return m_StartedTicks.has_value();}
+  inline int64_t GetStartedTicks() { return m_StartedTicks.value(); }
 };
 
 class CGame
@@ -228,7 +236,7 @@ protected:
   std::set<std::string>                                  m_RealmsExcluded;                // battle.net servers where the mirrored game is not to be broadcasted
   std::string                                            m_PlayedBy;
   std::string                                            m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
-  std::string                                            m_HCLCommandString;              // the "HostBot Command Library" command std::string, used to pass a limited amount of data to specially designed maps
+  std::string                                            m_HCLCommandString;              // the "HostBot Command Library" command string, used to pass a limited amount of data to specially designed maps
   std::string                                            m_MapPath;                       // store the map path to save in the database on game end
   std::string                                            m_MapSiteURL;
   int64_t                                                m_GameTicks;                     // ingame ticks
@@ -281,7 +289,6 @@ protected:
   uint16_t                                               m_PublicHostPort;
   uint8_t                                                m_DisplayMode;                   // game state, public or private
   bool                                                   m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
-  std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser;
   uint8_t                                                m_VirtualHostUID;                // virtual host's UID - note that they don't get a SID
   uint8_t                                                m_GProxyEmptyActions;            // empty actions used for gproxy protocol
   bool                                                   m_Exiting;                       // set to true and this instance will be deleted next update
@@ -333,6 +340,9 @@ protected:
 
   std::queue<CGameLogRecord*>                            m_PendingLogs;
   
+  std::optional<CGameVirtualUserReference>               m_HMCVirtualUser;
+  std::optional<CGameVirtualUserReference>               m_AHCLVirtualUser;
+  std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser;
 
 public:
   CGame(CAura* nAura, std::shared_ptr<CGameSetup> nGameSetup);
@@ -451,6 +461,7 @@ public:
   std::array<uint8_t, 20>                                GetMapSHA1(const Version& version) const;
   std::array<uint8_t, 2>                                 GetAnnounceWidth() const;
   std::array<uint8_t, 2>                                 GetAnnounceHeight() const;
+  std::string                                            CheckIsValidHCL(const std::string& hcl) const;
 
   std::string                                            GetLogPrefix() const;
   ImmutableUserList                                      GetPlayers() const;
@@ -608,7 +619,6 @@ public:
 
   // these events are called outside of any iterations
 
-  void                      HandleHCL();
   void                      EventGameStartedLoading();
   void                      EventGameBeforeLoaded();
   void                      EventGameLoaded();
@@ -648,7 +658,7 @@ public:
   uint8_t                   GetNewColor() const;
   uint8_t                   GetNewPseudonymUID() const;
   uint8_t                   SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect);
-  uint8_t                   HostToMapCommunicationUID() const;
+  void                      ResolveVirtualPlayers();
   bool                      GetHasAnyActiveTeam() const;
   bool                      GetHasAnyUser() const;
   bool                      GetIsPlayerSlot(const uint8_t SID) const;
@@ -661,9 +671,8 @@ public:
   uint8_t                   GetPublicHostUID() const;
   uint8_t                   GetHiddenHostUID() const;
   uint8_t                   GetHostUID() const;
-  uint8_t                   GetHMCSID() const;
   uint8_t                   GetEmptySID(bool reserved) const;
-  uint8_t                   GetEmptySID(uint8_t team, uint8_t UID) const;
+  uint8_t                   GetEmptyTeamSID(uint8_t team) const;
   uint8_t                   GetEmptyPlayerSID() const;
   uint8_t                   GetEmptyObserverSID() const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
@@ -709,12 +718,13 @@ public:
   void CloseObserverSlots();
   CGameVirtualUser* GetVirtualUserFromSID(const uint8_t SID);
   const CGameVirtualUser* InspectVirtualUserFromSID(const uint8_t SID) const;
-  void CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const std::string& name, bool asObserver = false);
-  bool CreateFakeUser(const bool useVirtualHostName);
-  bool CreateHMCPlayer();
-  bool CreateFakePlayer(const bool useVirtualHostName);
-  bool CreateFakeObserver(const bool useVirtualHostName);
+  CGameVirtualUser* CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const std::string& name, bool asObserver = false);
+  bool CreateFakeUser(const std::optional<std::string> playerName);
+  bool CreateFakePlayer(const std::optional<std::string> playerName);
+  bool CreateFakeObserver(const std::optional<std::string> playerName);
   bool DeleteFakeUser(uint8_t SID);
+  void UnrefFakeUser(uint8_t SID);
+  const CGameVirtualUser* InspectVirtualUserFromRef(const CGameVirtualUserReference* ref) const;
 
   uint8_t FakeAllSlots();
   void DeleteFakeUsersLobby();
@@ -787,8 +797,7 @@ public:
   bool Resume(GameUser::CGameUser* user, const bool isDisconnect);
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstByte, const uint32_t secondByte);
-  bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier);
-  bool SendHMC(const std::string& message);
+  bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint16_t identifier);
   bool GetIsCheckJoinable() const;
   void SetIsCheckJoinable(const bool nCheckIsJoinable);
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
@@ -839,6 +848,12 @@ public:
   bool SetLayoutTwoTeams();
   bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
   bool SetLayoutCompact();
+
+  void                      RunHCLEncoding();
+  bool                      SendHMC(const std::string& message);
+  bool                      CreateHMCPlayer();
+  uint8_t                   GetHMCSID() const;
+  uint8_t                   GetAHCLSID() const;
 };
 
 #endif // AURA_GAME_H_

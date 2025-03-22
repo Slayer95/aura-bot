@@ -279,7 +279,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_CreatedFrom(nGameSetup->m_CreatedFrom),
     m_CreatedFromType(nGameSetup->m_CreatedFromType),
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
-    m_HCLCommandString(nGameSetup->m_HCL.has_value() ? nGameSetup->m_HCL.value() : nGameSetup->m_Map->GetMapDefaultHCL()),
+    m_HCLCommandString(nGameSetup->m_HCL.has_value() ? nGameSetup->m_HCL.value() : nGameSetup->m_Map->GetHCLDefaultValue()),
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_GameTicks(0),
@@ -478,6 +478,8 @@ void CGame::ClearActions()
 void CGame::Reset()
 {
   m_PauseUser = nullptr;
+  m_HMCVirtualUser.reset();
+  m_AHCLVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   m_GameHistory.reset();
@@ -2077,7 +2079,6 @@ void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) cons
   if (user->GetType() == INCON_TYPE_PLAYER && static_cast<const GameUser::CGameUser*>(user)->GetIsInLoadingScreen()) {
     return;
   }
-  // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
   user->Send(data);
 }
 
@@ -3117,6 +3118,7 @@ array<uint8_t, 2> CGame::GetAnnounceWidth() const
   if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapWidth();
 }
+
 array<uint8_t, 2> CGame::GetAnnounceHeight() const
 {
   if (GetIsProxyReconnectable()) {
@@ -3125,6 +3127,15 @@ array<uint8_t, 2> CGame::GetAnnounceHeight() const
   }
   if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapHeight();
+}
+
+string CGame::CheckIsValidHCL(const string& hcl) const
+{
+  if (m_Map->GetHCLAboutVirtualPlayers()) {
+    return CheckIsValidHCLSmall(hcl);
+  } else {
+    return CheckIsValidHCLStandard(hcl);
+  }
 }
 
 void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
@@ -3405,7 +3416,6 @@ void CGame::SendAllActionsCallback()
       break;
   }
   for (GameUser::CGameUser* user : frame.leavers) {
-    // TODO: m_BufferingEnabled & BUFFERING_ENABLED_PLAYING
     DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] running scheduled deletion")
     user->SetDeleteMe(true);
   }
@@ -3455,6 +3465,7 @@ void CGame::SendAllActions()
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
     m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_ACTIONS, actions);
+    m_GameHistory->AddActionFrameCounter();
   }
 
   SendAllActionsCallback();
@@ -5215,7 +5226,29 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
         if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
           m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
         }
+
         // Enable --log-level debug to figure out HMC map-specific constants
+        // According to TriggerHappy's original HMC code,
+        // only the first (lower) two bytes are relevant (respectively <map.w3hmc.trigger_1>, <map.w3hmc.trigger_2>),
+        // and the upper two bytes are zero or can be zeroed in SendHMC().
+        //
+        // TH also expects both uint32_t values to be equal.
+        // But maybe the second one doesn't matter, just like the upper bytes above.
+        //
+        // So if those assumptions, hold,
+        // let N be the first integer output here.
+        //
+        // Then, W3HMC trigger constants are:
+        // <map.w3hmc.trigger_1 = N & 0xFF>
+        // <map.w3hmc.trigger_2 = (N >> 8) & 0xFF>
+        //
+        // Or, in simpler maths terms:
+        // a = N mod 256
+        // b = N mod 65536
+        // x = a
+        // y = (b - a) / 256
+        // <map.w3hmc.trigger_1 = x>
+        // <map.w3hmc.trigger_2 = y>
         LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [" + to_string(ByteArrayToUInt32(actionBytes, false, 1)) + " | " + to_string(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
       }
     }
@@ -5876,65 +5909,6 @@ void CGame::EventUserMapReady(GameUser::CGameUser* user)
   UpdateReadyCounters();
 }
 
-void CGame::HandleHCL()
-{
-  // encode the HCL command string in the slot handicaps
-  // here's how it works:
-  //  the user inputs a command string to be sent to the map
-  //  it is almost impossible to send a message from the bot to the map so we encode the command string in the slot handicaps
-  //  this works because there are only 6 valid handicaps but Warcraft III allows the bot to set up to 256 handicaps
-  //  we encode the original (unmodified) handicaps in the new handicaps and use the remaining space to store a short message
-  //  only occupied slots deliver their handicaps to the map and we can send one character (from a list) per handicap
-  //  when the map finishes loading, assuming it's designed to use the HCL system, it checks if anyone has an invalid handicap
-  //  if so, it decodes the message from the handicaps and restores the original handicaps using the encoded values
-  //  the meaning of the message is specific to each map and the bot doesn't need to understand it
-  //  e.g. you could send game modes, # of rounds, level to start on, anything you want as long as it fits in the limited space available
-  //  note: if you attempt to use the HCL system on a map that does not support HCL the bot will drastically modify the handicaps
-  //  since the map won't automatically restore the original handicaps in this case your game will be ruined
-
-  if (m_HCLCommandString.empty()) {
-    return;
-  }
-
-  if (m_HCLCommandString.size() > GetSlotsOccupied()) {
-    LOG_APP_IF(LOG_LEVEL_INFO, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because there aren't enough occupied slots")
-    return;
-  }
-
-  string HCLChars = "abcdefghijklmnopqrstuvwxyz0123456789 -=,.";
-
-  if (m_HCLCommandString.find_first_not_of(HCLChars) != string::npos) {
-    LOG_APP_IF(LOG_LEVEL_ERROR, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because it contains invalid characters")
-    return;
-  }
-
-  uint8_t EncodingMap[256];
-  uint8_t j = 0;
-
-  for (auto& encode : EncodingMap) {
-    // the following 7 handicap values are forbidden
-
-    if (j == 0 || j == 50 || j == 60 || j == 70 || j == 80 || j == 90 || j == 100)
-      ++j;
-
-    encode = j++;
-  }
-
-  uint8_t CurrentSlot = 0;
-
-  for (auto& character : m_HCLCommandString) {
-    while (m_Slots[CurrentSlot].GetSlotStatus() != SLOTSTATUS_OCCUPIED)
-      ++CurrentSlot;
-
-    uint8_t HandicapIndex = (m_Slots[CurrentSlot].GetHandicap() - 50) / 10;
-    uint8_t CharIndex     = static_cast<uint8_t>(HCLChars.find(character));
-    m_Slots[CurrentSlot++].SetHandicap(EncodingMap[HandicapIndex + CharIndex * 6]);
-  }
-
-  m_SlotInfoChanged |= SLOTS_HCL_INJECTED;
-  LOG_APP_IF(LOG_LEVEL_DEBUG, "successfully encoded mode as HCL string [" + m_HCLCommandString + "]")
-}
-
 // keyword: EventGameLoading
 void CGame::EventGameStartedLoading()
 {
@@ -5942,76 +5916,18 @@ void CGame::EventGameStartedLoading()
     SendGameDiscoveryDecreate();
   }
 
-  HandleHCL();
-
   m_StartedLoadingTicks    = GetTicks();
   m_LastLagScreenResetTime = GetTime();
 
   // Remove the virtual host user to ensure consistent game state and networking.
   DeleteVirtualHost();
 
-  if (m_RestoredGame) {
-    const uint8_t activePlayers = static_cast<uint8_t>(GetNumJoinedUsersOrFake()); // though it shouldn't be possible to manually add fake users
-    const uint8_t expectedPlayers = m_RestoredGame->GetNumHumanSlots();
-    if (activePlayers < expectedPlayers) {
-      if (m_IsAutoVirtualPlayers) {
-        // Restored games do not allow custom fake users, so we should only reach this point with actual users joined.
-        // This code path is triggered by !fp enable.
-        const uint8_t addedCounter = FakeAllSlots();
-        LOG_APP_IF(LOG_LEVEL_INFO, "resuming " + to_string(expectedPlayers) + "-user game. " + to_string(addedCounter) + " virtual users added.")
-      } else {
-        LOG_APP_IF(LOG_LEVEL_INFO, "resuming " + to_string(expectedPlayers) + "-user game. " + ToDecString(expectedPlayers - activePlayers) + " missing.")
-      }
-    }
-  }
-
   if (m_IsHiddenPlayerNames && m_Config.m_HideInGameNames != HIDE_IGN_ALWAYS) {
     ShowPlayerNamesGameStartLoading();
   }
 
-  bool virtualHostIsObserver = false;
-  if (!m_RestoredGame && GetSlotsOpen() > 0) {
-    // Assign an available slot to our virtual host.
-    // That makes it a fake user.
-
-    // This is an AWFUL hack to please WC3Stats.com parser
-    // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
-
-    if (m_Map->GetMapType() == "evergreen" && GetNumComputers() > 0) {
-      m_Config.m_LobbyVirtualHostName = "AMAI Insane";
-    }
-
-    if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-      if (CreateFakeObserver(true)) {
-        ++m_JoinedVirtualHosts;
-        virtualHostIsObserver = true;
-      }
-    } else {
-      if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && (m_Config.m_EnableJoinObserversInProgress || (GetNumJoinedObservers() > 0 && GetNumFakeObservers() == 0))) {
-        if (CreateFakeObserver(true)) {
-          ++m_JoinedVirtualHosts;
-          virtualHostIsObserver = true;
-        }
-      }
-      if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
-        if (CreateFakePlayer(true)) ++m_JoinedVirtualHosts;
-      }
-    }
-  }
-
-  if (m_Config.m_EnableJoinObserversInProgress) {
-    const bool isCustomForces = GetIsCustomForces();
-    for (const auto& fakeUser : m_FakeUsers) {
-      if (virtualHostIsObserver && fakeUser.GetName() != GetLobbyVirtualHostName()) {
-        // Choose the virtual host fake player, if it exists.
-        continue;
-      }
-      if (!isCustomForces || fakeUser.GetIsObserver()) {
-        m_JoinInProgressVirtualUser = CGameVirtualUserReference(fakeUser);
-        break;
-      }
-    }
-  }
+  ResolveVirtualPlayers();
+  RunHCLEncoding();
 
   //if (GetNumJoinedUsersOrFake() < 2) {
     // This is a single-user game. Neither chat events nor bot commands will work.
@@ -6086,7 +6002,7 @@ void CGame::EventGameStartedLoading()
 
   // enable stats
 
-  if (!m_RestoredGame && m_Map->GetMapMetaDataEnabled()) {
+  if (!m_RestoredGame && m_Map->GetMMDEnabled()) {
     if (m_Map->GetMapType() == "dota") {
       if (m_StartPlayers < 6) {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] not using dotastats due to too few users")
@@ -6131,7 +6047,7 @@ void CGame::EventGameStartedLoading()
   }
 
   if (m_Map->GetHMCEnabled()) {
-    const uint8_t SID = m_Map->GetHMCSlot() - 1;
+    const uint8_t SID = m_Map->GetHMCSlot();
     const CGameSlot* slot = InspectSlot(SID);
     if (slot && slot->GetIsPlayerOrFake() && !GetUserFromSID(SID)) {
       const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
@@ -6431,6 +6347,7 @@ void CGame::EventGameLoaded()
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
     m_GameHistory->SetLatency(GetLatency());
     m_GameHistory->SetGProxyEmptyActions(m_GProxyEmptyActions);
+    m_GameHistory->SetStartedTicks(m_FinishedLoadingTicks);
   } else {
     // These buffers serve no purpose anymore.
     m_GameHistory->m_LoadingRealBuffer = vector<uint8_t>();
@@ -6576,6 +6493,8 @@ void CGame::Remake()
   m_CustomLayout = 0;
 
   m_IsAutoVirtualPlayers = false;
+  m_HMCVirtualUser.reset();
+  m_AHCLVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_VirtualHostUID = 0xFF;
   m_ExitingSoon = false;
@@ -6975,13 +6894,103 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
   }
 }
 
-uint8_t CGame::HostToMapCommunicationUID() const
+void CGame::ResolveVirtualPlayers()
 {
-  if (!GetHMCEnabled()) return 0xFF;
-  const uint8_t SID = m_Map->GetHMCSlot() - 1;
-  const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
-  if (!virtualUserMatch) return 0xFF;
-  return virtualUserMatch->GetUID();
+  if (m_RestoredGame) {
+    const uint8_t activePlayers = static_cast<uint8_t>(GetNumJoinedUsersOrFake()); // though it shouldn't be possible to manually add fake users
+    const uint8_t expectedPlayers = m_RestoredGame->GetNumHumanSlots();
+    if (activePlayers < expectedPlayers) {
+      if (m_IsAutoVirtualPlayers) {
+        // Restored games do not allow custom fake users, so we should only reach this point with actual users joined.
+        // This code path is triggered by !fp enable.
+        const uint8_t addedCounter = FakeAllSlots();
+        LOG_APP_IF(LOG_LEVEL_INFO, "resuming " + to_string(expectedPlayers) + "-user game. " + to_string(addedCounter) + " virtual users added.")
+      } else {
+        LOG_APP_IF(LOG_LEVEL_INFO, "resuming " + to_string(expectedPlayers) + "-user game. " + ToDecString(expectedPlayers - activePlayers) + " missing.")
+      }
+    }
+    return;
+  }
+
+  // Host to bot map communication (W3HMC)
+  {
+    const uint8_t SID = GetHMCSID();
+    CGameSlot* slot = GetSlot(SID);
+    if (slot && slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
+      const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
+      m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
+    }
+  }
+
+  // AHCL
+  {
+    const uint8_t SID = GetAHCLSID();
+    CGameSlot* slot = GetSlot(SID);
+    if (slot && slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
+      const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
+      m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "AHCL virtual user added at slot " + ToDecString(SID + 1))
+    }
+  }
+
+  // Join-in-progress
+  bool joinInProgressIsNativeObserver = false;
+  if (m_Config.m_EnableJoinObserversInProgress && (!m_Map->GetMMDSupported() || m_Map->GetMMDSupportsVirtualPlayers())) {
+    const uint8_t SID = GetIsCustomForces() ? GetEmptyTeamSID(m_Map->GetMapCustomizableObserverTeam()) : GetEmptySID(false);
+    CGameSlot* slot = GetSlot(SID);
+    if (slot) {
+      const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName, true);
+      m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
+      joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
+      if (joinInProgressIsNativeObserver) {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (native observer)")
+      } else {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (team " + ToDecString(slot->GetTeam()) + ")")
+      }
+    } else {
+      m_Config.m_EnableJoinObserversInProgress = false;
+    }
+  } else if (m_Config.m_EnableJoinObserversInProgress) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>")
+    m_Config.m_EnableJoinObserversInProgress = false;
+  }
+
+  optional<string> maybeVirtualHostName = optional<string>(m_Config.m_LobbyVirtualHostName);
+
+  // Assign an available slot to our virtual host.
+  // That makes it a fake user.
+
+  if (m_Map->GetMMDSupported() && m_Map->GetMMDAboutComputers() && GetNumComputers() > 0) {
+    // This is an AWFUL hack to please WC3Stats.com parser
+    // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
+
+    if (m_Map->GetMapType() == "evergreen") {
+      maybeVirtualHostName = "AMAI Insane";
+    }
+  }
+
+  if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
+    if (CreateFakeObserver(maybeVirtualHostName)) {
+      ++m_JoinedVirtualHosts;
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as referee")
+    }
+  } else if (m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
+    const uint8_t beforeFakeObserverCount = GetNumFakeObservers();
+    if ((joinInProgressIsNativeObserver && beforeFakeObserverCount <= 1) || (GetNumJoinedObservers() > 0 && beforeFakeObserverCount == 0)) {
+      if (CreateFakeObserver(maybeVirtualHostName)) {
+        ++m_JoinedVirtualHosts;
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as full observer")
+      }
+    }
+  }
+
+  if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
+    if (CreateFakePlayer(maybeVirtualHostName)) {
+      ++m_JoinedVirtualHosts;
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "Added filler virtual player")
+    }
+  }
 }
 
 bool CGame::GetHasAnyActiveTeam() const
@@ -7281,48 +7290,12 @@ uint8_t CGame::GetEmptySID(bool reserved) const
   return 0xFF;
 }
 
-uint8_t CGame::GetHMCSID() const
+uint8_t CGame::GetEmptyTeamSID(uint8_t team) const
 {
-  if (!m_Map->GetHMCEnabled()) return 0xFF;
-  uint8_t slot = m_Map->GetHMCSlot();
-  if (slot > m_Slots.size()) return 0xFF;
-  return slot - 1;
-}
-
-uint8_t CGame::GetEmptySID(uint8_t team, uint8_t UID) const
-{
-  if (m_Slots.size() > 0xFF) {
-    return 0xFF;
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == team)
+      return i;
   }
-
-  // find an empty slot based on user's current slot
-
-  uint8_t StartSlot = GetSIDFromUID(UID);
-  if (StartSlot < m_Slots.size()) {
-    if (m_Slots[StartSlot].GetTeam() != team) {
-      // user is trying to move to another team so start looking from the first slot on that team
-      // we actually just start looking from the very first slot since the next few loops will check the team for us
-
-      StartSlot = 0;
-    }
-
-    // find an empty slot on the correct team starting from StartSlot
-
-    for (uint8_t i = StartSlot; i < m_Slots.size(); ++i) {
-      if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == team)
-        return i;
-    }
-
-    // didn't find an empty slot, but we could have missed one with SID < StartSlot
-    // e.g. in the DotA case where I am in slot 4 (yellow), slot 5 (orange) is occupied, and slot 1 (blue) is open and I am trying to move to another slot
-
-    for (uint8_t i = 0; i < StartSlot; ++i) {
-      if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == team) {
-        return i;
-      }
-    }
-  }
-
   return 0xFF;
 }
 
@@ -7466,7 +7439,7 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   if (!slot || !slot->GetIsSelectable()) {
     return false;
   }
-  if (m_Map->GetHMCEnabled() && SID + 1 == m_Map->GetHMCSlot()) {
+  if (SID == GetHMCSID()) {
     return false;
   }
 
@@ -8684,7 +8657,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
   }
 
   if (m_Map->GetHMCEnabled()) {
-    const uint8_t SID = m_Map->GetHMCSlot() - 1;
+    const uint8_t SID = m_Map->GetHMCSlot();
     const CGameSlot* slot = InspectSlot(SID);
     if (!slot || !slot->GetIsPlayerOrFake() || GetUserFromSID(SID)) {
       SendAllChat("This game requires a fake player on slot " + ToDecString(SID + 1));
@@ -9130,18 +9103,9 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   return true;
 }
 
-bool CGame::SendChatTriggerSymmetric(const uint8_t UID, const string& message, const uint8_t firstIdentifier, const uint8_t secondIdentifier)
+bool CGame::SendChatTriggerSymmetric(const uint8_t UID, const string& message, const uint16_t identifier)
 {
-  return SendChatTrigger(UID, message, (secondIdentifier << 8) | firstIdentifier, (secondIdentifier << 8) | firstIdentifier);
-}
-
-bool CGame::SendHMC(const string& message)
-{
-  if (!GetHMCEnabled()) return false;
-  const uint8_t triggerID1 = m_Map->GetHMCTrigger1();
-  const uint8_t triggerID2 = m_Map->GetHMCTrigger2();
-  const uint8_t UID = HostToMapCommunicationUID();
-  return SendChatTriggerSymmetric(UID, message, triggerID1, triggerID2);
+  return SendChatTrigger(UID, message, (uint32_t)identifier, (uint32_t)identifier);
 }
 
 bool CGame::GetIsCheckJoinable() const
@@ -9269,7 +9233,7 @@ const CGameVirtualUser* CGame::InspectVirtualUserFromSID(const uint8_t SID) cons
   return nullptr;
 }
 
-void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const string& name, bool asObserver)
+CGameVirtualUser* CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const string& name, bool asObserver)
 {
   const bool isCustomForces = GetIsCustomForces();
   if (!m_Users.empty()) {
@@ -9290,9 +9254,10 @@ void CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UID, const stri
 
   m_FakeUsers.emplace_back(this, SID, UID, name).SetObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  return &m_FakeUsers.back();
 }
 
-bool CGame::CreateFakeUser(const bool useVirtualHostName)
+bool CGame::CreateFakeUser(const optional<string> playerName)
 {
   // Fake users need not be explicitly restricted in any layout, so let's just use an empty slot.
   uint8_t SID = GetEmptySID(false);
@@ -9302,11 +9267,11 @@ bool CGame::CreateFakeUser(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"), false);
+  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or("User[" + ToDecString(SID + 1) + "]"), false);
   return true;
 }
 
-bool CGame::CreateFakePlayer(const bool useVirtualHostName)
+bool CGame::CreateFakePlayer(const optional<string> playerName)
 {
   const bool isCustomForces = GetIsCustomForces();
   uint8_t SID = isCustomForces ? GetEmptyPlayerSID() : GetEmptySID(false);
@@ -9321,11 +9286,11 @@ bool CGame::CreateFakePlayer(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"), false);
+  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or("User[" + ToDecString(SID + 1) + "]"), false);
   return true;
 }
 
-bool CGame::CreateFakeObserver(const bool useVirtualHostName)
+bool CGame::CreateFakeObserver(const optional<string> playerName)
 {
   if (!(m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES)) {
     return false;
@@ -9344,21 +9309,7 @@ bool CGame::CreateFakeObserver(const bool useVirtualHostName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), useVirtualHostName ? GetLobbyVirtualHostName() : ("User[" + ToDecString(SID + 1) + "]"), true);
-  return true;
-}
-
-bool CGame::CreateHMCPlayer()
-{
-  // Fake users need not be explicitly restricted in any layout, so let's just use an empty slot.
-  uint8_t SID = m_Map->GetHMCSlot() - 1;
-  if (SID >= static_cast<uint8_t>(m_Slots.size())) return false;
-  if (!CanLockSlotForJoins(SID)) return false;
-
-  if (GetSlotsOpen() == 1)
-    DeleteVirtualHost();
-
-  CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
+  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or("User[" + ToDecString(SID + 1) + "]"), true);
   return true;
 }
 
@@ -9366,7 +9317,7 @@ bool CGame::DeleteFakeUser(uint8_t SID)
 {
   CGameSlot* slot = GetSlot(SID);
   if (!slot) return false;
-  const bool isHMCSlot = m_Map->GetHMCEnabled() && SID + 1 == m_Map->GetHMCSlot();
+  const bool isHMCSlot = m_Map->GetHMCEnabled() && SID == m_Map->GetHMCSlot();
   for (auto it = begin(m_FakeUsers); it != end(m_FakeUsers); ++it) {
     if (slot->GetUID() == it->GetUID()) {
       if (GetIsCustomForces()) {
@@ -9376,9 +9327,7 @@ bool CGame::DeleteFakeUser(uint8_t SID)
       }
       // Ensure this is sent before virtual host rejoins
       SendAll(it->GetGameQuitBytes(PLAYERLEAVE_LOBBY));
-      if (m_JoinInProgressVirtualUser.has_value() && it->GetUID() == m_JoinInProgressVirtualUser->GetUID()) {
-        m_JoinInProgressVirtualUser.reset();
-      }
+      UnrefFakeUser(it->GetSID());
       it = m_FakeUsers.erase(it);
       CreateVirtualHost();
       m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
@@ -9386,6 +9335,29 @@ bool CGame::DeleteFakeUser(uint8_t SID)
     }
   }
   return false;
+}
+
+void CGame::UnrefFakeUser(const uint8_t SID)
+{
+  if (m_HMCVirtualUser.has_value() && SID == m_HMCVirtualUser->GetSID()) {
+    m_HMCVirtualUser.reset();
+  }
+  if (m_AHCLVirtualUser.has_value() && SID == m_AHCLVirtualUser->GetSID()) {
+    m_AHCLVirtualUser.reset();
+  }
+  if (m_JoinInProgressVirtualUser.has_value() && SID == m_JoinInProgressVirtualUser->GetSID()) {
+    m_JoinInProgressVirtualUser.reset();
+  }
+}
+
+
+const CGameVirtualUser* CGame::InspectVirtualUserFromRef(const CGameVirtualUserReference* ref) const
+{
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    if (fakeUser.GetSID() == ref->GetSID()) {
+      return &fakeUser;
+    }
+  }
 }
 
 uint8_t CGame::FakeAllSlots()
@@ -9447,6 +9419,8 @@ void CGame::DeleteFakeUsersLobby()
     SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_LOBBY));
   }
 
+  m_HMCVirtualUser.reset();
+  m_AHCLVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   CreateVirtualHost();
@@ -9462,6 +9436,8 @@ void CGame::DeleteFakeUsersLoaded()
     SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_DISCONNECT));
   }
 
+  m_HMCVirtualUser.reset();
+  m_AHCLVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
 }
@@ -9547,4 +9523,115 @@ uint32_t CGame::GetSyncLimit() const
 uint32_t CGame::GetSyncLimitSafe() const
 {
   return m_Config.m_SyncLimitSafe;
+}
+
+void CGame::RunHCLEncoding()
+{
+  // encode the HCL command string in the slot handicaps
+  // here's how it works:
+  //  the user inputs a command string to be sent to the map
+  //  it is almost impossible to send a message from the bot to the map so we encode the command string in the slot handicaps
+  //  this works because there are only 6 valid handicaps but Warcraft III allows the bot to set up to 256 handicaps
+  //  we encode the original (unmodified) handicaps in the new handicaps and use the remaining space to store a short message
+  //  only occupied slots deliver their handicaps to the map and we can send one character (from a list) per handicap
+  //  when the map finishes loading, assuming it's designed to use the HCL system, it checks if anyone has an invalid handicap
+  //  if so, it decodes the message from the handicaps and restores the original handicaps using the encoded values
+  //  the meaning of the message is specific to each map and the bot doesn't need to understand it
+  //  e.g. you could send game modes, # of rounds, level to start on, anything you want as long as it fits in the limited space available
+  //  note: if you attempt to use the HCL system on a map that does not support HCL the bot will drastically modify the handicaps
+  //  since the map won't automatically restore the original handicaps in this case your game will be ruined
+
+  if (m_HCLCommandString.empty()) {
+    return;
+  }
+
+  if (m_HCLCommandString.size() > GetSlotsOccupied()) {
+    LOG_APP_IF(LOG_LEVEL_INFO, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because there aren't enough occupied slots")
+    return;
+  }
+
+  const bool encodeVirtualPlayers = m_Map->GetHCLAboutVirtualPlayers();
+  string HCLChars = encodeVirtualPlayers ? HCL_CHARSET_SMALL : HCL_CHARSET_STANDARD;
+
+  if (m_HCLCommandString.find_first_not_of(HCLChars) != string::npos) {
+    LOG_APP_IF(LOG_LEVEL_ERROR, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because it contains invalid characters")
+    return;
+  }
+
+  uint8_t encodingMap[256];
+  uint8_t j = 0;
+
+  for (auto& encode : encodingMap) {
+    // the following 7 handicap values are forbidden for compatibility
+
+    if (j == 0 || j == 50 || j == 60 || j == 70 || j == 80 || j == 90 || j == 100)
+      ++j;
+
+    encode = j++;
+  }
+
+  uint8_t currentSlot = 0;
+
+  for (const auto& character : m_HCLCommandString) {
+    while (m_Slots[currentSlot].GetSlotStatus() != SLOTSTATUS_OCCUPIED)
+      ++currentSlot;
+
+    bool isVirtualPlayer = m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsPlayerSlot(currentSlot);
+    uint8_t handicapIndex = (m_Slots[currentSlot].GetHandicap() - 50) / 10;
+    uint8_t charIndex = static_cast<uint8_t>(HCLChars.find(character));
+    uint8_t slotInfo = handicapIndex;
+    if (encodeVirtualPlayers && m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsPlayerSlot(currentSlot)) {
+      slotInfo += 6;
+    }
+    slotInfo += charIndex * (encodeVirtualPlayers ? 12 : 6);
+    m_Slots[currentSlot++].SetHandicap(encodingMap[slotInfo]); // max() = 5+40*6 = 245 | 11+19*12 = 239
+  }
+
+  // See documentation for the decoding algorithm
+  // https://gist.github.com/Slayer95/a15fc75f38d0b3fdf356613ede96cf7f
+  //
+  // Variant encodeVirtualPlayers: K = 12
+  // value = encodedHandicap % K
+  // virtual = encodedHandicap - (value * K) > 6
+  // handicap = encodedHandicap - (value * K) - (virtual ? 6 : 0)
+
+  m_SlotInfoChanged |= SLOTS_HCL_INJECTED;
+  LOG_APP_IF(LOG_LEVEL_DEBUG, "successfully encoded mode as HCL string [" + m_HCLCommandString + "]")
+}
+
+bool CGame::SendHMC(const string& message)
+{
+  if (!m_HMCVirtualUser.has_value()) return false;
+  const uint16_t triggerID = m_Map->GetHMCTrigger();
+  const uint8_t UID = m_HMCVirtualUser->GetUID();
+  return SendChatTriggerSymmetric(UID, message, triggerID);
+}
+
+bool CGame::CreateHMCPlayer()
+{
+  const uint8_t SID = GetHMCSID();
+  if (SID == 0xFF) return false;
+  if (!CanLockSlotForJoins(SID)) return false;
+
+  if (GetSlotsOpen() == 1)
+    DeleteVirtualHost();
+
+  CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
+  return true;
+}
+
+uint8_t CGame::GetHMCSID() const
+{
+  if (!m_Map->GetHMCEnabled()) return 0xFF;
+  const uint8_t slot = m_Map->GetHMCSlot();
+  if (slot >= static_cast<uint8_t>(m_Slots.size())) return 0xFF;
+  return slot;
+}
+
+uint8_t CGame::GetAHCLSID() const
+{
+  if (!m_Map->GetAHCLEnabled()) return 0xFF;
+  const uint8_t slot = m_Map->GetAHCLSlot();
+  if (slot >= static_cast<uint8_t>(m_Slots.size())) return 0xFF;
+  return slot;
 }

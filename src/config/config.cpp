@@ -403,6 +403,28 @@ uint8_t CConfig::GetUint8(const string& key, uint8_t x)
   SUCCESS(Result)
 }
 
+uint8_t CConfig::GetSlot(const string& key, uint8_t x)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
+  uint8_t Result = x;
+  try {
+    long Value = stol(it->second);
+    if (Value <= 0 || MAX_SLOTS_MODERN <= Value) {
+      CONFIG_ERROR(key, x)
+    }
+    Result = static_cast<uint8_t>(Value) - 1;
+  } catch (...) {
+    CONFIG_ERROR(key, x)
+  }
+
+  SUCCESS(Result)
+}
+
 float CConfig::GetFloat(const string& key, float x)
 {
   m_ValidKeys.insert(key);

@@ -128,6 +128,7 @@ public:
   [[nodiscard]] uint32_t GetUint32(const std::string& key, uint32_t x);
   [[nodiscard]] uint16_t GetUint16(const std::string& key, uint16_t x);
   [[nodiscard]] uint8_t GetUint8(const std::string& key, uint8_t x);
+  [[nodiscard]] uint8_t GetSlot(const std::string& key, uint8_t x);
 
   [[nodiscard]] float GetFloat(const std::string& key, float x);
   [[nodiscard]] uint8_t GetStringIndex(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);

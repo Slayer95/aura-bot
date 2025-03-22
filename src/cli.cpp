@@ -194,7 +194,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--notify-joins,--no-notify-joins}", m_GameNotifyJoins, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
-  app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.")->check(CheckIsValidHCL);
+  app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
   app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")->check(CLI::IsMember({"never", "host", "always", "auto"}));
   app.add_flag(  "--hide-ign,--no-hide-ign{false}", m_GameHideLobbyNames, "Whether to hide player names in a hosted game lobby.");

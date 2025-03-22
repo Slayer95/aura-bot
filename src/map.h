@@ -137,6 +137,78 @@ struct MapEssentials
   ~MapEssentials() = default;
 };
 
+struct HCLConfig
+{
+  bool supported;
+  bool aboutVirtualPlayers;
+  uint8_t toggle;
+  std::string defaultValue;
+
+  HCLConfig()
+   : supported(false),
+     aboutVirtualPlayers(false),
+     toggle(MAP_FEATURE_TOGGLE_DISABLED)
+  {
+  }
+  ~HCLConfig() = default;
+};
+
+struct W3MMDConfig
+{
+  bool supported;
+  bool enabled;
+  bool aboutComputers;
+  bool emitSkipsVirtualPlayers;
+
+  W3MMDConfig()
+   : supported(false),
+     enabled(false),
+     aboutComputers(false),
+     emitSkipsVirtualPlayers(false)
+  {
+  }
+  ~W3MMDConfig() = default;
+};
+
+struct W3HMCConfig
+{
+  bool supported;
+  uint8_t toggle;
+  uint16_t trigger;
+  uint8_t slot;
+  std::string playerName;
+  std::string fileName;
+  std::string secret;
+
+  W3HMCConfig()
+   : supported(false),
+     toggle(MAP_FEATURE_TOGGLE_DISABLED),
+     trigger(0),
+     slot(0xFF)
+  {
+  }
+  ~W3HMCConfig() = default;
+};
+
+struct AHCLConfig
+{
+  bool supported;
+  uint8_t toggle;
+  uint8_t slot;
+  std::string playerName;
+  std::string fileName;
+  std::string mission;
+  std::string charset;
+
+  AHCLConfig()
+   : supported(false),
+     toggle(MAP_FEATURE_TOGGLE_DISABLED),
+     slot(0xFF)
+  {
+  }
+  ~AHCLConfig() = default;
+};
+
 //
 // CMap
 //
@@ -207,8 +279,6 @@ private:
   std::string                     m_CFGName;
   std::string                     m_ClientMapPath;       // config value: map path
   std::string                     m_MapType;       // config value: map type (for stats class)
-  bool                            m_MapMetaDataEnabled;
-  std::string                     m_MapDefaultHCL; // config value: map default HCL to use
   std::filesystem::path           m_MapServerPath;  // config value: map local path
   SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
   bool                            m_MapFileIsValid;
@@ -223,6 +293,7 @@ private:
   uint8_t                         m_MapNumControllers; // config value: max map number of players
   uint8_t                         m_MapNumDisabled; // config value: slots that cannot be used - not even by observers
   uint8_t                         m_MapNumTeams;   // config value: max map number of teams
+  uint8_t                         m_MapCustomizableObserverTeam;
   uint8_t                         m_MapVersionMaxSlots;
   uint8_t                         m_MapSpeed;
   uint8_t                         m_MapVisibility;
@@ -258,11 +329,11 @@ private:
   bool                            m_JASSValid;
   std::string                     m_ErrorMessage;
   std::string                     m_JASSErrorMessage;
-  uint8_t                         m_HMCMode;
-  uint8_t                         m_HMCTrigger1;
-  uint8_t                         m_HMCTrigger2;
-  uint8_t                         m_HMCSlot;
-  std::string                     m_HMCPlayerName;
+
+  HCLConfig                       m_HCL;
+  W3MMDConfig                     m_MMD;
+  W3HMCConfig                     m_HMC;
+  AHCLConfig                      m_AHCL;
 
 public:
   CMap(CAura* nAura, CConfig* CFG);
@@ -297,8 +368,6 @@ public:
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapWidth() const { return m_MapWidth; }
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapHeight() const { return m_MapHeight; }
   [[nodiscard]] inline std::string                GetMapType() const { return m_MapType; }
-  [[nodiscard]] inline bool                       GetMapMetaDataEnabled() const { return m_MapMetaDataEnabled; }
-  [[nodiscard]] inline std::string                GetMapDefaultHCL() const { return m_MapDefaultHCL; }
   [[nodiscard]] inline const std::filesystem::path&     GetServerPath() const { return m_MapServerPath; }
   [[nodiscard]] std::filesystem::path             GetResolvedServerPath() const;
   [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }
@@ -330,16 +399,10 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapNumDisabled() const { return m_MapNumDisabled; }
   [[nodiscard]] inline uint8_t                    GetMapNumControllers() const { return m_MapNumControllers; }
   [[nodiscard]] inline uint8_t                    GetMapNumTeams() const { return m_MapNumTeams; }
+  [[nodiscard]] inline uint8_t                    GetMapCustomizableObserverTeam() const { return m_MapCustomizableObserverTeam; }
   [[nodiscard]] inline uint8_t                    GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
   [[nodiscard]] inline std::vector<CGameSlot>     GetSlots() const { return m_Slots; }
   [[nodiscard]] inline const std::vector<CGameSlot>&     InspectSlots() const { return m_Slots; }
-  [[nodiscard]] bool                              GetHMCEnabled() const { return m_HMCMode != W3HMC_MODE_DISABLED; }
-  [[nodiscard]] bool                              GetHMCRequired() const { return m_HMCMode == W3HMC_MODE_REQUIRED; }
-  [[nodiscard]] uint8_t                           GetHMCMode() const { return m_HMCMode; }
-  [[nodiscard]] uint8_t                           GetHMCTrigger1() const { return m_HMCTrigger1; }
-  [[nodiscard]] uint8_t                           GetHMCTrigger2() const { return m_HMCTrigger2; }
-  [[nodiscard]] uint8_t                           GetHMCSlot() const { return m_HMCSlot; }
-  [[nodiscard]] std::string                       GetHMCPlayerName() const { return m_HMCPlayerName; }
   [[nodiscard]] uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
   [[nodiscard]] bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
   void                                            ClearMapFileContents() { m_MapFileContents.reset(); }
@@ -382,6 +445,43 @@ public:
   [[nodiscard]] std::pair<bool, uint32_t>         ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient, size_t, size_t)> processChunk);
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
+
+  // HCL
+  [[nodiscard]] inline bool                              GetHCLSupported() const { return m_HCL.supported; }
+  [[nodiscard]] inline bool                              GetHCLEnabled() const { return m_HCL.toggle != MAP_FEATURE_TOGGLE_DISABLED; }
+  [[nodiscard]] inline bool                              GetHCLRequired() const { return m_HCL.toggle == MAP_FEATURE_TOGGLE_REQUIRED; }
+  [[nodiscard]] inline bool                              GetHCLAboutVirtualPlayers() const { return m_HCL.aboutVirtualPlayers; }
+  [[nodiscard]] inline size_t                            GetHCLRawStatesPerPlayer() const { return m_HCL.aboutVirtualPlayers ? 40u : 41u; }
+  [[nodiscard]] inline size_t                            GetHCLRawBitsPerPlayer() const { return 5u; }
+  [[nodiscard]] inline size_t                            GetHCLConfigurableStatesPerPlayer() const { return m_HCL.aboutVirtualPlayers ? 20u : 41u; }
+  [[nodiscard]] inline size_t                            GetHCLConfigurableBitsPerPlayer() const { return m_HCL.aboutVirtualPlayers ? 4u : 5u; }
+  [[nodiscard]] inline const std::string&                GetHCLDefaultValue() const { return m_HCL.defaultValue; }
+
+  // W3MMD
+  [[nodiscard]] inline bool                              GetMMDSupported() const { return m_MMD.supported; }
+  [[nodiscard]] inline bool                              GetMMDEnabled() const { return m_MMD.enabled; }
+  [[nodiscard]] inline bool                              GetMMDAboutComputers() const { return m_MMD.aboutComputers; }
+  [[nodiscard]] inline bool                              GetMMDSupportsVirtualPlayers() const { return m_MMD.emitSkipsVirtualPlayers; }
+
+  // W3HMC
+  [[nodiscard]] inline bool                              GetHMCEnabled() const { return m_HMC.toggle != MAP_FEATURE_TOGGLE_DISABLED; }
+  [[nodiscard]] inline bool                              GetHMCRequired() const { return m_HMC.toggle == MAP_FEATURE_TOGGLE_REQUIRED; }
+  [[nodiscard]] inline uint8_t                           GetHMCMode() const { return m_HMC.toggle; }
+  [[nodiscard]] inline uint8_t                           GetHMCSlot() const { return m_HMC.slot; }
+  [[nodiscard]] inline const std::string&                GetHMCPlayerName() const { return m_HMC.playerName; }
+  [[nodiscard]] inline uint16_t                          GetHMCTrigger() const { return m_HMC.trigger; }
+  [[nodiscard]] inline const std::string&                GetHMCFileName() const { return m_HMC.fileName; }
+  [[nodiscard]] inline const std::string&                GetHMCSecret() const { return m_HMC.secret; }
+
+  // AHCL
+  [[nodiscard]] inline bool                              GetAHCLEnabled() const { return m_AHCL.toggle != MAP_FEATURE_TOGGLE_DISABLED; }
+  [[nodiscard]] inline bool                              GetAHCLRequired() const { return m_AHCL.toggle == MAP_FEATURE_TOGGLE_REQUIRED; }
+  [[nodiscard]] inline uint8_t                           GetAHCLMode() const { return m_AHCL.toggle; }
+  [[nodiscard]] inline uint8_t                           GetAHCLSlot() const { return m_AHCL.slot; }
+  [[nodiscard]] inline const std::string&                GetAHCLPlayerName() const { return m_AHCL.playerName; }
+  [[nodiscard]] inline const std::string&                GetAHCLFileName() const { return m_AHCL.fileName; }
+  [[nodiscard]] inline const std::string&                GetAHCLMission() const { return m_AHCL.mission; }
+  [[nodiscard]] inline const std::string&                GetAHCLCharset() const { return m_AHCL.charset; }
 
   [[nodiscard]] inline static std::optional<uint32_t> GetTrigStrNum(const std::string& text)
   {

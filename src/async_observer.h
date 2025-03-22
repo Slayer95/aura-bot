@@ -45,8 +45,10 @@ public:
   uint8_t                                                       m_Goal;
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
+  uint8_t                                                       m_Color;
   uint8_t                                                       m_FrameRate;
   size_t                                                        m_SyncCounter;                  // the number of keepalive packets received from this player
+  size_t                                                        m_ActionFrameCounter;
   std::queue<uint32_t>                                          m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
 
   /*
@@ -97,6 +99,7 @@ public:
   // other functions
 
   void Send(const std::vector<uint8_t>& data) final;
+  void SendChat(const std::string& message);
   std::string GetLogPrefix() const;
 };
 
