@@ -1640,6 +1640,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 
   if (nCLI->m_GameHideLobbyNames.has_value()) SetHideLobbyNames(nCLI->m_GameHideLobbyNames.value());
   if (nCLI->m_GameHideLoadedNames.has_value()) SetHideInGameNames(nCLI->GetGameHideLoadedNames());
+  if (nCLI->m_GameResultSource.has_value()) SetResultSource(nCLI->GetGameResultSource());
   if (nCLI->m_GameVersion.has_value()) {
     optional<Version> maybeVersion = nCLI->GetGameVersion();
     if (maybeVersion.has_value()) SetGameVersion(maybeVersion.value());

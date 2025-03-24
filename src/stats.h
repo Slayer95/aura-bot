@@ -47,6 +47,7 @@ public:
 
   bool ProcessAction(uint8_t UID, const CIncomingAction& action);
   void Save(CAura* nAura, CAuraDB* nDB);
+  [[nodiscard]] std::optional<GameResults> GetGameResults(const bool undecidedIsLoser) const;
 };
 
 #endif // AURA_STATS_H_

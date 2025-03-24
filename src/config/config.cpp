@@ -71,6 +71,16 @@ using namespace std;
     } while(0);
 
 
+#define CONFIG_ERROR_ALLOWED_VALUES(key, T, U) \
+    do { \
+        m_ErrorLast = true; \
+        if (m_StrictMode) m_CriticalError = true; \
+        Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">. Allowed values: ") + JoinVector(U, false) + "."); \
+        return T; \
+    } while(0);
+
+
+
 #define END(T) \
     do { \
         if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
@@ -277,7 +287,7 @@ uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromLis
     }
   }
 
-  CONFIG_ERROR(key, x)
+  CONFIG_ERROR_ALLOWED_VALUES(key, x, fromList)
 }
 
 bool CConfig::GetBool(const string& key, bool x)

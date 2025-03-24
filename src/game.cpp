@@ -252,6 +252,19 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
 }
 
 //
+// GameResults
+//
+
+vector<string> GameResults::GetWinnersNames() const
+{
+  vector<string> names;
+  for (const auto& winner : GetWinners()) {
+    names.push_back(winner->GetName());
+  }
+  return names;
+}
+
+//
 // CGame
 //
 
@@ -355,6 +368,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_Remaking(false),
     m_Remade(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_AUTO),
+    m_GameResultSourceOfTruth(nGameSetup->m_ResultSource.has_value() ? nGameSetup->m_ResultSource.value() : nGameSetup->m_Map->GetGameResultSourceOfTruth()),
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_BeforePlayingEmptyActions(0),
@@ -483,6 +497,7 @@ void CGame::Reset()
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   m_GameHistory.reset();
+  m_GameResults.reset();
 
   for (auto& entry : m_SyncPlayers) {
     entry.second.clear();
@@ -491,42 +506,16 @@ void CGame::Reset()
 
   ClearActions();
 
+  if (m_CustomStats) {
+    m_CustomStats->FlushQueue();
+  }
+
+  if (m_GameLoaded && RunGameResults()) {
+    LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
+  }
+
   if (m_GameLoaded && m_Config.m_SaveStats) {
-    // store the CDBGamePlayers in the database
-    // add non-dota stats
-    if (!m_DBGamePlayers.empty()) {
-      int64_t Ticks = GetTicks();
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] saving game end player data to database")
-      if (m_Aura->m_DB->Begin()) {
-        for (auto& dbPlayer : m_DBGamePlayers) {
-          // exclude observers
-          if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
-            continue;
-          }
-          m_Aura->m_DB->UpdateGamePlayerOnEnd(
-            dbPlayer->GetName(),
-            dbPlayer->GetServer(),
-            dbPlayer->GetIP(),
-            dbPlayer->GetLoadingTime(),
-            m_GameTicks / 1000,
-            dbPlayer->GetLeftTime()
-          );
-        }
-        if (!m_Aura->m_DB->Commit()) {
-          LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit game end player data")
-        } else {
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] commited game end player data in " + to_string(GetTicks() - Ticks) + " ms")
-        }
-      } else {
-        LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to begin transaction game end player data")
-      }
-    }
-    // store the stats in the database
-    if (m_CustomStats) {
-      m_CustomStats->FlushQueue();
-      LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] MMD detected winners: " + JoinVector(m_CustomStats->GetWinners(), false))
-    }
-    if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
+    TrySaveStats();
   }
 
   for (auto& user : m_DBGamePlayers) {
@@ -560,6 +549,41 @@ void CGame::Reset()
   }
 
   m_Aura->m_Net.OnGameReset(this);
+}
+
+void CGame::TrySaveStats() const
+{
+  // store the CDBGamePlayers in the database
+  // add non-dota stats
+  if (!m_DBGamePlayers.empty()) {
+    int64_t Ticks = GetTicks();
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] saving game end player data to database")
+    if (m_Aura->m_DB->Begin()) {
+      for (auto& dbPlayer : m_DBGamePlayers) {
+        // exclude observers
+        if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
+          continue;
+        }
+        m_Aura->m_DB->UpdateGamePlayerOnEnd(
+          dbPlayer->GetName(),
+          dbPlayer->GetServer(),
+          dbPlayer->GetIP(),
+          dbPlayer->GetLoadingTime(),
+          m_GameTicks / 1000,
+          dbPlayer->GetLeftTime()
+        );
+      }
+      if (!m_Aura->m_DB->Commit()) {
+        LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit game end player data")
+      } else {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] commited game end player data in " + to_string(GetTicks() - Ticks) + " ms")
+      }
+    } else {
+      LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to begin transaction game end player data")
+    }
+  }
+  // store the stats in the database
+  if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
 }
 
 void CGame::ReleaseMapBusyTimedLock() const
@@ -1127,14 +1151,18 @@ string CGame::GetEndDescription() const
   string winnersFragment;
   if (m_CustomStats) {
     m_CustomStats->FlushQueue();
-    vector<string> winners = m_CustomStats->GetWinners();
-    if (winners.size() > 2) {
-      winnersFragment = "Winners: [" + winners[0] + "], and others";
-    } else if (winners.size() == 2) {
-      winnersFragment = "Winners: [" + winners[0] + "] and [" + winners[1] + "]";
-    } else if (winners.size() == 1) {
-      winnersFragment = "Winner: [" + winners[0] + "]";
+  }
+
+  if (m_GameResults.has_value()) {
+    vector<string> winnerNames = m_GameResults->GetWinnersNames();
+    if (winnerNames.size() > 2) {
+      winnersFragment = "Winners: [" + winnerNames[0] + "], and others";
+    } else if (winnerNames.size() == 2) {
+      winnersFragment = "Winners: [" + winnerNames[0] + "] and [" + winnerNames[1] + "]";
+    } else if (winnerNames.size() == 1) {
+      winnersFragment = "Winner: [" + winnerNames[0] + "]";
     }
+    LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(winnerNames, false))
   }
 
   string Description = (
@@ -1770,6 +1798,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       }
       return false;
     }
+    if (m_CustomStats) m_CustomStats->FlushQueue();
     if (m_Aura->GetNewGameIsInQuota()) {
       Remake();
     } else {
@@ -1777,7 +1806,6 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       m_Remaking = false;
       m_Exiting = true;
     }
-    if (m_CustomStats) m_CustomStats->FlushQueue();
     return true;
   }
 
@@ -5111,6 +5139,12 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
   if (user->GetDisconnected()) return;
   if (m_GameLoading || m_GameLoaded || clientReason == PLAYERLEAVE_GPROXY) {
     LOG_APP_IF(LOG_LEVEL_INFO, "user [" + user->GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
+    if (m_GameLoaded && !user->GetIsObserver() && GetGameResultSourceOfTruth() == GAME_RESULT_SOURCE_LEAVECODE) {
+      const optional<uint8_t> gameResult = GameProtocol::LeftCodeToResult(clientReason);
+      if (gameResult.has_value()) {
+        SetSelfReportedGameResultForPlayer(user->GetUID(), gameResult.value());
+      }
+    }
   }
 
   // this function is only called when a client leave packet is received, not when there's a socket error or kick
@@ -5249,7 +5283,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
         // y = (b - a) / 256
         // <map.w3hmc.trigger_1 = x>
         // <map.w3hmc.trigger_2 = y>
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [" + to_string(ByteArrayToUInt32(actionBytes, false, 1)) + " | " + to_string(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 1)) + " | 0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
       }
     }
   }
@@ -6003,7 +6037,7 @@ void CGame::EventGameStartedLoading()
   // enable stats
 
   if (!m_RestoredGame && m_Map->GetMMDEnabled()) {
-    if (m_Map->GetMapType() == "dota") {
+    if (m_Map->GetMMDType() == MMD_TYPE_DOTA) {
       if (m_StartPlayers < 6) {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] not using dotastats due to too few users")
       } else if (!m_ControllersBalanced || !m_FakeUsers.empty()) {
@@ -6016,15 +6050,12 @@ void CGame::EventGameStartedLoading()
     }
   }
 
-  for (auto& user : m_Users) {
-    uint8_t SID = GetSIDFromUID(user->GetUID());
-    // Do not exclude observers yet, so they can be searched in commands.
-    m_DBGamePlayers.push_back(new CDBGamePlayer(
-      user->GetName(),
-      user->GetRealmHostName(),
-      user->GetIPStringStrict(),
-      m_Slots[SID].GetColor()
-    ));
+  for (const auto& user : m_Users) {
+    const uint8_t SID = GetSIDFromUID(user->GetUID());
+    const CGameSlot* slot = InspectSlot(SID);
+    const IndexedGameSlot idxSlot = IndexedGameSlot(SID, slot);
+    // Do not exclude observers yet, so that they can be searched in commands.
+    m_DBGamePlayers.push_back(new CDBGamePlayer(user, idxSlot));
   }
 
   for (auto& user : m_Users) {
@@ -6698,6 +6729,26 @@ CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
   return nullptr;
 }
 
+CDBGamePlayer* CGame::GetDBPlayerFromSID(uint8_t SID) const
+{
+  for (const auto& user : m_DBGamePlayers) {
+    if (user->GetSID() == SID) {
+      return user;
+    }
+  }
+  return nullptr;
+}
+
+CDBGamePlayer* CGame::GetDBPlayerFromUID(uint8_t UID) const
+{
+  for (const auto& user : m_DBGamePlayers) {
+    if (user->GetUID() == UID) {
+      return user;
+    }
+  }
+  return nullptr;
+}
+
 uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanPlayer) const
 {
   uint8_t matches = 0;
@@ -6936,23 +6987,27 @@ void CGame::ResolveVirtualPlayers()
 
   // Join-in-progress
   bool joinInProgressIsNativeObserver = false;
-  if (m_Config.m_EnableJoinObserversInProgress && (!m_Map->GetMMDSupported() || m_Map->GetMMDSupportsVirtualPlayers())) {
-    const uint8_t SID = GetIsCustomForces() ? GetEmptyTeamSID(m_Map->GetMapCustomizableObserverTeam()) : GetEmptySID(false);
-    CGameSlot* slot = GetSlot(SID);
-    if (slot) {
-      const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName, true);
-      m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
-      joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
-      if (joinInProgressIsNativeObserver) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (native observer)")
-      } else {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (team " + ToDecString(slot->GetTeam()) + ")")
+  if (m_Config.m_EnableJoinObserversInProgress) {
+    const bool mmdIncompatibility = m_Map->GetMMDSupported() && !m_Map->GetMMDSupportsVirtualPlayers() && !m_Map->GetMMDPrioritizePlayers();
+    if (!mmdIncompatibility) {
+      const uint8_t SID = GetIsCustomForces() ? GetEmptyTeamSID(m_Map->GetMapCustomizableObserverTeam()) : GetEmptySID(false);
+      CGameSlot* slot = GetSlot(SID);
+      if (slot) {
+        const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName, true);
+        m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
+        joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
+        if (joinInProgressIsNativeObserver) {
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (native observer)")
+        } else {
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (team " + ToDecString(slot->GetTeam()) + ")")
+        }
       }
     } else {
-      m_Config.m_EnableJoinObserversInProgress = false;
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>, <map.w3mmd.features.prioritize_players = no>")
     }
-  } else if (m_Config.m_EnableJoinObserversInProgress) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>")
+  }
+
+  if (!m_JoinInProgressVirtualUser.has_value()) {
     m_Config.m_EnableJoinObserversInProgress = false;
   }
 
@@ -9142,7 +9197,7 @@ void CGame::OpenObserverSlots()
   if (m_Slots.size() >= enabledCount) return;
   LOG_APP_IF(LOG_LEVEL_DEBUG, "adding " + to_string(enabledCount - m_Slots.size()) + " observer slots")
   while (m_Slots.size() < enabledCount) {
-    m_Slots.emplace_back(GetIsCustomForces() ? SLOTTYPE_NONE : SLOTTYPE_USER, 0u, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
+    m_Slots.emplace_back(GetIsCustomForces() ? SLOTTYPE_NONE : SLOTTYPE_USER, UID_ZERO, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
   }
 }
 
@@ -9525,6 +9580,76 @@ uint32_t CGame::GetSyncLimitSafe() const
   return m_Config.m_SyncLimitSafe;
 }
 
+void CGame::VoidDBGameResults()
+{
+  // TODO(VoidDBGameResults): Clear all CDBGamePlayer* game results
+}
+
+void CGame::SyncDBPlayersFromGameResults()
+{
+  // TODO(SyncDBGameResults): Copy from m_GameResults to CDBGamePlayer*
+}
+
+bool CGame::RunGameResults()
+{
+  if (m_GameResults.has_value()) return true;
+
+  optional<GameResults> gameResults;
+  switch (GetGameResultSourceOfTruth()) {
+    case GAME_RESULT_SOURCE_MMD: {
+      if (m_CustomStats) {
+        gameResults = m_CustomStats->GetGameResults(m_Map->GetGameResultUndecidedIsLoser());
+      }
+      if (m_DotaStats) {
+        gameResults = m_DotaStats->GetGameResults(m_Map->GetGameResultUndecidedIsLoser());
+      }
+      break;
+    }
+
+    case GAME_RESULT_SOURCE_LEAVECODE: {
+      // TODO(GAME_RESULT_SOURCE_LEAVECODE): Build gameResults from CDBGamePlayer* game results data
+      gameResults.emplace();
+      break;
+    }
+
+    default:
+      return false;
+  }
+
+  if (!gameResults.has_value()) return false;
+
+  if (!CheckGameResults(gameResults.value())) {
+    VoidDBGameResults();
+    return false;
+  }
+
+  m_GameResults.swap(gameResults);
+  SyncDBPlayersFromGameResults();
+  return true;
+}
+
+bool CGame::CheckGameResults(const GameResults& gameResults) const
+{
+  // TODO: CheckGameResults contraints (m_Map.m_GameResults)
+  //bool canDraw;
+  //bool canAllWin;
+  //bool canAllLose;
+  //bool canWinMultiplePlayers;
+  //bool canWinMultipleTeams;
+  //bool undecidedIsLoser;
+
+  gameResults;
+  return false;
+}
+
+void CGame::SetSelfReportedGameResultForPlayer(const uint8_t UID, const uint8_t gameResult) const
+{
+  GameUser::CGameUser* user = GetUserFromUID(UID);
+  if (user) user->SetSelfReportedGameResult(gameResult);
+  CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(GetColorFromUID(UID));
+  if (dbPlayer) dbPlayer->SetGameResult(gameResult);
+}
+
 void CGame::RunHCLEncoding()
 {
   // encode the HCL command string in the slot handicaps
@@ -9563,6 +9688,9 @@ void CGame::RunHCLEncoding()
 
   for (auto& encode : encodingMap) {
     // the following 7 handicap values are forbidden for compatibility
+    //
+    // when the HCL parser in the map/WC3 client encounters these values,
+    // it means that the host is not using HCL, so they are passed through
 
     if (j == 0 || j == 50 || j == 60 || j == 70 || j == 80 || j == 90 || j == 100)
       ++j;
@@ -9584,7 +9712,8 @@ void CGame::RunHCLEncoding()
       slotInfo += 6;
     }
     slotInfo += charIndex * (encodeVirtualPlayers ? 12 : 6);
-    m_Slots[currentSlot++].SetHandicap(encodingMap[slotInfo]); // max() = 5+40*6 = 245 | 11+19*12 = 239
+    // max() = 7+5+40*6 = 252 | 7+11+19*12 = 246
+    m_Slots[currentSlot++].SetHandicap(encodingMap[slotInfo]);
   }
 
   // See documentation for the decoding algorithm

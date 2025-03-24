@@ -104,6 +104,7 @@ struct AppAction;
 struct FileChunkCached;
 struct FileChunkTransient;
 struct GameHistory;
+struct GameResults;
 struct LazyCommandContext;
 struct UDPPkt;
 
@@ -113,6 +114,7 @@ struct DoubleLinkedListNode;
 template <typename T>
 struct CircleDoubleLinkedList;
 
+typedef std::pair<const uint8_t, const CGameSlot*>  IndexedGameSlot;
 typedef std::vector<GameUser::CGameUser*>           UserList;
 typedef std::vector<const GameUser::CGameUser*>     ImmutableUserList;
 typedef std::vector<CIncomingAction>                ActionQueue;

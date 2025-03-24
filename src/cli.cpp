@@ -192,10 +192,11 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");
-  app.add_flag(  "--notify-joins,--no-notify-joins}", m_GameNotifyJoins, "Reports whether the game is joinable over the Internet.");
+  app.add_flag(  "--notify-joins,--no-notify-joins{false}", m_GameNotifyJoins, "Reports whether the game is joinable over the Internet.");
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
+  app.add_option("--winners-source", m_GameResultSource, "Customizes how Aura will determine the winner(s) of the hosted lobby. Values: none, exit, mmd")->check(CLI::IsMember({"none", "exit", "mmd"}));
   app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")->check(CLI::IsMember({"never", "host", "always", "auto"}));
   app.add_flag(  "--hide-ign,--no-hide-ign{false}", m_GameHideLobbyNames, "Whether to hide player names in a hosted game lobby.");
   app.add_flag(  "--load-in-game,--no-load-in-game{false}", m_GameLoadInGame, "Whether to allow players chat in the game while waiting for others to finish loading.");
@@ -458,7 +459,7 @@ uint8_t CCLI::GetGameBroadcastErrorHandler() const
 uint8_t CCLI::GetGameCrossPlayMode() const
 {
   uint8_t mode = CROSSPLAY_MODE_NONE;
-  if (m_GameBroadcastErrorHandler.has_value()) {
+  if (m_GameCrossPlayMode.has_value()) {
     if (m_GameCrossPlayMode.value() == "none") {
       mode = CROSSPLAY_MODE_NONE;
     } else if (m_GameCrossPlayMode.value() == "conservative") {
@@ -487,6 +488,21 @@ uint8_t CCLI::GetGameHideLoadedNames() const
     }
   }
   return hideNamesMode;
+}
+
+uint8_t CCLI::GetGameResultSource() const
+{
+  uint8_t gameResultSource = GAME_RESULT_SOURCE_NONE;
+  if (m_GameResultSource.has_value()) {
+    if (m_GameResultSource.value() == "none") {
+      gameResultSource = GAME_RESULT_SOURCE_NONE;
+    } else if (m_GameResultSource.value() == "exit") {
+      gameResultSource = GAME_RESULT_SOURCE_LEAVECODE;
+    } else if (m_GameResultSource.value() == "mmd") {
+      gameResultSource = GAME_RESULT_SOURCE_MMD;
+    }
+  }
+  return gameResultSource;
 }
 
 optional<Version> CCLI::GetGameVersion() const

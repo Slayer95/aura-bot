@@ -132,14 +132,15 @@ private:
   uint32_t                                        m_Version;
   uint32_t                                        m_LastValueID;
   //uint32_t                                      m_NextCheckID;
-  std::map<uint8_t, std::string>                  m_SIDToName;           // pid -> player name (e.g. 0 -> "Varlock") --- note: will not be automatically converted to lower case
-  std::map<uint8_t, uint8_t>                      m_Flags;               // pid -> flag (e.g. 0 -> MMD_RESULT_WINNER)
-  std::map<uint8_t, bool>                         m_FlagsLeaver;         // pid -> leaver flag (e.g. 0 -> true) --- note: will only be present if true
-  std::map<uint8_t, bool>                         m_FlagsPracticing;     // pid -> practice flag (e.g. 0 -> true) --- note: will only be present if true
+  std::map<uint8_t, std::string>                  m_SIDToName;           // sid -> player name (e.g. 0 -> "Varlock") --- note: will not be automatically converted to lower case
+  std::map<uint8_t, uint8_t>                      m_SIDToColor;
+  std::map<uint8_t, uint8_t>                      m_GameResults;         // sid -> flag (e.g. 0 -> GAME_RESULT_WINNER)
+  std::map<uint8_t, bool>                         m_FlagsLeaver;         // sid -> leaver flag (e.g. 0 -> true) --- note: will only be present if true
+  std::map<uint8_t, bool>                         m_FlagsPracticing;     // sid -> practice flag (e.g. 0 -> true) --- note: will only be present if true
   std::map<std::string, uint8_t>                  m_DefVarPs;            // varname -> value type (e.g. "kills" -> MMD_VALUE_TYPE_INT)
-  std::map<VarP, int32_t>                         m_VarPInts;            // pid,varname -> value (e.g. 0,"kills" -> 5)
-  std::map<VarP, double>                          m_VarPReals;           // pid,varname -> value (e.g. 0,"x" -> 0.8)
-  std::map<VarP, std::string>                     m_VarPStrings;         // pid,varname -> value (e.g. 0,"hero" -> "heroname")
+  std::map<VarP, int32_t>                         m_VarPInts;            // sid,varname -> value (e.g. 0,"kills" -> 5)
+  std::map<VarP, double>                          m_VarPReals;           // sid,varname -> value (e.g. 0,"x" -> 0.8)
+  std::map<VarP, std::string>                     m_VarPStrings;         // sid,varname -> value (e.g. 0,"hero" -> "heroname")
   std::map<std::string, std::vector<std::string>> m_DefEvents;           // event -> vector of format + arguments
   std::array<std::string, 3>                      m_ResultVerbs;
 
@@ -163,7 +164,7 @@ public:
   [[nodiscard]] std::string GetTrustedPlayerNameFromColor(uint8_t color) const;
   [[nodiscard]] std::string GetSenderName(CW3MMDAction* action) const;
   [[nodiscard]] std::string GetSenderName(CW3MMDDefinition* definition) const;
-  [[nodiscard]] std::vector<std::string> GetWinners() const;
+  [[nodiscard]] std::optional<GameResults> GetGameResults(const bool undecidedIsLoser) const;
   [[nodiscard]] std::string GetLogPrefix() const;
   void LogMetaData(int64_t recvTicks, const std::string& text) const;
 };

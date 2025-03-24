@@ -1393,6 +1393,9 @@ void CAura::EventGameDeleted(CGame* game)
       // Do not announce game ended if game lasted less than 3 minutes.
       return;
     }
+    if (game->GetGameLoaded()) {
+      game->RunGameResults();
+    }
     for (auto& realm : m_Realms) {
       if (!realm->GetAnnounceHostToChat()) continue;
       if (game->GetGameLoaded()) {

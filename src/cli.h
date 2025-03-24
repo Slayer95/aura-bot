@@ -153,6 +153,7 @@ public:
   std::optional<std::string>            m_GameUnsafeNameHandler;
   std::optional<std::string>            m_GameBroadcastErrorHandler;
   std::optional<std::string>            m_GameCrossPlayMode;
+  std::optional<std::string>            m_GameResultSource;
   std::optional<bool>                   m_GameHideLobbyNames;
   std::optional<std::string>            m_GameHideLoadedNames;
   std::optional<bool>                   m_GameLoadInGame;
@@ -191,6 +192,7 @@ public:
   [[nodiscard]] uint8_t GetGameBroadcastErrorHandler() const;
   [[nodiscard]] uint8_t GetGameCrossPlayMode() const;
   [[nodiscard]] uint8_t GetGameHideLoadedNames() const;
+  [[nodiscard]] uint8_t GetGameResultSource() const;
   [[nodiscard]] std::optional<Version> GetGameVersion() const;
   [[nodiscard]] bool CheckGameParameters() const;
   [[nodiscard]] bool CheckGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;

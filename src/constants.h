@@ -175,6 +175,9 @@ constexpr uint8_t MAP_ALLOW_LUA_AUTO = 2u;
 constexpr const char* HCL_CHARSET_STANDARD = "abcdefghijklmnopqrstuvwxyz0123456789 -=,."; // 41 characters
 constexpr const char* HCL_CHARSET_SMALL = "0123456789abcdef-\" \\"; // 20 characters
 
+constexpr uint8_t MMD_TYPE_STANDARD = 0u;
+constexpr uint8_t MMD_TYPE_DOTA = 1u;
+
 constexpr const char* AHCL_DEFAULT_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ -=,.!?*_+=|:;"; // 142 characters 
 
 // game.h
@@ -246,42 +249,58 @@ constexpr uint8_t GAME_FRAME_TYPE_LEAVER = 1u;
 constexpr uint8_t GAME_FRAME_TYPE_CHAT = 2u;
 constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 3u;
 
+constexpr uint8_t GAME_RESULT_SOURCE_NONE = 0u;
+constexpr uint8_t GAME_RESULT_SOURCE_LEAVECODE = 1u;
+constexpr uint8_t GAME_RESULT_SOURCE_MMD = 2u;
+
+constexpr uint8_t GAME_RESULT_CONSTRAINTS_NONE = 0u;
+constexpr uint8_t GAME_RESULT_CONSTRAINTS_NODRAW = 1u;
+constexpr uint8_t GAME_RESULT_CONSTRAINTS_SAME_TEAM_WINNERS = 2u;
+constexpr uint8_t GAME_RESULT_CONSTRAINTS_ALL = GAME_RESULT_CONSTRAINTS_NODRAW | GAME_RESULT_CONSTRAINTS_SAME_TEAM_WINNERS;
+
+constexpr uint8_t GAME_RESULT_LOSER = 0u;
+constexpr uint8_t GAME_RESULT_DRAWER = 1u;
+constexpr uint8_t GAME_RESULT_WINNER = 2u;
+constexpr uint8_t GAME_RESULT_UNDECIDED = 3u;
+
 // game_slot.h
 
-#define SLOTSTATUS_OPEN 0u
-#define SLOTSTATUS_CLOSED 1u
-#define SLOTSTATUS_OCCUPIED 2u
-#define SLOTSTATUS_VALID 3u
-#define SLOTSTATUS_VALID_INITIAL_NON_COMPUTER 1u
+constexpr uint8_t UID_ZERO = 0;
 
-#define SLOTRACE_HUMAN 1u
-#define SLOTRACE_ORC 2u
-#define SLOTRACE_NIGHTELF 4u
-#define SLOTRACE_UNDEAD 8u
-#define SLOTRACE_RANDOM 32u
-#define SLOTRACE_SELECTABLE 64u
-#define SLOTRACE_PICKRANDOM 128u
-#define SLOTRACE_INVALID 255u
+constexpr uint8_t SLOTSTATUS_OPEN = 0u;
+constexpr uint8_t SLOTSTATUS_CLOSED = 1u;
+constexpr uint8_t SLOTSTATUS_OCCUPIED = 2u;
+constexpr uint8_t SLOTSTATUS_VALID = 3u;
+constexpr uint8_t SLOTSTATUS_VALID_INITIAL_NON_COMPUTER = 1u;
 
-#define SLOTCOMP_EASY 0u
-#define SLOTCOMP_NORMAL 1u
-#define SLOTCOMP_HARD 2u
-#define SLOTCOMP_VALID 3u
-#define SLOTCOMP_INVALID 255u
+constexpr uint8_t SLOTRACE_HUMAN = 1u;
+constexpr uint8_t SLOTRACE_ORC = 2u;
+constexpr uint8_t SLOTRACE_NIGHTELF = 4u;
+constexpr uint8_t SLOTRACE_UNDEAD = 8u;
+constexpr uint8_t SLOTRACE_RANDOM = 32u;
+constexpr uint8_t SLOTRACE_SELECTABLE = 64u;
+constexpr uint8_t SLOTRACE_PICKRANDOM = 128u;
+constexpr uint8_t SLOTRACE_INVALID = 255u;
 
-#define SLOTCOMP_NO 0u
-#define SLOTCOMP_YES 1u
+constexpr uint8_t SLOTCOMP_EASY = 0u;
+constexpr uint8_t SLOTCOMP_NORMAL = 1u;
+constexpr uint8_t SLOTCOMP_HARD = 2u;
+constexpr uint8_t SLOTCOMP_VALID = 3u;
+constexpr uint8_t SLOTCOMP_INVALID = 255u;
 
-#define SLOTTYPE_NONE 0u
-#define SLOTTYPE_USER 1u
-#define SLOTTYPE_COMP 2u
-#define SLOTTYPE_NEUTRAL 3u
-#define SLOTTYPE_RESCUEABLE 4u
-#define SLOTTYPE_AUTO 255u
+constexpr uint8_t SLOTCOMP_NO = 0u;
+constexpr uint8_t SLOTCOMP_YES = 1u;
 
-#define SLOTPROG_NEW 0u
-#define SLOTPROG_RDY 100u
-#define SLOTPROG_RST 255u
+constexpr uint8_t SLOTTYPE_NONE = 0u;
+constexpr uint8_t SLOTTYPE_USER = 1u;
+constexpr uint8_t SLOTTYPE_COMP = 2u;
+constexpr uint8_t SLOTTYPE_NEUTRAL = 3u;
+constexpr uint8_t SLOTTYPE_RESCUEABLE = 4u;
+constexpr uint8_t SLOTTYPE_AUTO = 255u;
+
+constexpr uint8_t SLOTPROG_NEW = 0u;
+constexpr uint8_t SLOTPROG_RDY = 100u;
+constexpr uint8_t SLOTPROG_RST = 255u;
 
 constexpr int MAX_SLOTS_MODERN = 24;
 constexpr int MAX_SLOTS_LEGACY = 12;
@@ -386,14 +405,14 @@ constexpr uint8_t ASYNC_OBSERVER_PROMOTED = 2u;
 #define GAMETYPE_CUSTOM 1
 #define GAMETYPE_BLIZZARD 9
 
-#define PLAYERLEAVE_DISCONNECT 1
-#define PLAYERLEAVE_LOST 7
-#define PLAYERLEAVE_LOSTBUILDINGS 8
-#define PLAYERLEAVE_WON 9
-#define PLAYERLEAVE_DRAW 10
-#define PLAYERLEAVE_OBSERVER 11
-#define PLAYERLEAVE_LOBBY 13
-#define PLAYERLEAVE_GPROXY 100
+constexpr uint8_t PLAYERLEAVE_DISCONNECT = 1u;
+constexpr uint8_t PLAYERLEAVE_LOST = 7u;
+constexpr uint8_t PLAYERLEAVE_LOSTBUILDINGS = 8u;
+constexpr uint8_t PLAYERLEAVE_WON = 9u;
+constexpr uint8_t PLAYERLEAVE_DRAW = 10u;
+constexpr uint8_t PLAYERLEAVE_OBSERVER = 11u;
+constexpr uint8_t PLAYERLEAVE_LOBBY = 13u;
+constexpr uint8_t PLAYERLEAVE_GPROXY = 100u;
 
 #define REJECTJOIN_FULL 9
 #define REJECTJOIN_STARTED 10
@@ -689,10 +708,6 @@ constexpr uint8_t PJASS_OPTIONS_CHECKNUMBERLITERALS = 10u;
 #define MMD_FLAG_WINNER 2u
 #define MMD_FLAG_LEAVER 3u
 #define MMD_FLAG_PRACTICE 4u
-
-#define MMD_RESULT_LOSER 0u
-#define MMD_RESULT_DRAWER 1u
-#define MMD_RESULT_WINNER 2u
 
 #define MMD_PROCESSING_INITIAL_DELAY 60000
 #define MMD_PROCESSING_STREAM_DEF_DELAY 60000

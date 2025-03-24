@@ -103,9 +103,9 @@ CW3MMD::CW3MMD(CGame *nGame)
     m_LastValueID(0)
     //m_NextCheckID(0)
 {
-  m_ResultVerbs[MMD_RESULT_LOSER] = "lost";
-  m_ResultVerbs[MMD_RESULT_DRAWER] = "drew";
-  m_ResultVerbs[MMD_RESULT_WINNER] = "won";
+  m_ResultVerbs[GAME_RESULT_LOSER] = "lost";
+  m_ResultVerbs[GAME_RESULT_DRAWER] = "drew";
+  m_ResultVerbs[GAME_RESULT_WINNER] = "won";
 }
 
 CW3MMD::~CW3MMD()
@@ -347,8 +347,9 @@ bool CW3MMD::RecvAction(uint8_t fromUID, const CIncomingAction& action)
 bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
 {
   if (definition->GetType() == MMD_DEFINITION_TYPE_INIT) {
-    if (definition->GetSubType() == MMD_INIT_TYPE_PLAYER) {
-      if (definition->GetSID() >= m_Game->GetNumSlots()) {
+    if (definition->GetSubType() == MMD_INIT_TYPE_PLAYER) { // pid
+      const CGameSlot* slot = m_Game->InspectSlot(definition->GetSID());
+      if (!slot) {
         Print(GetLogPrefix() + "cannot initialize player slot " + ToDecString(definition->GetSID()));
         return false;
       }
@@ -364,14 +365,16 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
           "] as [" + definition->GetName() + "]"
         );
       }
+      
       if (!found && m_SIDToName.size() >= m_Game->GetNumControllers()) {
         Print(GetLogPrefix() + "too many players initialized");
         return false;
       }
-      m_SIDToName[definition->GetSID()] = definition->GetName();
+      m_SIDToName[definition->GetSID()] = definition->GetName(); // W3MMD will report the player name as seen by the WC3 client
+      m_SIDToColor[definition->GetSID()] = slot->GetColor();
     }
     return true;
-  } else if (definition->GetType() == MMD_DEFINITION_TYPE_VAR) {
+  } else if (definition->GetType() == MMD_DEFINITION_TYPE_VAR) { // DefVarP
     if (m_DefVarPs.find(definition->GetName()) != m_DefVarPs.end()) {
       Print(GetLogPrefix() + "duplicate DefVarP [" + definition->GetName() + "] found, ignoring");
       return false;
@@ -384,7 +387,7 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
       m_DefVarPs[definition->GetName()] = MMD_VALUE_TYPE_STRING;
     }
     return true;
-  } else { // if (definition->GetType() == MMD_DEFINITION_TYPE_EVENT)
+  } else { // if (definition->GetType() == MMD_DEFINITION_TYPE_EVENT) // DefEvent
     if (m_DefEvents.find(definition->GetName()) != m_DefEvents.end()) {
       Print(GetLogPrefix() + "duplicate DefEvent [" + definition->GetName() + "] found, ignoring");
       return false;
@@ -412,23 +415,23 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
         break;
       }
       case MMD_FLAG_DRAWER: {
-        result = MMD_RESULT_DRAWER;
+        result = GAME_RESULT_DRAWER;
         break;
       }
       case MMD_FLAG_WINNER: {
-        result = MMD_RESULT_WINNER;
+        result = GAME_RESULT_WINNER;
         break;
       }
       default: {
-        result = MMD_RESULT_LOSER;
+        result = GAME_RESULT_LOSER;
         break;
       }
     }
     if (result == 0xFFu) {
       return true;
     }
-    auto previousResultIt = m_Flags.find(action->GetSID());
-    if (previousResultIt != m_Flags.end()) {
+    auto previousResultIt = m_GameResults.find(action->GetSID());
+    if (previousResultIt != m_GameResults.end()) {
       if (previousResultIt->second == result) {
         return true;
       }
@@ -438,8 +441,8 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       );
       return false;
     }
-    m_Flags[action->GetSID()] = result;
-    if (result == MMD_RESULT_WINNER) {
+    m_GameResults[action->GetSID()] = result;
+    if (result == GAME_RESULT_WINNER) {
       m_GameOver = true;
     }
     LogMetaData(action->GetRecvTicks(), GetStoredPlayerName(action->GetSID()) + " " + m_ResultVerbs[result] + " the game.");
@@ -680,14 +683,11 @@ string CW3MMD::GetSenderName(CW3MMDAction* action) const
   return GetTrustedPlayerNameFromColor(action->GetFromColor());
 }
 
-vector<string> CW3MMD::GetWinners() const
+optional<GameResults> CW3MMD::GetGameResults(const bool undecidedIsLoser) const
 {
-  vector<string> winners;
-  for (const auto& flagEntry : m_Flags) {
-    if (flagEntry.second != MMD_RESULT_WINNER) continue;
-    winners.push_back(GetStoredPlayerName(flagEntry.first));
-  }
-  return winners;
+  // TODO: CW3MMD::GetGameResults
+  optional<GameResults> gameResults;
+  return gameResults;
 }
 
 string CW3MMD::GetLogPrefix() const

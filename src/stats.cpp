@@ -388,3 +388,10 @@ void CDotaStats::Save(CAura* nAura, CAuraDB* DB)
   else
     Print("[STATS: " + m_Game->GetGameName() + "] unable to begin database transaction, data not saved");
 }
+
+optional<GameResults> CDotaStats::GetGameResults(const bool undecidedIsLoser) const
+{
+  // TODO: CDotaStats::GetGameResults
+  optional<GameResults> gameResults;
+  return gameResults;
+}

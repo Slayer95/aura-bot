@@ -261,8 +261,8 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
 
   // in fact, this is equivalent to INHERIT_MAP(m_GameVersion, m_MapTargetGameVersion),
   // since we always set CMap::m_MapTargetGameVersion according to this inheritance
-  INHERIT_MAP_OR_CUSTOM(m_GameVersion, m_MapTargetGameVersion, m_GameVersion);
-  INHERIT_CUSTOM(m_CrossPlayMode, m_CrossPlayMode);
+  INHERIT_MAP_OR_CUSTOM(m_GameVersion, m_MapTargetGameVersion, m_GameVersion)
+  INHERIT_CUSTOM(m_CrossPlayMode, m_CrossPlayMode)
   INHERIT(m_VoteKickPercentage)
 }
 

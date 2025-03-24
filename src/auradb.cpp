@@ -47,6 +47,8 @@
 #include "net.h"
 #include "util.h"
 #include "config/config.h"
+#include "game_slot.h"
+#include "game_user.h"
 #ifdef DISABLE_DPP
 #include <nlohmann/json.hpp>
 #else
@@ -1574,15 +1576,16 @@ CDBBan::~CDBBan() = default;
 // CDBGamePlayer
 //
 
-CDBGamePlayer::CDBGamePlayer(string nName, string nServer, string nIP/*, uint8_t nUID, uint8_t nSID*/, uint8_t nColor)
-  : m_Name(std::move(nName)),
-    m_Server(std::move(nServer)),
-    m_IP(std::move(nIP)),
+CDBGamePlayer::CDBGamePlayer(const GameUser::CGameUser* user, const IndexedGameSlot& idxSlot)
+  : m_Name(user->GetName()),
+    m_Server(user->GetRealmHostName()),
+    m_IP(user->GetIPStringStrict()),
     m_LoadingTime(0),
     m_LeftTime(0),
-    /*m_UID(nUID),
-    m_SID(nSID),*/
-    m_Color(nColor)
+    m_UID(user->GetUID()),
+    m_SID(idxSlot.first),
+    m_Color(idxSlot.second->GetColor()),
+    m_GameResult(GAME_RESULT_UNDECIDED)
 {
 }
 

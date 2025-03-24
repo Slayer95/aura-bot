@@ -77,6 +77,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapEditorVersion(0),
     m_MapDataSet(0),
     m_MapIsLua(false),
+    m_MapIsMelee(false),
     m_MapMinGameVersion(GAMEVER(1u, 0u)),
     m_MapMinSuggestedGameVersion(GAMEVER(1u, 0u)),
     m_MapNumControllers(0),
@@ -1137,8 +1138,8 @@ void CMap::Load(CConfig* CFG)
 
   if (mapEssentials.has_value()) {
     // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
-    m_MapFilterType = mapEssentials->melee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO;
-    if (m_MapFilterType == MAPFILTER_TYPE_MELEE) {
+    m_MapIsMelee = mapEssentials->melee;
+    if (m_MapIsMelee) {
       DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] found melee map")
     }
 
@@ -1317,6 +1318,13 @@ void CMap::Load(CConfig* CFG)
     m_MapFileIsValid = true;
   }
 
+  if (CFG->Exists("map.melee")) {
+    m_MapIsMelee = CFG->GetUint8("map.melee", m_MapIsMelee);
+  } else {
+    CFG->SetUint8("map.melee", m_MapIsMelee);
+  }  
+
+  m_MapFilterType = m_MapIsMelee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO;
   if (CFG->Exists("map.filter_type")) {
     // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
     m_MapFilterType = CFG->GetUint8("map.filter_type", m_MapFilterType);
@@ -1564,8 +1572,9 @@ void CMap::Load(CConfig* CFG)
 
   LoadGameConfigOverrides(*CFG);
   LoadMapSpecificConfig(*CFG);
+  LoadGameResultConfig(*CFG);
 
-  // Out of the box support for auto-starting maps using the Host Force + Others Force pattern.
+  // Out of the box support for auto-starting maps using the Host Force + Others Force pattern (e.g. Warlock)
   if (m_MapNumTeams == 2 && m_MapNumControllers > 2 && !m_AutoStartRequiresBalance.has_value()) {
     uint8_t refTeam = 0xFF;
     uint8_t playersRefTeam = 0;
@@ -2134,22 +2143,43 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   //
   // https://gist.github.com/Slayer95/a15fc75f38d0b3fdf356613ede96cf7f
 
-  m_HCL.supported = CFG.GetBool("map.hcl.supported", false);
+  m_HCL.supported = false;
+  if (CFG.Exists("map.hcl.supported")) {
+    m_HCL.supported = CFG.GetBool("map.hcl.supported", m_HCL.supported);
+  } else {
+    CFG.SetBool("map.hcl.supported", m_HCL.supported);
+  }
+
   m_HCL.aboutVirtualPlayers = CFG.GetBool("map.hcl.info.virtual_players", false);
-  m_HCL.toggle = CFG.GetStringIndex("map.hcl.toggle", {"disabled", "optional", "required"}, MAP_FEATURE_TOGGLE_DISABLED);
+
+  const vector<string> toggleOptions = {"disabled", "optional", "required"};
+  m_HCL.toggle = m_HCL.supported ? MAP_FEATURE_TOGGLE_OPTIONAL : MAP_FEATURE_TOGGLE_DISABLED;
+  if (CFG.Exists("map.hcl.toggle")) {
+    m_HCL.toggle = CFG.GetStringIndex("map.hcl.toggle", toggleOptions, m_HCL.toggle);
+  } else {
+    CFG.SetString("map.hcl.toggle", toggleOptions[m_HCL.toggle]);
+  }
+
   m_HCL.defaultValue = ToLowerCase(CFG.GetString("map.hcl.default", 1, m_MapVersionMaxSlots, string()));
 
-  if (m_HCL.aboutVirtualPlayers) {
-    if (!CheckIsValidHCLSmall(m_HCL.defaultValue).empty()) {
-      // short HCL may be a misnomer
-      // the charset is short, which means we need longer strings for the same amount of information
-      Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid virtual HCL (hexadecimal or in -\" \\).");
+  if (!m_HCL.defaultValue.empty()) {
+    if (!m_HCL.supported) {
+      Print("[MAP] HCL cannot be enabled - map does not support it.");
       CFG.SetFailed();
     }
-  } else {
-    if (!CheckIsValidHCLStandard(m_HCL.defaultValue).empty()) {
-      Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid standard HCL (alphanumeric or in -= .,).");
-      CFG.SetFailed();
+
+    if (m_HCL.aboutVirtualPlayers) {
+      if (!CheckIsValidHCLSmall(m_HCL.defaultValue).empty()) {
+        // short HCL may be a misnomer
+        // the charset is short, which means we need longer strings for the same amount of information
+        Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid virtual HCL (hexadecimal or in -\" \\).");
+        CFG.SetFailed();
+      }
+    } else {
+      if (!CheckIsValidHCLStandard(m_HCL.defaultValue).empty()) {
+        Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid standard HCL (alphanumeric or in -= .,).");
+        CFG.SetFailed();
+      }
     }
   }
 
@@ -2157,12 +2187,33 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   //
   // https://wc3stats.com/docs/w3mmd
 
-  m_MMD.supported = CFG.GetBool("map.w3mmd.supported", m_MapType == "dota" || m_MapType == "evergreen");
-  m_MMD.enabled = CFG.GetBool("map.w3mmd.enabled", m_MMD.supported);
+  m_MMD.supported = m_MapType == "dota" || m_MapType == "evergreen";
+  if (CFG.Exists("map.w3mmd.supported")) {
+    m_MMD.supported = CFG.GetBool("map.w3mmd.supported", m_MMD.supported);
+  } else {
+    CFG.SetBool("map.w3mmd.supported", m_MMD.supported);
+  }
+
+  m_MMD.enabled = m_MMD.supported;
+  if (CFG.Exists("map.w3mmd.enabled")) {
+    m_MMD.enabled = CFG.GetBool("map.w3mmd.enabled", m_MMD.enabled);
+  } else {
+    CFG.SetBool("map.w3mmd.enabled", m_MMD.enabled);
+  }
+
+  const vector<string> mmdTypes = {"standard", "dota"};
+  m_MMD.type = m_MapType == "dota" ? MMD_TYPE_DOTA : MMD_TYPE_STANDARD;
+  if (CFG.Exists("map.w3mmd.type")) {
+    m_MMD.type = CFG.GetStringIndex("map.w3mmd.type", mmdTypes, m_MMD.type);
+  } else {
+    CFG.SetString("map.w3mmd.type", mmdTypes[m_MMD.type]);
+  }
+
   // W3MMD v1 does not support attaching data to computer-controlled players
   m_MMD.aboutComputers = CFG.GetBool("map.w3mmd.subjects.computers.enabled", m_MapType == "evergreen");
   // W3MMD v1 has no way of distinguishing virtual from real players, so it expects some frames to be sent by virtual players
   m_MMD.emitSkipsVirtualPlayers = CFG.GetBool("map.w3mmd.features.virtual_players", false);
+  m_MMD.emitPrioritizePlayers = CFG.GetBool("map.w3mmd.features.prioritize_players", false);
 
   if (m_MMD.enabled) {
     if (!m_MMD.supported) {
@@ -2227,6 +2278,60 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   }
 
   CFG.SetStrictMode(wasStrict);
+}
+
+void CMap::LoadGameResultConfig(CConfig& CFG)
+{
+  const vector<string> truthSourceOptions = {"none", "exit", "mmd"};
+  m_GameResult.truthSource = m_MMD.enabled ? GAME_RESULT_SOURCE_MMD : GAME_RESULT_SOURCE_LEAVECODE;
+  if (CFG.Exists("map.game_result.source")) {
+    m_GameResult.truthSource = CFG.GetStringIndex("map.game_result.source", truthSourceOptions, m_GameResult.truthSource);
+    CFG.FailIfErrorLast();
+  } else {
+    CFG.SetString("map.game_result.source", truthSourceOptions[m_GameResult.truthSource]);
+  }
+
+  m_GameResult.canDraw = !m_MapIsMelee;
+  if (CFG.Exists("map.game_result.draw.allowed")) {
+    m_GameResult.canDraw = CFG.GetBool("map.game_result.draw.allowed", m_GameResult.canDraw);
+  } else {
+    CFG.SetBool("map.game_result.draw.allowed", m_GameResult.canDraw);
+  }
+
+  m_GameResult.canWinMultiplePlayers = true;
+  if (CFG.Exists("map.game_result.shared_winners.players.allowed")) {
+    m_GameResult.canWinMultiplePlayers = CFG.GetBool("map.game_result.shared_winners.players.allowed", m_GameResult.canWinMultiplePlayers);
+  } else {
+    CFG.SetBool("map.game_result.shared_winners.players.allowed", m_GameResult.canWinMultiplePlayers);
+  }
+
+  m_GameResult.canWinMultipleTeams = !m_MapIsMelee || !(m_GameFlags & MAPFLAG_FIXEDTEAMS);
+  if (CFG.Exists("map.game_result.shared_winners.teams.allowed")) {
+    m_GameResult.canWinMultipleTeams = CFG.GetBool("map.game_result.shared_winners.teams.allowed", m_GameResult.canWinMultipleTeams);
+  } else {
+    CFG.SetBool("map.game_result.shared_winners.teams.allowed", m_GameResult.canWinMultipleTeams);
+  }
+
+  m_GameResult.canAllWin = false; // not allowed in a rated game
+  if (CFG.Exists("map.game_result.shared_winners.all.allowed")) {
+    m_GameResult.canAllWin = CFG.GetBool("map.game_result.shared_winners.all.allowed", m_GameResult.canAllWin);
+  } else {
+    CFG.SetBool("map.game_result.shared_winners.all.allowed", !m_GameResult.canAllWin);
+  }
+
+  m_GameResult.canAllLose = false; // not allowed in a rated game
+  if (CFG.Exists("map.game_result.shared_losers.all.allowed")) {
+    m_GameResult.canAllLose = CFG.GetBool("map.game_result.shared_losers.all.allowed", m_GameResult.canAllLose);
+  } else {
+    CFG.SetBool("map.game_result.shared_losers.all.allowed", m_GameResult.canAllLose);
+  }
+
+  m_GameResult.undecidedIsLoser = true;
+  if (CFG.Exists("map.game_result.undecided.is_loser")) {
+    m_GameResult.undecidedIsLoser = CFG.GetBool("map.game_result.undecided.is_loser", m_GameResult.undecidedIsLoser);
+  } else {
+    CFG.SetBool("map.game_result.undecided.is_loser", m_GameResult.undecidedIsLoser);
+  }
 }
 
 uint8_t CMap::GetLobbyRace(const CGameSlot* slot) const

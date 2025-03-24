@@ -181,6 +181,7 @@ public:
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
   std::optional<bool>                             m_NotifyJoins;
+  std::optional<uint8_t>                          m_ResultSource;
   std::optional<bool>                             m_HideLobbyNames;
   std::optional<uint8_t>                          m_HideInGameNames;
   std::optional<Version>                          m_GameVersion;
@@ -310,6 +311,7 @@ public:
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetNotifyJoins(const bool nNotifyJoins) { m_NotifyJoins = nNotifyJoins; }
+  void SetResultSource(const uint8_t nResultSource) { m_ResultSource = nResultSource; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
   void SetContext(std::shared_ptr<CCommandContext> nCtx) { m_Ctx = nCtx; }
   void SetMapReadyCallback(const uint8_t action, const std::string& data) {

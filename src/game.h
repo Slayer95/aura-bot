@@ -137,7 +137,7 @@ struct GameFrame
   GameFrame(const uint8_t nType, std::vector<uint8_t>& nBytes)
    : m_Type(nType),
      m_Bytes(std::move(nBytes))
-  {};
+  {}
 
   ~GameFrame() = default;
 
@@ -173,7 +173,7 @@ struct GameHistory
      m_GProxyEmptyActions(0),
      m_Latency(0),
      m_NumActionFrames(0)
-  {};
+  {}
 
   ~GameHistory() = default;
 
@@ -191,6 +191,23 @@ struct GameHistory
   inline void SetStartedTicks(const int64_t nStartedTicks) { m_StartedTicks = nStartedTicks; }
   inline bool GetIsStarted() { return m_StartedTicks.has_value();}
   inline int64_t GetStartedTicks() { return m_StartedTicks.value(); }
+};
+
+struct GameResults
+{
+  std::vector<CDBGamePlayer*> winners;
+  std::vector<CDBGamePlayer*> losers;
+  std::vector<CDBGamePlayer*> drawers;
+  std::vector<CDBGamePlayer*> undecided;
+
+  GameResults() = default;
+  ~GameResults() = default;
+
+  inline const std::vector<CDBGamePlayer*>& GetWinners() const { return winners; }
+  inline const std::vector<CDBGamePlayer*>& GetLosers() const { return losers; }
+  inline const std::vector<CDBGamePlayer*>& GetDrawers() const { return drawers; }
+  inline const std::vector<CDBGamePlayer*>& GetUndecided() const { return drawers; }
+  std::vector<std::string> GetWinnersNames() const;
 };
 
 class CGame
@@ -321,12 +338,14 @@ protected:
   bool                                                   m_Remaking;
   bool                                                   m_Remade;
   uint8_t                                                m_SaveOnLeave;
+  uint8_t                                                m_GameResultSourceOfTruth;
   bool                                                   m_HMCEnabled;
   uint8_t                                                m_BufferingEnabled;
   uint32_t                                               m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
 
   SharedByteArray                                        m_LoadedMapChunk;
   std::shared_ptr<GameHistory>                           m_GameHistory;
+  std::optional<GameResults>                             m_GameResults;
 
   std::bitset<128>                                       m_SupportedGameVersions;
   Version                                                m_SupportedGameVersionsMin;
@@ -651,6 +670,8 @@ public:
   uint8_t                   GetUserFromDisplayNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
   uint8_t                   GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
   CDBGamePlayer*            GetDBPlayerFromColor(uint8_t colour) const;
+  CDBGamePlayer*            GetDBPlayerFromSID(uint8_t SID) const;
+  CDBGamePlayer*            GetDBPlayerFromUID(uint8_t UID) const;
   GameUser::CGameUser*                GetPlayerFromColor(uint8_t colour) const;
   uint8_t                   GetColorFromUID(uint8_t UID) const;
   uint8_t                   GetNewUID() const;
@@ -801,6 +822,10 @@ public:
   bool GetIsCheckJoinable() const;
   void SetIsCheckJoinable(const bool nCheckIsJoinable);
   inline bool GetSentPriorityWhois() const { return m_SentPriorityWhois; }
+  inline bool GetRemaking() const { return m_Remaking; }
+  inline bool GetRemade() const { return m_Remade; }
+  inline uint8_t GetSaveOnLeave() const { return m_SaveOnLeave; }
+  inline uint8_t GetGameResultSourceOfTruth() const { return m_GameResultSourceOfTruth; }
   bool GetHasReferees() const;
   inline bool GetUsesCustomReferees() const { return m_UsesCustomReferees; }
   bool GetIsSupportedGameVersion(const Version& nVersion) const;
@@ -848,6 +873,13 @@ public:
   bool SetLayoutTwoTeams();
   bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
   bool SetLayoutCompact();
+
+  void VoidDBGameResults();
+  void SyncDBPlayersFromGameResults();
+  bool RunGameResults();
+  bool CheckGameResults(const GameResults& gameResults) const;
+  void SetSelfReportedGameResultForPlayer(const uint8_t UID, const uint8_t gameResult) const;
+  void TrySaveStats() const;
 
   void                      RunHCLEncoding();
   bool                      SendHMC(const std::string& message);

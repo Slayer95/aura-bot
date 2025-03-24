@@ -137,6 +137,34 @@ struct MapEssentials
   ~MapEssentials() = default;
 };
 
+//
+// GameResultConfig
+//
+
+struct GameResultConfig
+{
+  bool canDraw;
+  bool canAllWin;
+  bool canAllLose;
+  bool canWinMultiplePlayers;
+  bool canWinMultipleTeams;
+  bool undecidedIsLoser;
+  uint8_t truthSource;
+
+  GameResultConfig()
+   : canDraw(false),
+     canAllWin(false),
+     canAllLose(false),
+     canWinMultiplePlayers(false),
+     canWinMultipleTeams(false),
+     undecidedIsLoser(false),
+     truthSource(GAME_RESULT_SOURCE_NONE)
+  {
+  }
+
+  ~GameResultConfig() = default;
+};
+
 struct HCLConfig
 {
   bool supported;
@@ -159,12 +187,16 @@ struct W3MMDConfig
   bool enabled;
   bool aboutComputers;
   bool emitSkipsVirtualPlayers;
+  bool emitPrioritizePlayers;
+  uint8_t type;
 
   W3MMDConfig()
    : supported(false),
      enabled(false),
      aboutComputers(false),
-     emitSkipsVirtualPlayers(false)
+     emitSkipsVirtualPlayers(false),
+     emitPrioritizePlayers(false),
+     type(MMD_TYPE_STANDARD)
   {
   }
   ~W3MMDConfig() = default;
@@ -267,6 +299,12 @@ public:
   std::optional<uint8_t>                m_BroadcastErrorHandler;
   std::optional<bool>                   m_PipeConsideredHarmful;
 
+  GameResultConfig                      m_GameResult;
+  HCLConfig                             m_HCL;
+  W3MMDConfig                           m_MMD;
+  W3HMCConfig                           m_HMC;
+  AHCLConfig                            m_AHCL;
+
 private:
   std::array<uint8_t, 4>                       m_MapSize;                // config value: <map.size> (4 bytes)
   std::array<uint8_t, 2>                       m_MapWidth;               // config value: <map.width> (2 bytes)
@@ -288,6 +326,7 @@ private:
   uint32_t                        m_MapEditorVersion;
   uint8_t                         m_MapDataSet;
   bool                            m_MapIsLua;
+  bool                            m_MapIsMelee;
   Version                         m_MapMinGameVersion;
   Version                         m_MapMinSuggestedGameVersion;
   uint8_t                         m_MapNumControllers; // config value: max map number of players
@@ -329,11 +368,6 @@ private:
   bool                            m_JASSValid;
   std::string                     m_ErrorMessage;
   std::string                     m_JASSErrorMessage;
-
-  HCLConfig                       m_HCL;
-  W3MMDConfig                     m_MMD;
-  W3HMCConfig                     m_HMC;
-  AHCLConfig                      m_AHCL;
 
 public:
   CMap(CAura* nAura, CConfig* CFG);
@@ -436,6 +470,7 @@ public:
   void Load(CConfig* CFG);
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
+  void LoadGameResultConfig(CConfig& CFG);
 
   [[nodiscard]] bool                              TryLoadMapFilePersistent(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
   [[nodiscard]] bool                              TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32, std::optional<std::array<uint8_t, 20>>& sha1);
@@ -445,6 +480,9 @@ public:
   [[nodiscard]] std::pair<bool, uint32_t>         ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient, size_t, size_t)> processChunk);
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
+
+  [[nodiscard]] inline uint8_t                           GetGameResultSourceOfTruth() const { return m_GameResult.truthSource; }
+  [[nodiscard]] inline bool                              GetGameResultUndecidedIsLoser() const { return m_GameResult.undecidedIsLoser; }
 
   // HCL
   [[nodiscard]] inline bool                              GetHCLSupported() const { return m_HCL.supported; }
@@ -462,6 +500,8 @@ public:
   [[nodiscard]] inline bool                              GetMMDEnabled() const { return m_MMD.enabled; }
   [[nodiscard]] inline bool                              GetMMDAboutComputers() const { return m_MMD.aboutComputers; }
   [[nodiscard]] inline bool                              GetMMDSupportsVirtualPlayers() const { return m_MMD.emitSkipsVirtualPlayers; }
+  [[nodiscard]] inline bool                              GetMMDPrioritizePlayers() const { return m_MMD.emitPrioritizePlayers; }
+  [[nodiscard]] inline uint8_t                           GetMMDType() const { return m_MMD.type; }
 
   // W3HMC
   [[nodiscard]] inline bool                              GetHMCEnabled() const { return m_HMC.toggle != MAP_FEATURE_TOGGLE_DISABLED; }

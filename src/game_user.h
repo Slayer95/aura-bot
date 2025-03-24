@@ -153,6 +153,8 @@ namespace GameUser
     // Actions
     uint8_t                          m_RemainingSaves;
     uint8_t                          m_RemainingPauses;
+    std::optional<uint8_t>           m_SelfGameResult;
+    std::optional<uint8_t>           m_FinalGameResult;
 
     CGameUser(CGame* game, CConnection* connection, uint8_t nUID, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
@@ -357,6 +359,8 @@ namespace GameUser
     inline void ClearPinnedMessage() { m_PinnedMessage.clear(); }
 
     void RefreshUID();
+    inline void SetSelfReportedGameResult(const uint8_t result) { m_SelfGameResult = result; }
+    inline void SetFinalGameResult(const uint8_t result) { m_FinalGameResult = result; }
 
     // processing functions
 
