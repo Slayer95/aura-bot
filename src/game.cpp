@@ -9327,7 +9327,7 @@ bool CGame::GetHasPvPGNPlayers() const
   return false;
 }
 
-bool CGame::GetIsSlotReservedForSystemVirtualUser(const uint8_t SID)
+bool CGame::GetIsSlotReservedForSystemVirtualUser(const uint8_t SID) const
 {
   if (m_Map->GetHMCEnabled() && SID == m_Map->GetHMCSlot()) return true;
   if (m_Map->GetAHCLEnabled() && SID == m_Map->GetAHCLSlot()) return true;

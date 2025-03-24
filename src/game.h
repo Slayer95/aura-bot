@@ -705,7 +705,7 @@ public:
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;
-  bool                      GetIsSlotReservedForSystemVirtualUser(const uint8_t SID) bool;
+  bool                      GetIsSlotReservedForSystemVirtualUser(const uint8_t SID) const;
 
   // Observer features
   inline std::shared_ptr<GameHistory> GetGameHistory() { return m_GameHistory; }
@@ -881,7 +881,7 @@ public:
   void VoidDBGameResults();
   void SyncDBPlayersFromGameResults();
   bool RunGameResults();
-  bool GetIsAPrioriCompatibleWithGameResultsConstraints(string& reason) const;
+  bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
   bool CheckGameResults(const GameResults& gameResults) const;
   void SetSelfReportedGameResultForPlayer(const uint8_t UID, const uint8_t gameResult) const;
   void TrySaveStats() const;
