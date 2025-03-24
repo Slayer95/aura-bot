@@ -6359,6 +6359,11 @@ void CGame::EventGameLoaded()
     }
   }
 
+  string unratedReason;
+  if (!GetIsAPrioriCompatibleWithGameResultsConstraints(unratedReason)) {
+    SendAllChat("This game is unrated because " + unratedReason);
+  }
+
   // GProxy hangs trying to reconnect
   if (GetIsSinglePlayerMode() && !GetAnyUsingGProxy()) {
     SendAllChat("HINT: Single-user game detected. In-game commands will be DISABLED.");
@@ -7321,7 +7326,6 @@ uint8_t CGame::GetEmptySID(bool reserved) const
   // look for an empty slot for a new user to occupy
   // if reserved is true then we're willing to use closed or occupied slots as long as it wouldn't displace a user with a reserved slot
 
-  uint8_t skipHMC = GetHMCSID();
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OPEN) {
       continue;
@@ -7334,7 +7338,7 @@ uint8_t CGame::GetEmptySID(bool reserved) const
     // no empty slots, but since user is reserved give them a closed slot
 
     for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-      if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_CLOSED && i != skipHMC) {
+      if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_CLOSED && !GetIsSlotReservedForSystemVirtualUser(i)) {
         return i;
       }
     }
@@ -7469,8 +7473,7 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
   if (SID1 >= static_cast<uint8_t>(m_Slots.size()) || SID2 >= static_cast<uint8_t>(m_Slots.size()) || SID1 == SID2) {
     return false;
   }
-  uint8_t hmcSID = GetHMCSID();
-  if (SID1 == hmcSID || SID2 == hmcSID) {
+  if (GetIsSlotReservedForSystemVirtualUser(SID1) || GetIsSlotReservedForSystemVirtualUser(SID2)) {
     return false;
   }
 
@@ -7552,7 +7555,7 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   if (!slot || !slot->GetIsSelectable()) {
     return false;
   }
-  if (SID == GetHMCSID()) {
+  if (GetIsSlotReservedForSystemVirtualUser(SID)) {
     return false;
   }
 
@@ -7587,10 +7590,9 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
 
 bool CGame::OpenSlot()
 {
-  uint8_t skipHMC = GetHMCSID();
   uint8_t SID = 0;
   while (SID < m_Slots.size()) {
-    if (SID != skipHMC && m_Slots[SID].GetSlotStatus() == SLOTSTATUS_CLOSED) {
+    if (!GetIsSlotReservedForSystemVirtualUser(SID) && m_Slots[SID].GetSlotStatus() == SLOTSTATUS_CLOSED) {
       return OpenSlot(SID, false);
     }
     ++SID;
@@ -7670,7 +7672,7 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
   if (SID >= static_cast<uint8_t>(m_Slots.size()) || skill > SLOTCOMP_HARD) {
     return false;
   }
-  if (SID == GetHMCSID()) {
+  if (GetIsSlotReservedForSystemVirtualUser(SID)) {
     return false;
   }
 
@@ -7879,11 +7881,10 @@ void CGame::SetSlotTeamAndColorAuto(const uint8_t SID)
 
 void CGame::OpenAllSlots()
 {
-  uint8_t skipHMC = GetHMCSID();
   bool anyChanged = false;
   uint8_t i = static_cast<uint8_t>(m_Slots.size());
   while (i--) {
-    if (i != skipHMC && m_Slots[i].GetSlotStatus() == SLOTSTATUS_CLOSED) {
+    if (!GetIsSlotReservedForSystemVirtualUser(i) && m_Slots[i].GetSlotStatus() == SLOTSTATUS_CLOSED) {
       m_Slots[i].SetSlotStatus(SLOTSTATUS_OPEN);
       anyChanged = true;
     }
@@ -7991,7 +7992,7 @@ bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool
   if (!overrideComputers && slot->GetIsComputer()) {
     return false;
   }
-  if (SID == GetHMCSID()) {
+  if (GetIsSlotReservedForSystemVirtualUser(SID)) {
     return false;
   }
 
@@ -9326,6 +9327,13 @@ bool CGame::GetHasPvPGNPlayers() const
   return false;
 }
 
+bool CGame::GetIsSlotReservedForSystemVirtualUser(const uint8_t SID)
+{
+  if (m_Map->GetHMCEnabled() && SID == m_Map->GetHMCSlot()) return true;
+  if (m_Map->GetAHCLEnabled() && SID == m_Map->GetAHCLSlot()) return true;
+  return false;
+}
+
 CGameVirtualUser* CGame::GetVirtualUserFromSID(const uint8_t SID)
 {
   uint8_t i = static_cast<uint8_t>(m_FakeUsers.size());
@@ -9432,13 +9440,13 @@ bool CGame::DeleteFakeUser(uint8_t SID)
 {
   CGameSlot* slot = GetSlot(SID);
   if (!slot) return false;
-  const bool isHMCSlot = m_Map->GetHMCEnabled() && SID == m_Map->GetHMCSlot();
+  const bool isSystemReservedSlot = GetIsSlotReservedForSystemVirtualUser(SID);
   for (auto it = begin(m_FakeUsers); it != end(m_FakeUsers); ++it) {
     if (slot->GetUID() == it->GetUID()) {
       if (GetIsCustomForces()) {
-        m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, isHMCSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
+        m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, isSystemReservedSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, slot->GetTeam(), slot->GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(slot));
       } else {
-        m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, isHMCSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
+        m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, isSystemReservedSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
       }
       // Ensure this is sent before virtual host rejoins
       SendAll(it->GetGameQuitBytes(PLAYERLEAVE_LOBBY));
@@ -9522,13 +9530,13 @@ void CGame::DeleteFakeUsersLobby()
   if (m_FakeUsers.empty())
     return;
 
-  uint8_t hmcSID = GetHMCSID();
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
     const uint8_t SID = fakeUser.GetSID();
+    const bool isSystemReservedSlot = GetIsSlotReservedForSystemVirtualUser(SID);
     if (GetIsCustomForces()) {
-      m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, SID == hmcSID ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Slots[SID].GetTeam(), m_Slots[SID].GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(&(m_Slots[SID])));
+      m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, isSystemReservedSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Slots[SID].GetTeam(), m_Slots[SID].GetColor(), /* only important if MAPOPT_FIXEDPLAYERSETTINGS */ m_Map->GetLobbyRace(&(m_Slots[SID])));
     } else {
-      m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, SID == hmcSID ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
+      m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), 0, SLOTPROG_RST, isSystemReservedSlot ? SLOTSTATUS_CLOSED : SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
     }
     // Ensure this is sent before virtual host rejoins
     SendAll(fakeUser.GetGameQuitBytes(PLAYERLEAVE_LOBBY));
@@ -9685,6 +9693,11 @@ bool CGame::RunGameResults()
 
   m_GameResults.swap(gameResults);
   SyncDBPlayersFromGameResults();
+  return true;
+}
+
+bool CGame::GetIsAPrioriCompatibleWithGameResultsConstraints(string& reason) const
+{
   return true;
 }
 

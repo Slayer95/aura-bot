@@ -2215,7 +2215,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_MMD.aboutComputers = CFG.GetBool("map.w3mmd.subjects.computers.enabled", m_MapType == "evergreen");
   // W3MMD v1 has no way of distinguishing virtual from real players, so it expects some frames to be sent by virtual players
   m_MMD.emitSkipsVirtualPlayers = CFG.GetBool("map.w3mmd.features.virtual_players", false);
-  m_MMD.emitPrioritizePlayers = CFG.GetBool("map.w3mmd.features.prioritize_players", false);
+  m_MMD.emitPrioritizePlayers = CFG.GetBool("map.w3mmd.features.prioritize_players", m_MapType == "evergreen");
 
   if (m_MMD.enabled) {
     if (!m_MMD.supported) {
