@@ -2134,11 +2134,12 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   if (m_MapOptions & MAPOPT_CUSTOMFORCES) {
     // Custom observer-team (one-based)
     m_MapCustomizableObserverTeam = CFG.GetUint8("map.custom_forces.observer_team", m_MapCustomizableObserverTeam);
-    if (m_MapCustomizableObserverTeam != 0 && m_MapNumTeams < m_MapCustomizableObserverTeam  && m_MapCustomizableObserverTeam != m_MapVersionMaxSlots + 1) {
+    if (m_MapCustomizableObserverTeam == 0 || (m_MapNumTeams < m_MapCustomizableObserverTeam  && m_MapCustomizableObserverTeam != m_MapVersionMaxSlots + 1)) {
       Print("[MAP] <map.custom_forces.observer_team> invalid team number");
       CFG.SetFailed();
     }
   }
+  --m_MapCustomizableObserverTeam;
 
   // HostBot Command Library (HCL)
   //

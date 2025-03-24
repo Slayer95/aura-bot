@@ -6959,12 +6959,12 @@ void CGame::ResolveVirtualPlayers()
       if (slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
         const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
         m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
+        LOG_APP_IF(LOG_LEVEL_INFO, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
       } else {
         const CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
         if (virtualUser) {
           m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "W3HMC virtual user assigned to slot " + ToDecString(SID + 1))
+          LOG_APP_IF(LOG_LEVEL_INFO, "W3HMC virtual user assigned to slot " + ToDecString(SID + 1))
         }
       }
     }
@@ -6978,18 +6978,19 @@ void CGame::ResolveVirtualPlayers()
       if (slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
         const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
         m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "AHCL virtual user added at slot " + ToDecString(SID + 1))
+        LOG_APP_IF(LOG_LEVEL_INFO, "AHCL virtual user added at slot " + ToDecString(SID + 1))
       } else {
         const CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
         if (virtualUser) {
           m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "AHCL virtual user assigned to slot " + ToDecString(SID + 1))
+          LOG_APP_IF(LOG_LEVEL_INFO, "AHCL virtual user assigned to slot " + ToDecString(SID + 1))
         }
       }
     }
   }
 
   // Join-in-progress
+
   bool joinInProgressIsNativeObserver = false;
   if (m_Config.m_EnableJoinObserversInProgress) {
     // W3MMD v1 lets observers and virtual players send actions, so it would desync any CAsyncObserver
@@ -6997,38 +6998,31 @@ void CGame::ResolveVirtualPlayers()
     if (!mmdIncompatibility) {
       uint8_t observerTeam = GetIsCustomForces() ? m_Map->GetMapCustomizableObserverTeam() : m_Map->GetVersionMaxSlots();
       uint8_t SID = GetIsCustomForces() ? GetEmptyTeamSID(observerTeam) : GetEmptySID(false);
-      bool isExisting = SID != 0xFF;
-      if (!isExisting) {
-        SID = GetVirtualUserTeamSID(observerTeam);
-        if (
-            (m_HMCVirtualUser.has_value() && SID == m_HMCVirtualUser->GetSID()) ||
-            (m_AHCLVirtualUser.has_value() && SID == m_AHCLVirtualUser->GetSID())
-        ) {
-          // HMC / AHCL virtual users send actions; therefore,
-          // joining CAsyncObserver into them would desync
-          SID = 0xFF;
-        }
+      bool isEmptyAvailable = SID != 0xFF;
+      if (!isEmptyAvailable) {
+        // Exclude HMC / AHCL virtual users to avoid desyncs.
+        SID = GetPassiveVirtualUserTeamSID(observerTeam);
       }
       CGameSlot* slot = GetSlot(SID);
       if (slot) {
         CGameVirtualUser* virtualUser = nullptr;
-        if (isExisting) {
-          virtualUser = GetVirtualUserFromSID(SID);
-        } else {
+        if (isEmptyAvailable) {
           virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName, true);
+        } else {
+          virtualUser = GetVirtualUserFromSID(SID);
         }
         if (virtualUser) {
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
           joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
-          if (joinInProgressIsNativeObserver) {
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (native observer)")
+          if (isEmptyAvailable) {
+            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1))
           } else {
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (team " + ToDecString(slot->GetTeam()) + ")")
+            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user assigned to slot " + ToDecString(SID + 1))
           }
         }
       }
     } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>, <map.w3mmd.features.prioritize_players = no>")
+      LOG_APP_IF(LOG_LEVEL_WARNING, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>, <map.w3mmd.features.prioritize_players = no>")
     }
   }
 
@@ -7424,6 +7418,27 @@ uint8_t CGame::GetVirtualUserTeamSID(const uint8_t team) const
 {
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetTeam() == team && GetIsVirtualPlayerSlot(i)) {
+      return i;
+    }
+  }
+  return 0xFF;
+}
+
+uint8_t CGame::GetPassiveVirtualUserTeamSID(const uint8_t team) const
+{
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[i].GetTeam() != team) {
+      continue;
+    }
+    if (m_HMCVirtualUser.has_value() && i == m_HMCVirtualUser->GetSID()) {
+      // HMC works by letting virtual user send triggers
+      continue;
+    }
+    if (m_AHCLVirtualUser.has_value() && i == m_AHCLVirtualUser->GetSID()) {
+      // AHCL works by letting virtual user send actions
+      continue;
+    }
+    if (GetIsVirtualPlayerSlot(i)) {
       return i;
     }
   }
@@ -8912,7 +8927,9 @@ void CGame::StartCountDown(bool fromUser, bool force)
     }
   }
 
-  if (!m_FakeUsers.empty()) {
+  if (m_FakeUsers.size() == 1) {
+    SendAllChat("HINT: " + to_string(m_FakeUsers.size()) + " slot is occupied by a fake user.");
+  } else if (!m_FakeUsers.empty()) {
     SendAllChat("HINT: " + to_string(m_FakeUsers.size()) + " slots are occupied by fake users.");
   }
 }

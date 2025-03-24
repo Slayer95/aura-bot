@@ -698,6 +698,7 @@ public:
   uint8_t                   GetEmptyPlayerSID() const;
   uint8_t                   GetEmptyObserverSID() const;
   uint8_t                   GetVirtualUserTeamSID(const uint8_t team) const;
+  uint8_t                   GetPassiveVirtualUserTeamSID(const uint8_t team) const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
   GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
