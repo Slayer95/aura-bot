@@ -206,7 +206,7 @@ template <typename Container>
     return false;
   }
   IS.read(reinterpret_cast<char*>(container.data()), maxReadSize);
-  *actualReadSize = IS.gcount();
+  *actualReadSize = static_cast<size_t>(IS.gcount());
   if (*actualReadSize < maxReadSize) {
     container.clear();
     try {

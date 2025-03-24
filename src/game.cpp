@@ -564,14 +564,7 @@ void CGame::TrySaveStats() const
         if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
           continue;
         }
-        m_Aura->m_DB->UpdateGamePlayerOnEnd(
-          dbPlayer->GetName(),
-          dbPlayer->GetServer(),
-          dbPlayer->GetIP(),
-          dbPlayer->GetLoadingTime(),
-          m_GameTicks / 1000,
-          dbPlayer->GetLeftTime()
-        );
+        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, dbPlayer, m_GameTicks / 1000);
       }
       if (!m_Aura->m_DB->Commit()) {
         LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit game end player data")
@@ -5182,7 +5175,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
   CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(slot->GetColor());
   if (dbPlayer) {
-    dbPlayer->SetLoadingTime(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks);
+    dbPlayer->SetLoadingTime((user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000);
   }
 
   if (!m_Config.m_LoadInGame) {
@@ -6446,12 +6439,7 @@ void CGame::HandleGameLoadedStats()
     if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
       continue;
     }
-    m_Aura->m_DB->UpdateGamePlayerOnStart(
-      dbPlayer->GetName(),
-      dbPlayer->GetServer(),
-      dbPlayer->GetIP(),
-      m_PersistentId
-    );
+    m_Aura->m_DB->UpdateGamePlayerOnStart(m_PersistentId, dbPlayer);
   }
   if (!m_Aura->m_DB->Commit()) {
     LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit transaction for game loaded data")

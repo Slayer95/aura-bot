@@ -892,9 +892,11 @@ vector<string> CAuraDB::ListBans(const string& authserver)
   return bans;
 }
 
-void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, const string& ip, uint64_t gameId)
+void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CDBGamePlayer* dbPlayer)
 {
-  const string lowerName = ToLowerCase(name);
+  const string lowerName = ToLowerCase(dbPlayer->GetName());
+  const string server = dbPlayer->GetServer();
+  const string ip = dbPlayer->GetIP();
 
   if (!m_StmtCache[UPDATE_PLAYER_START_IDX]) {
     m_DB->Prepare(
@@ -917,7 +919,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 5, unsigned_to_signed_64(gameId));
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 5, unsigned_to_signed_64(gamePersistentId));
 
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 
@@ -928,9 +930,13 @@ void CAuraDB::UpdateGamePlayerOnStart(const string& name, const string& server, 
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 }
 
-void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, const string& ip, uint64_t loadingtime, uint64_t duration, uint64_t left)
+void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CDBGamePlayer* dbPlayer, const uint64_t durationSeconds)
 {
-  const string lowerName = ToLowerCase(name);
+  const string lowerName = ToLowerCase(dbPlayer->GetName());
+  const string server = dbPlayer->GetServer();
+  const string ip = dbPlayer->GetIP();
+  const uint64_t loadingTimeSeconds = dbPlayer->GetLoadingTime();
+  const uint64_t leftTimeSeconds = dbPlayer->GetLeftTime();
 
   if (!m_StmtCache[UPDATE_PLAYER_END_IDX]) {
     m_DB->Prepare(
@@ -957,9 +963,9 @@ void CAuraDB::UpdateGamePlayerOnEnd(const string& name, const string& server, co
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 5, loadingtime);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 6, duration);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 7, left);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 5, loadingTimeSeconds);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 6, durationSeconds);
+  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 7, leftTimeSeconds);
 
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 
@@ -1016,8 +1022,18 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, con
   return GamePlayerSummary;
 }
 
-void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, uint32_t winner, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t neutralkills, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills)
+void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, uint32_t winner, const CDBDotAPlayer* dotaPlayer)
 {
+  uint32_t kills = dotaPlayer->GetKills();
+  uint32_t deaths = dotaPlayer->GetDeaths();
+  uint32_t creepkills = dotaPlayer->GetCreepKills();
+  uint32_t creepdenies = dotaPlayer->GetCreepDenies();
+  uint32_t assists = dotaPlayer->GetAssists();
+  uint32_t neutralkills = dotaPlayer->GetNeutralKills();
+  uint32_t towerkills = dotaPlayer->GetTowerKills();
+  uint32_t raxkills = dotaPlayer->GetRaxKills();
+  uint32_t courierkills = dotaPlayer->GetCourierKills();
+
   bool          Success = false;
   sqlite3_stmt* Statement = nullptr;
   string lowerName = ToLowerCase(name);

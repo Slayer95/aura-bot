@@ -375,7 +375,7 @@ void CDotaStats::Save(CAura* nAura, CAuraDB* DB)
         else if ((m_Winner == 2 && Color >= 1 && Color <= 5) || (m_Winner == 1 && Color >= 7 && Color <= 11))
           Win = 2;
 
-        nAura->m_DB->UpdateDotAPlayerOnEnd(Name, Server, Win, dotaPlayer->GetKills(), dotaPlayer->GetDeaths(), dotaPlayer->GetCreepKills(), dotaPlayer->GetCreepDenies(), dotaPlayer->GetAssists(), dotaPlayer->GetNeutralKills(), dotaPlayer->GetTowerKills(), dotaPlayer->GetRaxKills(), dotaPlayer->GetCourierKills());
+        nAura->m_DB->UpdateDotAPlayerOnEnd(Name, Server, Win, dotaPlayer);
         ++Players;
       }
     }

@@ -75,7 +75,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapLocale(CFG->GetUint32("map.locale", 0)),
     m_MapOptions(0),
     m_MapEditorVersion(0),
-    m_MapDataSet(0),
+    m_MapDataSet(MAP_DATASET_DEFAULT),
     m_MapIsLua(false),
     m_MapIsMelee(false),
     m_MapMinGameVersion(GAMEVER(1u, 0u)),
@@ -1319,9 +1319,9 @@ void CMap::Load(CConfig* CFG)
   }
 
   if (CFG->Exists("map.melee")) {
-    m_MapIsMelee = CFG->GetUint8("map.melee", m_MapIsMelee);
+    m_MapIsMelee = CFG->GetBool("map.melee", m_MapIsMelee);
   } else {
-    CFG->SetUint8("map.melee", m_MapIsMelee);
+    CFG->SetBool("map.melee", m_MapIsMelee);
   }  
 
   m_MapFilterType = m_MapIsMelee ? MAPFILTER_TYPE_MELEE : MAPFILTER_TYPE_SCENARIO;
@@ -2024,21 +2024,21 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_PlayingTimeout = CFG.GetUint32("map.hosting.expiry.playing.timeout", 18000);
   }
 
-  if (CFG.Exists("hosting.expiry.playing.timeout.warnings")) {
-    m_PlayingTimeoutWarningShortCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.soon_warnings", 10);
+  if (CFG.Exists("map.hosting.expiry.playing.timeout.warnings")) {
+    m_PlayingTimeoutWarningShortCountDown = CFG.GetUint8("map.hosting.expiry.playing.timeout.soon_warnings", 10);
   }
-  if (CFG.Exists("hosting.expiry.playing.timeout.interval")) {
-    m_PlayingTimeoutWarningShortInterval = CFG.GetUint32("hosting.expiry.playing.timeout.soon_interval", 60);
+  if (CFG.Exists("map.hosting.expiry.playing.timeout.interval")) {
+    m_PlayingTimeoutWarningShortInterval = CFG.GetUint32("map.hosting.expiry.playing.timeout.soon_interval", 60);
   }
-  if (CFG.Exists("hosting.expiry.playing.timeout.warnings")) {
-    m_PlayingTimeoutWarningLargeCountDown = CFG.GetUint8("hosting.expiry.playing.timeout.eager_warnings", 5);
+  if (CFG.Exists("map.hosting.expiry.playing.timeout.warnings")) {
+    m_PlayingTimeoutWarningLargeCountDown = CFG.GetUint8("map.hosting.expiry.playing.timeout.eager_warnings", 5);
   }
-  if (CFG.Exists("hosting.expiry.playing.timeout.interval")) {
-    m_PlayingTimeoutWarningLargeInterval = CFG.GetUint32("hosting.expiry.playing.timeout.eager_interval", 900);
+  if (CFG.Exists("map.hosting.expiry.playing.timeout.interval")) {
+    m_PlayingTimeoutWarningLargeInterval = CFG.GetUint32("map.hosting.expiry.playing.timeout.eager_interval", 900);
   }
 
-  if (CFG.Exists("hosting.expiry.owner.lan")) {
-    m_LobbyOwnerReleaseLANLeaver = CFG.GetBool("hosting.expiry.owner.lan", true);
+  if (CFG.Exists("map.hosting.expiry.owner.lan")) {
+    m_LobbyOwnerReleaseLANLeaver = CFG.GetBool("map.hosting.expiry.owner.lan", true);
   }
 
   if (CFG.Exists("map.hosting.game_start.count_down_interval")) {
@@ -2086,17 +2086,17 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.nicknames.hide_in_game")) {
     m_HideInGameNames = CFG.GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   }
-  if (CFG.Exists("map.hosting.nicknames.hide_lobby")) {
-    m_HideLobbyNames = CFG.GetBool("map.hosting.nicknames.hide_lobby", false);
+  if (CFG.Exists("map.hosting.load_in_game.enabled")) {
+    m_LoadInGame = CFG.GetBool("map.hosting.load_in_game.enabled", false);
   }
-  if (CFG.Exists("hosting.load_in_game.enabled")) {
-    m_HideLobbyNames = CFG.GetBool("hosting.load_in_game.enabled", false);
+  if (CFG.Exists("map.hosting.join_in_progress.observers")) {
+    m_EnableJoinObserversInProgress = CFG.GetBool("map.hosting.join_in_progress.observers", false);
   }
-  if (CFG.Exists("hosting.join_in_progress.observers")) {
-    m_HideLobbyNames = CFG.GetBool("hosting.join_in_progress.observers", false);
+  if (CFG.Exists("map.hosting.join_in_progress.players")) {
+    m_EnableJoinPlayersInProgress = CFG.GetBool("map.hosting.join_in_progress.players", false);
   }
-  if (CFG.Exists("hosting.join_in_progress.players")) {
-    m_LogCommands = CFG.GetBool("hosting.join_in_progress.players", false);
+  if (CFG.Exists("map.hosting.log_commands")) {
+    m_LogCommands = CFG.GetBool("map.hosting.log_commands", false);
   }
 
   CFG.SetStrictMode(wasStrict);
@@ -2132,6 +2132,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_MapType = CFG.GetString("map.type");
 
   if (m_MapOptions & MAPOPT_CUSTOMFORCES) {
+    // Custom observer-team (one-based)
     m_MapCustomizableObserverTeam = CFG.GetUint8("map.custom_forces.observer_team", m_MapCustomizableObserverTeam);
     if (m_MapCustomizableObserverTeam != 0 && m_MapNumTeams < m_MapCustomizableObserverTeam  && m_MapCustomizableObserverTeam != m_MapVersionMaxSlots + 1) {
       Print("[MAP] <map.custom_forces.observer_team> invalid team number");
@@ -2316,7 +2317,7 @@ void CMap::LoadGameResultConfig(CConfig& CFG)
   if (CFG.Exists("map.game_result.shared_winners.all.allowed")) {
     m_GameResult.canAllWin = CFG.GetBool("map.game_result.shared_winners.all.allowed", m_GameResult.canAllWin);
   } else {
-    CFG.SetBool("map.game_result.shared_winners.all.allowed", !m_GameResult.canAllWin);
+    CFG.SetBool("map.game_result.shared_winners.all.allowed", m_GameResult.canAllWin);
   }
 
   m_GameResult.canAllLose = false; // not allowed in a rated game
