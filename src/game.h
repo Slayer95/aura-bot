@@ -682,7 +682,8 @@ public:
   void                      ResolveVirtualPlayers();
   bool                      GetHasAnyActiveTeam() const;
   bool                      GetHasAnyUser() const;
-  bool                      GetIsPlayerSlot(const uint8_t SID) const;
+  bool                      GetIsRealPlayerSlot(const uint8_t SID) const;
+  bool                      GetIsVirtualPlayerSlot(const uint8_t SID) const;
   bool                      GetHasAnotherPlayer(const uint8_t ExceptSID) const;
   bool                      CheckIPFlood(const std::string joinName, const sockaddr_storage* sourceAddress) const;
   std::vector<uint8_t>      GetChatUIDs() const;
@@ -693,9 +694,10 @@ public:
   uint8_t                   GetHiddenHostUID() const;
   uint8_t                   GetHostUID() const;
   uint8_t                   GetEmptySID(bool reserved) const;
-  uint8_t                   GetEmptyTeamSID(uint8_t team) const;
+  uint8_t                   GetEmptyTeamSID(const uint8_t team) const;
   uint8_t                   GetEmptyPlayerSID() const;
   uint8_t                   GetEmptyObserverSID() const;
+  uint8_t                   GetVirtualUserTeamSID(const uint8_t team) const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
   GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  

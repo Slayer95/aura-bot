@@ -986,7 +986,7 @@ bool CCommandContext::GetParseNonPlayerSlot(const std::string& target, uint8_t& 
   if (!slot) {
     return false;
   }
-  if (m_TargetGame->GetIsPlayerSlot(testSID)) {
+  if (m_TargetGame->GetIsRealPlayerSlot(testSID)) {
     return false;
   }
   SID = testSID;
@@ -1012,7 +1012,7 @@ bool CCommandContext::RunParseNonPlayerSlot(const std::string& target, uint8_t& 
     ErrorReply("Slot [" + target + "] not found.");
     return false;
   }
-  if (m_TargetGame->GetIsPlayerSlot(testSID)) {
+  if (m_TargetGame->GetIsRealPlayerSlot(testSID)) {
     ErrorReply("Slot is occupied by a player.");
     return false;
   }

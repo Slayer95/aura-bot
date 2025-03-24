@@ -6955,10 +6955,18 @@ void CGame::ResolveVirtualPlayers()
   {
     const uint8_t SID = GetHMCSID();
     CGameSlot* slot = GetSlot(SID);
-    if (slot && slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
-      const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
-      m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
+    if (slot) {
+      if (slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
+        const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
+        m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
+      } else {
+        const CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
+        if (virtualUser) {
+          m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "W3HMC virtual user assigned to slot " + ToDecString(SID + 1))
+        }
+      }
     }
   }
 
@@ -6966,28 +6974,57 @@ void CGame::ResolveVirtualPlayers()
   {
     const uint8_t SID = GetAHCLSID();
     CGameSlot* slot = GetSlot(SID);
-    if (slot && slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
-      const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
-      m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "AHCL virtual user added at slot " + ToDecString(SID + 1))
+    if (slot) {
+      if (slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
+        const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
+        m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "AHCL virtual user added at slot " + ToDecString(SID + 1))
+      } else {
+        const CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
+        if (virtualUser) {
+          m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "AHCL virtual user assigned to slot " + ToDecString(SID + 1))
+        }
+      }
     }
   }
 
   // Join-in-progress
   bool joinInProgressIsNativeObserver = false;
   if (m_Config.m_EnableJoinObserversInProgress) {
+    // W3MMD v1 lets observers and virtual players send actions, so it would desync any CAsyncObserver
     const bool mmdIncompatibility = m_Map->GetMMDSupported() && !m_Map->GetMMDSupportsVirtualPlayers() && !m_Map->GetMMDPrioritizePlayers();
     if (!mmdIncompatibility) {
-      const uint8_t SID = GetIsCustomForces() ? GetEmptyTeamSID(m_Map->GetMapCustomizableObserverTeam()) : GetEmptySID(false);
+      uint8_t observerTeam = GetIsCustomForces() ? m_Map->GetMapCustomizableObserverTeam() : m_Map->GetVersionMaxSlots();
+      uint8_t SID = GetIsCustomForces() ? GetEmptyTeamSID(observerTeam) : GetEmptySID(false);
+      bool isExisting = SID != 0xFF;
+      if (!isExisting) {
+        SID = GetVirtualUserTeamSID(observerTeam);
+        if (
+            (m_HMCVirtualUser.has_value() && SID == m_HMCVirtualUser->GetSID()) ||
+            (m_AHCLVirtualUser.has_value() && SID == m_AHCLVirtualUser->GetSID())
+        ) {
+          // HMC / AHCL virtual users send actions; therefore,
+          // joining CAsyncObserver into them would desync
+          SID = 0xFF;
+        }
+      }
       CGameSlot* slot = GetSlot(SID);
       if (slot) {
-        const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName, true);
-        m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
-        joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
-        if (joinInProgressIsNativeObserver) {
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (native observer)")
+        CGameVirtualUser* virtualUser = nullptr;
+        if (isExisting) {
+          virtualUser = GetVirtualUserFromSID(SID);
         } else {
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (team " + ToDecString(slot->GetTeam()) + ")")
+          virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName, true);
+        }
+        if (virtualUser) {
+          m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
+          joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
+          if (joinInProgressIsNativeObserver) {
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (native observer)")
+          } else {
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (team " + ToDecString(slot->GetTeam()) + ")")
+          }
         }
       }
     } else {
@@ -7067,7 +7104,7 @@ bool CGame::GetHasAnyUser() const
   return false;
 }
 
-bool CGame::GetIsPlayerSlot(const uint8_t SID) const
+bool CGame::GetIsRealPlayerSlot(const uint8_t SID) const
 {
   const CGameSlot* slot = InspectSlot(SID);
   if (!slot || !slot->GetIsPlayerOrFake()) return false;
@@ -7076,12 +7113,20 @@ bool CGame::GetIsPlayerSlot(const uint8_t SID) const
   return !user->GetDeleteMe();
 }
 
+bool CGame::GetIsVirtualPlayerSlot(const uint8_t SID) const
+{
+  const CGameSlot* slot = InspectSlot(SID);
+  if (!slot || !slot->GetIsPlayerOrFake()) return false;
+  const GameUser::CGameUser* user = GetUserFromSID(SID);
+  return user == nullptr;
+}
+
 bool CGame::GetHasAnotherPlayer(const uint8_t ExceptSID) const
 {
   uint8_t SID = ExceptSID;
   do {
     SID = (SID + 1) % m_Slots.size();
-  } while (!GetIsPlayerSlot(SID) && SID != ExceptSID);
+  } while (!GetIsRealPlayerSlot(SID) && SID != ExceptSID);
   return SID != ExceptSID;
 }
 
@@ -7333,7 +7378,7 @@ uint8_t CGame::GetEmptySID(bool reserved) const
   return 0xFF;
 }
 
-uint8_t CGame::GetEmptyTeamSID(uint8_t team) const
+uint8_t CGame::GetEmptyTeamSID(const uint8_t team) const
 {
   for (uint8_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() == SLOTSTATUS_OPEN && m_Slots[i].GetTeam() == team)
@@ -7372,6 +7417,16 @@ uint8_t CGame::GetEmptyObserverSID() const
     }
   }
 
+  return 0xFF;
+}
+
+uint8_t CGame::GetVirtualUserTeamSID(const uint8_t team) const
+{
+  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+    if (m_Slots[i].GetTeam() == team && GetIsVirtualPlayerSlot(i)) {
+      return i;
+    }
+  }
   return 0xFF;
 }
 
@@ -7832,7 +7887,7 @@ uint8_t CGame::GetFirstCloseableSlot()
     if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
       if (firstSID == 0xFF) firstSID = SID + 1;
       if (hasPlayer) break;
-    } else if (GetIsPlayerSlot(SID)) {
+    } else if (GetIsRealPlayerSlot(SID)) {
       hasPlayer = true;
       if (firstSID != 0xFF) break;
     }
@@ -7915,7 +7970,7 @@ bool CGame::CloseAllSlots()
 bool CGame::ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool ignoreLayout, const bool overrideComputers)
 {
   const CGameSlot* slot = InspectSlot(SID);
-  if ((!ignoreLayout || GetIsPlayerSlot(SID)) && slot->GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
+  if ((!ignoreLayout || GetIsRealPlayerSlot(SID)) && slot->GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
     return false;
   }
   if (!overrideComputers && slot->GetIsComputer()) {
@@ -9692,11 +9747,11 @@ void CGame::RunHCLEncoding()
     while (m_Slots[currentSlot].GetSlotStatus() != SLOTSTATUS_OCCUPIED)
       ++currentSlot;
 
-    bool isVirtualPlayer = m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsPlayerSlot(currentSlot);
+    bool isVirtualPlayer = m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsRealPlayerSlot(currentSlot);
     uint8_t handicapIndex = (m_Slots[currentSlot].GetHandicap() - 50) / 10;
     uint8_t charIndex = static_cast<uint8_t>(HCLChars.find(character));
     uint8_t slotInfo = handicapIndex;
-    if (encodeVirtualPlayers && m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsPlayerSlot(currentSlot)) {
+    if (encodeVirtualPlayers && m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsRealPlayerSlot(currentSlot)) {
       slotInfo += 6;
     }
     slotInfo += charIndex * (encodeVirtualPlayers ? 12 : 6);
