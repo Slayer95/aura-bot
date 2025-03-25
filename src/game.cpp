@@ -292,7 +292,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_CreatedFrom(nGameSetup->m_CreatedFrom),
     m_CreatedFromType(nGameSetup->m_CreatedFromType),
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
-    m_HCLCommandString(nGameSetup->m_HCL.has_value() ? nGameSetup->m_HCL.value() : nGameSetup->m_Map->GetHCLDefaultValue()),
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_GameTicks(0),
@@ -379,7 +378,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
-  m_IsHiddenPlayerNames = m_Config.m_HideLobbyNames;
   SetSupportedGameVersion(GetVersion());
   bool canCrossPlay = !(
     (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_NONE) ||
@@ -403,6 +401,14 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       }
       SetSupportedGameVersion(version);
     }
+  }
+
+  m_IsHiddenPlayerNames = m_Config.m_HideLobbyNames;
+
+  if (nGameSetup->m_HCL.has_value()) {
+    m_HCLCommandString = nGameSetup->m_HCL.value();
+  } else if (nGameSetup->m_Map->GetHCLEnabled()) {
+    m_HCLCommandString = nGameSetup->m_Map->GetHCLDefaultValue();
   }
 
   if (m_Config.m_LoadInGame) {
@@ -7020,9 +7026,9 @@ void CGame::ResolveVirtualPlayers()
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
           joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
           if (isEmptyAvailable) {
-            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1))
+            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (" + virtualUser->GetDisplayName() + ")")
           } else {
-            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user assigned to slot " + ToDecString(SID + 1))
+            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user assigned to slot " + ToDecString(SID + 1) + " (" + virtualUser->GetDisplayName() + ")")
           }
         }
       }

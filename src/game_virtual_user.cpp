@@ -60,19 +60,12 @@ string CGameVirtualUser::GetLowerName() const
 
 string CGameVirtualUser::GetDisplayName() const
 {
-  // This information is important for letting hosts know which !open, !close, commands to execute.
-  return "User[" + ToDecString(m_SID + 1) + "]";
-  /*
-  if (m_Game->GetIsHiddenPlayerNames() && !(m_Observer && m_Game->GetGameLoaded())) {
-    if (m_PseudonymUID == 0xFF) {
-      return "Player " + ToDecString(m_UID);
-    } else {
-      // After CGame::RunPlayerObfuscation()
-      return "Player " + ToDecString(m_PseudonymUID) + "?";
-    }
+  if (m_Game->GetGameLoaded()) {
+    return m_Name;
+  } else {
+    // This information is important for letting hosts know which !open, !close, commands to execute.
+    return "User[" + ToDecString(m_SID + 1) + "]";
   }
-  return m_Name;
-  */
 }
 
 bool CGameVirtualUser::GetCanPause() const

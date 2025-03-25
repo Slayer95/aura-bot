@@ -2145,7 +2145,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   //
   // https://gist.github.com/Slayer95/a15fc75f38d0b3fdf356613ede96cf7f
 
-  m_HCL.supported = false;
+  m_HCL.supported = m_MapType == "dota" || m_MapType == "evergreen";
   if (CFG.Exists("map.hcl.supported")) {
     m_HCL.supported = CFG.GetBool("map.hcl.supported", m_HCL.supported);
   } else {
@@ -2215,7 +2215,13 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_MMD.aboutComputers = CFG.GetBool("map.w3mmd.subjects.computers.enabled", m_MapType == "evergreen");
   // W3MMD v1 has no way of distinguishing virtual from real players, so it expects some frames to be sent by virtual players
   m_MMD.emitSkipsVirtualPlayers = CFG.GetBool("map.w3mmd.features.virtual_players", false);
-  m_MMD.emitPrioritizePlayers = CFG.GetBool("map.w3mmd.features.prioritize_players", m_MapType == "evergreen");
+
+  m_MMD.emitPrioritizePlayers = m_MapType == "evergreen";
+  if (CFG.Exists("map.w3mmd.features.prioritize_players")) {
+    m_MMD.emitPrioritizePlayers = CFG.GetBool("map.w3mmd.features.prioritize_players", m_MMD.emitPrioritizePlayers);
+  } else {
+    CFG.SetBool("map.w3mmd.features.prioritize_players", m_MMD.emitPrioritizePlayers);
+  }
 
   if (m_MMD.enabled) {
     if (!m_MMD.supported) {

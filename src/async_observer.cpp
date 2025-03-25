@@ -325,7 +325,7 @@ void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
   if (m_Desynchronized) return;
 
   if (m_Game && m_Game->GetSyncCounter() <= m_SyncCounter) {
-    string text = GetLogPrefix() + "observer [" + m_Name + "] incorrectly ahead of sync";
+    string text = GetLogPrefix() + "[" + m_Name + "] incorrectly ahead of sync";
     Print(text);
     m_Aura->LogPersistent(text);
     return;
@@ -360,7 +360,7 @@ void CAsyncObserver::EventDesync()
   while (!m_CheckSums.empty()) {
     m_CheckSums.pop();
   }
-  string text = GetLogPrefix() + "observer [" + m_Name + "] desynchronized";
+  string text = GetLogPrefix() + "[" + m_Name + "] desynchronized";
   Print(text);
   m_Aura->LogPersistent(text);
 }
@@ -382,7 +382,7 @@ void CAsyncObserver::StartLoading()
 
 void CAsyncObserver::EventGameLoaded()
 {
-  Print("Observer [" + GetName() + "] finished loading");
+  Print(GetLogPrefix() + "[" + GetName() + "] finished loading");
   Send(m_GameHistory->m_LoadingRealBuffer);
   Send(m_GameHistory->m_LoadingVirtualBuffer);
 
@@ -438,7 +438,8 @@ void CAsyncObserver::SendChat(const string& message)
     else
       Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message));
   } else {
-    uint8_t extraFlags[] = {3 + m_Color, 0, 0, 0};
+    uint16_t receiverByte = static_cast<uint16_t>(3u + m_Color);
+    uint8_t extraFlags[] = {(uint8_t)receiverByte, 0, 0, 0};
     if (message.size() > 127)
       Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
     else
@@ -448,6 +449,6 @@ void CAsyncObserver::SendChat(const string& message)
 
 string CAsyncObserver::GetLogPrefix() const
 {
-  if (m_Game) return m_Game->GetLogPrefix();
+  if (m_Game) return m_Game->GetLogPrefix() + " [OBSERVER] ";
   return "[OBSERVER] ";
 }

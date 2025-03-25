@@ -2296,7 +2296,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetMap()->GetHCLRequired()) {
+      if (m_TargetGame->GetMap()->GetHCLRequired() && !GetIsSudo()) {
         ErrorReply("Game mode (HCL) cannot be reconfigured.");
         break;
       }
@@ -4008,7 +4008,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetMap()->GetHCLRequired()) {
+      if (m_TargetGame->GetMap()->GetHCLRequired() && !GetIsSudo()) {
         ErrorReply("Game mode cannot be reconfigured.");
         break;
       }
