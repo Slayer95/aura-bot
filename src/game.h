@@ -359,9 +359,10 @@ protected:
 
   std::queue<CGameLogRecord*>                            m_PendingLogs;
   
-  std::optional<CGameVirtualUserReference>               m_HMCVirtualUser;
-  std::optional<CGameVirtualUserReference>               m_AHCLVirtualUser;
-  std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser;
+  std::optional<CGameVirtualUserReference>               m_HMCVirtualUser; // sends ACTION_CHAT_TRIGGER actions for HMC system
+  std::optional<CGameVirtualUserReference>               m_AHCLVirtualUser; // sends ACTION_SYNC_INT actions for AHCL system
+  std::optional<CGameVirtualUserReference>               m_InertVirtualUser; // all interactions with this virtual user are forbidden, except maybe chat
+  std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser; // must never send actions, otherwise CAsyncObserver desyncs
 
 public:
   CGame(CAura* nAura, std::shared_ptr<CGameSetup> nGameSetup);

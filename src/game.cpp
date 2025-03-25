@@ -500,6 +500,7 @@ void CGame::Reset()
   m_PauseUser = nullptr;
   m_HMCVirtualUser.reset();
   m_AHCLVirtualUser.reset();
+  m_InertVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   m_GameHistory.reset();
@@ -6525,6 +6526,7 @@ void CGame::Remake()
   m_IsAutoVirtualPlayers = false;
   m_HMCVirtualUser.reset();
   m_AHCLVirtualUser.reset();
+  m_InertVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_VirtualHostUID = 0xFF;
   m_ExitingSoon = false;
@@ -7000,6 +7002,24 @@ void CGame::ResolveVirtualPlayers()
     }
   }
 
+  // Hack to workaround WC3Stats.com bad handling of MMD info about computers
+  // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
+  if (m_Map->GetMMDSupported() && m_Map->GetMMDAboutComputers() && GetNumComputers() > 0) {
+    if (m_Map->GetMapObservers() == MAPOBS_REFEREES || m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
+      optional<string> virtualPlayerName;
+      if (m_Map->GetMapType() == "evergreen") {
+        virtualPlayerName = "AMAI Insane";
+      } else {
+        virtualPlayerName = "Computer";
+      }
+      if (CreateFakeObserver(virtualPlayerName)) {
+        m_InertVirtualUser = CGameVirtualUserReference(m_FakeUsers.back());
+        ++m_JoinedVirtualHosts;
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual player for WC3Stats workaround")
+      }
+    }
+  }
+
   // Join-in-progress
 
   bool joinInProgressIsNativeObserver = false;
@@ -7012,6 +7032,7 @@ void CGame::ResolveVirtualPlayers()
       bool isEmptyAvailable = SID != 0xFF;
       if (!isEmptyAvailable) {
         // Exclude HMC / AHCL virtual users to avoid desyncs.
+        // Also exclude so-called "inert" virtual user to avoid misrepresentation in WC3Stats
         SID = GetPassiveVirtualUserTeamSID(observerTeam);
       }
       CGameSlot* slot = GetSlot(SID);
@@ -7041,37 +7062,27 @@ void CGame::ResolveVirtualPlayers()
     m_Config.m_EnableJoinObserversInProgress = false;
   }
 
-  optional<string> maybeVirtualHostName = optional<string>(m_Config.m_LobbyVirtualHostName);
-
   // Assign an available slot to our virtual host.
   // That makes it a fake user.
-
-  if (m_Map->GetMMDSupported() && m_Map->GetMMDAboutComputers() && GetNumComputers() > 0) {
-    // This is an AWFUL hack to please WC3Stats.com parser
-    // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
-
-    if (m_Map->GetMapType() == "evergreen") {
-      maybeVirtualHostName = "AMAI Insane";
-    }
-  }
-
   if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-    if (CreateFakeObserver(maybeVirtualHostName)) {
+    if (CreateFakeObserver(nullopt)) {
       ++m_JoinedVirtualHosts;
+      // As a referee, the virtual host can send messages and receive messages from any player.
       LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as referee")
     }
   } else if (m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
     const uint8_t beforeFakeObserverCount = GetNumFakeObservers();
     if ((joinInProgressIsNativeObserver && beforeFakeObserverCount <= 1) || (GetNumJoinedObservers() > 0 && beforeFakeObserverCount == 0)) {
-      if (CreateFakeObserver(maybeVirtualHostName)) {
+      if (CreateFakeObserver(nullopt)) {
         ++m_JoinedVirtualHosts;
+        // As a full observer, the virtual host can send messages and receive messages from other full observers.
         LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as full observer")
       }
     }
   }
 
   if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
-    if (CreateFakePlayer(maybeVirtualHostName)) {
+    if (CreateFakePlayer(nullopt)) {
       ++m_JoinedVirtualHosts;
       LOG_APP_IF(LOG_LEVEL_DEBUG, "Added filler virtual player")
     }
@@ -7446,6 +7457,10 @@ uint8_t CGame::GetPassiveVirtualUserTeamSID(const uint8_t team) const
     }
     if (m_AHCLVirtualUser.has_value() && i == m_AHCLVirtualUser->GetSID()) {
       // AHCL works by letting virtual user send actions
+      continue;
+    }
+    if (m_InertVirtualUser.has_value() && i == m_InertVirtualUser->GetSID()) {
+      // WC3Stats parser hack
       continue;
     }
     if (GetIsVirtualPlayerSlot(i)) {
@@ -9474,6 +9489,9 @@ void CGame::UnrefFakeUser(const uint8_t SID)
   if (m_AHCLVirtualUser.has_value() && SID == m_AHCLVirtualUser->GetSID()) {
     m_AHCLVirtualUser.reset();
   }
+  if (m_InertVirtualUser.has_value() && SID == m_InertVirtualUser->GetSID()) {
+    m_InertVirtualUser.reset();
+  }
   if (m_JoinInProgressVirtualUser.has_value() && SID == m_JoinInProgressVirtualUser->GetSID()) {
     m_JoinInProgressVirtualUser.reset();
   }
@@ -9550,6 +9568,7 @@ void CGame::DeleteFakeUsersLobby()
 
   m_HMCVirtualUser.reset();
   m_AHCLVirtualUser.reset();
+  m_InertVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   CreateVirtualHost();
@@ -9567,6 +9586,7 @@ void CGame::DeleteFakeUsersLoaded()
 
   m_HMCVirtualUser.reset();
   m_AHCLVirtualUser.reset();
+  m_InertVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
 }
