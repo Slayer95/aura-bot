@@ -3277,7 +3277,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (targetPlayer->GetDownloadStarted() || targetPlayer->GetDownloadFinished()) {
+      if (targetPlayer->GetMapTransfer().GetIsInProgress()) {
         ErrorReply("Player [" + targetPlayer->GetName() + "] is already downloading the map.");
         break;
       }
@@ -3291,8 +3291,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       SendReply("Map download started for [" + targetPlayer->GetName() + "]", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
       m_TargetGame->Send(targetPlayer, GameProtocol::SEND_W3GS_STARTDOWNLOAD(m_TargetGame->GetHostUID()));
       targetPlayer->SetDownloadAllowed(true);
-      targetPlayer->SetDownloadStarted(true);
-      targetPlayer->SetStartedDownloadingTicks(GetTicks());
+      targetPlayer->GetMapTransfer().Start();
       targetPlayer->RemoveKickReason(GameUser::KickReason::MAP_MISSING);
       if (!targetPlayer->GetAnyKicked() && targetPlayer->GetKickQueued()) {
         targetPlayer->ClearKickByTicks();

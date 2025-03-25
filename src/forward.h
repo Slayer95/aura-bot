@@ -54,10 +54,10 @@ class CGameSetup;
 class CGameSlot;
 class CIncomingAction;
 class CIncomingChatEvent;
-class CIncomingChatPlayer;
+class CIncomingChatMessage;
 class CIncomingGameHost;
 class CIncomingJoinRequest;
-class CIncomingMapSize;
+class CIncomingMapFileSize;
 class CIRC;
 class CMap;
 class CNet;
@@ -106,6 +106,7 @@ struct FileChunkTransient;
 struct GameHistory;
 struct GameResults;
 struct LazyCommandContext;
+struct MapTransfer;
 struct UDPPkt;
 
 template <typename T>

@@ -1322,87 +1322,36 @@ void CGame::UpdateJoinable()
       m_SlotInfoChanged &= ~(SLOTS_DOWNLOAD_PROGRESS_CHANGED);
     }
 
-    m_DownloadCounter               = 0;
+    m_DownloadCounter = 0;
     m_LastDownloadCounterResetTicks = Ticks;
   }
 
   if (Ticks - m_LastDownloadTicks >= 100) {
     bool mapIsInvalid = false;
-    uint32_t Downloaders = 0;
+    uint32_t downloadersCount = 0;
     for (auto& user : m_Users) {
-      if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
-        ++Downloaders;
-
-        if (m_Aura->m_Net.m_Config.m_MaxDownloaders > 0 && Downloaders > m_Aura->m_Net.m_Config.m_MaxDownloaders) {
+      const uint8_t sendResult = NextSendMap(user, user->GetUID(), user->GetMapTransfer(), downloadersCount);
+      switch (sendResult) {
+        case MAP_TRANSFER_IN_PROGRESS:
+        case MAP_TRANSFER_DONE:
+          ++downloadersCount;
           break;
-        }
-
-        // send up to 100 pieces of the map at once so that the download goes faster
-        // if we wait for each MAPPART packet to be acknowledged by the client it'll take a long time to download
-        // this is because we would have to wait the round trip time (the ping time) between sending every 1442 bytes of map data
-        // doing it this way allows us to send at least 1.4 MB in each round trip interval which is much more reasonable
-        // the theoretical throughput is [1.4 MB * 1000 / ping] in KB/sec so someone with 100 ping (round trip ping, not LC ping) could download at 1400 KB/sec
-        // note: this creates a queue of map data which clogs up the connection when the client is on a slower connection (e.g. dialup)
-        // in this case any changes to the lobby are delayed by the amount of time it takes to send the queued data (i.e. 140 KB, which could be 30 seconds or more)
-        // for example, users joining and leaving, slot changes, chat messages would all appear to happen much later for the low bandwidth user
-        // note: the throughput is also limited by the number of times this code is executed each second
-        // e.g. if we send the maximum amount (1.4 MB) 10 times per second the theoretical throughput is 1400 KB/sec
-        // therefore the maximum throughput is 14 MB/sec, and this value slowly diminishes as the user's ping increases
-        // in addition to this, the throughput is limited by the configuration value bot_maxdownloadspeed
-        // in summary: the actual throughput is MIN( 1.4 * 1000 / ping, 1400, bot_maxdownloadspeed ) in KB/sec assuming only one user is downloading the map
-
-        const uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
-
-        if (user->GetLastMapPartSentOffsetEnd() == 0 && (
-            user->GetLastMapPartSentOffsetEnd() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
-            user->GetLastMapPartSentOffsetEnd() < mapSize
-          )
-        ) {
-          // overwrite the "started download ticks" since this is the first time we've sent any map data to the user
-          // prior to this we've only determined if the user needs to download the map but it's possible we could have delayed sending any data due to download limits
-
-          user->SetStartedDownloadingTicks(Ticks);
-        }
-        while (
-          user->GetLastMapPartSentOffsetEnd() < user->GetLastMapPartAcked() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
-          user->GetLastMapPartSentOffsetEnd() < mapSize &&
-          !mapIsInvalid
-        ) {
-          if (m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024) {
-            // limit the download speed if we're sending too much data
-            // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
-            break;
+        case MAP_TRANSFER_NONE:
+        case MAP_TRANSFER_RATE_LIMITED:
+          break;
+        case MAP_TRANSFER_MISSING:
+          user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+          if (!user->HasLeftReason()) {
+            user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (deleted)");
           }
-
-          uint32_t lastOffsetEnd = user->GetLastMapPartSentOffsetEnd();
-          const FileChunkTransient cachedChunk = GetMapChunk(lastOffsetEnd);
-          if (!cachedChunk.bytes) {
-            user->AddKickReason(GameUser::KickReason::MAP_MISSING);
-            if (!user->HasLeftReason()) {
-              user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (deleted)");
-            }
-            user->CloseConnection(false);
-            break;
-          }
-
-          const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), user->GetUID(), lastOffsetEnd, cachedChunk);
-          uint32_t chunkSendSize = static_cast<uint32_t>(packet.size() - 18);
-          user->SetLastMapPartSentOffsetEnd(lastOffsetEnd + chunkSendSize);
-
-          // Update CRC32 for map parts sent to this user
-          user->SetLastMapPartCRC32(CRC32::CalculateCRC(
-            cachedChunk.GetDataAtCursor(lastOffsetEnd),
-            chunkSendSize,
-            user->GetLastMapPartCRC32()
-          ));
-
-          bool fullySent = user->GetLastMapPartSentOffsetEnd() == mapSize;
-          m_DownloadCounter += chunkSendSize;
-          Send(user, packet);
-          if (fullySent && user->GetLastMapPartCRC32() != ByteArrayToUInt32(m_Map->GetMapCRC32(), false)) {
-            mapIsInvalid = true;
-          }
-        }
+          user->CloseConnection(false);
+          // fall through
+        case MAP_TRANSFER_INVALID:
+          mapIsInvalid = true;
+          break;
+      }
+      if (mapIsInvalid) {
+        break;
       }
     }
 
@@ -1412,7 +1361,7 @@ void CGame::UpdateJoinable()
 
       // Something is wrong with the map in disk - immediately kick everyone that is still downloading it to prevent confusion
       for (auto& user : m_Users) {
-        if (user->GetDownloadStarted() && !user->GetDownloadFinished()) {
+        if (user->GetMapTransfer().GetStarted() && !user->GetMapTransfer().GetFinished()) {
           user->AddKickReason(GameUser::KickReason::MAP_MISSING);
           if (!user->HasLeftReason()) {
             user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
@@ -1424,7 +1373,7 @@ void CGame::UpdateJoinable()
 
     m_LastDownloadTicks = Ticks;
 
-    if (Downloaders == 0) {
+    if (downloadersCount == 0) {
       ClearLoadedMapChunk();
     }
   }
@@ -2298,13 +2247,18 @@ void CGame::UpdateReadyCounters()
   }
 }
 
+vector<uint8_t> CGame::GetSlotInfo() const
+{
+  return GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers());
+}
+
 void CGame::SendAllSlotInfo()
 {
   if (m_GameLoading || m_GameLoaded)
     return;
 
   if (!m_Users.empty()) {
-    SendAll(GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
+    SendAll(GetSlotInfo());
   }
   m_SlotInfoChanged = 0;
 }
@@ -3228,6 +3182,86 @@ void CGame::SendIncomingPlayerInfo(GameUser::CGameUser* user) const
       GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(user->GetUID(), user->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/)
     );
   }
+}
+
+uint8_t CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& mapTransfer, const uint32_t downloadersCount)
+{
+  if (!mapTransfer.GetIsInProgress()) {
+    return MAP_TRANSFER_NONE;
+  }
+
+  if (m_Aura->m_Net.m_Config.m_MaxDownloaders > 0 && downloadersCount >= m_Aura->m_Net.m_Config.m_MaxDownloaders) {
+    return MAP_TRANSFER_RATE_LIMITED;
+  }
+
+  // send up to 100 pieces of the map at once so that the download goes faster
+  // if we wait for each MAPPART packet to be acknowledged by the client it'll take a long time to download
+  // this is because we would have to wait the round trip time (the ping time) between sending every 1442 bytes of map data
+  // doing it this way allows us to send at least 1.4 MB in each round trip interval which is much more reasonable
+  // the theoretical throughput is [1.4 MB * 1000 / ping] in KB/sec so someone with 100 ping (round trip ping, not LC ping) could download at 1400 KB/sec
+  // note: this creates a queue of map data which clogs up the connection when the client is on a slower connection (e.g. dialup)
+  // in this case any changes to the lobby are delayed by the amount of time it takes to send the queued data (i.e. 140 KB, which could be 30 seconds or more)
+  // for example, users joining and leaving, slot changes, chat messages would all appear to happen much later for the low bandwidth user
+  // note: the throughput is also limited by the number of times this code is executed each second
+  // e.g. if we send the maximum amount (1.4 MB) 10 times per second the theoretical throughput is 1400 KB/sec
+  // therefore the maximum throughput is 14 MB/sec, and this value slowly diminishes as the user's ping increases
+  // in addition to this, the throughput is limited by the configuration value bot_maxdownloadspeed
+  // in summary: the actual throughput is MIN( 1.4 * 1000 / ping, 1400, bot_maxdownloadspeed ) in KB/sec assuming only one user is downloading the map
+
+  const uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+
+  if (mapTransfer.GetLastSentOffsetEnd() == 0 && (
+      mapTransfer.GetLastSentOffsetEnd() < mapTransfer.GetLastAck() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
+      mapTransfer.GetLastSentOffsetEnd() < mapSize &&
+      !(m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024)
+    )
+  ) {
+    // overwrite the "started download ticks" since this is the first time we've sent any map data to the user
+    // prior to this we've only determined if the user needs to download the map but it's possible we could have delayed sending any data due to download limits
+
+    mapTransfer.Start();
+  }
+
+  while (
+    mapTransfer.GetLastSentOffsetEnd() < mapTransfer.GetLastAck() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
+    mapTransfer.GetLastSentOffsetEnd() < mapSize &&
+
+    // limit the download speed if we're sending too much data
+    // the download counter is the # of map bytes downloaded in the last second (it's reset once per second)
+    !(m_Aura->m_Net.m_Config.m_MaxUploadSpeed > 0 && m_DownloadCounter > m_Aura->m_Net.m_Config.m_MaxUploadSpeed * 1024)
+  ) {
+    uint32_t lastOffsetEnd = mapTransfer.GetLastSentOffsetEnd();
+    const FileChunkTransient cachedChunk = GetMapChunk(lastOffsetEnd);
+    if (!cachedChunk.bytes) {
+      return MAP_TRANSFER_MISSING;
+    }
+
+    const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), UID, lastOffsetEnd, cachedChunk);
+    uint32_t chunkSendSize = static_cast<uint32_t>(packet.size() - 18);
+    mapTransfer.SetLastSentOffsetEnd(lastOffsetEnd + chunkSendSize);
+
+    // Update CRC32 for map parts sent to this user
+    mapTransfer.SetLastCRC32(CRC32::CalculateCRC(
+      cachedChunk.GetDataAtCursor(lastOffsetEnd),
+      chunkSendSize,
+      mapTransfer.GetLastCRC32()
+    ));
+
+    bool fullySent = mapTransfer.GetLastSentOffsetEnd() == mapSize;
+    m_DownloadCounter += chunkSendSize;
+    Send(user, packet);
+
+    if (fullySent) {
+      mapTransfer.SetFinished();
+      if (mapTransfer.GetLastCRC32() == ByteArrayToUInt32(m_Map->GetMapCRC32(), false)) {
+        return MAP_TRANSFER_DONE;
+      } else {
+        return MAP_TRANSFER_INVALID;
+      }
+    }
+  }
+
+  return MAP_TRANSFER_IN_PROGRESS;
 }
 
 void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
@@ -4448,7 +4482,7 @@ void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
   // left reason, left code already assigned when queued
 }
 
-void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const
+void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatPlayer) const
 {
   if (m_GameLoading && !m_Config.m_LoadInGame) {
     return;
@@ -4784,7 +4818,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   if (!m_JoinInProgressVirtualUser.has_value()) return;
   const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
 
-  CAsyncObserver* observer = new CAsyncObserver(connection, this, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
+  CAsyncObserver* observer = new CAsyncObserver(connection, this, fromRealm, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
   m_Aura->m_Net.m_GameObservers[connection->GetPort()].push_back(observer);
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
@@ -4800,15 +4834,74 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   LOG_APP_IF(LOG_LEVEL_NOTICE, notice)
 }
 
-void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapSize* mapSize)
+void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* clientMap)
 {
+  int64_t Ticks = GetTicks(); int64_t Time = GetTime();
   const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
-  if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != expectedMapSize) {
-    LOG_APP_IF(LOG_LEVEL_NOTICE, "Observer [" + user->GetName() + "] does not have the map.")
-    user->CloseConnection();
-    user->SetDeleteMe(true);
+  if (clientMap->GetFlag() != 1 || clientMap->GetFileSize() != expectedMapSize) {
+    // observer doesn't have the map
+    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(), false /* cannot start manual download for observers */);
+    if (checkResult == MAP_TRANSFER_CHECK_ALLOWED) {
+      MapTransfer& mapTransfer = user->GetMapTransfer();
+      if (!mapTransfer.GetStarted() && clientMap->GetFlag() == 1) {
+        // inform the client that we are willing to send the map
+
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "map download started for observer [" + user->GetName() + "]")
+        Send(user, GameProtocol::SEND_W3GS_STARTDOWNLOAD(GetHostUID()));
+        mapTransfer.Start();
+      } else {
+        mapTransfer.SetLastAck(clientMap->GetFileSize());
+      }
+    } else if (!user->GetNotifiedCannotDownload()) {
+      user->SetNotifiedCannotDownload();
+      user->SetTimeoutAtLatest(Ticks + m_Config.m_LacksMapKickDelay);
+
+      if (GetMapSiteURL().empty()) {
+        user->SendChat("Spectator [" + user->GetName() + "], please download the map before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
+      } else {
+        user->SendChat("Spectator [" + user->GetName() + "], please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
+      }
+
+      if (!user->HasLeftReason()) {
+        string reason;
+        switch (checkResult) {
+          case MAP_TRANSFER_CHECK_INVALID:
+            reason = "invalid";
+            break;
+          case MAP_TRANSFER_CHECK_MISSING:
+            reason = "missing";
+            break;
+          case MAP_TRANSFER_CHECK_DISABLED:
+            reason = "disabled";
+            break;
+          case MAP_TRANSFER_CHECK_TOO_LARGE:
+            reason = "too large";
+            break;
+          case MAP_TRANSFER_CHECK_BUFFERBLOAT:
+            reason = "bufferbloat";
+            break;
+        }
+        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (" + reason + ")");
+      }
+    }
+  } else if (user->GetMapTransfer().GetStarted()) {
+    // calculate download rate
+    const double seconds = static_cast<double>(Ticks - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "map download finished for observer [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
+    user->SendChat("You downloaded the map in " + ToFormattedString(seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
+    user->GetMapTransfer().Finish();
+    user->EventMapReady();
   } else {
     user->EventMapReady();
+  }
+
+  uint8_t newDownloadStatus = static_cast<uint8_t>(static_cast<float>(clientMap->GetFileSize()) / expectedMapSize * 100.f);
+  if (newDownloadStatus > 100) {
+    newDownloadStatus = 100;
+  }
+  if (newDownloadStatus != user->GetMapTransfer().GetStatus()) {
+    user->GetMapTransfer().SetStatus(newDownloadStatus);
+    user->UpdateDownloadProgression(newDownloadStatus);
   }
 }
 
@@ -5444,7 +5537,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
   }
 }
 
-void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* chatPlayer)
+void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage* chatPlayer)
 {
   if (chatPlayer->GetFromUID() == user->GetUID())
   {
@@ -5767,101 +5860,94 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
   }
 }
 
-bool CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSize)
+void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* clientMap)
 {
   if (m_GameLoading || m_GameLoaded) {
-    return true;
+    return;
   }
 
-  int64_t Time = GetTime();
+  int64_t Ticks = GetTicks(); int64_t Time = GetTime();
   const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
-
-  CRealm* JoinedRealm = user->GetRealm(false);
-  uint32_t MaxUploadSize = m_Aura->m_Net.m_Config.m_MaxUploadSize;
-  if (JoinedRealm)
-    MaxUploadSize = JoinedRealm->GetMaxUploadSize();
-
-  if (mapSize->GetSizeFlag() != 1 || mapSize->GetMapSize() != expectedMapSize) {
-    // the user doesn't have the map
-    bool IsMapTooLarge = expectedMapSize > MaxUploadSize * 1024;
-    bool ShouldTransferMap = (
-      m_Map->GetMapFileIsValid() && m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_NEVER &&
-      (user->GetDownloadAllowed() || (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !IsMapTooLarge)) &&
-      (m_Aura->m_StartedGames.size() < m_Aura->m_Config.m_MaxStartedGames) &&
-      (m_Aura->m_StartedGames.empty() || !m_Aura->m_Net.m_Config.m_HasBufferBloat)
-    );
-    if (ShouldTransferMap) {
-      if (!user->GetDownloadStarted() && mapSize->GetSizeFlag() == 1) {
+  if (clientMap->GetFlag() != 1 || clientMap->GetFileSize() != expectedMapSize) {
+    // user doesn't have the map
+    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(false), user->GetDownloadAllowed());
+    if (checkResult == MAP_TRANSFER_CHECK_ALLOWED) {
+      MapTransfer& mapTransfer = user->GetMapTransfer();
+      if (!mapTransfer.GetStarted() && clientMap->GetFlag() == 1) {
         // inform the client that we are willing to send the map
 
         LOG_APP_IF(LOG_LEVEL_DEBUG, "map download started for user [" + user->GetName() + "]")
         Send(user, GameProtocol::SEND_W3GS_STARTDOWNLOAD(GetHostUID()));
-        user->SetDownloadStarted(true);
-        user->SetStartedDownloadingTicks(GetTicks());
+        mapTransfer.Start();
       } else {
-        user->SetLastMapPartAcked(mapSize->GetMapSize());
+        mapTransfer.SetLastAck(clientMap->GetFileSize());
       }
     } else if (!user->GetMapKicked()) {
       user->AddKickReason(GameUser::KickReason::MAP_MISSING);
-      user->KickAtLatest(GetTicks() + m_Config.m_LacksMapKickDelay);
-      if (!user->HasLeftReason()) {
-        if (m_Remade) {
-          user->SetLeftReason("autokicked - they don't have the map (remade game)");
-        } else if (m_Aura->m_Net.m_Config.m_AllowTransfers != MAP_TRANSFERS_AUTOMATIC) {
-          // Even if manual, claim they are disabled.
-          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (disabled)");
-        } else if (
-          (m_Aura->m_StartedGames.size() >= m_Aura->m_Config.m_MaxStartedGames) ||
-          (!m_Aura->m_StartedGames.empty() && m_Aura->m_Net.m_Config.m_HasBufferBloat)
-        ) {
-          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (bufferbloat)");
-        } else if (IsMapTooLarge) {
-          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (too large)");
-        } else if (m_Map->HasMismatch()) {
-          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (invalid)");
-        } else if (!m_Map->GetMapFileIsValid()) {
-          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (missing)");
-        }
-      }
+      user->KickAtLatest(Ticks + m_Config.m_LacksMapKickDelay);
+
       if (GetMapSiteURL().empty()) {
         SendChat(user, "" + user->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
       } else {
         SendChat(user, "" + user->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
       }
+
+      if (!user->HasLeftReason()) {
+        string reason;
+        switch (checkResult) {
+          case MAP_TRANSFER_CHECK_INVALID:
+            reason = "invalid";
+            break;
+          case MAP_TRANSFER_CHECK_MISSING:
+            reason = "missing";
+            break;
+          case MAP_TRANSFER_CHECK_DISABLED:
+            reason = "disabled";
+            break;
+          case MAP_TRANSFER_CHECK_TOO_LARGE:
+            reason = "too large";
+            break;
+          case MAP_TRANSFER_CHECK_BUFFERBLOAT:
+            reason = "bufferbloat";
+            break;
+        }
+        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (" + reason + ")");
+      }
     }
-  } else if (user->GetDownloadStarted()) {
+  } else if (user->GetMapTransfer().GetStarted()) {
     // calculate download rate
-    const double Seconds = static_cast<double>(GetTicks() - user->GetStartedDownloadingTicks()) / 1000.f;
-    //const double Rate    = static_cast<double>(expectedMapSize) / 1024.f / Seconds;
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "map download finished for user [" + user->GetName() + "] in " + ToFormattedString(Seconds) + " seconds")
-    SendAllChat("Player [" + user->GetDisplayName() + "] downloaded the map in " + ToFormattedString(Seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
-    user->SetDownloadFinished(true);
-    user->SetFinishedDownloadingTime(Time);
+    const double seconds = static_cast<double>(Ticks - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
+    //const double Rate    = static_cast<double>(expectedMapSize) / 1024.f / seconds;
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "map download finished for user [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
+    SendAllChat("Player [" + user->GetDisplayName() + "] downloaded the map in " + ToFormattedString(seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
+    user->GetMapTransfer().Finish();
     EventUserMapReady(user);
   } else {
     EventUserMapReady(user);
   }
 
-  uint8_t NewDownloadStatus = static_cast<uint8_t>(static_cast<float>(mapSize->GetMapSize()) / expectedMapSize * 100.f);
-  if (NewDownloadStatus > 100) {
-    NewDownloadStatus = 100;
+  uint8_t newDownloadStatus = static_cast<uint8_t>(static_cast<float>(clientMap->GetFileSize()) / expectedMapSize * 100.f);
+  if (newDownloadStatus > 100) {
+    newDownloadStatus = 100;
   }
 
-  CGameSlot* slot = GetSlot(GetSIDFromUID(user->GetUID()));
-  if (slot && slot->GetDownloadStatus() != NewDownloadStatus) {
-    // only send the slot info if the download status changed
-    slot->SetDownloadStatus(NewDownloadStatus);
+  if (user->GetMapTransfer().GetStatus() != newDownloadStatus) {
+    user->GetMapTransfer().SetStatus(newDownloadStatus);
 
-    // we don't actually send the new slot info here
-    // this is an optimization because it's possible for a user to download a map very quickly
-    // if we send a new slot update for every percentage change in their download status it adds up to a lot of data
-    // instead, we mark the slot info as "out of date" and update it only once in awhile
-    // (once per second when this comment was made)
+    CGameSlot* slot = GetSlot(GetSIDFromUID(user->GetUID()));
+    if (slot) {
+      // only send the slot info if the download status changed
+      slot->SetDownloadStatus(newDownloadStatus);
 
-    m_SlotInfoChanged |= (SLOTS_DOWNLOAD_PROGRESS_CHANGED);
+      // we don't actually send the new slot info here
+      // this is an optimization because it's possible for a user to download a map very quickly
+      // if we send a new slot update for every percentage change in their download status it adds up to a lot of data
+      // instead, we mark the slot info as "out of date" and update it only once in awhile
+      // (once per second when this comment was made)
+
+      m_SlotInfoChanged |= (SLOTS_DOWNLOAD_PROGRESS_CHANGED);
+    }
   }
-
-  return true;
 }
 
 void CGame::EventUserPongToHost(GameUser::CGameUser* user)
@@ -7015,7 +7101,7 @@ void CGame::ResolveVirtualPlayers()
       if (CreateFakeObserver(virtualPlayerName)) {
         m_InertVirtualUser = CGameVirtualUserReference(m_FakeUsers.back());
         ++m_JoinedVirtualHosts;
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual player for WC3Stats workaround")
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual player for WC3Stats workaround [" + virtualPlayerName.value() + "]")
       }
     }
   }
@@ -7023,6 +7109,7 @@ void CGame::ResolveVirtualPlayers()
   // Join-in-progress
 
   bool joinInProgressIsNativeObserver = false;
+  bool addedVirtualHost = false;
   if (m_Config.m_EnableJoinObserversInProgress) {
     // W3MMD v1 lets observers and virtual players send actions, so it would desync any CAsyncObserver
     const bool mmdIncompatibility = m_Map->GetMMDSupported() && !m_Map->GetMMDSupportsVirtualPlayers() && !m_Map->GetMMDPrioritizePlayers();
@@ -7039,7 +7126,8 @@ void CGame::ResolveVirtualPlayers()
       if (slot) {
         CGameVirtualUser* virtualUser = nullptr;
         if (isEmptyAvailable) {
-          virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Aura->m_GameDefaultConfig->m_LobbyVirtualHostName, true);
+          virtualUser = CreateFakeUserInner(SID, GetNewUID(), GetLobbyVirtualHostName(), true);
+          addedVirtualHost = true;
         } else {
           virtualUser = GetVirtualUserFromSID(SID);
         }
@@ -7047,9 +7135,9 @@ void CGame::ResolveVirtualPlayers()
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
           joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
           if (isEmptyAvailable) {
-            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " (" + virtualUser->GetDisplayName() + ")")
+            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " [" + virtualUser->GetName() + "]")
           } else {
-            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user assigned to slot " + ToDecString(SID + 1) + " (" + virtualUser->GetDisplayName() + ")")
+            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user assigned to slot " + ToDecString(SID + 1) + " [" + virtualUser->GetName() + "]")
           }
         }
       }
@@ -7062,21 +7150,26 @@ void CGame::ResolveVirtualPlayers()
     m_Config.m_EnableJoinObserversInProgress = false;
   }
 
-  // Assign an available slot to our virtual host.
-  // That makes it a fake user.
-  if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
-    if (CreateFakeObserver(nullopt)) {
-      ++m_JoinedVirtualHosts;
-      // As a referee, the virtual host can send messages and receive messages from any player.
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as referee")
-    }
-  } else if (m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
-    const uint8_t beforeFakeObserverCount = GetNumFakeObservers();
-    if ((joinInProgressIsNativeObserver && beforeFakeObserverCount <= 1) || (GetNumJoinedObservers() > 0 && beforeFakeObserverCount == 0)) {
+  const uint8_t beforeFakeObserverCount = GetNumFakeObservers();
+  const bool addVirtualHost = beforeFakeObserverCount <= 2 && !addedVirtualHost;
+  if (addVirtualHost) {
+    optional<string> virtualPlayerName;
+    virtualPlayerName = GetLobbyVirtualHostName();
+    // Assign an available slot to our virtual host.
+    // That makes it a fake user.
+    if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
       if (CreateFakeObserver(nullopt)) {
         ++m_JoinedVirtualHosts;
-        // As a full observer, the virtual host can send messages and receive messages from other full observers.
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as full observer")
+        // As a referee, the virtual host can send messages and receive messages from any player.
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as referee")
+      }
+    } else if (m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
+      if ((joinInProgressIsNativeObserver && beforeFakeObserverCount <= 1) || (GetNumJoinedObservers() > 0 && beforeFakeObserverCount == 0)) {
+        if (CreateFakeObserver(nullopt)) {
+          ++m_JoinedVirtualHosts;
+          // As a full observer, the virtual host can send messages and receive messages from other full observers.
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as full observer")
+        }
       }
     }
   }
@@ -7313,6 +7406,34 @@ uint8_t CGame::GetHostUID() const
   } else {
     return GetPublicHostUID();
   }
+}
+
+uint8_t CGame::CheckCanTransferMap(const CConnection* /*connection*/, const CRealm* realm, const bool gotPermission)
+{
+  if (!m_Map->GetMapFileIsValid()) {
+    return m_Map->HasMismatch() ? MAP_TRANSFER_CHECK_INVALID : MAP_TRANSFER_CHECK_MISSING;
+  }
+  if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
+    return MAP_TRANSFER_CHECK_DISABLED;
+  }
+
+  const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  uint32_t maxTransferSize = m_Aura->m_Net.m_Config.m_MaxUploadSize;
+  if (realm) {
+    maxTransferSize = realm->GetMaxUploadSize();
+  }
+  bool isTooLarge = expectedMapSize > maxTransferSize * 1024;
+
+  if (!(gotPermission || (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !isTooLarge))) {
+    return m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC ? MAP_TRANSFER_CHECK_TOO_LARGE : MAP_TRANSFER_CHECK_DISABLED;
+  }
+  if (m_Aura->m_Config.m_MaxStartedGames <= m_Aura->m_StartedGames.size()) {
+    return MAP_TRANSFER_CHECK_BUFFERBLOAT;
+  }
+  if (!m_Aura->m_StartedGames.empty() && m_Aura->m_Net.m_Config.m_HasBufferBloat) {
+    return MAP_TRANSFER_CHECK_BUFFERBLOAT;
+  }
+  return MAP_TRANSFER_CHECK_ALLOWED;
 }
 
 FileChunkTransient CGame::GetMapChunk(size_t start)
@@ -8585,7 +8706,7 @@ bool CGame::IsDownloading() const
 
   for (auto& user : m_Users)
   {
-    if (user->GetDownloadStarted() && !user->GetDownloadFinished())
+    if (user->GetMapTransfer().GetStarted() && !user->GetMapTransfer().GetFinished())
       return true;
   }
 

@@ -45,10 +45,11 @@ using namespace std;
 // CAsyncObserver
 //
 
-CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID, const string& nName)
+CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRealm* nFromRealm, uint8_t nUID, const string& nName)
   : CConnection(*nConnection),
     m_Game(nGame),
     m_GameHistory(nGame->GetGameHistory()),
+    m_FromRealm(nFromRealm),
     m_MapReady(false),
     m_Desynchronized(false),
     m_Offset(0),
@@ -59,9 +60,7 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t n
     m_FrameRate(1),
     m_SyncCounter(0),
     m_ActionFrameCounter(0),
-    m_DownloadStarted(false),
-    m_DownloadFinished(false),
-    m_FinishedDownloadingTime(0),
+    m_NotifiedCannotDownload(false),
     m_StartedLoading(false),
     m_StartedLoadingTicks(0),
     m_FinishedLoading(false),
@@ -76,11 +75,24 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t n
 CAsyncObserver::~CAsyncObserver()
 {
   m_GameHistory.reset();
+
+  if (HasLeftReason()) {
+    Print(GetLogPrefix() + "destroyed - " + GetLeftReason());
+  } else {
+    Print(GetLogPrefix() + "destroyed");
+  }
 }
 
 void CAsyncObserver::SetTimeout(const int64_t delta)
 {
   m_TimeoutTicks = GetTicks() + delta;
+}
+
+void CAsyncObserver::SetTimeoutAtLatest(const int64_t atLatestTicks)
+{
+  if (!m_TimeoutTicks.has_value() || atLatestTicks < m_TimeoutTicks.value()) {
+    m_TimeoutTicks = atLatestTicks;
+  }
 }
 
 bool CAsyncObserver::CloseConnection()
@@ -174,10 +186,10 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
 
             case GameProtocol::Magic::CHAT_TO_HOST: {
-              CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
+              CIncomingChatMessage* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
               if (ChatPlayer) {
-                Print(GetLogPrefix() + "[" + this->GetName() + "] (observer): " + ChatPlayer->GetMessage());
+                EventChatMessage(ChatPlayer);
                 delete ChatPlayer;
               }
               break;
@@ -189,7 +201,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
                 break;
               }
 
-              CIncomingMapSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
+              CIncomingMapFileSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
 
               if (MapSize && m_Game) {
                 m_Game->EventObserverMapSize(this, MapSize);
@@ -262,7 +274,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     m_PlaybackEnded = true;
     Print("[CAsyncObserver] Sent entire game to [" + GetName() + "]");
     if (!m_TimeoutTicks.has_value()) {
-      SetTimeout(3000);
+      SetTimeoutAtLatest(GetTicks() + 3000);
     }
   }
 
@@ -325,7 +337,7 @@ void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
   if (m_Desynchronized) return;
 
   if (m_Game && m_Game->GetSyncCounter() <= m_SyncCounter) {
-    string text = GetLogPrefix() + "[" + m_Name + "] incorrectly ahead of sync";
+    string text = GetLogPrefix() + "incorrectly ahead of sync";
     Print(text);
     m_Aura->LogPersistent(text);
     return;
@@ -355,12 +367,27 @@ void CAsyncObserver::CheckClientGameState()
   }
 }
 
+void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression)
+{
+  if (!m_Game) return;
+  vector<uint8_t> slotInfo = m_Game->GetSlotInfo();
+  constexpr static uint16_t fixedOffset = (
+    4 /* W3GS headers */ +
+    2 /* EncodeSlotInfo() byte size */ +
+    1 /* number of slots */ +
+    1 /* download status offset in CGameSlot::GetProtocolArray() */
+  );
+  uint16_t progressionIndex = 9 * m_SID + fixedOffset;
+  slotInfo[progressionIndex] = downloadProgression;
+  Send(slotInfo);
+}
+
 void CAsyncObserver::EventDesync()
 {
   while (!m_CheckSums.empty()) {
     m_CheckSums.pop();
   }
-  string text = GetLogPrefix() + "[" + m_Name + "] desynchronized";
+  string text = GetLogPrefix() + "desynchronized";
   Print(text);
   m_Aura->LogPersistent(text);
 }
@@ -382,7 +409,7 @@ void CAsyncObserver::StartLoading()
 
 void CAsyncObserver::EventGameLoaded()
 {
-  Print(GetLogPrefix() + "[" + GetName() + "] finished loading");
+  Print(GetLogPrefix() + "finished loading");
   Send(m_GameHistory->m_LoadingRealBuffer);
   Send(m_GameHistory->m_LoadingVirtualBuffer);
 
@@ -400,6 +427,12 @@ void CAsyncObserver::EventGameLoaded()
     SendChat("Watching replay");
     SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago");
   }
+}
+
+void CAsyncObserver::EventChatMessage(const CIncomingChatMessage* incomingChatMessage)
+{
+  Print(GetLogPrefix() + ": " + incomingChatMessage->GetMessage());
+  SendChat("You are in spectator mode. Chat is RESTRICTED.");
 }
 
 void CAsyncObserver::EventLeft(const uint32_t clientReason)
@@ -430,8 +463,10 @@ void CAsyncObserver::Send(const std::vector<uint8_t>& data)
 void CAsyncObserver::SendChat(const string& message)
 {
   if (m_StartedLoading && !m_FinishedLoading) {
+    Print("[CAsyncObserver] SendChat() ignored bad timing");
     return;
   }
+  Print("[CAsyncObserver] SendChat(\"" + message + "\")");
   if (m_StartedLoading) {
     if (message.size() > 254)
       Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message.substr(0, 254)));
@@ -449,6 +484,6 @@ void CAsyncObserver::SendChat(const string& message)
 
 string CAsyncObserver::GetLogPrefix() const
 {
-  if (m_Game) return m_Game->GetLogPrefix() + " [OBSERVER] ";
-  return "[OBSERVER] ";
+  if (m_Game) return m_Game->GetLogPrefix() + "[OBSERVER] [" + m_Name + "] ";
+  return "[OBSERVER] [" + m_Name + "]";
 }

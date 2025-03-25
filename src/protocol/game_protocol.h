@@ -119,8 +119,8 @@ namespace GameProtocol
   [[nodiscard]] bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
   [[nodiscard]] CIncomingAction RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
   [[nodiscard]] uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingChatPlayer* RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingMapSize* RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingChatMessage* RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingMapFileSize* RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data);
   [[nodiscard]] uint32_t RECEIVE_W3GS_PONG_TO_HOST(const std::vector<uint8_t>& data);
 
   // send functions
@@ -133,7 +133,7 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t UID, const std::string& name);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t UID, uint32_t leftCode);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMELOADED_OTHERS(uint8_t UID);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFO(std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFO(const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_COUNTDOWN_START();
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_COUNTDOWN_END();
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_EMPTY_ACTIONS(uint32_t count);
@@ -261,10 +261,10 @@ public:
 };
 
 //
-// CIncomingChatPlayer
+// CIncomingChatMessage
 //
 
-class CIncomingChatPlayer
+class CIncomingChatMessage
 {
 public:
 private:
@@ -277,10 +277,10 @@ private:
   std::vector<uint8_t>                m_ExtraFlags;
 
 public:
-  CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage);
-  CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage, std::vector<uint8_t> nExtraFlags);
-  CIncomingChatPlayer(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
-  ~CIncomingChatPlayer();
+  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage);
+  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage, std::vector<uint8_t> nExtraFlags);
+  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
+  ~CIncomingChatMessage();
 
   [[nodiscard]] inline GameProtocol::ChatToHostType       GetType() const { return m_Type; }
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
@@ -291,18 +291,18 @@ public:
   [[nodiscard]] inline const std::vector<uint8_t>&        GetExtraFlags() const { return m_ExtraFlags; }
 };
 
-class CIncomingMapSize
+class CIncomingMapFileSize
 {
 private:
-  uint32_t m_MapSize;
-  uint8_t  m_SizeFlag;
+  uint32_t m_FileSize;
+  uint8_t  m_Flag;
 
 public:
-  CIncomingMapSize(uint8_t nSizeFlag, uint32_t nMapSize);
-  ~CIncomingMapSize();
+  CIncomingMapFileSize(uint8_t nSizeFlag, uint32_t nMapSize);
+  ~CIncomingMapFileSize();
 
-  [[nodiscard]] inline uint8_t  GetSizeFlag() const { return m_SizeFlag; }
-  [[nodiscard]] inline uint32_t GetMapSize() const { return m_MapSize; }
+  [[nodiscard]] inline uint8_t  GetFlag() const { return m_Flag; }
+  [[nodiscard]] inline uint32_t GetFileSize() const { return m_FileSize; }
 };
 
 #endif // AURA_GAMEPROTOCOL_H_

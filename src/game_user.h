@@ -48,6 +48,7 @@
 
 #include "includes.h"
 #include "connection.h"
+#include "map.h"
 
 //
 // GameUser::CGameUser
@@ -68,6 +69,7 @@ namespace GameUser
   {
   public:
     CGame*                           m_Game;
+    MapTransfer                      m_MapTransfer;
     std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
     std::vector<uint32_t>            m_RTTValues;                    // store the last few (10) pings received so we can take an average
     OptionalTimedUint32              m_MeasuredRTT;
@@ -88,11 +90,6 @@ namespace GameUser
     size_t                           m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
     size_t                           m_SyncCounter;                  // the number of keepalive packets received from this player
     int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
-    uint32_t                         m_LastMapPartSentOffsetEnd;     // the last mappart sent to the player (for sending more than one part at a time)
-    uint32_t                         m_LastMapPartAcked;             // the last mappart acknowledged by the player
-    uint32_t                         m_LastMapPartCRC32;             // the cumulative CRC32 value calculated
-    int64_t                          m_StartedDownloadingTicks;      // GetTicks when the player started downloading the map
-    int64_t                          m_FinishedDownloadingTime;      // GetTime when the player finished downloading the map
     int64_t                          m_FinishedLoadingTicks;         // GetTicks when the player finished loading the game
     int64_t                          m_StartedLaggingTicks;          // GetTicks when the player started laggin
     int64_t                          m_LastGProxyWaitNoticeSentTime; // GetTime when the last disconnection notice has been sent when using GProxy++
@@ -118,8 +115,6 @@ namespace GameUser
     uint8_t                          m_KickReason;                   // bitmask for all the reasons why this user is going to be kicked
     bool                             m_HasHighPing;                  // if last time we checked, the player had high ping
     bool                             m_DownloadAllowed;              // if we're allowed to download the map or not (used with permission based map downloads)
-    bool                             m_DownloadStarted;              // if we've started downloading the map or not
-    bool                             m_DownloadFinished;             // if we've finished downloading the map or not
     bool                             m_FinishedLoading;              // if the player has finished loading or not
     bool                             m_Lagging;                      // if the player is lagging or not (on the lag screen)
     std::optional<bool>              m_DropVote;                     // if the player voted to drop the laggers or not (on the lag screen)
@@ -171,6 +166,7 @@ namespace GameUser
     [[nodiscard]] inline std::string              GetName() const { return m_Name; }
     [[nodiscard]] std::string                     GetLowerName() const;
     [[nodiscard]] std::string                     GetDisplayName() const;
+    [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
     [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
     [[nodiscard]] inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
     [[nodiscard]] inline bool                     GetIsRTTMeasured() const { return m_MeasuredRTT.has_value() || !m_RTTValues.empty(); }
@@ -209,11 +205,6 @@ namespace GameUser
     [[nodiscard]] inline size_t                GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
     [[nodiscard]] bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
     [[nodiscard]] inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
-    [[nodiscard]] inline uint32_t              GetLastMapPartSentOffsetEnd() const { return m_LastMapPartSentOffsetEnd; }
-    [[nodiscard]] inline uint32_t              GetLastMapPartAcked() const { return m_LastMapPartAcked; }
-    [[nodiscard]] inline uint32_t              GetLastMapPartCRC32() const { return m_LastMapPartCRC32; }
-    [[nodiscard]] inline int64_t               GetStartedDownloadingTicks() const { return m_StartedDownloadingTicks; }
-    [[nodiscard]] inline int64_t               GetFinishedDownloadingTime() const { return m_FinishedDownloadingTime; }
     [[nodiscard]] inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
 
     [[nodiscard]] inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
@@ -244,8 +235,6 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
     [[nodiscard]] inline bool                  GetWhoisSent() const { return m_WhoisSent; }
     [[nodiscard]] inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }
-    [[nodiscard]] inline bool                  GetDownloadStarted() const { return m_DownloadStarted; }
-    [[nodiscard]] inline bool                  GetDownloadFinished() const { return m_DownloadFinished; }
     [[nodiscard]] inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
     [[nodiscard]] inline bool                  GetMapReady() const { return m_MapReady; }
     [[nodiscard]] inline bool                  GetMapKicked() const { return (m_KickReason & GameUser::KickReason::MAP_MISSING) != GameUser::KickReason::NONE; }
@@ -290,11 +279,6 @@ namespace GameUser
     inline void SetSyncCounter(const size_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
     inline void AddSyncCounterOffset(const size_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
-    inline void SetLastMapPartSentOffsetEnd(uint32_t nLastMapPartSentOffsetEnd) { m_LastMapPartSentOffsetEnd = nLastMapPartSentOffsetEnd; }
-    inline void SetLastMapPartAcked(uint32_t nLastMapPartAcked) { m_LastMapPartAcked = nLastMapPartAcked; }
-    inline void SetLastMapPartCRC32(uint32_t nLastMapPartCRC32) { m_LastMapPartCRC32 = nLastMapPartCRC32; }
-    inline void SetStartedDownloadingTicks(uint64_t nStartedDownloadingTicks) { m_StartedDownloadingTicks = nStartedDownloadingTicks; }
-    inline void SetFinishedDownloadingTime(uint64_t nFinishedDownloadingTime) { m_FinishedDownloadingTime = nFinishedDownloadingTime; }
     inline void SetStartedLaggingTicks(uint64_t nStartedLaggingTicks) { m_StartedLaggingTicks = nStartedLaggingTicks; }
     inline void SetRealmVerified(bool nVerified) { m_Verified = nVerified; }
     inline void SetOwner(bool nOwner) { m_Owner = nOwner; }
@@ -304,8 +288,6 @@ namespace GameUser
     inline void SetPowerObserver(bool nPowerObserver) { m_PowerObserver = nPowerObserver; }
     inline void SetWhoisShouldBeSent(bool nWhoisShouldBeSent) { m_WhoisShouldBeSent = nWhoisShouldBeSent; }
     inline void SetDownloadAllowed(bool nDownloadAllowed) { m_DownloadAllowed = nDownloadAllowed; }
-    inline void SetDownloadStarted(bool nDownloadStarted) { m_DownloadStarted = nDownloadStarted; }
-    inline void SetDownloadFinished(bool nDownloadFinished) { m_DownloadFinished = nDownloadFinished; }
     inline void SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
     inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
     inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }

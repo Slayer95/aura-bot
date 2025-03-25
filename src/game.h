@@ -49,6 +49,7 @@
 #include "includes.h"
 #include "list.h"
 #include "async_observer.h"
+#include "map.h"
 #include "game_seeker.h"
 #include "game_slot.h"
 #include "game_setup.h"
@@ -574,7 +575,7 @@ public:
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
   void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
   void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
-  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatPlayer* chatPlayer) const;
+  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatPlayer) const;
   void                                                   SendGProxyEmptyActions();
   void                                                   SendAllActionsCallback();
   void                                                   SendAllActions();
@@ -584,6 +585,7 @@ public:
   std::vector<uint8_t>                                   GetGameDiscoveryInfo(const Version& gameVersion, const uint16_t hostPort);
   std::vector<uint8_t>*                                  GetGameDiscoveryInfoTemplate();
   std::vector<uint8_t>                                   GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
+  std::vector<uint8_t>                                   GetSlotInfo() const;
 
   void                                                   AnnounceToRealm(CRealm* realm);
   void                                                   AnnounceDecreateToRealms();
@@ -627,13 +629,13 @@ public:
   void                      EventUserLoaded(GameUser::CGameUser* user);
   bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
-  void                      EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatPlayer* chatPlayer);
+  void                      EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage* chatPlayer);
   void                      EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team);
   void                      EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour);
   void                      EventUserChangeRace(GameUser::CGameUser* user, uint8_t race);
   void                      EventUserChangeHandicap(GameUser::CGameUser* user, uint8_t handicap);
   void                      EventUserDropRequest(GameUser::CGameUser* user);
-  bool                      EventUserMapSize(GameUser::CGameUser* user, CIncomingMapSize* mapSize);
+  void                      EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* mapSize);
   void                      EventUserPongToHost(GameUser::CGameUser* user);
   void                      EventUserMapReady(GameUser::CGameUser* user);
 
@@ -702,6 +704,7 @@ public:
   uint8_t                   GetPassiveVirtualUserTeamSID(const uint8_t team) const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
+  uint8_t                   NextSendMap(CConnection* connection, const uint8_t UID, MapTransfer& mapTransfer, const uint32_t downloadersCount);
   GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
@@ -712,10 +715,11 @@ public:
   inline std::shared_ptr<GameHistory> GetGameHistory() { return m_GameHistory; }
   void                                JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm);
   void                                EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason);
-  void                                EventObserverMapSize(CAsyncObserver* connection, CIncomingMapSize* mapSize);
+  void                                EventObserverMapSize(CAsyncObserver* connection, CIncomingMapFileSize* mapSize);
   void                                EventObserverDisconnectProtocolError(CAsyncObserver* user);
 
   // Map transfer
+  uint8_t                   CheckCanTransferMap(const CConnection* connection, const CRealm* realm, const bool gotPermission);
   inline SharedByteArray    GetLoadedMapChunk() { return m_LoadedMapChunk; }
   void                      SetLoadedMapChunk(SharedByteArray nLoadedMapChunk) { m_LoadedMapChunk = nLoadedMapChunk; }
   void                      ClearLoadedMapChunk() { m_LoadedMapChunk.reset(); }

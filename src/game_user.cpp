@@ -83,11 +83,6 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
     m_JoinTicks(GetTicks()),
-    m_LastMapPartSentOffsetEnd(0),
-    m_LastMapPartAcked(0),
-    m_LastMapPartCRC32(0),
-    m_StartedDownloadingTicks(0),
-    m_FinishedDownloadingTime(0),
     m_FinishedLoadingTicks(0),
     m_StartedLaggingTicks(0),
     m_LastGProxyWaitNoticeSentTime(0),
@@ -108,8 +103,6 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_KickReason(KickReason::NONE),
     m_HasHighPing(false),
     m_DownloadAllowed(false),
-    m_DownloadStarted(false),
-    m_DownloadFinished(false),
     m_FinishedLoading(false),
     m_Lagging(false),
     m_DropVote(false),
@@ -433,7 +426,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {
-            CIncomingChatPlayer* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
+            CIncomingChatMessage* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
             if (ChatPlayer) {
               m_Game->EventUserChatToHost(this, ChatPlayer);
@@ -460,7 +453,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               break;
             }
 
-            CIncomingMapSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
+            CIncomingMapFileSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
             if (MapSize) {
               m_Game->EventUserMapSize(this, MapSize);
             }
@@ -492,7 +485,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                 // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
                 // we also discard pong values when we're downloading because they're almost certainly inaccurate
                 // this statement also gives the player a 8 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
-                if (!m_DownloadStarted || (m_DownloadFinished && GetTime() - m_FinishedDownloadingTime >= 8)) {
+                if (!m_MapTransfer.GetStarted() || (m_MapTransfer.GetFinished() && GetTicks() - m_MapTransfer.GetFinishedTicks() >= 8000)) {
                   m_RTTValues.push_back(useLiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
                   if (m_RTTValues.size() > MAXIMUM_PINGS_COUNT) {
                     m_RTTValues.erase(begin(m_RTTValues));

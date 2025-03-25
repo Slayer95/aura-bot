@@ -180,6 +180,20 @@ constexpr uint8_t MMD_TYPE_DOTA = 1u;
 
 constexpr const char* AHCL_DEFAULT_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ -=,.!?*_+=|:;"; // 142 characters 
 
+constexpr uint8_t MAP_TRANSFER_NONE = 0u;
+constexpr uint8_t MAP_TRANSFER_DONE = 1u;
+constexpr uint8_t MAP_TRANSFER_IN_PROGRESS = 2u;
+constexpr uint8_t MAP_TRANSFER_RATE_LIMITED = 3u;
+constexpr uint8_t MAP_TRANSFER_MISSING = 4u;
+constexpr uint8_t MAP_TRANSFER_INVALID = 5u;
+
+constexpr uint8_t MAP_TRANSFER_CHECK_ALLOWED = 0u;
+constexpr uint8_t MAP_TRANSFER_CHECK_INVALID = 1u;
+constexpr uint8_t MAP_TRANSFER_CHECK_MISSING = 2u;
+constexpr uint8_t MAP_TRANSFER_CHECK_DISABLED = 3u;
+constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE = 4u;
+constexpr uint8_t MAP_TRANSFER_CHECK_BUFFERBLOAT = 5u;
+
 // game.h
 #define SLOTS_ALIGNMENT_CHANGED (1 << 0)
 #define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)

@@ -241,6 +241,63 @@ struct AHCLConfig
   ~AHCLConfig() = default;
 };
 
+struct MapTransfer
+{
+  bool started;
+  bool finished;
+  uint8_t status;
+  int64_t startedTicks;
+  int64_t finishedTicks;
+  uint32_t lastSentOffsetEnd;
+  uint32_t lastAck;
+  uint32_t crc32;
+
+  MapTransfer()
+   : started(false),
+     finished(false),
+     status(0xFF),
+     startedTicks(0),
+     finishedTicks(0),
+     lastSentOffsetEnd(0),
+     lastAck(0),
+     crc32(0)
+  {
+  }
+  ~MapTransfer() = default;
+
+  inline bool GetStarted() { return started; }
+  inline int64_t GetStartedTicks() { return startedTicks; }
+  inline void SetStarted() { started = true; }
+  inline void SetStartedTicks(const int64_t ticks) { startedTicks = ticks; }
+
+  inline bool GetFinished() { return finished; }
+  inline int64_t GetFinishedTicks() { return finishedTicks; }
+  inline void SetFinished() { finished = true; }
+  inline void SetFinishedTicks(const int64_t ticks) { finishedTicks = ticks; }
+
+  inline uint8_t GetStatus() { return status; }
+  inline void SetStatus(uint8_t nStatus) { status = nStatus; }
+
+  inline uint32_t GetLastSentOffsetEnd() { return lastSentOffsetEnd; }
+  inline void SetLastSentOffsetEnd(const uint32_t offset) { lastSentOffsetEnd = offset; }
+
+  inline uint32_t GetLastAck() { return lastAck; }
+  inline void SetLastAck(uint32_t nLastAck) { lastAck = nLastAck; }
+
+  inline uint32_t GetLastCRC32() { return crc32; }
+  inline void SetLastCRC32(const uint32_t nCRC32) { crc32 = nCRC32; }
+
+  inline void Start() {
+    SetStarted();
+    SetStartedTicks(GetTicks());
+  }
+  inline void Finish() {
+    SetFinished();
+    SetFinishedTicks(GetTicks());
+  }
+  inline bool GetIsInProgress() { return GetStarted() && !GetFinished(); }
+};
+
 //
 // CMap
 //

@@ -29,6 +29,9 @@
 #include "includes.h"
 #include "connection.h"
 #include "game.h"
+#include "map.h"
+#include "realm.h"
+#include "protocol/game_protocol.h"
 
 //
 // CAsyncObserver
@@ -38,6 +41,8 @@ class CAsyncObserver final : public CConnection
 {
 public:
   CGame*                                                        m_Game;
+  MapTransfer                                                   m_MapTransfer;
+  const CRealm*                                                 m_FromRealm;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
   bool                                                          m_MapReady;
   bool                                                          m_Desynchronized;
@@ -56,9 +61,7 @@ public:
   OptionalTimedUint32                                           m_MeasuredRTT;
   */
 
-  bool                                                          m_DownloadStarted;
-  bool                                                          m_DownloadFinished;
-  int64_t                                                       m_FinishedDownloadingTime;
+  bool                                                          m_NotifiedCannotDownload;
 
   bool                                                          m_StartedLoading;
   int64_t                                                       m_StartedLoadingTicks;
@@ -70,18 +73,32 @@ public:
   int64_t                                                       m_LastPingTime;
 
   std::string                                                   m_Name;
+  std::string                                                   m_LeftReason;
 
-  CAsyncObserver(CConnection* nConnection, CGame* nGame, uint8_t nUID, const std::string& nName);
+  CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRealm* nFromRealm, uint8_t nUID, const std::string& nName);
   ~CAsyncObserver();
 
   // processing functions
 
-  void SetTimeout(const int64_t nTicks);
+  void SetTimeout(const int64_t nTicksDelta);
+  void SetTimeoutAtLatest(const int64_t nTicks);
+
   bool CloseConnection();
   void Init();
   [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
+  [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
+  [[nodiscard]] inline const CRealm*            GetRealm() { return m_FromRealm; }
+
+  [[nodiscard]] inline bool                     GetNotifiedCannotDownload() { return m_NotifiedCannotDownload; }
+  inline void                                   SetNotifiedCannotDownload() { m_NotifiedCannotDownload = true; }
+
   [[nodiscard]] inline const std::string&       GetName() { return m_Name; }
+
+  [[nodiscard]] inline bool                     HasLeftReason() { return !m_LeftReason.empty(); }
+  [[nodiscard]] inline std::string              GetLeftReason() { return m_LeftReason; }
+  inline void                                   SetLeftReason(const std::string& reason) { m_LeftReason = reason; }
+
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
 
@@ -89,10 +106,12 @@ public:
   void OnGameReset(const CGame* nGame);
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();
+  void UpdateDownloadProgression(const uint8_t downloadProgression);
   void EventDesync();
   void EventMapReady();
   void StartLoading();
   void EventGameLoaded();
+  void EventChatMessage(const CIncomingChatMessage* chatMessage);
   void EventLeft(const uint32_t clientReason);
   void EventProtocolError();
 

@@ -642,7 +642,6 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
       if ((*i)->GetSocket()) {
         (*i)->GetSocket()->DoSend(send_fd); // flush the socket
       }
-      Print("[NET] Destroying CAsyncObserver [" + (*i)->GetName() + "]");
       delete *i;
       i = serverConnections.second.erase(i);
     }
