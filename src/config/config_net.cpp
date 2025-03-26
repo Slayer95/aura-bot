@@ -215,7 +215,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
   m_AllowTransfers               = CFG.GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG.GetUint32("hosting.map_transfers.max_players", 3);
   m_MaxUploadSize                = CFG.GetUint32("hosting.map_transfers.max_size", 8192);
-  m_MaxUploadSpeed               = CFG.GetUint32("hosting.map_transfers.max_speed", 1024);
+  m_MaxUploadSpeed               = 10 * CFG.GetUint32("hosting.map_transfers.max_speed", 1000);
   m_MaxParallelMapPackets        = CFG.GetUint32("hosting.map_transfers.max_parallel_packets", 1000);
   m_HasBufferBloat               = CFG.GetBool("net.has_buffer_bloat", false);
 

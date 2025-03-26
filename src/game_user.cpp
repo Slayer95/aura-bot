@@ -633,6 +633,11 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
   return false;
 }
 
+uint8_t CGameUser::NextSendMap()
+{
+  return m_Game->NextSendMap(this, GetUID(), GetMapTransfer());
+}
+
 void CGameUser::Send(const std::vector<uint8_t>& data)
 {
   // must start counting packet total from beginning of connection

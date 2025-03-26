@@ -118,6 +118,8 @@ struct CircleDoubleLinkedList;
 typedef std::pair<const uint8_t, const CGameSlot*>  IndexedGameSlot;
 typedef std::vector<GameUser::CGameUser*>           UserList;
 typedef std::vector<const GameUser::CGameUser*>     ImmutableUserList;
+typedef std::vector<CAsyncObserver*>                ObserverList;
+typedef std::vector<const CAsyncObserver*>          ImmutableObserverList;
 typedef std::vector<CIncomingAction>                ActionQueue;
 typedef DoubleLinkedListNode<CQueuedActionsFrame>   QueuedActionsFrameNode;
 typedef std::optional<std::pair<int64_t, uint32_t>> OptionalTimedUint32;

@@ -141,11 +141,17 @@ public:
   bool                                                        m_IPAddressFetchInProgress;
   uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
 
+  int64_t                                                     m_LastDownloadTicks;             // GetTicks when the last map download cycle was performed
+  uint64_t                                                    m_TransferredMapBytesThisUpdate;
+
   void InitPersistentConfig();
   bool Init();
   [[nodiscard]] uint32_t SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds);
+
   void UpdateBeforeGames(fd_set* fd, fd_set* send_fd);
   void UpdateAfterGames(fd_set* fd, fd_set* send_fd);
+  void UpdateMapTransfers();
+
   bool SendBroadcast(const std::vector<uint8_t>& packet);
   void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet) const;
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet) const;
@@ -195,6 +201,7 @@ public:
 
   [[nodiscard]] static std::optional<std::tuple<std::string, std::string, uint16_t, std::string>> ParseURL(const std::string& address);
   [[nodiscard]] static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
+
   void                                   SetBroadcastTarget(sockaddr_storage& subnet);
   void                                   PropagateBroadcastEnabled(const bool nEnable);
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);

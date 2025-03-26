@@ -261,7 +261,6 @@ protected:
   int64_t                                                m_CreationTime;                  // GetTime when the game was created
   int64_t                                                m_LastPingTime;                  // GetTime when the last ping was sent
   int64_t                                                m_LastRefreshTime;               // GetTime when the last game refresh was sent
-  int64_t                                                m_LastDownloadTicks;             // GetTicks when the last map download cycle was performed
   int64_t                                                m_LastDownloadCounterResetTicks; // GetTicks when the download counter was last reset
   int64_t                                                m_LastCountDownTicks;            // GetTicks when the last countdown message was sent
   int64_t                                                m_StartedLoadingTicks;           // GetTicks when the game started loading
@@ -496,6 +495,7 @@ public:
   std::string                                            GetReadyStatusText() const;
   std::string                                            GetCmdToken() const;
   CTCPServer*                                            GetSocket() const { return m_Socket; };
+  UserList&                                              GetUsers() { return m_Users; }
 
   uint16_t                                               GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
   inline bool                                            GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
@@ -707,7 +707,7 @@ public:
   uint8_t                   GetPassiveVirtualUserTeamSID(const uint8_t team) const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
-  uint8_t                   NextSendMap(CConnection* connection, const uint8_t UID, MapTransfer& mapTransfer, const uint32_t downloadersCount);
+  uint8_t                   NextSendMap(CConnection* connection, const uint8_t UID, MapTransfer& mapTransfer);
   GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();

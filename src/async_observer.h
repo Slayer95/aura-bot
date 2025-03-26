@@ -69,7 +69,7 @@ public:
   int64_t                                                       m_FinishedLoadingTicks;
 
   bool                                                          m_PlaybackEnded;
-  std::optional<int64_t>                                        m_LastFrameTicks;
+  int64_t                                                       m_LastFrameTicks;
   int64_t                                                       m_LastPingTime;
 
   std::string                                                   m_Name;
@@ -83,7 +83,7 @@ public:
   void SetTimeout(const int64_t nTicksDelta);
   void SetTimeoutAtLatest(const int64_t nTicks);
 
-  bool CloseConnection();
+  bool CloseConnection(bool recoverable = false);
   void Init();
   [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
@@ -94,6 +94,7 @@ public:
   inline void                                   SetNotifiedCannotDownload() { m_NotifiedCannotDownload = true; }
 
   [[nodiscard]] inline const std::string&       GetName() { return m_Name; }
+  [[nodiscard]] inline CGame*                   GetGame() { return m_Game; }
 
   [[nodiscard]] inline bool                     HasLeftReason() { return !m_LeftReason.empty(); }
   [[nodiscard]] inline std::string              GetLeftReason() { return m_LeftReason; }
@@ -104,11 +105,13 @@ public:
   
   int64_t                                       GetNextTimedActionByTicks() const;
 
-  void SendUpdates(fd_set* send_fd);
+  bool PushGameFrames();
+  void CheckGameOver();
   void OnGameReset(const CGame* nGame);
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();
   void UpdateDownloadProgression(const uint8_t downloadProgression);
+  [[nodiscard]] uint8_t NextSendMap();
   void EventDesync();
   void EventMapReady();
   void StartLoading();

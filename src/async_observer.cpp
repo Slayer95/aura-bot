@@ -66,7 +66,7 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_FinishedLoading(false),
     m_FinishedLoadingTicks(0),
     m_PlaybackEnded(false),
-    m_LastPingTime(0),
+    m_LastPingTime(APP_MIN_TICKS),
     m_Name(nName)
 {
   m_Socket->SetLogErrors(true);
@@ -95,7 +95,7 @@ void CAsyncObserver::SetTimeoutAtLatest(const int64_t atLatestTicks)
   }
 }
 
-bool CAsyncObserver::CloseConnection()
+bool CAsyncObserver::CloseConnection(bool /*recoverable*/)
 {
   if (!m_Socket->GetConnected()) return false;
   m_Socket->Close();
@@ -118,7 +118,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     return m_DeleteMe;
   }
 
-  const int64_t Ticks = GetTicks();
+  const int64_t Time = GetTime(), Ticks = GetTicks();
 
   if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
     return ASYNC_OBSERVER_DESTROY;
@@ -167,6 +167,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
                 if (m_StartedLoading && !m_FinishedLoading) {
                   m_FinishedLoading      = true;
                   m_FinishedLoadingTicks = GetTicks();
+                  m_LastFrameTicks = m_FinishedLoadingTicks;
                   EventGameLoaded();
                 }
               }
@@ -182,6 +183,10 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
             case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
               UpdateClientGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+
+              if (!m_Socket->GetConnected()) {
+                Abort = true;
+              }
               break;
             }
 
@@ -196,14 +201,14 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
 
             case GameProtocol::Magic::MAPSIZE: {
-              if (m_MapReady) {
+              if (m_MapReady || !m_Game || m_Game->GetIsGameOver()) {
                 // Protection against rogue clients
                 break;
               }
 
               CIncomingMapFileSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
 
-              if (MapSize && m_Game) {
+              if (MapSize) {
                 m_Game->EventObserverMapSize(this, MapSize);
               }
 
@@ -227,6 +232,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
         case GPSProtocol::Magic::GPS_HEADER: {
           // GProxy unsupported for observers
+          if (/*m_Game && m_Game->GetIsProxyReconnectable() && */Bytes[1] == GPSProtocol::Magic::INIT) {
+            Print(GetLogPrefix() + "client started GProxy handshake ");
+          }
           break;
         }
 
@@ -260,17 +268,33 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     return ASYNC_OBSERVER_DESTROY;
   }
 
-  SendUpdates(send_fd);
+  if (m_FinishedLoading && !m_PlaybackEnded) {
+    const size_t beforeCounter = m_ActionFrameCounter;
+    if (PushGameFrames()) {
+      Print(GetLogPrefix() + "pushed " + to_string(SubtractClampZero(m_ActionFrameCounter, beforeCounter)) + " action frames");
+    }
+    CheckGameOver();
+  }
 
-  if (!m_PlaybackEnded && !m_Game && m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
+  if (m_LastPingTime + 5 <= Time) {
+    Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
+    m_LastPingTime = Time;
+  }
+
+  m_Socket->DoSend(send_fd);
+  return result;
+}
+
+void CAsyncObserver::CheckGameOver()
+{
+  if (m_Game && !m_Game->GetIsGameOver()) return;
+  if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
     m_PlaybackEnded = true;
-    Print("[CAsyncObserver] Sent entire game to [" + GetName() + "]");
+    Print(GetLogPrefix() + "playback ended");
     if (!m_TimeoutTicks.has_value()) {
       SetTimeoutAtLatest(GetTicks() + 3000);
     }
   }
-
-  return result;
 }
 
 int64_t CAsyncObserver::GetNextTimedActionByTicks() const
@@ -278,52 +302,41 @@ int64_t CAsyncObserver::GetNextTimedActionByTicks() const
   if (m_GameHistory->GetNumActionFrames() <= m_ActionFrameCounter) {
     return APP_MAX_TICKS;
   }
-  int64_t prevTicks = m_LastFrameTicks.has_value() ? m_LastFrameTicks.value() : m_FinishedLoadingTicks;
-  return prevTicks + (int64_t)(m_GameHistory->GetLatency()) / (int64_t)(m_FrameRate);
+  return m_LastFrameTicks + (int64_t)(m_GameHistory->GetLatency()) / (int64_t)(m_FrameRate);
 }
 
-void CAsyncObserver::SendUpdates(fd_set* send_fd)
+bool CAsyncObserver::PushGameFrames()
 {
-  int64_t Time = GetTime();
-  if (m_FinishedLoading) {
-    int64_t prevTicks = m_LastFrameTicks.has_value() ? m_LastFrameTicks.value() : m_FinishedLoadingTicks;
-    size_t pendingUpdates = static_cast<size_t>((int64_t)(m_FrameRate) * (GetTicks() - prevTicks) / (int64_t)(m_GameHistory->GetLatency()));
-    if (m_GameHistory->GetNumActionFrames() < m_ActionFrameCounter + pendingUpdates) {
-      // We probably need to count GProxy frames as if they were regular actions in the entire algo.
-      pendingUpdates = m_GameHistory->GetNumActionFrames() - m_ActionFrameCounter;
-    }
-
-    bool anyUpdated = false;
-    if (pendingUpdates >= 1) {
-      auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
-      auto itEnd = end(m_GameHistory->m_PlayingBuffer);
-      while (it != itEnd) {
-        anyUpdated = true;
-        ++m_Offset;
-        if (it->GetType() == GAME_FRAME_TYPE_GPROXY) {
-          Send(GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GameHistory->GetGProxyEmptyActions()));
-        } else {
-          Send(it->GetBytes());
-        }
-        if (it->GetType() == GAME_FRAME_TYPE_ACTIONS) {
-          ++m_ActionFrameCounter;
-          if (--pendingUpdates == 0) break;
-        }
-        ++it;
-      }
-    }
-
-    if (anyUpdated) {
-      m_LastFrameTicks = GetTicks();
-    }
+  int64_t Ticks = GetTicks();
+  // Note: Actually, each frame may have its own custom latency.
+  size_t actionFramesWanted = static_cast<size_t>((int64_t)(m_FrameRate) * (Ticks - m_LastFrameTicks) / (int64_t)(m_GameHistory->GetLatency()));
+  // We probably need to count GProxy frames as if they were regular actions in the entire algo.
+  size_t actionFramesStored = SubtractClampZero(m_GameHistory->GetNumActionFrames(), m_ActionFrameCounter);
+  size_t actionFramesExpected = actionFramesWanted < actionFramesStored ? actionFramesWanted : actionFramesStored;
+  if (actionFramesExpected == 0) {
+    return false;
   }
 
-  if (Time - m_LastPingTime >= 5) {
-    Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
-    m_LastPingTime = Time;
+  bool success = false;
+  auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
+  auto itEnd = end(m_GameHistory->m_PlayingBuffer);
+  while (it != itEnd) {
+    if (it->GetType() == GAME_FRAME_TYPE_GPROXY) {
+      Send(GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GameHistory->GetGProxyEmptyActions()));
+    } else {
+      Send(it->GetBytes());
+    }
+    ++m_Offset;
+    if (it->GetType() == GAME_FRAME_TYPE_ACTIONS) {
+      success = true;
+      m_LastFrameTicks = Ticks;
+      ++m_ActionFrameCounter;
+      if (--actionFramesExpected == 0) break;
+    }
+    ++it;
   }
 
-  m_Socket->DoSend(send_fd);
+  return success;
 }
 
 void CAsyncObserver::OnGameReset(const CGame* nGame)
@@ -362,6 +375,7 @@ void CAsyncObserver::CheckClientGameState()
     if (nextCheckSum != m_GameHistory->GetCheckSum(nextCheckSumIndex)) {
       m_Desynchronized = true; // how? idfk
       EventDesync();
+      break;
     }
     ++nextCheckSumIndex;
     m_CheckSums.pop();
@@ -381,8 +395,12 @@ void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression
   );
   uint16_t progressionIndex = 9 * m_SID + fixedOffset;
   slotInfo[progressionIndex] = downloadProgression;
-
   Send(slotInfo);
+}
+
+uint8_t CAsyncObserver::NextSendMap()
+{
+  return m_Game->NextSendMap(this, GetUID(), GetMapTransfer()); 
 }
 
 void CAsyncObserver::EventDesync()
@@ -390,7 +408,7 @@ void CAsyncObserver::EventDesync()
   while (!m_CheckSums.empty()) {
     m_CheckSums.pop();
   }
-  string text = GetLogPrefix() + "desynchronized on frame " + to_string(m_Offset);
+  string text = GetLogPrefix() + "desynchronized on " + to_string(m_SyncCounter) + "th checksum - sent " + to_string(m_Offset) + " total frames (" + to_string(m_ActionFrameCounter) + " actions)";
   Print(text);
   m_Aura->LogPersistent(text);
 
@@ -411,6 +429,7 @@ void CAsyncObserver::EventMapReady()
 void CAsyncObserver::StartLoading()
 {
   if (m_StartedLoading) return;
+  Print(GetLogPrefix() + "started loading");
   Send(GameProtocol::SEND_W3GS_COUNTDOWN_START());
   Send(GameProtocol::SEND_W3GS_COUNTDOWN_END());
   m_StartedLoading = true;

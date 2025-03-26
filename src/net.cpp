@@ -412,7 +412,9 @@ CNet::CNet(CConfig& nCFG)
 
     m_IPAddressFetchInProgress(false),
 
-    m_LastHostPort(0)
+    m_LastHostPort(0),
+    m_LastDownloadTicks(APP_MIN_TICKS),
+    m_TransferredMapBytesThisUpdate(0)
 {
 }
 
@@ -686,6 +688,126 @@ void CNet::UpdateAfterGames(fd_set* fd, fd_set* send_fd)
     }
   } else if (m_UDPDeafSocket) {
     m_UDPDeafSocket->Discard(fd);
+  }
+
+  UpdateMapTransfers();
+}
+
+void CNet::UpdateMapTransfers()
+{
+  const int64_t Ticks = GetTicks();
+  if (Ticks < m_LastDownloadTicks + 100) {
+    return;
+  }
+
+  if (m_TransferredMapBytesThisUpdate > 0) {
+    Print("[NET] Byte counter RESET. Last update: " + to_string(m_TransferredMapBytesThisUpdate) + " bytes");
+    m_TransferredMapBytesThisUpdate = 0;
+  }
+
+  uint32_t downloadersCount = 0;
+  multiset<const CGame*> downloadersCountByGame;
+  UserList downloaderPlayers;
+  ObserverList downloaderObservers;
+
+  for (const auto& game : m_Aura->m_Lobbies) {
+    for (auto& user : game->GetUsers()) {
+      if (!user->GetMapTransfer().GetIsInProgress()) continue;
+      if (downloadersCount >= m_Config.m_MaxDownloaders) continue;
+      downloaderPlayers.push_back(user);
+      downloadersCountByGame.insert(game);
+      ++downloadersCount;
+    }
+  }
+
+  for (const auto& serverConnections : m_GameObservers) {
+    for (const auto& observer : serverConnections.second) {
+      if (!observer->GetMapTransfer().GetIsInProgress()) continue;
+      if (!observer->GetGame() || observer->GetGame()->GetIsGameOver()) {
+        observer->CloseConnection(false);
+        continue;
+      }
+      if (downloadersCount >= m_Config.m_MaxDownloaders) continue;
+      downloaderObservers.push_back(observer);
+      downloadersCountByGame.insert(observer->GetGame());
+      ++downloadersCount;
+    }
+  }
+
+  for (const auto& user : downloaderPlayers) {
+    if (!user->GetGame()->GetMap()->GetMapFileIsValid()) {
+      user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+      if (!user->HasLeftReason()) {
+        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
+      }
+      user->CloseConnection(false);
+      continue;
+    }
+
+    bool mapIsInvalid = false;
+    const uint8_t sendResult = user->NextSendMap();
+    switch (sendResult) {
+      case MAP_TRANSFER_IN_PROGRESS:
+      case MAP_TRANSFER_DONE:
+      case MAP_TRANSFER_NONE: // not really needed
+      case MAP_TRANSFER_RATE_LIMITED: // not used
+        break;
+      case MAP_TRANSFER_MISSING:
+      case MAP_TRANSFER_INVALID:
+        mapIsInvalid = true;
+        break;
+    }
+
+    if (mapIsInvalid) {
+      // Flag the map as invalid so that new users joining the lobby get a notice that the map cannot be transferred (and get eventually kicked.)
+      user->GetGame()->GetMap()->InvalidateMapFile();
+      if (!user->HasLeftReason()) {
+        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (deleted)");
+      }
+      user->CloseConnection(false);
+    }
+  }
+
+  for (const auto& user : downloaderObservers) {
+    if (!user->GetGame()->GetMap()->GetMapFileIsValid()) {
+      if (!user->HasLeftReason()) {
+        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
+      }
+      user->CloseConnection(false);
+      continue;
+    }
+
+    bool mapIsInvalid = false;
+    const uint8_t sendResult = user->NextSendMap();
+    switch (sendResult) {
+      case MAP_TRANSFER_IN_PROGRESS:
+      case MAP_TRANSFER_DONE:
+      case MAP_TRANSFER_NONE: // not really needed
+      case MAP_TRANSFER_RATE_LIMITED: // not used
+        break;
+      case MAP_TRANSFER_MISSING:
+      case MAP_TRANSFER_INVALID:
+        mapIsInvalid = true;
+        break;
+    }
+
+    if (mapIsInvalid) {
+      // Flag the map as invalid so that new users joining the lobby get a notice that the map cannot be transferred (and get eventually kicked.)
+      user->GetGame()->GetMap()->InvalidateMapFile();
+      if (!user->HasLeftReason()) {
+        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (deleted)");
+      }
+      user->CloseConnection();
+    }
+  }
+
+  m_LastDownloadTicks = Ticks;
+
+  for (auto& game : m_Aura->GetJoinableGames()) {
+    if (downloadersCountByGame.find(game) == downloadersCountByGame.end()) {
+      // Keep memory usage in check.
+      game->ClearLoadedMapChunk();
+    }
   }
 }
 

@@ -166,6 +166,7 @@ namespace GameUser
     [[nodiscard]] inline std::string              GetName() const { return m_Name; }
     [[nodiscard]] std::string                     GetLowerName() const;
     [[nodiscard]] std::string                     GetDisplayName() const;
+    [[nodiscard]] inline CGame*                   GetGame() { return m_Game; }
     [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
     [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
     [[nodiscard]] inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
@@ -347,6 +348,7 @@ namespace GameUser
     // processing functions
 
     [[nodiscard]] bool Update(fd_set* fd, int64_t timeout);
+    [[nodiscard]] uint8_t NextSendMap();
 
     // other functions
 
