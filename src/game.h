@@ -440,7 +440,7 @@ public:
   uint8_t                                                GetLayout() const;
   uint8_t                                                GetCustomLayout() const { return m_CustomLayout; }
   bool                                                   GetIsCustomForces() const;
-  int64_t                                                GetNextTimedActionMicroSeconds() const;
+  void                                                   UpdateSelectBlockTime(int64_t& usecBlockTime) const;
   uint32_t                                               GetSlotsOccupied() const;
   uint32_t                                               GetSlotsOpen() const;
   bool                                                   HasSlotsOpen() const;

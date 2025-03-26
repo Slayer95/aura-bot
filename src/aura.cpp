@@ -1069,18 +1069,9 @@ int64_t CAura::GetSelectBlockTime() const
   int64_t usecBlock = 50000;
 
   for (const auto& game : m_StartedGames) {
-    int64_t nextGameTimedActionMicroSeconds = game->GetNextTimedActionMicroSeconds();
-    if (nextGameTimedActionMicroSeconds < usecBlock) {
-      usecBlock = nextGameTimedActionMicroSeconds;
-    }
+    game->UpdateSelectBlockTime(usecBlock);
   }
-
-  {
-    int64_t nextObserverActionMicroSeconds = m_Net.GetNextTimedActionMicroSeconds();
-    if (nextObserverActionMicroSeconds < usecBlock) {
-      usecBlock = nextObserverActionMicroSeconds;
-    }
-  }
+  m_Net.UpdateSelectBlockTime(usecBlock);
 
   return usecBlock;
 }

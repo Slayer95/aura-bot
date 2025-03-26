@@ -858,22 +858,27 @@ bool CGame::GetIsCustomForces() const
   return GetMap()->GetMapLayoutStyle() != MAPLAYOUT_ANY;
 }
 
-int64_t CGame::GetNextTimedActionMicroSeconds() const
+void CGame::UpdateSelectBlockTime(int64_t& usecBlockTime) const
 {
   // return the number of ticks (ms) until the next "timed action", which for our purposes is the next game update
   // the main Aura loop will make sure the next loop update happens at or before this value
   // note: there's no reason this function couldn't take into account the game's other timers too but they're far less critical
   // warning: this function must take into account when actions are not being sent (e.g. during loading or lagging)
 
-  if (!m_GameLoaded || m_Lagging)
-    return 50000;
+  if (!m_GameLoaded || m_Lagging || usecBlockTime == 0)
+    return;
 
   const int64_t TicksSinceLastUpdate = GetTicks() - m_LastActionSentTicks;
 
-  if (TicksSinceLastUpdate > GetLatency() - m_LastActionLateBy)
-    return 0;
-  else
-    return (GetLatency() - m_LastActionLateBy - TicksSinceLastUpdate) * 1000;
+  if (TicksSinceLastUpdate > GetLatency() - m_LastActionLateBy) {
+    usecBlockTime = 0;
+    return;
+  }
+
+  int64_t maybeBlockTime = (GetLatency() - m_LastActionLateBy - TicksSinceLastUpdate) * 1000;
+  if (maybeBlockTime < usecBlockTime) {
+    usecBlockTime = maybeBlockTime;
+  }
 }
 
 uint32_t CGame::GetSlotsOccupied() const
