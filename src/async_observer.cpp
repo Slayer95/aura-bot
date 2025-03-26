@@ -372,14 +372,20 @@ void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression
 {
   if (!m_Game) return;
   vector<uint8_t> slotInfo = m_Game->GetSlotInfo();
+  string beforeSlots = ByteArrayToDecString(slotInfo);
   constexpr static uint16_t fixedOffset = (
-    4 /* W3GS headers */ +
+    2 /* W3GS type headers */ +
+    2 /* W3GS packet byte size */ +
     2 /* EncodeSlotInfo() byte size */ +
     1 /* number of slots */ +
     1 /* download status offset in CGameSlot::GetProtocolArray() */
   );
   uint16_t progressionIndex = 9 * m_SID + fixedOffset;
   slotInfo[progressionIndex] = downloadProgression;
+
+  string afterSlots = ByteArrayToDecString(slotInfo);
+  m_Aura->LogPersistent("UpdateDownloadProgression(" + to_string(downloadProgression) + ") ->\n  <" + beforeSlots + ">\n  <" + afterSlots + ">");
+
   Send(slotInfo);
 }
 
@@ -474,11 +480,9 @@ void CAsyncObserver::Send(const std::vector<uint8_t>& data)
 void CAsyncObserver::SendChat(const string& message)
 {
   if (m_StartedLoading && !m_FinishedLoading) {
-    Print(GetLogPrefix() + "SendChat() ignored bad timing");
     return;
   }
-  Print(GetLogPrefix() + "SendChat(\"" + message + "\")");
-  if (m_StartedLoading) {
+  if (!m_StartedLoading) {
     if (message.size() > 254)
       Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message.substr(0, 254)));
     else

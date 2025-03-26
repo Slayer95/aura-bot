@@ -6290,6 +6290,7 @@ void CGame::UpdateUserMapProgression(CAsyncObserver* user, const double current,
   if (current <= expected) {
     newDownloadStatus = static_cast<uint8_t>(static_cast<uint32_t>(percent * current / expected));
   }
+
   if (newDownloadStatus == user->GetMapTransfer().GetStatus()) {
     return;
   }
