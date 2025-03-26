@@ -436,9 +436,16 @@ constexpr uint8_t ACTION_PAUSE = 1u;
 constexpr uint8_t ACTION_RESUME = 2u;
 constexpr uint8_t ACTION_SAVE = 6u;
 constexpr uint8_t ACTION_SAVE_ENDED = 7u;
+constexpr uint8_t ACTION_SHARE_UNITS = 80u;
+constexpr uint8_t ACTION_TRANSFER_RESOURCES = 81u;
 constexpr uint8_t ACTION_CHAT_TRIGGER = 96u;
 constexpr uint8_t ACTION_MODAL_BTN = 106u;
 constexpr uint8_t ACTION_SYNC_INT = 107u;
+
+constexpr uint32_t ALLIANCE_SETTINGS_ALLY = 0x1Fu;
+constexpr uint32_t ALLIANCE_SETTINGS_SHARED_VISION = 0x20u;
+constexpr uint32_t ALLIANCE_SETTINGS_SHARED_CONTROL = 0x40u;
+constexpr uint32_t ALLIANCE_SETTINGS_SHARED_VICTORY = 0x400u;
 
 #define MAX_PLAYER_NAME_SIZE 15
 
@@ -519,58 +526,62 @@ constexpr uint8_t LOG_REMOTE_MODE_MIXED = 3u;
 
 // config_game.h
 
-#define ON_DESYNC_NONE 0u
-#define ON_DESYNC_NOTIFY 1u
-#define ON_DESYNC_DROP 2u
+constexpr uint8_t ON_DESYNC_NONE = 0u;
+constexpr uint8_t ON_DESYNC_NOTIFY = 1u;
+constexpr uint8_t ON_DESYNC_DROP = 2u;
 
-#define ON_IPFLOOD_NONE 0u
-#define ON_IPFLOOD_NOTIFY 1u
-#define ON_IPFLOOD_DENY 2u
+constexpr uint8_t ON_IPFLOOD_NONE = 0u;
+constexpr uint8_t ON_IPFLOOD_NOTIFY = 1u;
+constexpr uint8_t ON_IPFLOOD_DENY = 2u;
 
-#define ON_UNSAFE_NAME_NONE 0u
-#define ON_UNSAFE_NAME_CENSOR_MAY_DESYNC 1u
-#define ON_UNSAFE_NAME_DENY 2u
+constexpr uint8_t ON_UNSAFE_NAME_NONE = 0u;
+constexpr uint8_t ON_UNSAFE_NAME_CENSOR_MAY_DESYNC = 1u;
+constexpr uint8_t ON_UNSAFE_NAME_DENY = 2u;
 
-#define CROSSPLAY_MODE_NONE 0u
-#define CROSSPLAY_MODE_CONSERVATIVE 1u
-#define CROSSPLAY_MODE_OPTIMISTIC 2u
-#define CROSSPLAY_MODE_FORCE 3u
+constexpr uint8_t ON_PLAYER_LEAVE_NONE = 0u;
+constexpr uint8_t ON_PLAYER_LEAVE_NATIVE = 1u;
+constexpr uint8_t ON_PLAYER_LEAVE_SHARE_UNITS = 2u;
 
-#define READY_MODE_FAST 0u
-#define READY_MODE_EXPECT_RACE 1u
-#define READY_MODE_EXPLICIT 2u
+constexpr uint8_t CROSSPLAY_MODE_NONE = 0u;
+constexpr uint8_t CROSSPLAY_MODE_CONSERVATIVE = 1u;
+constexpr uint8_t CROSSPLAY_MODE_OPTIMISTIC = 2u;
+constexpr uint8_t CROSSPLAY_MODE_FORCE = 3u;
 
-#define HIDE_IGN_NEVER 0u
-#define HIDE_IGN_HOST 1u
-#define HIDE_IGN_ALWAYS 2u
-#define HIDE_IGN_AUTO 3u
+constexpr uint8_t READY_MODE_FAST = 0u;
+constexpr uint8_t READY_MODE_EXPECT_RACE = 1u;
+constexpr uint8_t READY_MODE_EXPLICIT = 2u;
 
-#define ON_ADV_ERROR_IGNORE_ERRORS 0u
-#define ON_ADV_ERROR_EXIT_ON_MAIN_ERROR 1u
-#define ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY 2u
-#define ON_ADV_ERROR_EXIT_ON_ANY_ERROR 3u
-#define ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY 4u
-#define ON_ADV_ERROR_EXIT_ON_MAX_ERRORS 5u
+constexpr uint8_t HIDE_IGN_NEVER = 0u;
+constexpr uint8_t HIDE_IGN_HOST = 1u;
+constexpr uint8_t HIDE_IGN_ALWAYS = 2u;
+constexpr uint8_t HIDE_IGN_AUTO = 3u;
 
-#define LOBBY_TIMEOUT_NEVER 0u
-#define LOBBY_TIMEOUT_EMPTY 1u
-#define LOBBY_TIMEOUT_OWNERLESS 2u
-#define LOBBY_TIMEOUT_STRICT 3u
+constexpr uint8_t ON_ADV_ERROR_IGNORE_ERRORS = 0u;
+constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAIN_ERROR = 1u;
+constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY = 2u;
+constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR = 3u;
+constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY = 4u;
+constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAX_ERRORS = 5u;
 
-#define LOBBY_OWNER_TIMEOUT_NEVER 0u
-#define LOBBY_OWNER_TIMEOUT_ABSENT 1u
-#define LOBBY_OWNER_TIMEOUT_STRICT 2u
+constexpr uint8_t LOBBY_TIMEOUT_NEVER = 0u;
+constexpr uint8_t LOBBY_TIMEOUT_EMPTY = 1u;
+constexpr uint8_t LOBBY_TIMEOUT_OWNERLESS = 2u;
+constexpr uint8_t LOBBY_TIMEOUT_STRICT = 3u;
 
-#define GAME_LOADING_TIMEOUT_NEVER 0u
-#define GAME_LOADING_TIMEOUT_STRICT 1u
+constexpr uint8_t LOBBY_OWNER_TIMEOUT_NEVER = 0u;
+constexpr uint8_t LOBBY_OWNER_TIMEOUT_ABSENT = 1u;
+constexpr uint8_t LOBBY_OWNER_TIMEOUT_STRICT = 2u;
 
-#define GAME_PLAYING_TIMEOUT_NEVER 0u
-#define GAME_PLAYING_TIMEOUT_DRY 1u
-#define GAME_PLAYING_TIMEOUT_STRICT 2u
+constexpr uint8_t GAME_LOADING_TIMEOUT_NEVER = 0u;
+constexpr uint8_t GAME_LOADING_TIMEOUT_STRICT = 1u;
 
-#define LOG_CHAT_TYPE_ASCII 1u
-#define LOG_CHAT_TYPE_NON_ASCII 2u
-#define LOG_CHAT_TYPE_COMMANDS 4u
+constexpr uint8_t GAME_PLAYING_TIMEOUT_NEVER = 0u;
+constexpr uint8_t GAME_PLAYING_TIMEOUT_DRY = 1u;
+constexpr uint8_t GAME_PLAYING_TIMEOUT_STRICT = 2u;
+
+constexpr uint8_t LOG_CHAT_TYPE_ASCII = 1u;
+constexpr uint8_t LOG_CHAT_TYPE_NON_ASCII = 2u;
+constexpr uint8_t LOG_CHAT_TYPE_COMMANDS = 4u;
 
 constexpr uint8_t MAX_GAME_VERSION_OVERRIDES = 24;
 

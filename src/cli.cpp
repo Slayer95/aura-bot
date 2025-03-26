@@ -144,6 +144,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--speed", m_GameSpeed, "Customizes game speed when hosting from the CLI. Values: slow, normal, fast")->check(CLI::IsMember({"slow", "normal", "fast"}));
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
   app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
+  app.add_option("--on-leave", m_GameLeaverHandler, "Customizes how to deal with leaver players. Values: none, native, share")->check(CLI::IsMember({"none", "native", "share"}));
   app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")->check(CLI::IsMember({"none", "censor", "deny"}));
   app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")->check(CLI::IsMember({"ignore", "exit-main-error", "exit-empty-main-error", "exit-any-error", "exit-empty-any-error", "exit-max-errors"}));
   app.add_option("--game-version", m_GameVersion, "Customizes the main version for the hosted lobby.");
@@ -418,6 +419,21 @@ uint8_t CCLI::GetGameIPFloodHandler() const
     }
   }
   return floodHandler;
+}
+
+uint8_t CCLI::GetGameLeaverHandler() const
+{
+  uint8_t leaverHandler = ON_PLAYER_LEAVE_NONE;
+  if (m_GameLeaverHandler.has_value()) {
+    if (m_GameLeaverHandler.value() == "none") {
+      leaverHandler = ON_PLAYER_LEAVE_NONE;
+    } else if (m_GameLeaverHandler.value() == "native") {
+      leaverHandler = ON_PLAYER_LEAVE_NATIVE;
+    } else if (m_GameLeaverHandler.value() == "share") {
+      leaverHandler = ON_PLAYER_LEAVE_SHARE_UNITS;
+    }
+  }
+  return leaverHandler;
 }
 
 uint8_t CCLI::GetGameUnsafeNameHandler() const

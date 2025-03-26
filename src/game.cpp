@@ -1580,10 +1580,10 @@ void CGame::UpdateLoaded()
       }
     }
     if (!droppedUsers.empty()) {
+      bool saved = false;
       for (const auto& user : droppedUsers) {
-        if (TrySaveOnDisconnect(user, false)) {
-          break;
-        }
+        TryShareUnitsOnDisconnect(user, false);
+        if (!saved) saved = TrySaveOnDisconnect(user, false);
       }
       ResetDropVotes();
     }
@@ -4355,7 +4355,7 @@ void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
     user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
-    TrySaveOnDisconnect(user, false);
+    TryActionsOnDisconnect(user, false);
   }
 }
 
@@ -4383,7 +4383,7 @@ void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
   } else {
     user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
   }
-  TrySaveOnDisconnect(user, false);
+  TryActionsOnDisconnect(user, false);
 }
 
 void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
@@ -4409,7 +4409,7 @@ void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
   } else {
     user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
   }
-  TrySaveOnDisconnect(user, false);
+  TryActionsOnDisconnect(user, false);
 }
 
 void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool canRecover)
@@ -4440,7 +4440,7 @@ void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool
     user->DisableReconnect();
     user->CloseConnection(); // automatically sets ended
   }
-  TrySaveOnDisconnect(user, false);
+  TryActionsOnDisconnect(user, false);
 }
 
 void CGame::EventUserDisconnectGameAbuse(GameUser::CGameUser* user)
@@ -4459,7 +4459,7 @@ void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
 {
   if (user->GetDeleteMe()) return;
   StopLagger(user, "failed to reconnect in time");
-  TrySaveOnDisconnect(user, false);
+  TryActionsOnDisconnect(user, false);
   ResetDropVotes();
 }
 
@@ -4562,10 +4562,20 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
   }
   LogRemote("[" + user->GetExtendedName() + "] " + user->GetLeftReason());
 
-  vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode());
-  SendAll(packet);
-  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
+  
+  switch (m_Config.m_LeaverHandler) {
+    case ON_PLAYER_LEAVE_NONE:
+    case ON_PLAYER_LEAVE_SHARE_UNITS:
+      break;
+
+    case ON_PLAYER_LEAVE_NATIVE: {
+      vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode());
+      SendAll(packet);
+      if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+        m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
+      }
+      break;
+    }
   }
 
   user->SetLeftMessageSent(true);
@@ -5260,7 +5270,7 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
     user->DisableReconnect();
     user->CloseConnection();
   }
-  TrySaveOnDisconnect(user, true);
+  TryActionsOnDisconnect(user, true);
   return;
 }
 
@@ -9164,10 +9174,10 @@ void CGame::StopLaggers(const string& reason)
   for (const auto& user : laggingUsers) {
     StopLagger(user, reason);
   }
+  bool saved = false;
   for (const auto& user : laggingUsers) {
-    if (TrySaveOnDisconnect(user, false)) {
-      break;
-    }
+    TryShareUnitsOnDisconnect(user, false);
+    if (!saved) saved = TrySaveOnDisconnect(user, false);
   }
   ResetDropVotes();
 }
@@ -9249,6 +9259,7 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
     actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_SAVE_ENDED)));
   }
 
+  // Add actions for everyone else saves finishing
   SaveEnded(UID);
   return true;
 }
@@ -9283,6 +9294,84 @@ bool CGame::Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, 
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_RESUME)));
   actionFrame.callback = ON_SEND_ACTIONS_RESUME;
+  return true;
+}
+
+bool CGame::Save(GameUser::CGameUser* user, const bool isDisconnect)
+{
+  return Save(user, GetLastActionFrame(), isDisconnect);
+}
+
+void CGame::SaveEnded(const uint8_t exceptUID)
+{
+  SaveEnded(exceptUID, GetLastActionFrame());
+}
+
+bool CGame::Pause(GameUser::CGameUser* user, const bool isDisconnect)
+{
+  return Pause(user, GetLastActionFrame(), isDisconnect);
+}
+
+bool CGame::Resume(GameUser::CGameUser* user, const bool isDisconnect)
+{
+  return Resume(user, GetLastActionFrame(), isDisconnect);
+}
+
+bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
+{
+  const uint8_t fromUID = fromUser->GetUID();
+
+  {
+    vector<uint8_t> ActionStart;
+    ActionStart.push_back(ACTION_SHARE_UNITS);
+    ActionStart.push_back(SID);
+    AppendByteArray(ActionStart, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY, false);
+    actionFrame.AddAction(std::move(CIncomingAction(fromUID, ActionStart)));
+  }
+
+  return true;
+}
+
+bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, const bool isDisconnect)
+{
+  return ShareUnits(fromUser, SID, GetLastActionFrame(), isDisconnect);
+}
+
+bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstByte, const uint32_t secondByte)
+{
+  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
+  AppendByteArray(packet, firstByte, false);
+  AppendByteArray(packet, secondByte, false);
+  vector<uint8_t> action;
+  AppendByteArrayFast(packet, message);
+  AppendByteArray(action, packet);
+  GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
+  return true;
+}
+
+bool CGame::SendChatTriggerSymmetric(const uint8_t UID, const string& message, const uint16_t identifier)
+{
+  return SendChatTrigger(UID, message, (uint32_t)identifier, (uint32_t)identifier);
+}
+
+void CGame::TryActionsOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary)
+{
+  TryShareUnitsOnDisconnect(user, isVoluntary);
+  TrySaveOnDisconnect(user, isVoluntary);
+}
+
+bool CGame::TryShareUnitsOnDisconnect(GameUser::CGameUser* user, const bool /*isVoluntary*/)
+{
+  if (m_Config.m_LeaverHandler != ON_PLAYER_LEAVE_SHARE_UNITS) return false;
+  uint8_t fromSID = GetSIDFromUID(user->GetUID());
+  if (fromSID == 0xFF) return false;
+
+  uint8_t SID = static_cast<uint8_t>(m_Slots.size());
+  while (SID--) {
+    if (SID == fromSID || !m_Slots[SID].GetIsPlayerOrFake()) continue;
+    if (m_Slots[SID].GetTeam() != m_Slots[SID].GetTeam()) continue;
+    ShareUnits(user, SID, true);
+  }
   return true;
 }
 
@@ -9349,43 +9438,6 @@ bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntar
   }
 
   return false;
-}
-
-bool CGame::Save(GameUser::CGameUser* user, const bool isDisconnect)
-{
-  return Save(user, GetLastActionFrame(), isDisconnect);
-}
-
-void CGame::SaveEnded(const uint8_t exceptUID)
-{
-  SaveEnded(exceptUID, GetLastActionFrame());
-}
-
-bool CGame::Pause(GameUser::CGameUser* user, const bool isDisconnect)
-{
-  return Pause(user, GetLastActionFrame(), isDisconnect);
-}
-
-bool CGame::Resume(GameUser::CGameUser* user, const bool isDisconnect)
-{
-  return Resume(user, GetLastActionFrame(), isDisconnect);
-}
-
-bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstByte, const uint32_t secondByte)
-{
-  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
-  AppendByteArray(packet, firstByte, false);
-  AppendByteArray(packet, secondByte, false);
-  vector<uint8_t> action;
-  AppendByteArrayFast(packet, message);
-  AppendByteArray(action, packet);
-  GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
-  return true;
-}
-
-bool CGame::SendChatTriggerSymmetric(const uint8_t UID, const string& message, const uint16_t identifier)
-{
-  return SendChatTrigger(UID, message, (uint32_t)identifier, (uint32_t)identifier);
 }
 
 bool CGame::GetIsCheckJoinable() const

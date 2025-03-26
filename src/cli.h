@@ -150,6 +150,7 @@ public:
   std::optional<std::string>            m_GameMapAlias;
   std::optional<std::string>            m_GameDisplayMode;
   std::optional<std::string>            m_GameIPFloodHandler;
+  std::optional<std::string>            m_GameLeaverHandler;
   std::optional<std::string>            m_GameUnsafeNameHandler;
   std::optional<std::string>            m_GameBroadcastErrorHandler;
   std::optional<std::string>            m_GameCrossPlayMode;
@@ -188,6 +189,7 @@ public:
   [[nodiscard]] uint8_t GetGameReconnectionMode() const;
   [[nodiscard]] uint8_t GetGameDisplayType() const;
   [[nodiscard]] uint8_t GetGameIPFloodHandler() const;
+  [[nodiscard]] uint8_t GetGameLeaverHandler() const;
   [[nodiscard]] uint8_t GetGameUnsafeNameHandler() const;
   [[nodiscard]] uint8_t GetGameBroadcastErrorHandler() const;
   [[nodiscard]] uint8_t GetGameCrossPlayMode() const;

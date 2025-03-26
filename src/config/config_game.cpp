@@ -145,6 +145,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LogCommands                            = CFG.GetBool("hosting.log_commands", false);
   m_DesyncHandler                          = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_IPFloodHandler                         = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
+  m_LeaverHandler                          = CFG.GetStringIndex("hosting.game_protocol.leaver_handler", {"none", "native", "share"}, ON_PLAYER_LEAVE_NATIVE);
   m_UnsafeNameHandler                      = CFG.GetStringIndex("hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);
   m_BroadcastErrorHandler                  = CFG.GetStringIndex("hosting.realm_broadcast.error_handler", {"ignore", "exit_main_error", "exit_empty_main_error", "exit_any_error", "exit_empty_any_error", "exit_max_errors"}, ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
   m_PipeConsideredHarmful                  = CFG.GetBool("hosting.name_filter.is_pipe_harmful", true);
@@ -245,6 +246,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_LogCommands, m_LogCommands, m_LogCommands)
   INHERIT(m_DesyncHandler)
   INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)
+  INHERIT_MAP_OR_CUSTOM(m_LeaverHandler, m_LeaverHandler, m_LeaverHandler)
   INHERIT_MAP_OR_CUSTOM(m_UnsafeNameHandler, m_UnsafeNameHandler, m_UnsafeNameHandler)
   INHERIT_MAP_OR_CUSTOM(m_BroadcastErrorHandler, m_BroadcastErrorHandler, m_BroadcastErrorHandler)
   INHERIT_MAP(m_PipeConsideredHarmful, m_PipeConsideredHarmful)

@@ -108,6 +108,7 @@ struct CGameConfig
   bool                     m_LogCommands;
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
+  uint8_t                  m_LeaverHandler;
   uint8_t                  m_UnsafeNameHandler;         // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care
   uint8_t                  m_BroadcastErrorHandler;     // under which circumstances should a game lobby be closed given that we failed to announce the game in one or more realms
   bool                     m_PipeConsideredHarmful;

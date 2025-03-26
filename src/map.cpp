@@ -2065,6 +2065,9 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.ip_filter.flood_handler")) {
     m_IPFloodHandler = CFG.GetStringIndex("map.hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
   }
+  if (CFG.Exists("map.hosting.game_protocol.leaver_handler")) {
+    m_LeaverHandler = CFG.GetStringIndex("map.hosting.game_protocol.leaver_handler", {"none", "native", "share"}, ON_PLAYER_LEAVE_NATIVE);
+  }
   if (CFG.Exists("map.hosting.name_filter.unsafe_handler")) {
     m_UnsafeNameHandler = CFG.GetStringIndex("map.hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);
   }

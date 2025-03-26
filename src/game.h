@@ -823,7 +823,11 @@ public:
   void SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame);
   bool Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
+  bool ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
+  bool ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, const bool isDisconnect);
+  void TryActionsOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
   bool TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
+  bool TryShareUnitsOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
   bool Save(GameUser::CGameUser* user, const bool isDisconnect);
   void SaveEnded(const uint8_t exceptUID);
   bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
