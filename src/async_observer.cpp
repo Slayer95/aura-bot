@@ -283,6 +283,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
 int64_t CAsyncObserver::GetNextTimedActionByTicks() const
 {
+  if (m_GameHistory->GetNumActionFrames() <= m_ActionFrameCounter) {
+    return APP_MAX_TICKS;
+  }
   int64_t prevTicks = m_LastFrameTicks.has_value() ? m_LastFrameTicks.value() : m_FinishedLoadingTicks;
   return prevTicks + (int64_t)(m_GameHistory->GetLatency()) / (int64_t)(m_FrameRate);
 }
