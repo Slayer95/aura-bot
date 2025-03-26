@@ -64,7 +64,7 @@ private:
   uint32_t m_MapGameType;
   std::string m_GameName;
   std::vector<uint8_t> m_StatString;
-  uint32_t m_ReceivedTime;
+  int64_t m_ReceivedTime;
   uint32_t m_ElapsedTime;
   uint32_t m_SlotsTotal;
   uint32_t m_SlotsOpen;
@@ -95,7 +95,7 @@ public:
   [[nodiscard]] const std::string& GetGameName( )                            { return m_GameName; }
   [[nodiscard]] const std::vector<uint8_t>& GetStatString( )                 { return m_StatString; }
   [[nodiscard]] const std::string& GetHostName( )                            { return m_HostName; }
-  [[nodiscard]] uint32_t GetReceivedTime( )                           { return m_ReceivedTime; }
+  [[nodiscard]] int64_t GetReceivedTime( )                           { return m_ReceivedTime; }
   [[nodiscard]] uint32_t GetElapsedTime( )                            { return m_ElapsedTime; }
   [[nodiscard]] const std::string& GetMapPath( )                             { return m_MapPath; }
   [[nodiscard]] const std::vector<uint8_t>& GetMapCRC( )                     { return m_MapCRC; }
