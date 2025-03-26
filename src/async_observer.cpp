@@ -372,7 +372,6 @@ void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression
 {
   if (!m_Game) return;
   vector<uint8_t> slotInfo = m_Game->GetSlotInfo();
-  string beforeSlots = ByteArrayToDecString(slotInfo);
   constexpr static uint16_t fixedOffset = (
     2 /* W3GS type headers */ +
     2 /* W3GS packet byte size */ +
@@ -382,9 +381,6 @@ void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression
   );
   uint16_t progressionIndex = 9 * m_SID + fixedOffset;
   slotInfo[progressionIndex] = downloadProgression;
-
-  string afterSlots = ByteArrayToDecString(slotInfo);
-  m_Aura->LogPersistent("UpdateDownloadProgression(" + to_string(downloadProgression) + ") ->\n  <" + beforeSlots + ">\n  <" + afterSlots + ">");
 
   Send(slotInfo);
 }
