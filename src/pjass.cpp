@@ -118,7 +118,7 @@ pair<bool, string> ParseJASSFiles(const vector<filesystem::path>& filePaths, con
   return ParseJASSFiles(filePaths, flags);
 }
 
-pair<bool, string> ParseJASS(const string& commonJ, const string& blizzardJ, const string& war3mapJ, const bitset<11> flags)
+pair<bool, string> ParseJASS(string commonJ, string blizzardJ, string war3mapJ, const bitset<11> flags)
 {
   const static vector<string> pjassAvailableFlags = {
     // pjass error types
@@ -158,8 +158,8 @@ pair<bool, string> ParseJASS(const string& commonJ, const string& blizzardJ, con
   }
 
   const int bufferSizes[] = {static_cast<int>(commonSize), static_cast<int>(blizzardSize), static_cast<int>(war3mapSize)};
-  const char* targets[] = {commonJ.data(), blizzardJ.data(), war3mapJ.data()};
-  const char* fixedFlags[] = {flagString.data(), flagString.data(), flagString.data()};
+  char* targets[] = {commonJ.data(), blizzardJ.data(), war3mapJ.data()};
+  char* fixedFlags[] = {flagString.data(), flagString.data(), flagString.data()};
 
   result = parse_jass_custom(buffer, maxOutSize, &outSize, 3, bufferSizes, targets, fixedFlags) == 0;
   //result = parse_jass_custom(buffer, maxOutSize, &outSize, 1, bufferSizes + 2, targets + 2, fixedFlags + 2) == 0;
