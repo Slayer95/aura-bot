@@ -191,6 +191,8 @@ public:
   uint16_t NextHostPort();
   void     MergeDownGradedConnections();
 
+  [[nodiscard]] int64_t GetNextTimedActionMicroSeconds() const;
+
   [[nodiscard]] static std::optional<std::tuple<std::string, std::string, uint16_t, std::string>> ParseURL(const std::string& address);
   [[nodiscard]] static std::optional<sockaddr_storage> ParseAddress(const std::string& address, const uint8_t inputMode = ACCEPT_ANY);
   void                                   SetBroadcastTarget(sockaddr_storage& subnet);

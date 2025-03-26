@@ -101,6 +101,8 @@ public:
 
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
+  
+  int64_t                                       GetNextTimedActionByTicks() const;
 
   void SendUpdates(fd_set* send_fd);
   void OnGameReset(const CGame* nGame);

@@ -1504,6 +1504,24 @@ void CNet::MergeDownGradedConnections()
   }
 }
 
+int64_t CNet::GetNextTimedActionMicroSeconds() const
+{
+  int64_t ticks = GetTicks();
+  int64_t byTicks = APP_MAX_TICKS;
+  for (const auto& serverConnections : m_GameObservers) {
+    for (const auto& connection : serverConnections.second) {
+      int64_t thisByTicks = connection->GetNextTimedActionByTicks();
+      if (thisByTicks < byTicks) {
+        byTicks = thisByTicks;
+      }
+    }
+  }
+  if (byTicks <= ticks) {
+    return 0;
+  }
+  return (byTicks - ticks) * 1000;
+}
+
 vector<uint16_t> CNet::GetPotentialGamePorts() const
 {
   vector<uint16_t> result;

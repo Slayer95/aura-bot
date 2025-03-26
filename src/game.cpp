@@ -4838,6 +4838,8 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* cli
 {
   int64_t Ticks = GetTicks(); int64_t Time = GetTime();
   const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  UpdateUserMapProgression(user, clientMap->GetFileSize(), expectedMapSize);
+
   if (clientMap->GetFlag() != 1 || clientMap->GetFileSize() != expectedMapSize) {
     // observer doesn't have the map
     const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(), false /* cannot start manual download for observers */);
@@ -4893,15 +4895,6 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* cli
     user->EventMapReady();
   } else {
     user->EventMapReady();
-  }
-
-  uint8_t newDownloadStatus = static_cast<uint8_t>(static_cast<float>(clientMap->GetFileSize()) / expectedMapSize * 100.f);
-  if (newDownloadStatus > 100) {
-    newDownloadStatus = 100;
-  }
-  if (newDownloadStatus != user->GetMapTransfer().GetStatus()) {
-    user->GetMapTransfer().SetStatus(newDownloadStatus);
-    user->UpdateDownloadProgression(newDownloadStatus);
   }
 }
 
@@ -5862,12 +5855,10 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 
 void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* clientMap)
 {
-  if (m_GameLoading || m_GameLoaded) {
-    return;
-  }
-
   int64_t Ticks = GetTicks(); int64_t Time = GetTime();
   const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  UpdateUserMapProgression(user, clientMap->GetFileSize(), expectedMapSize);
+
   if (clientMap->GetFlag() != 1 || clientMap->GetFileSize() != expectedMapSize) {
     // user doesn't have the map
     const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(false), user->GetDownloadAllowed());
@@ -5924,29 +5915,6 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* cl
     EventUserMapReady(user);
   } else {
     EventUserMapReady(user);
-  }
-
-  uint8_t newDownloadStatus = static_cast<uint8_t>(static_cast<float>(clientMap->GetFileSize()) / expectedMapSize * 100.f);
-  if (newDownloadStatus > 100) {
-    newDownloadStatus = 100;
-  }
-
-  if (user->GetMapTransfer().GetStatus() != newDownloadStatus) {
-    user->GetMapTransfer().SetStatus(newDownloadStatus);
-
-    CGameSlot* slot = GetSlot(GetSIDFromUID(user->GetUID()));
-    if (slot) {
-      // only send the slot info if the download status changed
-      slot->SetDownloadStatus(newDownloadStatus);
-
-      // we don't actually send the new slot info here
-      // this is an optimization because it's possible for a user to download a map very quickly
-      // if we send a new slot update for every percentage change in their download status it adds up to a lot of data
-      // instead, we mark the slot info as "out of date" and update it only once in awhile
-      // (once per second when this comment was made)
-
-      m_SlotInfoChanged |= (SLOTS_DOWNLOAD_PROGRESS_CHANGED);
-    }
   }
 }
 
@@ -6279,6 +6247,50 @@ void CGame::UpdateBannableUsers()
       string() // reason
     ));
   }
+}
+
+void CGame::UpdateUserMapProgression(GameUser::CGameUser* user, const double current, const double expected)
+{
+  constexpr static double percent = 100.;
+  uint8_t newDownloadStatus = 100;
+  if (current <= expected) {
+    newDownloadStatus = static_cast<uint8_t>(static_cast<uint32_t>(percent * current / expected));
+  }
+
+  if (user->GetMapTransfer().GetStatus() == newDownloadStatus) {
+    return;
+  }
+
+  user->GetMapTransfer().SetStatus(newDownloadStatus);
+
+  CGameSlot* slot = GetSlot(GetSIDFromUID(user->GetUID()));
+  if (slot) {
+    // only send the slot info if the download status changed
+    slot->SetDownloadStatus(newDownloadStatus);
+
+    // we don't actually send the new slot info here
+    // this is an optimization because it's possible for a user to download a map very quickly
+    // if we send a new slot update for every percentage change in their download status it adds up to a lot of data
+    // instead, we mark the slot info as "out of date" and update it only once in awhile
+    // (once per second when this comment was made)
+
+    m_SlotInfoChanged |= (SLOTS_DOWNLOAD_PROGRESS_CHANGED);
+  }
+}
+
+void CGame::UpdateUserMapProgression(CAsyncObserver* user, const double current, const double expected)
+{
+  constexpr static double percent = 100.;
+  uint8_t newDownloadStatus = 100;
+  if (current <= expected) {
+    newDownloadStatus = static_cast<uint8_t>(static_cast<uint32_t>(percent * current / expected));
+  }
+  if (newDownloadStatus == user->GetMapTransfer().GetStatus()) {
+    return;
+  }
+
+  user->GetMapTransfer().SetStatus(newDownloadStatus);
+  user->UpdateDownloadProgression(newDownloadStatus);
 }
 
 bool CGame::ResolvePlayerObfuscation() const

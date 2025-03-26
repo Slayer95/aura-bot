@@ -1061,6 +1061,30 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
   return APP_ACTION_ERROR;
 }
 
+int64_t CAura::GetSelectBlockTime() const
+{
+  // before we call select we need to determine how long to block for
+  // 50 ms is the hard maximum
+
+  int64_t usecBlock = 50000;
+
+  for (const auto& game : m_StartedGames) {
+    int64_t nextGameTimedActionMicroSeconds = game->GetNextTimedActionMicroSeconds();
+    if (nextGameTimedActionMicroSeconds < usecBlock) {
+      usecBlock = nextGameTimedActionMicroSeconds;
+    }
+  }
+
+  {
+    int64_t nextObserverActionMicroSeconds = m_Net.GetNextTimedActionMicroSeconds();
+    if (nextObserverActionMicroSeconds < usecBlock) {
+      usecBlock = nextObserverActionMicroSeconds;
+    }
+  }
+
+  return usecBlock;
+}
+
 bool CAura::Update()
 {
   if (gGracefulExit == 1 || m_ExitingSoon) {
@@ -1148,24 +1172,12 @@ bool CAura::Update()
     NumFDs += m_IRC.SetFD(&fd, &send_fd, &nfds);
   }
 
-  // UDP sockets, outgoing test connections
+  // UDP sockets, outgoing test connections, observers
   NumFDs += m_Net.SetFD(&fd, &send_fd, &nfds);
-
-  // before we call select we need to determine how long to block for
-  // 50 ms is the hard maximum
-
-  int64_t usecBlock = 50000;
-
-  for (const auto& game : m_StartedGames) {
-    int64_t nextGameTimedActionMicroSeconds = game->GetNextTimedActionMicroSeconds();
-    if (nextGameTimedActionMicroSeconds < usecBlock) {
-      usecBlock = nextGameTimedActionMicroSeconds;
-    }
-  }
 
   struct timeval tv;
   tv.tv_sec  = 0;
-  tv.tv_usec = static_cast<long int>(usecBlock);
+  tv.tv_usec = static_cast<long int>(GetSelectBlockTime());
 
   struct timeval send_tv;
   send_tv.tv_sec  = 0;

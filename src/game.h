@@ -656,6 +656,9 @@ public:
   void                      AddProvisionalBannableUser(const GameUser::CGameUser* user);
   void                      ClearBannableUsers();
   void                      UpdateBannableUsers();
+
+  void                      UpdateUserMapProgression(CAsyncObserver* user, const double current, const double expected);
+  void                      UpdateUserMapProgression(GameUser::CGameUser* user, const double current, const double expected);
   bool                      ResolvePlayerObfuscation() const;
   void                      RunPlayerObfuscation();
   bool                      CheckSmartCommands(GameUser::CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* nConfig);

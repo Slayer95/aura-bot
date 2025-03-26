@@ -448,7 +448,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             break;
 
           case GameProtocol::Magic::MAPSIZE: {
-            if (m_MapReady) {
+            if (m_MapReady || m_Game->GetGameLoading() || m_Game->GetGameLoaded()) {
               // Protection against rogue clients
               break;
             }

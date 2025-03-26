@@ -56,6 +56,7 @@
 #include <chrono>
 #include <iostream>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 #include <array>
@@ -120,6 +121,9 @@
 #endif
 
 #define GAMEVER(T, U) Version((uint8_t)(T), (uint8_t)(U))
+
+#define APP_MAX_TICKS std::numeric_limits<int64_t>::max()
+#define APP_MIN_TICKS std::numeric_limits<int64_t>::min()
 
 // time
 

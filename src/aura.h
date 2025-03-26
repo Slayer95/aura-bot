@@ -184,6 +184,7 @@ public:
   [[nodiscard]] uint8_t HandleAction(const AppAction& action);
   [[nodiscard]] uint8_t HandleDeferredCommandContext(const LazyCommandContext& lazyCtx);
   [[nodiscard]] uint8_t HandleGenericAction(const GenericAppAction& genAction);
+  [[nodiscard]] int64_t GetSelectBlockTime() const;
   bool Update();
   void AwaitSettled();
   [[nodiscard]] inline bool GetReady() const { return m_Ready; }
