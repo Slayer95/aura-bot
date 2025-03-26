@@ -393,9 +393,15 @@ void CAsyncObserver::EventDesync()
   while (!m_CheckSums.empty()) {
     m_CheckSums.pop();
   }
-  string text = GetLogPrefix() + "desynchronized";
+  string text = GetLogPrefix() + "desynchronized on frame " + to_string(m_Offset);
   Print(text);
   m_Aura->LogPersistent(text);
+
+  if (!CloseConnection()) {
+    return;
+  }
+  Print("Observer [" + GetName() + "] left the game (desynchronized)");
+  SetDeleteMe(true);
 }
 
 void CAsyncObserver::EventMapReady()
