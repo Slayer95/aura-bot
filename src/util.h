@@ -128,7 +128,7 @@ template <typename T>
 [[nodiscard]] inline T SubtractClampZero(const T& minuend, const T& subtrahend) noexcept
 {
   if (minuend < subtrahend) return 0;
-  return subtrahend - minuend;
+  return minuend - subtrahend;
 }
 
 [[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString)
