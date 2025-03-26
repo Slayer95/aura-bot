@@ -97,6 +97,8 @@ struct CGameVirtualUser
   inline void SetStatus(uint8_t nStatus) { m_Status = nStatus; }
   inline void SetSID(uint8_t nSID) { m_SID = nSID; }
   inline void SetPseudonymUID(uint8_t nUID) { m_PseudonymUID = nUID; }
+  inline void SetAllowedActions(uint8_t nAllowedActions) { m_AllowedActions = nAllowedActions; }
+  inline void SetAllowedConnections(uint8_t nAllowedConnections) { m_AllowedConnections = nAllowedConnections; }
 
   inline void TrySetEnding() {
     if (m_Status != USERSTATUS_ENDED) {

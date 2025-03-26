@@ -7117,7 +7117,9 @@ void CGame::ResolveVirtualPlayers()
         virtualPlayerName = "Computer";
       }
       if (CreateFakeObserver(virtualPlayerName)) {
-        m_InertVirtualUser = CGameVirtualUserReference(m_FakeUsers.back());
+        CGameVirtualUser& virtualUser = m_FakeUsers.back();
+        virtualUser.DisableAllActions();
+        m_InertVirtualUser = CGameVirtualUserReference(virtualUser);
         ++m_JoinedVirtualHosts;
         LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual player for WC3Stats workaround [" + virtualPlayerName.value() + "]")
       }
@@ -7150,6 +7152,8 @@ void CGame::ResolveVirtualPlayers()
           virtualUser = GetVirtualUserFromSID(SID);
         }
         if (virtualUser) {
+          virtualUser->DisableAllActions();
+          virtualUser->SetAllowedConnections(VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER);
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
           joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
           if (isEmptyAvailable) {
