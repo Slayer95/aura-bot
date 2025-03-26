@@ -257,14 +257,6 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
   // At this point, m_Socket may have been transferred to GameUser::CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
-    if (m_DeleteMe) {
-      Print("ASYNC_OBSERVER_DESTROY L246");
-    } else {
-      Print("ASYNC_OBSERVER_DESTROY L248");
-      if (!m_Socket->GetConnected()) Print("ASYNC_OBSERVER_DESTROY L249");
-      if (m_Socket->HasError()) Print("ASYNC_OBSERVER_DESTROY L250");
-      if (m_Socket->HasFin()) Print("ASYNC_OBSERVER_DESTROY L251");
-    }
     return ASYNC_OBSERVER_DESTROY;
   }
 
@@ -455,7 +447,11 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
   if (!CloseConnection()) {
     return;
   }
-  Print("Observer [" + GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
+  if (m_StartedLoading) {
+    Print(GetLogPrefix() + "left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
+  } else {
+    Print(GetLogPrefix() + "left the lobby");
+  }
   SetDeleteMe(true);
 }
 
@@ -464,7 +460,7 @@ void CAsyncObserver::EventProtocolError()
   if (!CloseConnection()) {
     return;
   }
-  Print("Observer [" + GetName() + "] disconnected due to protocol error");
+  Print(GetLogPrefix() + "disconnected due to protocol error");
   SetDeleteMe(true);
 }
 
@@ -478,10 +474,10 @@ void CAsyncObserver::Send(const std::vector<uint8_t>& data)
 void CAsyncObserver::SendChat(const string& message)
 {
   if (m_StartedLoading && !m_FinishedLoading) {
-    Print("[CAsyncObserver] SendChat() ignored bad timing");
+    Print(GetLogPrefix() + "SendChat() ignored bad timing");
     return;
   }
-  Print("[CAsyncObserver] SendChat(\"" + message + "\")");
+  Print(GetLogPrefix() + "SendChat(\"" + message + "\")");
   if (m_StartedLoading) {
     if (message.size() > 254)
       Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message.substr(0, 254)));
