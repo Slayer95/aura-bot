@@ -555,7 +555,7 @@ public:
 
   void                                                   Send(CConnection* player, const std::vector<uint8_t>& data) const;
   void                                                   Send(uint8_t UID, const std::vector<uint8_t>& data) const;
-  void                                                   Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
+  void                                                   SendMulti(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
   void                                                   SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
   void                                                   SendAll(const std::vector<uint8_t>& data) const;
   bool                                                   SendAllAsChat(const std::vector<uint8_t>& data) const;
@@ -690,6 +690,7 @@ public:
   uint8_t                   GetNewPseudonymUID() const;
   uint8_t                   SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect);
   void                      ResolveVirtualPlayers();
+  void                      ResolveBuffering();
   bool                      GetHasAnyActiveTeam() const;
   bool                      GetHasAnyUser() const;
   bool                      GetIsRealPlayerSlot(const uint8_t SID) const;

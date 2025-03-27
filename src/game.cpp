@@ -410,13 +410,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_HCLCommandString = nGameSetup->m_Map->GetHCLDefaultValue();
   }
 
-  if (m_Config.m_LoadInGame) {
-    m_BufferingEnabled |= BUFFERING_ENABLED_LOADING;
-  }
-  if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
-    m_BufferingEnabled |= BUFFERING_ENABLED_ALL;
-  }
-
   m_GameFlags = CalcGameFlags();
   m_LatencyTicks = m_Config.m_Latency;
 
@@ -2010,10 +2003,17 @@ void CGame::Send(uint8_t UID, const std::vector<uint8_t>& data) const
   Send(user, data);
 }
 
-void CGame::Send(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const
+void CGame::SendMulti(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const
 {
   for (auto& UID : UIDs) {
-    Send(UID, data);
+    if (m_JoinInProgressVirtualUser.has_value() && UID == m_JoinInProgressVirtualUser->GetUID()) {
+      if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
+        GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
+        frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + data.size());
+      }
+    } else {
+      Send(UID, data);
+    }
   }
 }
 
@@ -2044,7 +2044,7 @@ bool CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
   }
   if (!success) return success;
 
-  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+  if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
     GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
     frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + data.size());
   }
@@ -4467,7 +4467,8 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
     if (overrideObserverUIDs.empty()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening to [" + user->GetName() + "] --")
     } else {
-      Send(overrideObserverUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideObserverUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+      vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideObserverUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage());
+      SendMulti(overrideObserverUIDs, packet);
     }
   } else if (forcePrivateChat) {
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
@@ -4475,10 +4476,11 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
         vector<uint8_t> overrideTargetUIDs = GetChatUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
         vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
         if (!overrideTargetUIDs.empty()) {
-          Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
           if (extraFlags[0] != CHAT_RECV_ALL) {
             LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All]")
           }
+          vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage());
+          SendMulti(overrideTargetUIDs, packet);
         }
       } else if (extraFlags[0] != CHAT_RECV_ALL) { 
         LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All], but muteAll is active (message from [" + user->GetName() + "] discarded)")
@@ -4488,14 +4490,15 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
       vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
       vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
       if (!overrideTargetUIDs.empty()) {
-        Send(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage()));
+        vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage());
+        SendMulti(overrideTargetUIDs, packet);
         if (extraFlags[0] != CHAT_RECV_OBS) {
           LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] enforced server-side")
         }
       }
     }
   } else {
-    Send(chatPlayer->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
+    SendMulti(chatPlayer->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
   }
 }
 
@@ -4540,7 +4543,7 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
 
     case ON_PLAYER_LEAVE_NATIVE: {
       SendAll(packet);
-      if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+      if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
         m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
       }
       break;
@@ -4575,7 +4578,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       // Let GProxy know that it should give up at reconnecting.
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
-    if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT);
       m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
     }
@@ -6024,6 +6027,8 @@ void CGame::EventGameStartedLoading()
     }
   }
 
+  ResolveBuffering();
+
   m_GameLoading = true;
 
   // since we use a fake countdown to deal with leavers during countdown the COUNTDOWN_START and COUNTDOWN_END packets are sent in quick succession
@@ -7184,6 +7189,16 @@ void CGame::ResolveVirtualPlayers()
   }
 }
 
+void CGame::ResolveBuffering()
+{
+  if (m_Config.m_LoadInGame) {
+    m_BufferingEnabled |= BUFFERING_ENABLED_LOADING;
+  }
+  if (!m_Config.m_EnableJoinObserversInProgress && !m_Config.m_EnableJoinPlayersInProgress) {
+    m_BufferingEnabled |= BUFFERING_ENABLED_ALL;
+  }
+}
+
 bool CGame::GetHasAnyActiveTeam() const
 {
   bitset<MAX_SLOTS_MODERN> usedTeams;
@@ -7252,6 +7267,11 @@ std::vector<uint8_t> CGame::GetChatUIDs() const
     result.push_back(user->GetUID());
   }
 
+  // if a tree falls in the forest and nobody is there to hear it does it make a sound? for simplicity and some pointless privacy, let's say no
+  if (m_JoinInProgressVirtualUser.has_value()) {
+    result.push_back(m_JoinInProgressVirtualUser->GetUID());
+  }
+
   return result;
 }
 
@@ -7265,6 +7285,11 @@ std::vector<uint8_t> CGame::GetChatUIDs(uint8_t excludeUID) const
       result.push_back(user->GetUID());
   }
 
+  // if a tree falls in the forest and nobody is there to hear it does it make a sound? for simplicity and some pointless privacy, let's say no
+  if (!result.empty() && m_JoinInProgressVirtualUser.has_value() && m_JoinInProgressVirtualUser->GetUID() != excludeUID) {
+    result.push_back(m_JoinInProgressVirtualUser->GetUID());
+  }
+
   return result;
 }
 
@@ -7275,6 +7300,12 @@ std::vector<uint8_t> CGame::GetObserverUIDs() const
     if (!user->GetLeftMessageSent() && user->GetIsObserver())
       result.push_back(user->GetUID());
   }
+
+  // if a tree falls in the forest and nobody is there to hear it does it make a sound? for simplicity and some pointless privacy, let's say no
+  if (!result.empty() && m_JoinInProgressVirtualUser.has_value()) {
+    result.push_back(m_JoinInProgressVirtualUser->GetUID());
+  }
+
   return result;
 }
 
@@ -7286,6 +7317,11 @@ std::vector<uint8_t> CGame::GetChatObserverUIDs(uint8_t excludeUID) const
     if (user->GetIsObserver() && user->GetUID() != excludeUID) {
       result.push_back(user->GetUID());
     }
+  }
+
+  // if a tree falls in the forest and nobody is there to hear it does it make a sound? for simplicity and some pointless privacy, let's say no
+  if (!result.empty() && m_JoinInProgressVirtualUser.has_value() && m_JoinInProgressVirtualUser->GetUID() != excludeUID) {
+    result.push_back(m_JoinInProgressVirtualUser->GetUID());
   }
 
   return result;
