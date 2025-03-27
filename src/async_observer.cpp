@@ -115,12 +115,13 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
   if (m_DeleteMe) {
     m_Socket->ClearRecvBuffer(); // in case there are pending bytes from a previous recv
     m_Socket->Discard(fd);
-    return m_DeleteMe;
+    return ASYNC_OBSERVER_DESTROY;
   }
 
   const int64_t Time = GetTime(), Ticks = GetTicks();
 
   if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
+    SetLeftReasonGeneric("observer timeout");
     return ASYNC_OBSERVER_DESTROY;
   }
 
@@ -154,7 +155,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               if (ValidateLength(Data) && Data.size() >= 8) {
                 const uint32_t reason = ByteArrayToUInt32(Data, false, 4);
                 EventLeft(reason);
-                m_Socket->SetLogErrors(false);
+                //m_Socket->SetLogErrors(false);
               } else {
                 EventProtocolError();
               }
@@ -178,6 +179,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             case GameProtocol::Magic::OUTGOING_ACTION: {
               // Ignore all actions performed by observers,
               // and let's see how this turns out.
+              Print(GetLogPrefix() + "got action <" + ByteArrayToDecString(Data) + ">");
               break;
             }
 
@@ -259,19 +261,21 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
-  } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
+  } else if (Ticks >= m_Socket->GetLastRecv() + timeout) {
+    SetLeftReasonGeneric("connection timed out");
     return ASYNC_OBSERVER_DESTROY;
   }
 
-  // At this point, m_Socket may have been transferred to GameUser::CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
+    SetLeftReasonGeneric("observer decomissioned");
     return ASYNC_OBSERVER_DESTROY;
   }
 
   if (m_FinishedLoading && !m_PlaybackEnded) {
     const size_t beforeCounter = m_ActionFrameCounter;
     if (PushGameFrames()) {
-      Print(GetLogPrefix() + "pushed " + to_string(SubtractClampZero(m_ActionFrameCounter, beforeCounter)) + " action frames");
+      const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
+      if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
     }
     CheckGameOver();
   }
@@ -312,7 +316,7 @@ bool CAsyncObserver::PushGameFrames()
   size_t actionFramesWanted = static_cast<size_t>((int64_t)(m_FrameRate) * (Ticks - m_LastFrameTicks) / (int64_t)(m_GameHistory->GetLatency()));
   // We probably need to count GProxy frames as if they were regular actions in the entire algo.
   size_t actionFramesStored = SubtractClampZero(m_GameHistory->GetNumActionFrames(), m_ActionFrameCounter);
-  size_t actionFramesExpected = actionFramesWanted < actionFramesStored ? actionFramesWanted : actionFramesStored;
+  size_t actionFramesExpected = (m_Game && m_Game->GetPaused()) ? actionFramesStored : ((actionFramesWanted < actionFramesStored) ? actionFramesWanted : actionFramesStored);
   if (actionFramesExpected == 0) {
     return false;
   }
@@ -415,7 +419,7 @@ void CAsyncObserver::EventDesync()
   if (!CloseConnection()) {
     return;
   }
-  Print("Observer [" + GetName() + "] left the game (desynchronized)");
+  SetLeftReasonGeneric("desynchronized");
   SetDeleteMe(true);
 }
 
@@ -459,7 +463,13 @@ void CAsyncObserver::EventGameLoaded()
 
 void CAsyncObserver::EventChatMessage(const CIncomingChatMessage* incomingChatMessage)
 {
-  Print(GetLogPrefix() + ": " + incomingChatMessage->GetMessage());
+  string message = incomingChatMessage->GetMessage();
+  if (message == "!ff") {
+    m_FrameRate *= 2;
+  } else if (message == "!sync") {
+    m_FrameRate = 1;
+  }
+  Print(GetLogPrefix() + ": " + message);
   SendChat("You are in spectator mode. Chat is RESTRICTED.");
 }
 
@@ -481,7 +491,7 @@ void CAsyncObserver::EventProtocolError()
   if (!CloseConnection()) {
     return;
   }
-  Print(GetLogPrefix() + "disconnected due to protocol error");
+  SetLeftReasonGeneric("disconnected due to protocol error");
   SetDeleteMe(true);
 }
 
@@ -515,5 +525,5 @@ void CAsyncObserver::SendChat(const string& message)
 string CAsyncObserver::GetLogPrefix() const
 {
   if (m_Game) return m_Game->GetLogPrefix() + "[OBSERVER] [" + m_Name + "] ";
-  return "[OBSERVER] [" + m_Name + "]";
+  return "[OBSERVER] [" + m_Name + "] ";
 }

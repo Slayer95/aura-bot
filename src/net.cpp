@@ -700,10 +700,7 @@ void CNet::UpdateMapTransfers()
     return;
   }
 
-  if (m_TransferredMapBytesThisUpdate > 0) {
-    Print("[NET] Byte counter RESET. Last update: " + to_string(m_TransferredMapBytesThisUpdate) + " bytes");
-    m_TransferredMapBytesThisUpdate = 0;
-  }
+  m_TransferredMapBytesThisUpdate = 0;
 
   uint32_t downloadersCount = 0;
   multiset<const CGame*> downloadersCountByGame;

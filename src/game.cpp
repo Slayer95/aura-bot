@@ -1313,7 +1313,7 @@ void CGame::UpdateJoinable()
     return;
   }
 
-  // send more map data
+  // update map download progression indicators
 
   if (Ticks - m_LastDownloadCounterResetTicks >= 1000) {
     // hackhack: another timer hijack is in progress here
@@ -4503,8 +4503,12 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
   }
   LogRemote("[" + user->GetExtendedName() + "] " + user->GetLeftReason());
 
-  
-  switch (m_Config.m_LeaverHandler) {
+  uint8_t leaverHandler = m_Config.m_LeaverHandler;
+  if (!m_GameLoaded) {
+    leaverHandler = ON_PLAYER_LEAVE_NATIVE;
+  }
+
+  switch (leaverHandler) {
     case ON_PLAYER_LEAVE_NONE:
     case ON_PLAYER_LEAVE_SHARE_UNITS:
       // TODO: Turn into a CGameVirtualUser?
@@ -9306,6 +9310,9 @@ void CGame::TryActionsOnDisconnect(GameUser::CGameUser* user, const bool isVolun
 bool CGame::TryShareUnitsOnDisconnect(GameUser::CGameUser* user, const bool /*isVoluntary*/)
 {
   if (m_Config.m_LeaverHandler != ON_PLAYER_LEAVE_SHARE_UNITS) return false;
+  if (!m_GameLoaded) {
+    return false;
+  }
   uint8_t fromSID = GetSIDFromUID(user->GetUID());
   if (fromSID == 0xFF) return false;
 
