@@ -471,6 +471,7 @@ public:
   inline int64_t                                         GetLatencyTicks() const { return m_LatencyTicks; }
   inline int64_t                                         GetLastPausedTicks() const { return m_LastPausedTicks; }
   inline int64_t                                         GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
+  inline int64_t                                         GetStartedLaggingTime() const { return m_StartedLaggingTime; }
   inline bool                                            GetChatOnly() const { return m_ChatOnly; }
   inline bool                                            GetAnyUsingGProxy() { return m_ReconnectProtocols > 0; }
   std::string                                            GetStatusDescription() const;
@@ -674,6 +675,7 @@ public:
   GameUser::CGameUser*                GetUserFromSID(uint8_t SID) const;
   std::string               GetUserNameFromUID(uint8_t UID) const;
   GameUser::CGameUser*                GetUserFromName(std::string name, bool sensitive) const;
+  GameUser::CGameUser*      GetOwner() const;
   bool                      HasOwnerSet() const;
   bool                      HasOwnerInGame() const;
   uint8_t                   GetUserFromNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;

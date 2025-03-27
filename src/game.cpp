@@ -4158,6 +4158,9 @@ void CGame::ReportAllPings() const
         }
       }
     }
+    if (m_StartedLaggingTime + 20 < GetTime()) {
+      SendAllChat(GetCmdToken() + "drop command is available");
+    }
   }
 }
 
@@ -6704,6 +6707,14 @@ string CGame::GetUserNameFromUID(uint8_t UID) const
   return string();
 }
 
+GameUser::CGameUser* CGame::GetOwner() const
+{
+  if (!HasOwnerSet()) return nullptr;
+  GameUser::CGameUser* maybeOwner = GetUserFromName(m_OwnerName, false);
+  if (!maybeOwner || !maybeOwner->GetIsOwner(nullopt)) return nullptr;
+  return maybeOwner;
+}
+
 bool CGame::HasOwnerSet() const
 {
   return !m_OwnerName.empty();
@@ -6712,9 +6723,9 @@ bool CGame::HasOwnerSet() const
 bool CGame::HasOwnerInGame() const
 {
   if (!HasOwnerSet()) return false;
-  GameUser::CGameUser* MaybeOwner = GetUserFromName(m_OwnerName, false);
-  if (!MaybeOwner) return false;
-  return MaybeOwner->GetIsOwner(nullopt);
+  GameUser::CGameUser* maybeOwner = GetUserFromName(m_OwnerName, false);
+  if (!maybeOwner) return false;
+  return maybeOwner->GetIsOwner(nullopt);
 }
 
 GameUser::CGameUser* CGame::GetUserFromName(string name, bool sensitive) const
