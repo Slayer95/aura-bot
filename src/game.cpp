@@ -4508,14 +4508,17 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
     leaverHandler = ON_PLAYER_LEAVE_NATIVE;
   }
 
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode());
   switch (leaverHandler) {
     case ON_PLAYER_LEAVE_NONE:
-    case ON_PLAYER_LEAVE_SHARE_UNITS:
+    case ON_PLAYER_LEAVE_SHARE_UNITS: {
+      // Ensure the disconnected user's game client / GProxy fully exits.
+      Send(user, packet);
       // TODO: Turn into a CGameVirtualUser?
       break;
+    }
 
     case ON_PLAYER_LEAVE_NATIVE: {
-      vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode());
       SendAll(packet);
       if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
         m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
