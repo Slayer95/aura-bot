@@ -50,9 +50,6 @@ struct CGameConfig
   bool                     m_AutoStartRequiresBalance;
   bool                     m_SaveStats;
   
-  uint32_t                 m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
-  uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
-  bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
   uint32_t                 m_AutoKickPing;               // auto kick players with ping higher than this
   uint32_t                 m_WarnHighPing;               // announce on chat when players have a ping higher than this value
   uint32_t                 m_SafeHighPing;               // when players ping drops below this value, announce they no longer have high ping
@@ -77,9 +74,18 @@ struct CGameConfig
   uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
   uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
 
+  uint16_t                 m_LatencyMin;                   // the minimum configurable game refresh latency
+  uint16_t                 m_LatencyMax;                   // the maximum configurable game refresh latency
+  uint32_t                 m_SyncLimitMaxMilliSeconds;     // constraint for configurable parameters m_SyncLimit * m_Latency
+  uint32_t                 m_SyncLimitSafeMinMilliSeconds; // constraint for configurable parameters m_SyncLimitSafe * m_Latency
+
   uint16_t                 m_Latency;                    // the game refresh latency (by default)
   bool                     m_LatencyEqualizerEnabled;    // whether to add a minimum delay proportional to m_Latency to all actions sent by players
   uint8_t                  m_LatencyEqualizerFrames;     // how many frames should the latency equalizer use
+
+  uint32_t                 m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
+  uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
+  bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
 
   uint32_t                 m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;

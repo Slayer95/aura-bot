@@ -294,7 +294,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
-    m_EffectiveTicks(0),
     m_CreationTime(GetTime()),
     m_LastPingTime(GetTime()),
     m_LastRefreshTime(GetTime()),
@@ -302,6 +301,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LastCountDownTicks(0),
     m_StartedLoadingTicks(0),
     m_FinishedLoadingTicks(0),
+    m_EffectiveTicks(0),
+    m_LatencyTicks(0),
     m_LastActionSentTicks(0),
     m_LastActionLateBy(0),
     m_LastPausedTicks(0),
@@ -417,6 +418,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
   }
 
   m_GameFlags = CalcGameFlags();
+  m_LatencyTicks = m_Config.m_Latency;
 
   if (!nGameSetup->GetIsMirror()) {
     for (const auto& userName : nGameSetup->m_Reservations) {
@@ -868,12 +870,12 @@ void CGame::UpdateSelectBlockTime(int64_t& usecBlockTime) const
 
   const int64_t TicksSinceLastUpdate = GetTicks() - m_LastActionSentTicks;
 
-  if (TicksSinceLastUpdate > GetLatency() - m_LastActionLateBy) {
+  if (TicksSinceLastUpdate > m_LatencyTicks - m_LastActionLateBy) {
     usecBlockTime = 0;
     return;
   }
 
-  int64_t maybeBlockTime = (GetLatency() - m_LastActionLateBy - TicksSinceLastUpdate) * 1000;
+  int64_t maybeBlockTime = (m_LatencyTicks - m_LastActionLateBy - TicksSinceLastUpdate) * 1000;
   if (maybeBlockTime < usecBlockTime) {
     usecBlockTime = maybeBlockTime;
   }
@@ -1493,7 +1495,7 @@ void CGame::UpdateLoaded()
         m_LastLagScreenResetTime = Time;
 
         // print debug information
-        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(GetLatency()) / static_cast<double>(1000.);
+        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_LatencyTicks) / static_cast<double>(1000.);
         if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
           LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".", LOG_ALL);
           LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)", LOG_C);
@@ -1572,7 +1574,7 @@ void CGame::UpdateLoaded()
 
     if (playersLaggingCounter == 0) {
       m_Lagging = false;
-      m_LastActionSentTicks = Ticks - GetLatency();
+      m_LastActionSentTicks = Ticks - m_LatencyTicks;
       m_LastActionLateBy = 0;
       m_PingReportedSinceLagTimes = 0;
       LOG_APP_IF(LOG_LEVEL_INFO, "stopped lagging after " + ToFormattedString(static_cast<double>(Time - m_StartedLaggingTime)) + " seconds")
@@ -1719,7 +1721,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // actions are at the heart of every Warcraft 3 game but luckily we don't need to know their contents to relay them
   // we queue user actions in EventUserAction then just resend them in batches to all users here
 
-  if (m_GameLoaded && !m_Lagging && Ticks - m_LastActionSentTicks >= GetLatency() - m_LastActionLateBy)
+  if (m_GameLoaded && !m_Lagging && Ticks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy)
     SendAllActions();
 
   UpdateLogs();
@@ -1847,23 +1849,44 @@ void CGame::CheckLobbyTimeouts()
   }
 }
 
-void CGame::RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset)
+void CGame::RunActionsScheduler()
+{
+  const int64_t oldLatency = GetActiveLatency();
+  const int64_t newLatency = GetNextLatency();
+  if (newLatency != oldLatency) {
+    m_LatencyTicks = newLatency;
+    if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+      vector<uint8_t> storedLatency = CreateByteArray(newLatency, false);
+      m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LATENCY, storedLatency);
+    }
+  }
+
+  uint8_t maxOldEqualizerOffset = m_MaxPingEqualizerDelayFrames;
+  if (CheckUpdatePingEqualizer()) {
+    m_MaxPingEqualizerDelayFrames = UpdatePingEqualizer();
+  }
+
+  RunActionsSchedulerInner(newLatency, m_MaxPingEqualizerDelayFrames, oldLatency, maxOldEqualizerOffset);
+}
+
+void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset)
 {
   const int64_t Ticks = GetTicks();
   if (m_LastActionSentTicks != 0) {
     const int64_t ActualSendInterval = Ticks - m_LastActionSentTicks;
-    const int64_t ExpectedSendInterval = GetLatency() - m_LastActionLateBy;
+    const int64_t ExpectedSendInterval = oldLatency - m_LastActionLateBy;
     int64_t ThisActionLateBy = ActualSendInterval - ExpectedSendInterval;
 
     if (ThisActionLateBy > m_Config.m_PerfThreshold && !GetIsSinglePlayerMode()) {
       // something is going terribly wrong - Aura is probably starved of resources
       // print a message because even though this will take more resources it should provide some information to the administrator for future reference
       // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
-      LOG_APP_IF(LOG_LEVEL_WARNING, "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(GetLatency()) + "ms]")
+      LOG_APP_IF(LOG_LEVEL_WARNING, "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(m_LatencyTicks) + "ms]")
     }
 
-    if (ThisActionLateBy > GetLatency()) {
-      ThisActionLateBy = GetLatency();
+    if (ThisActionLateBy > newLatency) {
+      // FIXME? I'm actually not sure whether we really want this clamped (IceSandslash)
+      ThisActionLateBy = newLatency;
     }
 
     m_LastActionLateBy = ThisActionLateBy;
@@ -3459,16 +3482,17 @@ void CGame::SendGProxyEmptyActions()
 
 void CGame::SendAllActions()
 {
+  const int64_t activeLatency = GetActiveLatency();
   if (!m_Paused) {
-    m_EffectiveTicks += GetLatency();
+    m_EffectiveTicks += activeLatency;
   } else {
-    m_PausedTicksDeltaSum = GetLatency();
+    m_PausedTicksDeltaSum = activeLatency;
   }
 
   ++m_SyncCounter;
 
   SendGProxyEmptyActions();
-  vector<uint8_t> actions = GetFirstActionFrame().GetBytes(GetLatency());
+  vector<uint8_t> actions = GetFirstActionFrame().GetBytes((uint16_t)activeLatency);
   SendAll(actions);
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
@@ -3478,11 +3502,7 @@ void CGame::SendAllActions()
 
   SendAllActionsCallback();
 
-  uint8_t maxOldEqualizerOffset = m_MaxPingEqualizerDelayFrames;
-  if (CheckUpdatePingEqualizer()) {
-    m_MaxPingEqualizerDelayFrames = UpdatePingEqualizer();
-  }
-  RunActionsScheduler(m_MaxPingEqualizerDelayFrames, maxOldEqualizerOffset);
+  RunActionsScheduler();
 }
 
 std::string CGame::GetPrefixedGameName(const CRealm* realm) const
@@ -3680,7 +3700,7 @@ uint8_t CGame::UpdatePingEqualizer()
   bool addedFrame = false;
   for (const pair<GameUser::CGameUser*, uint32_t>& userPing : descendingRTTs) {
     // How much better ping than the worst player?
-    const uint32_t framesAheadNowDiscriminator = (maxPing - userPing.second) / GetLatency();
+    const uint32_t framesAheadNowDiscriminator = (maxPing - userPing.second) / (uint32_t)m_LatencyTicks;
     const uint32_t framesAheadBefore = userPing.first->GetPingEqualizerOffset();
     uint32_t framesAheadNow;
     if (framesAheadNowDiscriminator > framesAheadBefore) {
@@ -6447,7 +6467,7 @@ void CGame::EventGameLoaded()
   }
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_GameHistory->SetLatency(GetLatency());
+    m_GameHistory->SetDefaultLatency((uint16_t)m_LatencyTicks);
     m_GameHistory->SetGProxyEmptyActions(m_GProxyEmptyActions);
     m_GameHistory->SetStartedTicks(m_FinishedLoadingTicks);
   } else {
@@ -8643,6 +8663,16 @@ void CGame::ResetLagScreen()
   m_LastLagScreenResetTime = GetTime();
 }
 
+bool CGame::SetupLatency(double latency, uint16_t syncLimit, uint16_t syncLimitSafe)
+{
+  if (syncLimitSafe >= syncLimit) return false;
+  if (latency <= 0 || latency > 0xFFFF) return false;
+  m_Config.m_Latency = static_cast<uint16_t>(latency);
+  m_Config.m_SyncLimit = syncLimit;
+  m_Config.m_SyncLimitSafe = syncLimitSafe;
+  return true;
+}
+
 void CGame::ResetLatency()
 {
   m_Config.m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
@@ -9807,9 +9837,14 @@ uint8_t CGame::CalcMaxEqualizerDelayFrames() const
   return max;
 }
 
-uint16_t CGame::GetLatency() const
+int64_t CGame::GetActiveLatency() const
 {
-  return m_Config.m_Latency;
+  return m_LatencyTicks;
+}
+
+int64_t CGame::GetNextLatency() const
+{
+  return static_cast<int64_t>(m_Config.m_Latency);
 }
 
 uint32_t CGame::GetSyncLimit() const

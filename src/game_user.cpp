@@ -231,7 +231,7 @@ string CGameUser::GetDisplayName() const
 uint32_t CGameUser::GetPingEqualizerDelay() const
 {
   if (!m_Game->GetGameLoaded()) return 0u;
-  return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game->GetLatency());
+  return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game->GetActiveLatency());
 }
 
 CQueuedActionsFrame& CGameUser::GetPingEqualizerFrame()
@@ -803,7 +803,7 @@ string CGameUser::GetDelayText(bool displaySync) const
     if (anyPings) return pingText + "ms";
     return pingText;
   }
-  float syncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
+  float syncDelay = static_cast<float>(m_Game->GetActiveLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
 
   if (m_SyncCounterOffset == 0) {
     // Expect clients to always be at least one RTT behind.
@@ -839,11 +839,11 @@ string CGameUser::GetSyncText() const
   bool isNormalized = m_SyncCounterOffset > 0;
   string behindTimeText;
   if (GetNormalSyncCounter() < m_Game->GetSyncCounter()) {
-    float normalSyncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
+    float normalSyncDelay = static_cast<float>(m_Game->GetActiveLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
     behindTimeText = ToFormattedString(normalSyncDelay / 1000) + "s behind";
   }
   if (isNormalized && GetSyncCounter() < m_Game->GetSyncCounter()) {
-    float totalSyncDelay = static_cast<float>(m_Game->GetLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
+    float totalSyncDelay = static_cast<float>(m_Game->GetActiveLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
     if (behindTimeText.empty()) {
       behindTimeText += ToFormattedString(totalSyncDelay / 1000) + "s behind unnormalized";
     } else {

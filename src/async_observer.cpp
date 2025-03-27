@@ -306,14 +306,14 @@ int64_t CAsyncObserver::GetNextTimedActionByTicks() const
   if (m_GameHistory->GetNumActionFrames() <= m_ActionFrameCounter) {
     return APP_MAX_TICKS;
   }
-  return m_LastFrameTicks + (int64_t)(m_GameHistory->GetLatency()) / (int64_t)(m_FrameRate);
+  return m_LastFrameTicks + (int64_t)(m_GameHistory->GetDefaultLatency()) / (int64_t)(m_FrameRate);
 }
 
 bool CAsyncObserver::PushGameFrames()
 {
   int64_t Ticks = GetTicks();
   // Note: Actually, each frame may have its own custom latency.
-  size_t actionFramesWanted = static_cast<size_t>((int64_t)(m_FrameRate) * (Ticks - m_LastFrameTicks) / (int64_t)(m_GameHistory->GetLatency()));
+  size_t actionFramesWanted = static_cast<size_t>((int64_t)(m_FrameRate) * (Ticks - m_LastFrameTicks) / (int64_t)(m_GameHistory->GetDefaultLatency()));
   // We probably need to count GProxy frames as if they were regular actions in the entire algo.
   size_t actionFramesStored = SubtractClampZero(m_GameHistory->GetNumActionFrames(), m_ActionFrameCounter);
   size_t actionFramesExpected = (m_Game && m_Game->GetPaused()) ? actionFramesStored : ((actionFramesWanted < actionFramesStored) ? actionFramesWanted : actionFramesStored);
@@ -327,7 +327,7 @@ bool CAsyncObserver::PushGameFrames()
   while (it != itEnd) {
     if (it->GetType() == GAME_FRAME_TYPE_GPROXY) {
       Send(GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GameHistory->GetGProxyEmptyActions()));
-    } else {
+    } else if (it->GetType() != GAME_FRAME_TYPE_LATENCY) {
       Send(it->GetBytes());
     }
     ++m_Offset;

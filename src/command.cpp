@@ -1436,11 +1436,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         SendReply("Ping not measured yet.", !m_GameUser || m_GameUser->GetCanUsePublicChat() ? CHAT_SEND_TARGET_ALL : 0);
       }
 
-      const uint16_t internalLatency = m_TargetGame->GetLatency();
+      const uint16_t internalLatency = (uint16_t)m_TargetGame->GetNextLatency();
       const bool suggestLowerLatency = 0 < maxPing && maxPing < internalLatency && REFRESH_PERIOD_MIN_SUGGESTED < internalLatency;
       const bool suggestHigherLatency = 0 < maxPing && internalLatency < maxPing / 4 && REFRESH_PERIOD_MAX_SUGGESTED > internalLatency;
       if (m_TargetGame->m_Config.m_LatencyEqualizerEnabled || suggestLowerLatency || suggestHigherLatency) {
-        string refreshText = "Internal latency is " + to_string(m_TargetGame->GetLatency()) + "ms.";
+        string refreshText = "Internal latency is " + to_string(m_TargetGame->GetNextLatency()) + "ms.";
         string equalizerHeader;
         if (m_TargetGame->m_Config.m_LatencyEqualizerEnabled) {
           equalizerHeader = "Ping equalizer ENABLED. ";
@@ -2518,7 +2518,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
 
       if (Payload.empty()) {
-        SendReply("The game latency is " + to_string(m_TargetGame->GetLatency()) + " ms");
+        SendReply("The game latency is " + to_string(m_TargetGame->GetNextLatency()) + " ms");
         break;
       }
 
@@ -2558,27 +2558,30 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       double refreshTime = static_cast<double>(Args[0]);
-      double refreshFactor = /*m_TargetGame->m_Config.m_LatencyEqualizerEnabled ? 2. : */1.;
       optional<double> tolerance;
       if (Args.size() >= 2) {
         tolerance = static_cast<double>(Args[1]);
-        if (tolerance.value() <= LAG_TOLERANCE_MIN_TIME) {
-          ErrorReply("Minimum spike tolerance is " + to_string(LAG_TOLERANCE_MIN_TIME) + " ms.");
+        if (tolerance.value() <= 0) {
+          ErrorReply("Spike tolerance must be a positive value in ms.");
           break;
         }
-        if (tolerance.value() >= LAG_TOLERANCE_MAX_TIME) {
-          ErrorReply("Maximum spike tolerance is " + to_string(LAG_TOLERANCE_MAX_TIME) + " ms.");
+        if (tolerance.value() < m_TargetGame->m_Config.m_SyncLimitSafeMinMilliSeconds && !GetIsSudo()) {
+          ErrorReply("Minimum spike tolerance is " + to_string(m_TargetGame->m_Config.m_SyncLimitSafeMinMilliSeconds) + " ms.");
+          break;
+        }
+        if (tolerance.value() > m_TargetGame->m_Config.m_SyncLimitMaxMilliSeconds && !GetIsSudo()) {
+          ErrorReply("Maximum spike tolerance is " + to_string(m_TargetGame->m_Config.m_SyncLimitMaxMilliSeconds) + " ms.");
           break;
         }
       }
 
-      if (refreshTime < REFRESH_PERIOD_MIN) {
-        refreshTime = REFRESH_PERIOD_MIN;
-      } else if (refreshTime > REFRESH_PERIOD_MAX) {
-        refreshTime = REFRESH_PERIOD_MAX;
+      if (refreshTime < m_TargetGame->m_Config.m_LatencyMin) {
+        refreshTime = m_TargetGame->m_Config.m_LatencyMin;
+      } else if (refreshTime > m_TargetGame->m_Config.m_LatencyMax) {
+        refreshTime = m_TargetGame->m_Config.m_LatencyMax;
       }
 
-      const double oldRefresh = m_TargetGame->GetLatency();
+      const double oldRefresh = (uint16_t)m_TargetGame->GetNextLatency();
       const double oldSyncLimit = m_TargetGame->GetSyncLimit();
       const double oldSyncLimitSafe = m_TargetGame->GetSyncLimitSafe();
 
@@ -2594,21 +2597,23 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (syncLimitSafe < syncLimit / 2) syncLimitSafe = syncLimit / 2;
       if (syncLimitSafe < 1) syncLimitSafe = 1;
 
-      m_TargetGame->m_Config.m_Latency = static_cast<uint16_t>(refreshTime * refreshFactor);
-      m_TargetGame->m_Config.m_SyncLimit = static_cast<uint16_t>(syncLimit);
-      m_TargetGame->m_Config.m_SyncLimitSafe = static_cast<uint16_t>(syncLimitSafe);
+      if (!m_TargetGame->SetupLatency(refreshTime, (uint16_t)syncLimit, (uint16_t)syncLimitSafe)) {
+        // Sudo abuse caused overflow or other aberrant behavior
+        ErrorReply("Failed to reconfigure game latency");
+        break;
+      }
 
       const uint32_t finalToleranceMilliseconds = (
-        static_cast<uint32_t>(m_TargetGame->GetLatency()) *
+        static_cast<uint32_t>(m_TargetGame->GetNextLatency()) *
         static_cast<uint32_t>(m_TargetGame->GetSyncLimit())
       );
 
-      if (refreshTime == REFRESH_PERIOD_MIN) {
-        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
-      } else if (refreshTime == REFRESH_PERIOD_MAX) {
-        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->GetLatency()) + " ms)", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+      if (refreshTime == m_TargetGame->m_Config.m_LatencyMin) {
+        SendReply("Game will be updated at the fastest rate (every " + to_string(m_TargetGame->GetNextLatency()) + " ms)", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+      } else if (refreshTime == m_TargetGame->m_Config.m_LatencyMax) {
+        SendReply("Game will be updated at the slowest rate (every " + to_string(m_TargetGame->GetNextLatency()) + " ms)", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->GetLatency()) + "ms.", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Game will be updated with a delay of " + to_string(m_TargetGame->GetNextLatency()) + "ms.", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       }
       SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", m_TargetGame->GetIsLobbyStrict() || !m_TargetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
       break;

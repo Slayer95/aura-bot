@@ -70,14 +70,6 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_AutoStartRequiresBalance               = CFG.GetBool("hosting.autostart.requires_balance", true);
   m_SaveStats                              = CFG.GetBool("db.game_stats.enabled", true);
 
-  m_SyncLimit                              = CFG.GetUint32("net.start_lag.sync_limit", 32);
-  m_SyncLimitSafe                          = CFG.GetUint32("net.stop_lag.sync_limit", 8);
-  m_SyncNormalize                          = CFG.GetBool("net.sync_normalization.enabled", true);
-  if (m_SyncLimit <= m_SyncLimitSafe) {
-    Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
-    CFG.SetFailed();
-  }
-
   m_AutoKickPing                           = CFG.GetUint32("hosting.high_ping.kick_ms", 250);
   m_WarnHighPing                           = CFG.GetUint32("hosting.high_ping.warn_ms", 175);
   m_SafeHighPing                           = CFG.GetUint32("hosting.high_ping.safe_ms", 130);
@@ -102,9 +94,54 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownInterval                 = CFG.GetUint32("hosting.game_start.count_down_interval", 500);
   m_LobbyCountDownStartValue               = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
 
-  m_Latency                                = CFG.GetUint16("hosting.latency", 100);
+  m_LatencyMin                             = CFG.GetUint16("hosting.latency.min", 10);
+  m_LatencyMax                             = CFG.GetUint16("hosting.latency.max", 500);
+
+  if (m_LatencyMin > m_LatencyMax) {
+    Print("<hosting.latency.min> cannot be larger than <hosting.latency.max = 10>");
+    CFG.SetFailed();
+  }
+
+  m_SyncLimitMaxMilliSeconds               = CFG.GetUint32("net.start_lag.sync_limit.max_ms", 3500);
+  m_SyncLimitSafeMinMilliSeconds           = CFG.GetUint32("net.stop_lag.sync_limit.min_ms", 100);
+
+  if (m_SyncLimitSafeMinMilliSeconds > m_SyncLimitMaxMilliSeconds) {
+    Print("<net.stop_lag.sync_limit.min_ms> cannot be larger than <net.start_lag.sync_limit.max_ms>");
+    CFG.SetFailed();
+  }
+
+  m_Latency                                = CFG.GetUint16("hosting.latency.default", 100);
+
+  if (m_Latency < m_LatencyMin) {
+    Print("<hosting.latency.default> must be larger than <hosting.latency.min = 10>");
+    CFG.SetFailed();
+  }
+
+  if (m_Latency > m_LatencyMax) {
+    Print("<hosting.latency.default> must be smaller than <hosting.latency.max = 500>");
+    CFG.SetFailed();
+  }
+
   m_LatencyEqualizerEnabled                = CFG.GetBool("hosting.latency.equalizer.enabled", false);
   m_LatencyEqualizerFrames                 = CFG.GetUint8("hosting.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
+
+  m_SyncLimit                              = CFG.GetUint32("net.start_lag.sync_limit.default", 32);
+  m_SyncLimitSafe                          = CFG.GetUint32("net.stop_lag.sync_limit.default", 8);
+  m_SyncNormalize                          = CFG.GetBool("net.sync_normalization.enabled", true);
+  if (m_SyncLimit <= m_SyncLimitSafe) {
+    Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
+    CFG.SetFailed();
+  }
+
+  if (m_SyncLimitMaxMilliSeconds < m_Latency * m_SyncLimit) {
+    Print("<net.start_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimit) + " ms, which is larger than <net.start_lag.sync_limit.max_ms = " + to_string(m_SyncLimitMaxMilliSeconds) + ">");
+    CFG.SetFailed();
+  }
+
+  if (m_Latency * m_SyncLimitSafe < m_SyncLimitSafeMinMilliSeconds) {
+    Print("<net.stop_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimitSafe) + " ms, which is smaller than <net.stop_lag.sync_limit.min_ms = " + to_string(m_SyncLimitSafeMinMilliSeconds) + ">");
+    CFG.SetFailed();
+  }
 
   m_PerfThreshold                          = CFG.GetUint32("bot.perf_limit", 150);
   m_LacksMapKickDelay                      = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
@@ -170,10 +207,6 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_AutoStartRequiresBalance, m_AutoStartRequiresBalance, m_AutoStartRequiresBalance)
   INHERIT(m_SaveStats);
 
-  INHERIT_MAP_OR_CUSTOM(m_SyncLimit, m_LatencyMaxFrames, m_LatencyMaxFrames)
-  INHERIT_MAP_OR_CUSTOM(m_SyncLimitSafe, m_LatencySafeFrames, m_LatencySafeFrames)
-  INHERIT_CUSTOM(m_SyncNormalize, m_SyncNormalize)
-
   INHERIT_MAP_OR_CUSTOM(m_AutoKickPing, m_AutoKickPing, m_AutoKickPing)
   INHERIT_MAP_OR_CUSTOM(m_WarnHighPing, m_WarnHighPing, m_WarnHighPing)
   INHERIT_MAP_OR_CUSTOM(m_SafeHighPing, m_SafeHighPing, m_SafeHighPing)
@@ -203,6 +236,12 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownInterval, m_LobbyCountDownInterval, m_LobbyCountDownInterval)
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownStartValue, m_LobbyCountDownStartValue, m_LobbyCountDownStartValue)
 
+  INHERIT(m_LatencyMin)
+  INHERIT(m_LatencyMax)
+
+  INHERIT(m_SyncLimitMaxMilliSeconds)
+  INHERIT(m_SyncLimitSafeMinMilliSeconds)
+
   INHERIT_MAP_OR_CUSTOM(m_Latency, m_Latency, m_LatencyAverage)
   INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled)
   INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerFrames, m_LatencyEqualizerFrames, m_LatencyEqualizerFrames)
@@ -210,6 +249,10 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   if (m_LatencyEqualizerFrames == 0) {
     m_LatencyEqualizerFrames = 1;
   }
+
+  INHERIT_MAP_OR_CUSTOM(m_SyncLimit, m_LatencyMaxFrames, m_LatencyMaxFrames)
+  INHERIT_MAP_OR_CUSTOM(m_SyncLimitSafe, m_LatencySafeFrames, m_LatencySafeFrames)
+  INHERIT_CUSTOM(m_SyncNormalize, m_SyncNormalize)
 
   INHERIT(m_PerfThreshold)
   INHERIT(m_LacksMapKickDelay)

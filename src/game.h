@@ -159,7 +159,7 @@ struct GameHistory
 {
   bool                                                   m_Desynchronized;
   uint8_t                                                m_GProxyEmptyActions;
-  uint32_t                                               m_Latency;
+  uint16_t                                               m_DefaultLatency;
   std::optional<int64_t>                                 m_StartedTicks;
   size_t                                                 m_NumActionFrames;
   std::vector<uint32_t>                                  m_CheckSums;
@@ -172,7 +172,7 @@ struct GameHistory
   GameHistory()
    : m_Desynchronized(false),
      m_GProxyEmptyActions(0),
-     m_Latency(0),
+     m_DefaultLatency(0),
      m_NumActionFrames(0)
   {}
 
@@ -183,8 +183,8 @@ struct GameHistory
   inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
   inline void SetDesynchronized(const bool nDesynchronized) { m_Desynchronized = nDesynchronized; }
   inline bool GetDesynchronized() { return m_Desynchronized; }
-  inline void SetLatency(const uint32_t nLatency) { m_Latency = nLatency; }
-  inline uint32_t GetLatency() { return m_Latency; }
+  inline void SetDefaultLatency(const uint16_t nLatency) { m_DefaultLatency = nLatency; }
+  inline uint16_t GetDefaultLatency() { return m_DefaultLatency; }
   inline void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
   inline uint32_t GetGProxyEmptyActions() { return m_GProxyEmptyActions; }
   inline void AddActionFrameCounter() { ++m_NumActionFrames; }
@@ -257,7 +257,6 @@ protected:
   std::string                                            m_HCLCommandString;              // the "HostBot Command Library" command string, used to pass a limited amount of data to specially designed maps
   std::string                                            m_MapPath;                       // store the map path to save in the database on game end
   std::string                                            m_MapSiteURL;
-  int64_t                                                m_EffectiveTicks;                     // ingame ticks
   int64_t                                                m_CreationTime;                  // GetTime when the game was created
   int64_t                                                m_LastPingTime;                  // GetTime when the last ping was sent
   int64_t                                                m_LastRefreshTime;               // GetTime when the last game refresh was sent
@@ -265,6 +264,8 @@ protected:
   int64_t                                                m_LastCountDownTicks;            // GetTicks when the last countdown message was sent
   int64_t                                                m_StartedLoadingTicks;           // GetTicks when the game started loading
   int64_t                                                m_FinishedLoadingTicks;          // GetTicks when the game finished loading
+  int64_t                                                m_EffectiveTicks;                // ingame ticks excluding paused time
+  int64_t                                                m_LatencyTicks;                  // ticks between last update and next
   int64_t                                                m_LastActionSentTicks;           // GetTicks when the last action packet was sent
   int64_t                                                m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
   int64_t                                                m_LastPausedTicks;               // GetTicks when the game was last paused
@@ -429,7 +430,8 @@ public:
   inline uint32_t                                        GetSyncCounter() const { return m_SyncCounter; }
   uint8_t                                                GetMaxEqualizerDelayFrames() const { return m_MaxPingEqualizerDelayFrames; }
   uint8_t                                                CalcMaxEqualizerDelayFrames() const;
-  uint16_t                                               GetLatency() const;
+  int64_t                                                GetActiveLatency() const;
+  int64_t                                                GetNextLatency() const;
   uint32_t                                               GetSyncLimit() const;
   uint32_t                                               GetSyncLimitSafe() const;
   inline bool                                            GetLagging() const { return m_Lagging; }
@@ -466,6 +468,7 @@ public:
   std::string                                            GetClientFileName() const;
   std::string                                            GetMapSiteURL() const { return m_MapSiteURL; }
   inline int64_t                                         GetEffectiveTicks() const { return m_EffectiveTicks; }
+  inline int64_t                                         GetLatencyTicks() const { return m_LatencyTicks; }
   inline int64_t                                         GetLastPausedTicks() const { return m_LastPausedTicks; }
   inline int64_t                                         GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
   inline bool                                            GetChatOnly() const { return m_ChatOnly; }
@@ -535,7 +538,8 @@ public:
   bool                                                   Update(fd_set* fd, fd_set* send_fd);
   void                                                   UpdatePost(fd_set* send_fd) const;
   void                                                   CheckLobbyTimeouts();
-  void                                                   RunActionsScheduler(const uint8_t maxNewEqualizerOffset, const uint8_t maxOldEqualizerOffset);
+  void                                                   RunActionsScheduler();
+  void                                                   RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset);
 
   // logging
   void                                                   LogApp(const std::string& logText, const uint8_t logTargets) const;
@@ -792,6 +796,7 @@ public:
   UserList CalculateNewLaggingPlayers() const;
   void RemoveFromLagScreens(GameUser::CGameUser* user) const;
   void ResetLagScreen();
+  bool SetupLatency(double latency, uint16_t syncLimit, uint16_t syncLimitSafe);
   void ResetLatency();
   void NormalizeSyncCounters() const;
   bool GetIsReserved(const std::string& name) const;
