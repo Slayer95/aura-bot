@@ -58,6 +58,7 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_SID(nGame->GetSIDFromUID(nUID)),
     m_Color(nGame->GetColorFromUID(nUID)),
     m_FrameRate(1),
+    m_Latency(nGame->GetGameHistory()->GetDefaultLatency()),
     m_SyncCounter(0),
     m_ActionFrameCounter(0),
     m_NotifiedCannotDownload(false),
@@ -306,38 +307,48 @@ int64_t CAsyncObserver::GetNextTimedActionByTicks() const
   if (m_GameHistory->GetNumActionFrames() <= m_ActionFrameCounter) {
     return APP_MAX_TICKS;
   }
-  return m_LastFrameTicks + (int64_t)(m_GameHistory->GetDefaultLatency()) / (int64_t)(m_FrameRate);
+  return m_LastFrameTicks + m_Latency / m_FrameRate;
 }
 
 bool CAsyncObserver::PushGameFrames()
 {
   int64_t Ticks = GetTicks();
   // Note: Actually, each frame may have its own custom latency.
-  size_t actionFramesWanted = static_cast<size_t>((int64_t)(m_FrameRate) * (Ticks - m_LastFrameTicks) / (int64_t)(m_GameHistory->GetDefaultLatency()));
-  // We probably need to count GProxy frames as if they were regular actions in the entire algo.
-  size_t actionFramesStored = SubtractClampZero(m_GameHistory->GetNumActionFrames(), m_ActionFrameCounter);
-  size_t actionFramesExpected = (m_Game && m_Game->GetPaused()) ? actionFramesStored : ((actionFramesWanted < actionFramesStored) ? actionFramesWanted : actionFramesStored);
-  if (actionFramesExpected == 0) {
+  int64_t gameDurationWanted = m_FrameRate * (Ticks - m_LastFrameTicks);
+  if (gameDurationWanted < m_Latency) {
+    // Fast path for the common case (there will never be a GAME_FRAME_TYPE_LATENCY hanging)
+    return false;
+  }
+  if (m_ActionFrameCounter >= m_GameHistory->GetNumActionFrames()) {
     return false;
   }
 
   bool success = false;
   auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
   auto itEnd = end(m_GameHistory->m_PlayingBuffer);
-  while (it != itEnd) {
-    if (it->GetType() == GAME_FRAME_TYPE_GPROXY) {
-      Send(GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GameHistory->GetGProxyEmptyActions()));
-    } else if (it->GetType() != GAME_FRAME_TYPE_LATENCY) {
-      Send(it->GetBytes());
-    }
-    ++m_Offset;
-    if (it->GetType() == GAME_FRAME_TYPE_ACTIONS) {
-      success = true;
-      m_LastFrameTicks = Ticks;
-      ++m_ActionFrameCounter;
-      if (--actionFramesExpected == 0) break;
+  while (it != itEnd && (gameDurationWanted >= m_Latency || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
+    switch (it->GetType()) {
+      case GAME_FRAME_TYPE_GPROXY:
+        // if stored, GAME_FRAME_TYPE_GPROXY always precedes GAME_FRAME_TYPE_ACTIONS
+        Send(GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GameHistory->GetGProxyEmptyActions()));
+        break;
+      case GAME_FRAME_TYPE_LATENCY:
+        // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
+        m_Latency = ByteArrayToUInt32(it->GetBytes(), false, 0);
+        break;
+      case GAME_FRAME_TYPE_ACTIONS:
+        if (gameDurationWanted < m_Latency) break;
+        gameDurationWanted -= m_Latency;
+        success = true;
+        m_LastFrameTicks = Ticks;
+        ++m_ActionFrameCounter;
+        // falls through
+      default:
+        // GAME_FRAME_TYPE_ACTIONS, GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT
+        Send(it->GetBytes());
     }
     ++it;
+    ++m_Offset;
   }
 
   return success;
@@ -464,13 +475,20 @@ void CAsyncObserver::EventGameLoaded()
 void CAsyncObserver::EventChatMessage(const CIncomingChatMessage* incomingChatMessage)
 {
   string message = incomingChatMessage->GetMessage();
+  Print(GetLogPrefix() + ": " + message);
   if (message == "!ff") {
-    m_FrameRate *= 2;
+    if (m_FrameRate >= 64) {
+      SendChat("Playback rate is limited to 64x");
+    } else {
+      m_FrameRate *= 2;
+      SendChat("Playback rate set to " + to_string(m_FrameRate) + "x");
+    }
   } else if (message == "!sync") {
     m_FrameRate = 1;
+    SendChat("Playback rate set to " + to_string(m_FrameRate) + "x");
+  } else {
+    SendChat("You are in spectator mode. Chat is RESTRICTED.");
   }
-  Print(GetLogPrefix() + ": " + message);
-  SendChat("You are in spectator mode. Chat is RESTRICTED.");
 }
 
 void CAsyncObserver::EventLeft(const uint32_t clientReason)

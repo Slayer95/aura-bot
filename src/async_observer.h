@@ -51,7 +51,8 @@ public:
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
   uint8_t                                                       m_Color;
-  uint8_t                                                       m_FrameRate;
+  int64_t                                                       m_FrameRate;
+  int64_t                                                       m_Latency;
   size_t                                                        m_SyncCounter;                  // the number of keepalive packets received from this player
   size_t                                                        m_ActionFrameCounter;
   std::queue<uint32_t>                                          m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
