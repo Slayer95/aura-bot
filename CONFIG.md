@@ -243,14 +243,6 @@ Config
 - Type: uint8vector
 - Error handling: Abort operation
 
-## \`global_realm.game_version\`
-- Type: version
-- Error handling: Use default value
-
-## \`global_realm.game_version\`
-- Type: version
-- Error handling: Use default value
-
 ## \`global_realm.auth_ignore_version_error\`
 - Type: bool
 - Default value: false
@@ -544,6 +536,14 @@ Config
 - Type: string
 - Constraints: Min length: 0. Max length: 16.
 - Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_version\`
+- Type: version
+- Error handling: Use default value
+
+## \`global_realm.game_version\`
+- Type: version
 - Error handling: Use default value
 
 ## \`global_realm.host_name\`
@@ -863,6 +863,11 @@ Config
 - Default value: true
 - Error handling: Use default value
 
+## \`hosting.game_protocol.leaver_handler\`
+- Type: enum
+- Default value: ON_PLAYER_LEAVE_NATIVE
+- Error handling: Use default value
+
 ## \`hosting.game_ready.mode\`
 - Type: enum
 - Default value: READY_MODE_EXPECT_RACE
@@ -973,7 +978,7 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`hosting.latency\`
+## \`hosting.latency.default\`
 - Type: uint16
 - Default value: 100
 - Error handling: Use default value
@@ -986,6 +991,16 @@ Config
 ## \`hosting.latency.equalizer.frames\`
 - Type: uint8
 - Default value: PING_EQUALIZER_DEFAULT_FRAMES
+- Error handling: Use default value
+
+## \`hosting.latency.max\`
+- Type: uint16
+- Default value: 500
+- Error handling: Use default value
+
+## \`hosting.latency.min\`
+- Type: uint16
+- Default value: 10
 - Error handling: Use default value
 
 ## \`hosting.load_in_game.enabled\`
@@ -1060,7 +1075,7 @@ Config
 
 ## \`hosting.map_transfers.max_speed\`
 - Type: uint32
-- Default value: 1024
+- Default value: 1000
 - Error handling: Use default value
 
 ## \`hosting.map_transfers.mode\`
@@ -1428,14 +1443,24 @@ Config
 - Default value: true
 - Error handling: Use default value
 
-## \`net.start_lag.sync_limit\`
+## \`net.start_lag.sync_limit.default\`
 - Type: uint32
 - Default value: 32
 - Error handling: Use default value
 
-## \`net.stop_lag.sync_limit\`
+## \`net.start_lag.sync_limit.max_ms\`
+- Type: uint32
+- Default value: 3500
+- Error handling: Use default value
+
+## \`net.stop_lag.sync_limit.default\`
 - Type: uint32
 - Default value: 8
+- Error handling: Use default value
+
+## \`net.stop_lag.sync_limit.min_ms\`
+- Type: uint32
+- Default value: 100
 - Error handling: Use default value
 
 ## \`net.sync_normalization.enabled\`
