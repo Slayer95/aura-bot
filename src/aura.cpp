@@ -1392,7 +1392,7 @@ void CAura::EventGameDeleted(CGame* game)
     }
   } else {
     Print("[AURA] deleting game [" + game->GetGameName() + "]");
-    if ((game->GetGameTicks() / 1000) < 180) {
+    if ((game->GetEffectiveTicks() / 1000) < 180) {
       // Do not announce game ended if game lasted less than 3 minutes.
       return;
     }

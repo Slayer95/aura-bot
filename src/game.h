@@ -257,7 +257,7 @@ protected:
   std::string                                            m_HCLCommandString;              // the "HostBot Command Library" command string, used to pass a limited amount of data to specially designed maps
   std::string                                            m_MapPath;                       // store the map path to save in the database on game end
   std::string                                            m_MapSiteURL;
-  int64_t                                                m_GameTicks;                     // ingame ticks
+  int64_t                                                m_EffectiveTicks;                     // ingame ticks
   int64_t                                                m_CreationTime;                  // GetTime when the game was created
   int64_t                                                m_LastPingTime;                  // GetTime when the last ping was sent
   int64_t                                                m_LastRefreshTime;               // GetTime when the last game refresh was sent
@@ -288,7 +288,7 @@ protected:
   size_t                                                 m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
   size_t                                                 m_SyncCounterChecked;            // the number of verified keepalive packets
   uint8_t                                                m_MaxPingEqualizerDelayFrames;
-  int64_t                                                m_LastPingEqualizerGameTicks;    // m_GameTicks when ping equalizer was last run
+  int64_t                                                m_LastPingEqualizerGameTicks;    // m_EffectiveTicks when ping equalizer was last run
 
   uint32_t                                               m_DownloadCounter;               // # of map bytes downloaded in the last second
   uint32_t                                               m_CountDownCounter;              // the countdown is finished when this reaches zero
@@ -465,7 +465,7 @@ public:
   uint8_t                                                GetNumTeamControllersOrOpen(const uint8_t team) const;
   std::string                                            GetClientFileName() const;
   std::string                                            GetMapSiteURL() const { return m_MapSiteURL; }
-  inline int64_t                                         GetGameTicks() const { return m_GameTicks; }
+  inline int64_t                                         GetEffectiveTicks() const { return m_EffectiveTicks; }
   inline int64_t                                         GetLastPausedTicks() const { return m_LastPausedTicks; }
   inline int64_t                                         GetPausedTicksDeltaSum() const { return m_PausedTicksDeltaSum; }
   inline bool                                            GetChatOnly() const { return m_ChatOnly; }

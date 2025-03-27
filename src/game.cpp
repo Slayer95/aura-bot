@@ -294,7 +294,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
-    m_GameTicks(0),
+    m_EffectiveTicks(0),
     m_CreationTime(GetTime()),
     m_LastPingTime(GetTime()),
     m_LastRefreshTime(GetTime()),
@@ -569,7 +569,7 @@ void CGame::TrySaveStats() const
         if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
           continue;
         }
-        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, dbPlayer, m_GameTicks / 1000);
+        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, dbPlayer, m_EffectiveTicks / 1000);
       }
       if (!m_Aura->m_DB->Commit()) {
         LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit game end player data")
@@ -1139,7 +1139,7 @@ string CGame::GetStatusDescription() const
   );
 
   if (m_GameLoading || m_GameLoaded)
-    Description += " : " + to_string((m_GameTicks / 1000) / 60) + "min";
+    Description += " : " + to_string((m_EffectiveTicks / 1000) / 60) + "min";
   else
     Description += " : " + to_string((GetTime() - m_CreationTime) / 60) + "min";
 
@@ -1173,7 +1173,7 @@ string CGame::GetEndDescription() const
   );
 
   if (m_GameLoading || m_GameLoaded)
-    Description += " : " + to_string((m_GameTicks / 1000) / 60) + "min";
+    Description += " : " + to_string((m_EffectiveTicks / 1000) / 60) + "min";
   else
     Description += " : " + to_string((GetTime() - m_CreationTime) / 60) + "min";
 
@@ -1190,8 +1190,8 @@ string CGame::GetCategory() const
 
 string CGame::GetLogPrefix() const
 {
-  string MinString = to_string((m_GameTicks / 1000) / 60);
-  string SecString = to_string((m_GameTicks / 1000) % 60);
+  string MinString = to_string((m_EffectiveTicks / 1000) / 60);
+  string SecString = to_string((m_EffectiveTicks / 1000) % 60);
 
   if (MinString.size() == 1)
     MinString.insert(0, "0");
@@ -1898,7 +1898,7 @@ void CGame::LogApp(const string& logText, const uint8_t logTargets) const
 void CGame::Log(const string& text)
 {
   if (m_GameLoaded) {
-    Log(text, m_GameTicks);
+    Log(text, m_EffectiveTicks);
   } else {
     string logText = GetLogPrefix() + text;
     Print(logText);
@@ -1935,7 +1935,7 @@ void CGame::LogRemoteRaw(const string& text) const
 
 void CGame::UpdateLogs()
 {
-  int64_t ticks = m_GameTicks;
+  int64_t ticks = m_EffectiveTicks;
   while (!m_PendingLogs.empty()) {
     CGameLogRecord* record = m_PendingLogs.front();
     if (ticks + static_cast<int64_t>(m_Config.m_LogDelay) < record->GetTicks()) {
@@ -3460,7 +3460,7 @@ void CGame::SendGProxyEmptyActions()
 void CGame::SendAllActions()
 {
   if (!m_Paused) {
-    m_GameTicks += GetLatency();
+    m_EffectiveTicks += GetLatency();
   } else {
     m_PausedTicksDeltaSum = GetLatency();
   }
@@ -3663,8 +3663,8 @@ void CGame::ResetUserPingEqualizerDelays()
 bool CGame::CheckUpdatePingEqualizer()
 {
   if (!m_Config.m_LatencyEqualizerEnabled) return false;
-  // Use m_GameTicks instead of GetTicks() to ensure we don't drift while lag screen is displayed.
-  if (m_GameTicks - m_LastPingEqualizerGameTicks < PING_EQUALIZER_PERIOD_TICKS) {
+  // Use m_EffectiveTicks instead of GetTicks() to ensure we don't drift while lag screen is displayed.
+  if (m_EffectiveTicks - m_LastPingEqualizerGameTicks < PING_EQUALIZER_PERIOD_TICKS) {
     return false;
   }
   return true;
@@ -3699,7 +3699,7 @@ uint8_t CGame::UpdatePingEqualizer()
       maxEqualizerOffset = nextOffset;
     }
   }
-  m_LastPingEqualizerGameTicks = m_GameTicks;
+  m_LastPingEqualizerGameTicks = m_EffectiveTicks;
   return maxEqualizerOffset;
 }
 
@@ -4053,7 +4053,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
     const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
     CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(slot->GetColor());
     if (dbPlayer) {
-      dbPlayer->SetLeftTime(m_GameTicks / 1000);
+      dbPlayer->SetLeftTime(m_EffectiveTicks / 1000);
     }
 
     // keep track of the last user to leave for the !banlast command
@@ -6550,7 +6550,7 @@ void CGame::Remake()
   int64_t Ticks = GetTicks();
 
   m_FromAutoReHost = false;
-  m_GameTicks = 0;
+  m_EffectiveTicks = 0;
   m_CreationTime = Time;
   m_LastPingTime = Time;
   m_LastRefreshTime = Time;
