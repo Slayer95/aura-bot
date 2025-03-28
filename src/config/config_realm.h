@@ -116,9 +116,13 @@ struct CRealmConfig
 
   std::string m_FirstChannel;                    //
   std::set<std::string> m_SudoUsers;             //
-  std::set<std::string> m_Admins;            //
-  std::string m_GamePrefix;                      // string prepended to game names
+  std::set<std::string> m_Admins;                //
+  std::string m_LobbyPrefix;                      // string prepended to game names
+  std::string m_LobbySuffix;
+  std::string m_WatchablePrefix;
+  std::string m_WatchableSuffix;
   uint32_t m_MaxUploadSize;                      // in KB
+  uint8_t m_WatchableDisplayMode;                // none, deprioritize, always
 
   bool m_ConsoleLogChat;                         // whether we should print public chat messages
   uint8_t m_FloodQuotaLines;                     // - PvPGN: corresponds to bnetd.conf: quota_lines (default 5)

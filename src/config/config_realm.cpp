@@ -49,12 +49,10 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_AutoRegister(false),
     m_UserNameCaseSensitive(false),
     m_PassWordCaseSensitive(false),
-    m_UserName(string()),
-    m_PassWord(string()),
 
     m_Admins({}),
-    m_GamePrefix(string()),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
+    m_WatchableDisplayMode(REALM_OBSERVER_DISPLAY_NONE),
     m_FloodImmune(false),
 
     m_WhisperErrorReply("That user is not logged on."),
@@ -150,8 +148,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
   m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
-  m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", m_GamePrefix);
+  m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", m_LobbyPrefix);
+  m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", m_LobbySuffix);
+  m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", m_WatchablePrefix);
+  m_WatchableSuffix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_suffix", m_WatchableSuffix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
+  m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", true);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5) - 1;
@@ -269,8 +271,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_FirstChannel(nRootConfig->m_FirstChannel),
     m_SudoUsers(nRootConfig->m_SudoUsers),
     m_Admins(nRootConfig->m_Admins),
-    m_GamePrefix(nRootConfig->m_GamePrefix),
+    m_LobbyPrefix(nRootConfig->m_LobbyPrefix),
+    m_LobbySuffix(nRootConfig->m_LobbySuffix),
+    m_WatchablePrefix(nRootConfig->m_WatchablePrefix),
+    m_WatchableSuffix(nRootConfig->m_WatchableSuffix),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
+    m_WatchableDisplayMode(nRootConfig->m_WatchableDisplayMode),
 
     m_ConsoleLogChat(nRootConfig->m_ConsoleLogChat),
     m_FloodQuotaLines(nRootConfig->m_FloodQuotaLines),
@@ -411,8 +417,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
   m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
-  m_GamePrefix             = CFG.GetString(m_CFGKeyPrefix + "game_prefix", 0, 16, m_GamePrefix);
+  m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", 0, 16, m_LobbyPrefix);
+  m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", 0, 16, m_LobbySuffix);
+  m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", 0, 16, m_WatchablePrefix);
+  m_WatchableSuffix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_suffix", 0, 16, m_WatchableSuffix);
   m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
+  m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", m_ConsoleLogChat);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", m_FloodQuotaLines + 1) - 1;

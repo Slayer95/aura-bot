@@ -187,7 +187,7 @@ public:
   bool                 GetIsFloodImmune() const;
   bool                 GetIsDueReconnect() const;
   std::string          GetCommandToken() const;
-  std::string          GetPrefixedGameName(const std::string& gameName) const;
+  std::string          GetCustomGameName(const std::string& gameName, bool isSpectator) const;
   bool                 GetAnnounceHostToChat() const;
   inline bool          GetIsChatQueuedGameAnnouncement() { return m_ChatQueuedGameAnnouncement; }  
   inline bool          GetIsGameBroadcastSettled() { return m_GameBroadcastStatus.has_value(); }
@@ -197,6 +197,7 @@ public:
   bool                 GetHasEnhancedAntiSpoof() const;
   bool                 GetUnverifiedCannotStartGame() const;
   bool                 GetUnverifiedAutoKickedFromLobby() const;
+  uint8_t              GetWatchableGamesDisplayMode() const;                 
   CCommandConfig*      GetCommandConfig() const;
 
   // processing functions

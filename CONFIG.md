@@ -527,12 +527,45 @@ Config
 - Default value: !m_IsHostMulti
 - Error handling: Use default value
 
-## \`global_realm.game_prefix\`
+## \`global_realm.game_list.lobby_prefix\`
 - Type: string
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.game_prefix\`
+## \`global_realm.game_list.lobby_prefix\`
+- Type: string
+- Constraints: Min length: 0. Max length: 16.
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.lobby_suffix\`
+- Type: string
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.lobby_suffix\`
+- Type: string
+- Constraints: Min length: 0. Max length: 16.
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.watchable_prefix\`
+- Type: string
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.watchable_prefix\`
+- Type: string
+- Constraints: Min length: 0. Max length: 16.
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.watchable_suffix\`
+- Type: string
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.watchable_suffix\`
 - Type: string
 - Constraints: Min length: 0. Max length: 16.
 - Default value: Empty
@@ -760,6 +793,16 @@ Config
 
 ## \`global_realm.vpn\`
 - Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.watchable_games.display_mode\`
+- Type: enum
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.watchable_games.display_mode\`
+- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 

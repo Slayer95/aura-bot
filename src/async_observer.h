@@ -107,7 +107,8 @@ public:
   
   int64_t                                       GetNextTimedActionByTicks() const;
 
-  bool PushGameFrames();
+  bool PushGameFrames(bool isFlush = false);
+  inline void FlushGameFrames() { PushGameFrames(true); }
   void CheckGameOver();
   void OnGameReset(const CGame* nGame);
   void UpdateClientGameState(const uint32_t checkSum);

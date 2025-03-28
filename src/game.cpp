@@ -1291,6 +1291,9 @@ void CGame::UpdateJoinable()
         if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
           continue;
         }
+        if (m_JoinInProgressVirtualUser.has_value() && realm->GetWatchableGamesDisplayMode() != REALM_OBSERVER_DISPLAY_ALWAYS) {
+          continue;
+        }
         // Send STARTADVEX3
         AnnounceToRealm(realm);
       }
@@ -3518,10 +3521,10 @@ void CGame::SendAllActions()
   RunActionsScheduler();
 }
 
-std::string CGame::GetPrefixedGameName(const CRealm* realm) const
+std::string CGame::GetCustomGameName(const CRealm* realm) const
 {
   if (realm == nullptr) return m_GameName;
-  return realm->GetPrefixedGameName(m_GameName);
+  return realm->GetCustomGameName(m_GameName, m_GameLoading || m_GameLoaded);
 }
 
 std::string CGame::GetAnnounceText(const CRealm* realm) const
@@ -3540,9 +3543,9 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
 }
   string startedPhrase;
   if (m_IsMirror || m_RestoredGame || m_OwnerName.empty()) {
-    startedPhrase = ". (\"" + GetPrefixedGameName(realm) + "\")";
+    startedPhrase = ". (\"" + GetCustomGameName(realm) + "\")";
   } else {
-    startedPhrase = ". (Started by " + m_OwnerName + ": \"" + GetPrefixedGameName(realm) + "\")";
+    startedPhrase = ". (Started by " + m_OwnerName + ": \"" + GetCustomGameName(realm) + "\")";
   }
 
   string typeWord;
@@ -6179,9 +6182,10 @@ void CGame::EventGameStartedLoading()
     if (GetUDPEnabled()) {
       SendGameDiscoveryDecreate();
     }
-    // and finally reenter battle.net chat
-    AnnounceDecreateToRealms();
   }
+
+  // and finally reenter battle.net chat
+  AnnounceDecreateToRealms();
 
   ClearBannableUsers();
   UpdateBannableUsers();

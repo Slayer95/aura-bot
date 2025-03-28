@@ -1729,6 +1729,73 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !PRD
+    //
+
+    case HashCode("markov"):
+    case HashCode("prd"): {
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "prd <NOMINAL CHANCE%>");
+        break;
+      }
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
+      if (Args.empty() || Args[0] > 100) {
+        ErrorReply("Usage: " + cmdToken + "prd <NOMINAL CHANCE%>");
+        break;
+      }
+      vector<string> factors = {"0.00380", "0.01475", "0.03221", "0.05570", "0.08475", "0.11895", "0.14628", "0.18128", "0.21867", "0.25701", "0.29509", "0.33324", "0.38109", "0.42448", "0.46134", "0.50276"};
+      vector<string> chances = {"5.0", "10.0", "15.0", "20.0", "24.9", "29.9", "33.6", "37.7", "41.8", "45.7", "49.3", "53.0", "56.6", "60.1", "63.2", "66.7"};
+      uint8_t nominalChance = static_cast<uint8_t>(Args[0]);
+      uint8_t index = nominalChance / 5 - 1;
+      if (nominalChance <= 5) {
+        SendReply("Nominal chance of 5% formula: P(N) = " + factors[0] + " N. Expected value: " + chances[0] + "%");
+      } else if (nominalChance >= 80) {
+        SendReply("Nominal chance of 80% formula: P(N) = " + factors[15] + "N. Expected value: " + chances[15] + "%");
+      } else if (nominalChance % 5 == 0) {
+        SendReply("Nominal chance of " + ToDecString(nominalChance) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + chances[index] + "%");
+      } else {
+        uint8_t lower = static_cast<uint8_t>(5 * (index + 1));
+        uint8_t upper = static_cast<uint8_t>(5 * (index + 2));
+        SendReply("Nominal chance of " + ToDecString(lower) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + chances[index] + "%");
+        SendReply("Nominal chance of " + ToDecString(upper) + "% formula: P(N) = " + factors[index + 1] + " N. Expected value: " + chances[index + 1] + "%");
+      }
+      break;
+    }
+
+    //
+    // !PRD2
+    //
+
+    case HashCode("markov2"):
+    case HashCode("prd2"): {
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "prd2 <NOMINAL CHANCE%>");
+        break;
+      }
+      vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
+      if (Args.empty() || Args[0] > 100) {
+        ErrorReply("Usage: " + cmdToken + "prd2 <NOMINAL CHANCE%>");
+        break;
+      }
+      vector<string> factors = {"0.00380166", "0.01474584", "0.03222091", "0.05570404", "0.08474409", "0.11894919", "0.15798310", "0.20154741", "0.24930700", "0.30210303", "0.36039785", "0.42264973", "0.48112548", "0.57142857", "0.66666667", "0.75000000", "0.82352941", "0.88888889", "0.94736842"};
+      uint8_t nominalChance = static_cast<uint8_t>(Args[0]);
+      uint8_t index = nominalChance / 5 - 1;
+      if (nominalChance <= 5) {
+        SendReply("Nominal chance of 5% formula: P(N) = " + factors[0] + " N. Expected value: 5%");
+      } else if (nominalChance >= 95) {
+        SendReply("Nominal chance of 95% formula: P(N) = " + factors[18] + "N. Expected value: 95%");
+      } else if (nominalChance % 5 == 0) {
+        SendReply("Nominal chance of " + ToDecString(nominalChance) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + ToDecString(nominalChance) + "%");
+      } else {
+        uint8_t lower = static_cast<uint8_t>(5 * (index + 1));
+        uint8_t upper = static_cast<uint8_t>(5 * (index + 2));
+        SendReply("Nominal chance of " + ToDecString(lower) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + ToDecString(lower) + "%");
+        SendReply("Nominal chance of " + ToDecString(upper) + "% formula: P(N) = " + factors[index + 1] + " N. Expected value: " + ToDecString(upper) + "%");
+      }
+      break;
+    }
+
+    //
     // !FLIP
     //
 

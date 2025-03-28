@@ -293,9 +293,11 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 void CAsyncObserver::CheckGameOver()
 {
   if (m_Game && !m_Game->GetIsGameOver()) return;
+  FlushGameFrames();
   if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
     m_PlaybackEnded = true;
     Print(GetLogPrefix() + "playback ended");
+    SendChat("Playback ended");
     if (!m_TimeoutTicks.has_value()) {
       SetTimeoutAtLatest(GetTicks() + 3000);
     }
@@ -310,7 +312,7 @@ int64_t CAsyncObserver::GetNextTimedActionByTicks() const
   return m_LastFrameTicks + m_Latency / m_FrameRate;
 }
 
-bool CAsyncObserver::PushGameFrames()
+bool CAsyncObserver::PushGameFrames(bool isFlush)
 {
   int64_t Ticks = GetTicks();
   // Note: Actually, each frame may have its own custom latency.
@@ -319,7 +321,7 @@ bool CAsyncObserver::PushGameFrames()
     // Fast path for the common case (there will never be a GAME_FRAME_TYPE_LATENCY hanging)
     return false;
   }
-  if (m_ActionFrameCounter >= m_GameHistory->GetNumActionFrames()) {
+  if (!isFlush && m_ActionFrameCounter >= m_GameHistory->GetNumActionFrames()) {
     return false;
   }
 
@@ -327,6 +329,7 @@ bool CAsyncObserver::PushGameFrames()
   auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
   auto itEnd = end(m_GameHistory->m_PlayingBuffer);
   while (it != itEnd && (m_Latency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
+    //Print(GetLogPrefix() + "sending " + it->GetTypeName() + " frame");
     switch (it->GetType()) {
       case GAME_FRAME_TYPE_GPROXY:
         // if stored, GAME_FRAME_TYPE_GPROXY always precedes GAME_FRAME_TYPE_ACTIONS
@@ -432,7 +435,7 @@ void CAsyncObserver::EventDesync()
   if (!m_GameHistory->GetSoftDesynchronized()) {
     m_GameHistory->SetSoftDesynchronized();
     if (m_Game) {
-      m_Aura->UntrackGameJoinInProgress(m_Game)
+      m_Aura->UntrackGameJoinInProgress(m_Game);
       m_Game->AnnounceDecreateToRealms();
       if (m_Game->GetUDPEnabled()) m_Game->SendGameDiscoveryDecreate();
     }
@@ -509,6 +512,13 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
   }
   if (m_StartedLoading) {
     Print(GetLogPrefix() + "left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
+    /*
+    if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
+      Print(GetLogPrefix() + "next frame was not available");
+    } else {
+      Print(GetLogPrefix() + "next frame was " + m_GameHistory->m_PlayingBuffer[m_Offset].GetTypeName());
+    }
+    */
   } else {
     Print(GetLogPrefix() + "left the lobby");
   }

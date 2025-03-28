@@ -147,8 +147,10 @@ struct GameFrame
   inline std::string GetTypeName() {
     switch (m_Type) {
       case GAME_FRAME_TYPE_ACTIONS: return "actions";
+      case GAME_FRAME_TYPE_PAUSED: return "paused";
       case GAME_FRAME_TYPE_LEAVER: return "leaver";
       case GAME_FRAME_TYPE_CHAT: return "chat";
+      case GAME_FRAME_TYPE_LATENCY: return "latency";
       case GAME_FRAME_TYPE_GPROXY: return "gproxy";
       default: return "unknown";
     }
@@ -403,7 +405,7 @@ public:
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
-  std::string                                            GetPrefixedGameName(const CRealm* realm = nullptr) const;
+  std::string                                            GetCustomGameName(const CRealm* realm = nullptr) const;
   std::string                                            GetAnnounceText(const CRealm* realm = nullptr) const;
   inline bool                                            GetFromAutoReHost() const { return m_FromAutoReHost; }
   inline bool                                            GetLockedOwnerLess() const { return m_OwnerLess; }

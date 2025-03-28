@@ -685,7 +685,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
     }
   }
 
-  size_t longestGamePrefixSize = 0;
+  size_t longestGameParticlesSize = 0;
   for (const auto& entry : uniqueInputIds) {
     CRealm* matchingRealm = GetRealmByInputId(entry.first);
     CRealmConfig* realmConfig = realmConfigs[entry.second];
@@ -715,15 +715,19 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
       }
     }
 
-    if (realmConfig->m_GamePrefix.length() > longestGamePrefixSize)
-      longestGamePrefixSize = realmConfig->m_GamePrefix.length();
+    size_t lobbyParticlesSize = realmConfig->m_LobbyPrefix.length() + realmConfig->m_LobbySuffix.length();
+    size_t watchableParticlesSize = realmConfig->m_WatchableDisplayMode == REALM_OBSERVER_DISPLAY_NONE ? 0 : (realmConfig->m_WatchablePrefix.length() + realmConfig->m_WatchablePrefix.length());
+    if (lobbyParticlesSize > longestGameParticlesSize)
+      longestGameParticlesSize = lobbyParticlesSize;
+    if (watchableParticlesSize > longestGameParticlesSize)
+      longestGameParticlesSize = watchableParticlesSize;
 
     m_RealmsByHostCounter[matchingRealm->GetHostCounterID()] = matchingRealm;
     realmConfig->Reset();
     delete realmConfig;
   }
 
-  m_MaxGameNameSize = 31 - longestGamePrefixSize;
+  m_MaxGameNameSize = 31 - longestGameParticlesSize;
   return true;
 }
 

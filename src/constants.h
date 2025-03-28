@@ -509,18 +509,22 @@ constexpr uint8_t LOG_REMOTE_MODE_MIXED = 3u;
 
 // config_realm.h
 
-#define REALM_AUTH_PVPGN 0
-#define REALM_AUTH_BATTLENET 1
+constexpr uint8_t REALM_AUTH_PVPGN = 0u;
+constexpr uint8_t REALM_AUTH_BATTLENET = 1u;
 
-#define COMMANDS_ALLOWED_NONE 0
-#define COMMANDS_ALLOWED_UNVERIFIED 1
-#define COMMANDS_ALLOWED_VERIFIED 2
+constexpr uint8_t COMMANDS_ALLOWED_NONE = 0u;
+constexpr uint8_t COMMANDS_ALLOWED_UNVERIFIED = 1u;
+constexpr uint8_t COMMANDS_ALLOWED_VERIFIED = 2u;
+
+constexpr uint8_t REALM_OBSERVER_DISPLAY_NONE = 0u;
+constexpr uint8_t REALM_OBSERVER_DISPLAY_LOW_PRIORITY = 1u;
+constexpr uint8_t REALM_OBSERVER_DISPLAY_ALWAYS = 2u;
 
 // config_net.h 
 
-#define MAP_TRANSFERS_NEVER 0
-#define MAP_TRANSFERS_AUTOMATIC 1
-#define MAP_TRANSFERS_MANUAL 2
+constexpr uint8_t MAP_TRANSFERS_NEVER = 0u;
+constexpr uint8_t MAP_TRANSFERS_AUTOMATIC = 1u;
+constexpr uint8_t MAP_TRANSFERS_MANUAL = 2u;
 
 // config_game.h
 

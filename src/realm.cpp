@@ -710,7 +710,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     // extract the first word which we hope is the username
     // this is not necessarily true though since info messages also include channel MOTD's and such
 
-    if (m_GameBroadcast && !m_GameBroadcast->GetIsMirror()) {
+    if (m_GameBroadcast && m_GameBroadcast->GetIsLobbyStrict()) {
       string aboutName;
       string::size_type spIndex = message.find(' ');
 
@@ -727,7 +727,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
 
         if (message.find("Throne in game") != string::npos || message.find("currently in  game") != string::npos || message.find("currently in private game") != string::npos) {
           // note: if the game is rehosted, bnet will not be aware of the game being renamed
-          string gameName = GetPrefixedGameName(m_GameBroadcast->GetGameName());
+          string gameName = GetCustomGameName(m_GameBroadcast->GetGameName(), false);
           string::size_type GameNameFoundPos = message.find("\"" + gameName + "\"");
           if (GameNameFoundPos != string::npos && GameNameFoundPos + gameName.length() + 3 == message.length()) {
             m_GameBroadcast->AddToRealmVerified(m_HostName, aboutPlayer, true);
@@ -1012,14 +1012,26 @@ bool CRealm::GetIsDueReconnect() const
   return !m_Aura->m_Net.GetIsOutgoingThrottled(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
 }
 
-string CRealm::GetPrefixedGameName(const string& gameName) const
+string CRealm::GetCustomGameName(const string& gameName, bool isSpectator) const
 {
-  if (gameName.length() + m_Config.m_GamePrefix.length() < 31) {
-    // Check again just in case m_GamePrefix was reloaded and became prohibitively large.
-    return m_Config.m_GamePrefix + gameName;
+  // Check name sizes again just in case realm config was reloaded and prefix/suffix became prohibitively large.
+  string customGameName = gameName;
+  if (isSpectator) {
+    if (customGameName.length() + m_Config.m_WatchablePrefix.length() < 31) {
+      customGameName.append(m_Config.m_WatchablePrefix);
+    }
+    if (customGameName.length() + m_Config.m_WatchableSuffix.length() < 31) {
+      customGameName.append(m_Config.m_WatchableSuffix);
+    }
   } else {
-    return gameName;
+    if (customGameName.length() + m_Config.m_LobbyPrefix.length() < 31) {
+      customGameName.append(m_Config.m_LobbyPrefix);
+    }
+    if (customGameName.length() + m_Config.m_LobbySuffix.length() < 31) {
+      customGameName.append(m_Config.m_LobbySuffix);
+    }
   }
+  return customGameName;
 }
 
 bool CRealm::GetAnnounceHostToChat() const
@@ -1044,6 +1056,11 @@ bool CRealm::GetUnverifiedCannotStartGame() const
 bool CRealm::GetUnverifiedAutoKickedFromLobby() const
 {
   return m_Config.m_UnverifiedAutoKickedFromLobby;
+}
+
+uint8_t CRealm::GetWatchableGamesDisplayMode() const
+{
+  return m_Config.m_WatchableDisplayMode;
 }
 
 CCommandConfig* CRealm::GetCommandConfig() const
@@ -1410,7 +1427,8 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
     game->GetGameFlags(),
     game->GetAnnounceWidth(),
     game->GetAnnounceHeight(),
-    GetPrefixedGameName(game->GetGameName()), m_Config.m_UserName,
+    game->GetCustomGameName(this),
+    m_Config.m_UserName,
     game->GetUptime(),
     game->GetSourceFilePath(),
     game->GetSourceFileHashBlizz(version),

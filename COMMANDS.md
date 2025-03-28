@@ -273,6 +273,14 @@ Commands
 ## \`portforward\`
 - Syntax: portforward \<EXTPORT\> , \<INTPORT\>
 
+## \`prd\`
+- Aliases: markov
+- Syntax: prd \<NOMINAL CHANCE%\>
+
+## \`prd2\`
+- Aliases: markov2
+- Syntax: prd2 \<NOMINAL CHANCE%\>
+
 ## \`pub\`
 - Aliases: priv
 - Syntax: pub \<GAMENAME\>
