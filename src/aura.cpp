@@ -2210,6 +2210,7 @@ void CAura::UntrackGameJoinInProgress(CGame* game)
   for (auto it = begin(m_JoinInProgressGames); it != end(m_JoinInProgressGames);) {
     if (*it == game) {
       it = m_JoinInProgressGames.erase(it);
+      break;
     } else {
       ++it;
     }

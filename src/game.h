@@ -158,6 +158,7 @@ struct GameFrame
 struct GameHistory
 {
   bool                                                   m_Desynchronized;
+  bool                                                   m_SoftDesynchronized;            // desynchronizes observers
   uint8_t                                                m_GProxyEmptyActions;
   uint16_t                                               m_DefaultLatency;
   std::optional<int64_t>                                 m_StartedTicks;
@@ -172,6 +173,7 @@ struct GameHistory
 
   GameHistory()
    : m_Desynchronized(false),
+     m_SoftDesynchronized(false),
      m_GProxyEmptyActions(0),
      m_DefaultLatency(0),
      m_NumActionFrames(0)
@@ -182,8 +184,10 @@ struct GameHistory
   void AddCheckSum(const uint32_t checkSum) { m_CheckSums.push_back(checkSum); }
   inline uint32_t GetCheckSum(const size_t index) { return m_CheckSums[index]; }
   inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
-  inline void SetDesynchronized(const bool nDesynchronized) { m_Desynchronized = nDesynchronized; }
+  inline void SetDesynchronized(const bool nDesynchronized = true) { m_Desynchronized = nDesynchronized; }
   inline bool GetDesynchronized() { return m_Desynchronized; }
+  inline void SetSoftDesynchronized(const bool nSoftDesynchronized = true) { m_SoftDesynchronized = nSoftDesynchronized; }
+  inline bool GetSoftDesynchronized() { return m_SoftDesynchronized; }
   inline void SetDefaultLatency(const uint16_t nLatency) { m_DefaultLatency = nLatency; }
   inline uint16_t GetDefaultLatency() { return m_DefaultLatency; }
   inline void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }

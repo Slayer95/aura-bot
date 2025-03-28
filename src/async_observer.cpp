@@ -429,6 +429,15 @@ void CAsyncObserver::EventDesync()
   Print(text);
   m_Aura->LogPersistent(text);
 
+  if (!m_GameHistory->GetSoftDesynchronized()) {
+    m_GameHistory->SetSoftDesynchronized();
+    if (m_Game) {
+      m_Aura->UntrackGameJoinInProgress(m_Game)
+      m_Game->AnnounceDecreateToRealms();
+      if (m_Game->GetUDPEnabled()) m_Game->SendGameDiscoveryDecreate();
+    }
+  }
+
   if (!CloseConnection()) {
     return;
   }

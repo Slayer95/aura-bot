@@ -1271,7 +1271,7 @@ void CGame::UpdateJoinable()
   if (m_LastRefreshTime + 3 <= Time) {
     // send a game refresh packet to each battle.net connection
 
-    if (m_DisplayMode == GAME_PUBLIC && (HasSlotsOpen() || m_JoinInProgressVirtualUser.has_value()) && GetIsLobbyStrict()) {
+    if (m_DisplayMode == GAME_PUBLIC && (HasSlotsOpen() || m_JoinInProgressVirtualUser.has_value())) {
       for (auto& realm : m_Aura->m_Realms) {
         if (!realm->GetLoggedIn()) {
           continue;
@@ -3840,8 +3840,10 @@ void CGame::AnnounceDecreateToRealms()
     if (m_IsMirror && realm->GetIsMirror())
       continue;
 
-    realm->ResetGameChatAnnouncement();
-    realm->ResetGameBroadcastData();
+    if (realm->GetGameBroadcast() == this) {
+      realm->ResetGameChatAnnouncement();
+      realm->ResetGameBroadcastData();
+    }
   }
 }
 
@@ -5506,7 +5508,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     }
   }
   if (DesyncDetected) {
-    m_GameHistory->SetDesynchronized(true);
+    m_GameHistory->SetDesynchronized();
     string syncListText = ToNameListSentence(m_SyncPlayers[user]);
     string desyncListText = ToNameListSentence(DesyncedPlayers);
     if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
@@ -6006,10 +6008,6 @@ void CGame::EventUserMapReady(GameUser::CGameUser* user)
 // keyword: EventGameLoading
 void CGame::EventGameStartedLoading()
 {
-  if (GetUDPEnabled()) {
-    SendGameDiscoveryDecreate();
-  }
-
   m_StartedLoadingTicks    = GetTicks();
   m_LastLagScreenResetTime = GetTime();
 
@@ -6178,6 +6176,9 @@ void CGame::EventGameStartedLoading()
   }
 
   if (!m_Config.m_EnableJoinObserversInProgress && !m_Config.m_EnableJoinPlayersInProgress) {
+    if (GetUDPEnabled()) {
+      SendGameDiscoveryDecreate();
+    }
     // and finally reenter battle.net chat
     AnnounceDecreateToRealms();
   }
@@ -9849,6 +9850,7 @@ bool CGame::GetIsStageAcceptingJoins() const
   if (m_LobbyLoading || m_Exiting || GetIsGameOver()) return false;
   if (!m_CountDownStarted) return true;
   if (!m_GameLoaded) return false;
+  if (m_GameHistory->GetSoftDesynchronized()) return false;
   return m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress;
 }
 
