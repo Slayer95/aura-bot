@@ -503,6 +503,7 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
   } else {
     Print(GetLogPrefix() + "left the lobby");
   }
+  SetLeftReasonGeneric("left voluntarily");
   SetDeleteMe(true);
 }
 
