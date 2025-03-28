@@ -255,10 +255,11 @@ constexpr uint8_t BUFFERING_ENABLED_LOBBY = 8u;
 constexpr uint8_t BUFFERING_ENABLED_ALL = 15u;
 
 constexpr uint8_t GAME_FRAME_TYPE_ACTIONS = 0u;
-constexpr uint8_t GAME_FRAME_TYPE_LEAVER = 1u;
-constexpr uint8_t GAME_FRAME_TYPE_CHAT = 2u;
-constexpr uint8_t GAME_FRAME_TYPE_LATENCY = 3u;
-constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 4u;
+constexpr uint8_t GAME_FRAME_TYPE_PAUSED = 1u;
+constexpr uint8_t GAME_FRAME_TYPE_LEAVER = 2u;
+constexpr uint8_t GAME_FRAME_TYPE_CHAT = 3u;
+constexpr uint8_t GAME_FRAME_TYPE_LATENCY = 4u;
+constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 5u;
 
 constexpr uint8_t GAME_RESULT_SOURCE_NONE = 0u;
 constexpr uint8_t GAME_RESULT_SOURCE_LEAVECODE = 1u;

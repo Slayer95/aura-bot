@@ -326,7 +326,7 @@ bool CAsyncObserver::PushGameFrames()
   bool success = false;
   auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
   auto itEnd = end(m_GameHistory->m_PlayingBuffer);
-  while (it != itEnd && (gameDurationWanted >= m_Latency || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
+  while (it != itEnd && (m_Latency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
     switch (it->GetType()) {
       case GAME_FRAME_TYPE_GPROXY:
         // if stored, GAME_FRAME_TYPE_GPROXY always precedes GAME_FRAME_TYPE_ACTIONS
@@ -334,17 +334,19 @@ bool CAsyncObserver::PushGameFrames()
         break;
       case GAME_FRAME_TYPE_LATENCY:
         // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
-        m_Latency = ByteArrayToUInt32(it->GetBytes(), false, 0);
+        m_Latency = ByteArrayToUInt16(it->GetBytes(), false, 0);
         break;
-      case GAME_FRAME_TYPE_ACTIONS:
-        if (gameDurationWanted < m_Latency) break;
+      case GAME_FRAME_TYPE_ACTIONS:  
         gameDurationWanted -= m_Latency;
+        // falls through
+      case GAME_FRAME_TYPE_PAUSED:
         success = true;
         m_LastFrameTicks = Ticks;
         ++m_ActionFrameCounter;
-        // falls through
+        Send(it->GetBytes());
+        break;
       default:
-        // GAME_FRAME_TYPE_ACTIONS, GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT
+        // GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT
         Send(it->GetBytes());
     }
     ++it;

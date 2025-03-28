@@ -1849,7 +1849,7 @@ void CGame::RunActionsScheduler()
   if (newLatency != oldLatency) {
     m_LatencyTicks = newLatency;
     if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-      vector<uint8_t> storedLatency = CreateByteArray(newLatency, false);
+      vector<uint8_t> storedLatency = CreateByteArray(static_cast<uint16_t>(newLatency), false);
       m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LATENCY, storedLatency);
     }
   }
@@ -3496,7 +3496,7 @@ void CGame::SendAllActions()
   SendAll(actions);
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_ACTIONS, actions);
+    m_GameHistory->m_PlayingBuffer.emplace_back(m_Paused ? GAME_FRAME_TYPE_PAUSED : GAME_FRAME_TYPE_ACTIONS, actions);
     m_GameHistory->AddActionFrameCounter();
   }
 
@@ -4823,12 +4823,12 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
 
   string realmHostName;
   if (fromRealm) realmHostName = fromRealm->GetServer();
-  LOG_APP_IF(LOG_LEVEL_INFO, "spectator joined: : [" + joinRequest->GetName() + "@" + realmHostName + "#" + to_string(observer->GetUID()) + "] from [" + observer->GetIPString() + "]")
+  LOG_APP_IF(LOG_LEVEL_INFO, "spectator joined [" + joinRequest->GetName() + "@" + realmHostName + "#" + to_string(observer->GetUID()) + "] from [" + observer->GetIPString() + "]")
 }
 
 void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* clientMap)
 {
-  int64_t Ticks = GetTicks(); int64_t Time = GetTime();
+  int64_t Ticks = GetTicks();
   const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   UpdateUserMapProgression(user, clientMap->GetFileSize(), expectedMapSize);
 
@@ -5847,7 +5847,7 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 
 void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* clientMap)
 {
-  int64_t Ticks = GetTicks(); int64_t Time = GetTime();
+  int64_t Ticks = GetTicks();
   const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   UpdateUserMapProgression(user, clientMap->GetFileSize(), expectedMapSize);
 
@@ -7205,7 +7205,7 @@ void CGame::ResolveBuffering()
   if (m_Config.m_LoadInGame) {
     m_BufferingEnabled |= BUFFERING_ENABLED_LOADING;
   }
-  if (!m_Config.m_EnableJoinObserversInProgress && !m_Config.m_EnableJoinPlayersInProgress) {
+  if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
     m_BufferingEnabled |= BUFFERING_ENABLED_ALL;
   }
 }
@@ -9344,7 +9344,7 @@ bool CGame::Resume(GameUser::CGameUser* user, const bool isDisconnect)
   return Resume(user, GetLastActionFrame(), isDisconnect);
 }
 
-bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
+bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool /*isDisconnect*/)
 {
   const uint8_t fromUID = fromUser->GetUID();
 
@@ -9730,6 +9730,7 @@ const CGameVirtualUser* CGame::InspectVirtualUserFromRef(const CGameVirtualUserR
       return &fakeUser;
     }
   }
+  return nullptr;
 }
 
 uint8_t CGame::FakeAllSlots()
@@ -10037,7 +10038,7 @@ void CGame::RunHCLEncoding()
     uint8_t handicapIndex = (m_Slots[currentSlot].GetHandicap() - 50) / 10;
     uint8_t charIndex = static_cast<uint8_t>(HCLChars.find(character));
     uint8_t slotInfo = handicapIndex;
-    if (encodeVirtualPlayers && m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsRealPlayerSlot(currentSlot)) {
+    if (encodeVirtualPlayers && isVirtualPlayer) {
       slotInfo += 6;
     }
     slotInfo += charIndex * (encodeVirtualPlayers ? 12 : 6);

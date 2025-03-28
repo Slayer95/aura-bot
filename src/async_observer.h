@@ -46,7 +46,7 @@ public:
   std::shared_ptr<GameHistory>                                  m_GameHistory;
   bool                                                          m_MapReady;
   bool                                                          m_Desynchronized;
-  uint32_t                                                      m_Offset;
+  size_t                                                        m_Offset;
   uint8_t                                                       m_Goal;
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
