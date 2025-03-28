@@ -425,7 +425,7 @@ void CAsyncObserver::EventDesync()
   while (!m_CheckSums.empty()) {
     m_CheckSums.pop();
   }
-  string text = GetLogPrefix() + "desynchronized on " + to_string(m_SyncCounter) + "th checksum - sent " + to_string(m_Offset) + " total frames (" + to_string(m_ActionFrameCounter) + " actions)";
+  string text = GetLogPrefix() + "desynchronized on " + ToOrdinalName(m_SyncCounter) + " checksum - sent " + to_string(m_Offset) + " total frames (" + to_string(m_ActionFrameCounter) + " actions)";
   Print(text);
   m_Aura->LogPersistent(text);
 
@@ -520,6 +520,11 @@ void CAsyncObserver::Send(const std::vector<uint8_t>& data)
   if (m_Socket && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);
   }
+}
+
+void CAsyncObserver::SendOtherPlayersInfo()
+{
+  Send(m_GameHistory->m_PlayersBuffer);
 }
 
 void CAsyncObserver::SendChat(const string& message)

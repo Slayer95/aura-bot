@@ -125,6 +125,7 @@ public:
   // other functions
 
   void Send(const std::vector<uint8_t>& data) final;
+  void SendOtherPlayersInfo();
   void SendChat(const std::string& message);
   std::string GetLogPrefix() const;
 };

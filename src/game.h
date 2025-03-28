@@ -164,6 +164,7 @@ struct GameHistory
   size_t                                                 m_NumActionFrames;
   std::vector<uint32_t>                                  m_CheckSums;
   std::vector<uint8_t>                                   m_LobbyBuffer;
+  std::vector<uint8_t>                                   m_PlayersBuffer;
   std::vector<uint8_t>                                   m_SlotsBuffer;
   std::vector<uint8_t>                                   m_LoadingRealBuffer;             // real W3GS_GAMELOADED messages for real players. In standard load, this buffer is filled in real-time. When load-in-game is enabled, this buffer is prefilled.
   std::vector<uint8_t>                                   m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
@@ -591,6 +592,8 @@ public:
   std::vector<uint8_t>*                                  GetGameDiscoveryInfoTemplate();
   std::vector<uint8_t>                                   GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
   std::vector<uint8_t>                                   GetSlotInfo() const;
+  std::vector<uint8_t>                                   GetFakeUsersInfo() const;
+  std::vector<uint8_t>                                   GetJoinedPlayersInfo() const;
 
   void                                                   AnnounceToRealm(CRealm* realm);
   void                                                   AnnounceDecreateToRealms();

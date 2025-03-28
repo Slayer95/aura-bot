@@ -3104,32 +3104,45 @@ void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
   Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
 
-void CGame::SendFakeUsersInfo(CConnection* user) const
+vector<uint8_t> CGame::GetFakeUsersInfo() const
 {
-  if (m_FakeUsers.empty()) {
-    return;
-  }
-
+  vector<uint8_t> info;
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
     if (m_JoinInProgressVirtualUser.has_value() && fakeUser.GetUID() == m_JoinInProgressVirtualUser->GetUID()) {
       continue;
     }
-    Send(user, fakeUser.GetPlayerInfoBytes());
+    vector<uint8_t> playerInfo = fakeUser.GetPlayerInfoBytes();
+    AppendByteArrayFast(info, playerInfo);
+  }
+  return info;
+}
+
+vector<uint8_t> CGame::GetJoinedPlayersInfo() const
+{
+  vector<uint8_t> info;
+  for (auto& otherPlayer : m_Users) {
+    if (otherPlayer->GetDeleteMe()) {
+      continue;
+    }
+    AppendByteArrayFast(info,
+      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
+    );
+  }
+  return info;
+}
+
+void CGame::SendFakeUsersInfo(CConnection* user) const
+{
+  if (!m_FakeUsers.empty()) {
+    Send(user, GetFakeUsersInfo());
   }
 }
 
 void CGame::SendJoinedPlayersInfo(CConnection* connection) const
 {
-  for (auto& otherPlayer : m_Users) {
-    if (otherPlayer->GetDeleteMe()) {
-      continue;
-    }
-    if (connection->GetType() == INCON_TYPE_PLAYER && static_cast<GameUser::CGameUser*>(connection) == otherPlayer) {
-      continue;
-    }
-    Send(connection,
-      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
-    );
+  vector<uint8_t> info = GetJoinedPlayersInfo();
+  if (!info.empty()) {
+    Send(connection, info);
   }
 }
 
@@ -4717,7 +4730,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
 
   // Now, socket belongs to GameUser::CGameUser. Don't look for it in CConnection.
 
-  m_Users.push_back(Player);
+  //m_Users.push_back(Player);
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
 
@@ -4751,6 +4764,8 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
 
   // send a map check packet to the new user.
   SendMapAndVersionCheck(Player, gameVersion);
+
+  m_Users.push_back(Player);
 
   // send slot info to everyone, so the new user gets this info twice but everyone else still needs to know the new slot layout.
   SendAllSlotInfo();
@@ -4814,8 +4829,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   connection->SetDeleteMe(true);
 
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFOJOIN(observer->GetUID(), observer->GetSocket()->GetPortLE(), observer->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
-  SendFakeUsersInfo(observer);
-  SendJoinedPlayersInfo(observer);
+  observer->SendOtherPlayersInfo();
   SendMapAndVersionCheck(observer, gameVersion);
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
@@ -6054,10 +6068,15 @@ void CGame::EventGameStartedLoading()
     user->SetWhoisShouldBeSent(false);
   }
 
-  // record the number of starting users
+  // record the starting users
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
+
+  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetFakeUsersInfo());
+    AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetJoinedPlayersInfo());
+  }
 
   // When load-in-game is disabled, m_LoadingVirtualBuffer also includes
   // load messages for disconnected real players, but we let automatic resizing handle that.

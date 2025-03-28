@@ -193,6 +193,16 @@ template <typename T>
   return (version.first - 1) * 37 + version.second;
 }
 
+[[nodiscard]] inline std::string ToOrdinalName(const size_t number)
+{
+  switch (number % 10) {
+    case 1: return std::to_string(number) + "st";
+    case 2: return std::to_string(number) + "nd";
+    case 3: return std::to_string(number) + "rd";
+    default: return std::to_string(number) + "th";
+  }
+}
+
 inline void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const uint32_t offset, bool bigEndian = false)
 {
   if (!bigEndian) {
