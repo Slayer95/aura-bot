@@ -308,7 +308,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
                   "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
                 )
 
-                SendAuth(BNETProtocol::SEND_SID_AUTH_CHECK(GetInfoClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, "uwu"));
+                SendAuth(BNETProtocol::SEND_SID_AUTH_CHECK(GetInfoClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, m_Config.m_LicenseeName));
                 SendAuth(BNETProtocol::SEND_SID_ZERO());
                 SendNetworkConfig();
               } else {

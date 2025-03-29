@@ -106,6 +106,7 @@ struct CRealmConfig
   bool m_PassWordCaseSensitive;
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
+  std::string m_LicenseeName;
 
   bool m_ExeAuthUseCustomVersionData;
   bool m_ExeAuthIgnoreVersionError;

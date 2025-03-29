@@ -51,6 +51,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_AutoRegister(false),
     m_UserNameCaseSensitive(false),
     m_PassWordCaseSensitive(false),
+    m_LicenseeName("Aura"),
 
     m_Admins({}),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
@@ -139,6 +140,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_UserName               = CFG.GetString(m_CFGKeyPrefix + "username", m_UserName);
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
+  m_LicenseeName           = CFG.GetString(m_CFGKeyPrefix + "licensee", m_LicenseeName);
 
   m_ExeAuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.custom", false);
   m_ExeAuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.ignore_version_error", false);
@@ -266,6 +268,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_PassWordCaseSensitive(nRootConfig->m_PassWordCaseSensitive),
     m_UserName(nRootConfig->m_UserName),
     m_PassWord(nRootConfig->m_PassWord),
+    m_LicenseeName(nRootConfig->m_LicenseeName),
 
     m_ExeAuthUseCustomVersionData(nRootConfig->m_ExeAuthUseCustomVersionData),
     m_ExeAuthIgnoreVersionError(nRootConfig->m_ExeAuthIgnoreVersionError),
@@ -396,6 +399,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_PassWord               = CFG.GetString(m_CFGKeyPrefix + "password", m_PassWord);
   if (!m_UserNameCaseSensitive) m_UserName = ToLowerCase(m_UserName);
   if (!m_PassWordCaseSensitive) m_PassWord = ToLowerCase(m_PassWord);
+
+  m_LicenseeName           = CFG.GetString(m_CFGKeyPrefix + "licensee", m_LicenseeName);
 
   m_ExeAuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.custom", m_ExeAuthUseCustomVersionData);
   m_ExeAuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.ignore_version_error", m_ExeAuthIgnoreVersionError);
