@@ -1127,7 +1127,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_INFO(const Version& ver, uint32_t localeID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
+  vector<uint8_t> SEND_SID_AUTH_INFO(const Version& ver, uint32_t localeID, uint32_t languageID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
   {
     const uint8_t ProtocolID[]    = {0, 0, 0, 0};
     const uint8_t PlatformID[]    = {54, 56, 88, 73};              // "IX86"
@@ -1149,9 +1149,9 @@ namespace BNETProtocol
     AppendByteArray(packet, LocalIP, 4);                           // Local IP for NAT compatibility
     AppendByteArray(packet, TimeZoneBias, 4);                      // Time Zone Bias
     AppendByteArray(packet, localeID, false);                      // Locale ID
-    AppendByteArray(packet, localeID, false);                      // Language ID (copying the locale ID should be sufficient since we don't care about sublanguages)
-    AppendByteArrayFast(packet, countryShort);                     // Country Abbreviation
-    AppendByteArrayFast(packet, country);                          // Country
+    AppendByteArray(packet, languageID, false);                    // Language ID
+    AppendByteArrayFast(packet, countryShort);                     // Country Abbreviation - PvPGN accepts up to 64 characters, including null terminator
+    AppendByteArrayFast(packet, country);                          // Country - PvPGN accepts up to 128 characters, including null terminator
     AssignLength(packet);
 
     return packet;

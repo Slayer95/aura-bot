@@ -309,20 +309,6 @@ namespace BNETProtocol
     inline bool GetIsInGame() { return status == BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PRIVATE || status == BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PUBLIC; }
   };
 
-  [[nodiscard]] inline uint8_t GetSimplifiedLocale(const uint32_t localeID) {
-    switch (localeID) {
-    case 1042:
-      return PVPGN_LOCALE_KO_KR;
-    case 1031:
-      return PVPGN_LOCALE_DE_DE;
-    case 10250:
-      return PVPGN_LOCALE_ES_ES;
-    case 1033:
-    default:
-      return PVPGN_LOCALE_EN_US;
-    }
-  }
-
   [[nodiscard]] inline bool GetIsCommandConflictsWithWhisper(const uint64_t hashCode, bool hasArgument) {
     switch (hashCode) {
       case HashCode("kick"):

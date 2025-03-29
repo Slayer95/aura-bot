@@ -46,7 +46,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
     // Inheritable
     m_Enabled(true),
-    m_LocaleShort({69, 80, 115, 101}), // esPE, reversed
+    m_LocaleShort({83, 69, 115, 101}), // esES, reversed
+    m_Locale(PVPGN_LOCALE_ES_ES),
     m_AutoRegister(false),
     m_UserNameCaseSensitive(false),
     m_PassWordCaseSensitive(false),
@@ -60,9 +61,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 {
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", "PER");
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", "Peru");
-  m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", "system");
+  m_Win32Locale            = CFG.GetString(m_CFGKeyPrefix + "win32.lcid", "system");
 
-  string localeShort = CFG.GetString(m_CFGKeyPrefix + "locale_short", 4, 4, "esPE"); // esPE reversed
+  string localeShort = CFG.GetString(m_CFGKeyPrefix + "locale_short", 4, 4, "esES");
   copy_n(localeShort.rbegin(), 4, m_LocaleShort.begin());
 
   {
@@ -77,21 +78,26 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
       }
     }
     if (localeError) {
-      Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "locale_short> - must provide a valid pair of ISO 639-1, ISO 3166 alpha-2 identifiers (e.g. enUS)");
+      Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "locale_short> - must provide a valid pair of ISO 639-1, ISO 3166 alpha-2 identifiers");
       CFG.SetFailed();
     }
   }
 
-  if (m_Locale == "system") {
-    m_LocaleID = 10250;
+  vector<string> shortLocales = {"enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"};
+  m_Locale = CFG.GetStringIndex(m_CFGKeyPrefix + "locale_short", shortLocales, PVPGN_LOCALE_ES_ES);
+
+  if (m_Win32Locale == "system") {
+    m_Win32LocaleID = 10250;
   } else {
     try {
-      m_LocaleID  = stoul(m_Locale);
+      m_Win32LocaleID  = stoul(m_Win32Locale);
     } catch (...) {
-      m_Locale = "system";
-      m_LocaleID = 10250;
+      m_Win32Locale = "system";
+      m_Win32LocaleID = 10250;
     }
   }
+
+  m_Win32LanguageID        = CFG.GetUint32(m_CFGKeyPrefix + "win32.langid", m_Win32LocaleID);
 
   m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", "!");
   if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
@@ -229,9 +235,11 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
     m_CountryShort(nRootConfig->m_CountryShort),
     m_Country(nRootConfig->m_Country),
-    m_Locale(nRootConfig->m_Locale),
-    m_LocaleID(nRootConfig->m_LocaleID),
+    m_Win32Locale(nRootConfig->m_Win32Locale),
+    m_Win32LocaleID(nRootConfig->m_Win32LocaleID),
+    m_Win32LanguageID(nRootConfig->m_Win32LanguageID),
     m_LocaleShort(nRootConfig->m_LocaleShort),
+    m_Locale(nRootConfig->m_Locale),
 
     m_PrivateCmdToken(nRootConfig->m_PrivateCmdToken),
     m_BroadcastCmdToken(nRootConfig->m_BroadcastCmdToken),
@@ -308,10 +316,11 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", m_CountryShort);
   m_Country                = CFG.GetString(m_CFGKeyPrefix + "country", m_Country);
-  m_Locale                 = CFG.GetString(m_CFGKeyPrefix + "locale", m_Locale);
+  m_Win32Locale            = CFG.GetString(m_CFGKeyPrefix + "win32.lcid", m_Win32Locale);
 
+  // These are the main supported locales, but we still accept other values
   if (CFG.Exists(m_CFGKeyPrefix + "locale_short")) {
-    string localeShort       = CFG.GetString(m_CFGKeyPrefix + "locale_short", 4, 4, "esPE");
+    string localeShort = CFG.GetString(m_CFGKeyPrefix + "locale_short", 4, 4, "esES");
     bool localeError = CFG.GetErrorLast();
     if (!localeError) {
       copy_n(localeShort.rbegin(), 4, m_LocaleShort.begin());
@@ -324,20 +333,25 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
       }
     }
     if (localeError) {
-      Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "locale_short> - must provide a valid pair of ISO 639-1, ISO 3166 alpha-2 identifiers (e.g. enUS)");
+      Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "locale_short> - must provide a valid pair of ISO 639-1, ISO 3166 alpha-2 identifiers");
       CFG.SetFailed();
     }
   }
 
-  if (m_Locale == "system") {
-    m_LocaleID = 10250;
+  vector<string> shortLocales = {"enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"};
+  m_Locale = CFG.GetStringIndex(m_CFGKeyPrefix + "locale_short", shortLocales, m_Locale);
+
+  if (m_Win32Locale == "system") {
+    m_Win32LocaleID = 10250;
   } else {
     try {
-      m_LocaleID  = stoul(m_Locale);
+      m_Win32LocaleID  = stoul(m_Win32Locale);
     } catch (...) {
-      m_Locale = nRootConfig->m_Locale;
+      m_Win32Locale = nRootConfig->m_Win32Locale;
     }
   }
+
+  m_Win32LanguageID        = CFG.GetUint32(m_CFGKeyPrefix + "win32.langid", m_Win32LanguageID);
 
   m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", m_PrivateCmdToken);
   if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
@@ -460,7 +474,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_WhisperErrorReply      = CFG.GetString(m_CFGKeyPrefix + "protocol.whisper.error_reply", m_WhisperErrorReply);
 
   if (m_WhisperErrorReply.empty()) {
-    switch (BNETProtocol::GetSimplifiedLocale(m_LocaleID)) {
+    switch (m_Locale) {
       case PVPGN_LOCALE_DE_DE:
         m_WhisperErrorReply = "Dieser Nutzer ist nicht eingeloggt.";
         break;

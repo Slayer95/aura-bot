@@ -73,10 +73,12 @@ struct CRealmConfig
   // Inheritable
 
   std::string m_CountryShort;                    // ISO 3166 alpha-3 country code
-  std::string m_Country;                         // country name
-  std::string m_Locale;                          // locale used: numeric or "system"
-  uint32_t m_LocaleID;                           // see: http://msdn.microsoft.com/en-us/library/0h88fahh%28VS.85%29.aspx
+  std::string m_Country;                         // country name - this is actually useless
+  std::string m_Win32Locale;                     // locale used: numeric or "system" - this is nominal, used to figure out m_Win32LocaleID - but also actually useless
+  uint32_t m_Win32LocaleID;                      // see: http://msdn.microsoft.com/en-us/library/0h88fahh%28VS.85%29.aspx - this is actually useless
+  uint32_t m_Win32LanguageID;
   std::array<uint8_t, 4> m_LocaleShort;          // language (ISO 639-1 concatenated with ISO 3166 alpha-2) - reversed internally
+  uint8_t m_Locale;                              // PvPGN supports a limited set of languages, so use 1 byte to identify them
 
   std::string m_PrivateCmdToken;                 // a symbol prefix to identify commands and send a private reply
   std::string m_BroadcastCmdToken;               // a symbol prefix to identify commands and send the reply to everyone
@@ -97,7 +99,7 @@ struct CRealmConfig
   uint16_t m_PublicHostPort;                     // the port to broadcast in pvpgn servers
 
   std::string m_HostName;                        // server address to connect to
-  uint16_t    m_ServerPort;
+  uint16_t m_ServerPort;
 
   bool m_AutoRegister;
   bool m_UserNameCaseSensitive;

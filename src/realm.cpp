@@ -596,7 +596,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
       }
       SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
       m_GameVersion = gameVersion.value();
-      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameVersion, m_Config.m_LocaleID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
+      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
       m_Socket->DoSend(send_fd);
       m_LastGameListTime       = Time;
       return;
@@ -850,7 +850,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 
 optional<BNETProtocol::WhoisInfo> CRealm::ParseWhoisInfo(const string& message) const
 {
-  return BNETProtocol::PARSE_WHOIS_INFO(message, BNETProtocol::GetSimplifiedLocale(m_Config.m_LocaleID));
+  return BNETProtocol::PARSE_WHOIS_INFO(message, m_Config.m_Locale);
 }
 
 bool CRealm::GetConnected() const
