@@ -711,32 +711,19 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     // this is not necessarily true though since info messages also include channel MOTD's and such
 
     if (m_GameBroadcast && m_GameBroadcast->GetIsLobbyStrict()) {
-      string aboutName;
-      string::size_type spIndex = message.find(' ');
-
-      if (spIndex != string::npos)
-        aboutName = message.substr(0, spIndex);
-      else
-        aboutName = message;
-
-      GameUser::CGameUser* aboutPlayer = m_GameBroadcast->GetUserFromName(aboutName, true);
-      if (aboutPlayer && aboutPlayer->GetRealmInternalID() == m_InternalServerID) {
-        // handle spoof checking for current game
-        // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
-        // at all times you can still /w the bot with "spoofcheck" to manually spoof check
-
-        if (message.find("Throne in game") != string::npos || message.find("currently in  game") != string::npos || message.find("currently in private game") != string::npos) {
-          // note: if the game is rehosted, bnet will not be aware of the game being renamed
-          string gameName = GetCustomGameName(m_GameBroadcast->GetGameName(), false);
-          string::size_type GameNameFoundPos = message.find("\"" + gameName + "\"");
-          if (GameNameFoundPos != string::npos && GameNameFoundPos + gameName.length() + 3 == message.length()) {
+      // note: if the game is rehosted, bnet will not be aware of the game being renamed
+      optional<BNETProtocol::WhoisInfo> whoisInfo = ParseWhoisInfo(message);
+      if (whoisInfo.has_value() && !whoisInfo->name.empty()) {
+        GameUser::CGameUser* aboutPlayer = m_GameBroadcast->GetUserFromName(whoisInfo->name, true);
+        if (aboutPlayer && aboutPlayer->GetRealmInternalID() == m_InternalServerID) {
+          // handle spoof checking for current game
+          // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
+          // at all times you can still /w the bot with "spoofcheck" to manually spoof check
+          if (whoisInfo->GetIsInGame() && whoisInfo->location == GetCustomGameName(m_GameBroadcast->GetGameName(), false)) {
             m_GameBroadcast->AddToRealmVerified(m_HostName, aboutPlayer, true);
           } else {
             m_GameBroadcast->ReportSpoofed(m_HostName, aboutPlayer);
           }
-        } else {
-          // [ERROR] Unknown user.
-          // [INFO] User was last seen on:
         }
       }
     }
@@ -856,6 +843,21 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   }
 
   return deleteMessage;
+}
+
+optional<BNETProtocol::WhoisInfo> CRealm::ParseWhoisInfo(const string& message) const
+{
+  switch (m_Config.m_LocaleID) {
+    case 1042:
+      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_KO_KR);
+    case 1031:
+      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_DE_DE);
+    case 10250:
+      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_ES_ES);
+    case 1033:
+    default:
+      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_EN_US);
+  }
 }
 
 bool CRealm::GetEnabled() const

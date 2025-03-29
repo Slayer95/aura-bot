@@ -520,6 +520,19 @@ constexpr uint8_t REALM_OBSERVER_DISPLAY_NONE = 0u;
 constexpr uint8_t REALM_OBSERVER_DISPLAY_LOW_PRIORITY = 1u;
 constexpr uint8_t REALM_OBSERVER_DISPLAY_ALWAYS = 2u;
 
+constexpr uint8_t PVPGN_LOCALE_EN_US = 0u;
+constexpr uint8_t PVPGN_LOCALE_CS_CZ = 1u;
+constexpr uint8_t PVPGN_LOCALE_DE_DE = 2u;
+constexpr uint8_t PVPGN_LOCALE_ES_ES = 3u;
+constexpr uint8_t PVPGN_LOCALE_FR_FR = 4u;
+constexpr uint8_t PVPGN_LOCALE_IT_IT = 5u;
+constexpr uint8_t PVPGN_LOCALE_JA_JA = 6u;
+constexpr uint8_t PVPGN_LOCALE_KO_KR = 7u;
+constexpr uint8_t PVPGN_LOCALE_PL_PL = 8u;
+constexpr uint8_t PVPGN_LOCALE_RU_RU = 9u;
+constexpr uint8_t PVPGN_LOCALE_ZH_CN = 10u;
+constexpr uint8_t PVPGN_LOCALE_ZH_TW = 11u;
+
 // config_net.h 
 
 constexpr uint8_t MAP_TRANSFERS_NEVER = 0u;

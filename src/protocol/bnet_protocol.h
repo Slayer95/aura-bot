@@ -121,6 +121,69 @@ namespace BNETProtocol
     constexpr uint32_t EMOTE               = 23u; // emote
   };
 
+  namespace WhoisTexts
+  {
+    namespace enUS
+    {
+      constexpr const char* CLIENT_WC3 = "is using Warcraft III";
+      constexpr const char* CLIENT_TFT = " Frozen Throne";
+      constexpr const char* LOCATION_PREFIX = " and is currently ";
+      constexpr const char* LOCATION_PRIVATE_GAME = "in private game \"";
+      constexpr const char* LOCATION_PUBLIC_GAME = "in  game \"";
+      constexpr const char* LOCATION_CHAT = "in channel \"";
+      constexpr const char* LAST_SEEN_PREFIX = "User was last seen on: ";
+      constexpr const char* USER_UNKNOWN = "Unknown user.";
+      constexpr const char* USER_OFFLINE = "User is offline";
+      constexpr const char* LOCATION_SUFFIX = "\".";
+    };
+
+    namespace esES
+    {
+      constexpr const char* CLIENT_WC3 = "está usando Warcraft III";
+      constexpr const char* CLIENT_TFT = " Frozen Throne";
+      constexpr const char* LOCATION_PREFIX = " y está actualmente dentro ";
+      constexpr const char* LOCATION_PRIVATE_GAME = "de privado juego \"";
+      constexpr const char* LOCATION_PUBLIC_GAME = "de  juego \"";
+      constexpr const char* LOCATION_CHAT = "del canal \"";
+      constexpr const char* LAST_SEEN_PREFIX = "Usuario última vez visto el: ";
+      constexpr const char* USER_UNKNOWN = "Usuario desconocido.";
+      constexpr const char* USER_OFFLINE = "El usuario está desconectado";
+      constexpr const char* LOCATION_SUFFIX = "\".";
+    };
+
+    namespace deDE
+    {
+      constexpr const char* CLIENT_WC3 = "ist nutzt Warcraft III";
+      constexpr const char* CLIENT_TFT = " Frozen Throne";
+      constexpr const char* LOCATION_PREFIX = " und ist ist momentan ";
+      constexpr const char* LOCATION_PRIVATE_GAME = "im privat Spiel \"";
+      constexpr const char* LOCATION_PUBLIC_GAME = "im  Spiel \"";
+      constexpr const char* LOCATION_CHAT = "im Kanal \"";
+      constexpr const char* LAST_SEEN_PREFIX = "Nutzer zuletzt gesehen am: ";
+      constexpr const char* USER_UNKNOWN = "Unbekannter Nutzer.";
+      constexpr const char* USER_OFFLINE = "Nutzer ist offline.";
+      constexpr const char* LOCATION_SUFFIX = "\""; // trailing period missing in German
+    };
+  };
+  
+  namespace WhoisInfoStatus
+  {
+    constexpr uint8_t UNKNOWN                = 0u;  // received when you join a channel (includes users in the channel and their information)
+    constexpr uint8_t OFFLINE_GENERIC        = 1u;  // received when someone joins the channel you're currently in
+    constexpr uint8_t OFFLINE_LAST_SEEN      = 2u;  // received when someone leaves the channel you're currently in
+    constexpr uint8_t ONLINE                 = 3u;
+    constexpr uint8_t ONLINE_IN_GAME_PUBLIC  = 4u;
+    constexpr uint8_t ONLINE_IN_GAME_PRIVATE = 5u;
+    constexpr uint8_t ONLINE_IN_CHAT         = 6u;
+  };
+
+  namespace WhoisInfoClientTag
+  {
+    constexpr uint8_t None                   = 0u;
+    constexpr uint8_t ROC                    = 1u;
+    constexpr uint8_t TFT                    = 2u;
+  };
+
   struct AuthInfoResult
   {
     const bool success;
@@ -212,6 +275,39 @@ namespace BNETProtocol
     ~IncomingChatResult() = default;
   };
 
+  //
+  // WhoisInfo
+  //
+
+  struct WhoisInfo
+  {
+    const uint8_t status;
+    const uint8_t tag;
+    const std::string name;
+    const std::string location;
+
+    WhoisInfo(const uint8_t nStatus)
+     : status(nStatus),
+       tag(BNETProtocol::WhoisInfoClientTag::None)
+     {};
+
+    WhoisInfo(const uint8_t nStatus, const uint8_t nTag)
+     : status(nStatus),
+       tag(nTag)
+     {};
+
+    WhoisInfo(const uint8_t nStatus, const uint8_t nTag, const std::string& nName, const std::string& nLocation)
+     : status(nStatus),
+       tag(nTag),
+       name(nName),
+       location(nLocation)
+     {};
+
+    ~WhoisInfo() = default;
+
+    inline bool GetIsInGame() { return status == BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PRIVATE || status == BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PUBLIC; }
+  };
+
   [[nodiscard]] inline size_t GetMessageSize(const std::vector<uint8_t> message) { return message.size(); }
   [[nodiscard]] inline size_t GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) { return message.size() + name.size(); }
       
@@ -232,6 +328,8 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);
   [[nodiscard]] std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
   [[nodiscard]] std::optional<CConfig> RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
+
+  [[nodiscard]] std::optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const std::string& message, const uint8_t realmLocale);
 
   // send functions
 

@@ -512,6 +512,386 @@ namespace BNETProtocol
     return gameConfig;
   }
 
+  optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const string& message, const uint8_t realmLocale)
+  {
+    optional<BNETProtocol::WhoisInfo> result;
+    const string::size_type spIndex = message.find(' ');
+    const string::size_type msgSize = message.size();
+    if (spIndex == string::npos) {
+      return result;
+    }
+    switch (realmLocale) {
+      case PVPGN_LOCALE_EN_US: {
+        constexpr static string::size_type SIZE_CLIENT_WC3 = GetStringLength(BNETProtocol::WhoisTexts::enUS::CLIENT_WC3);
+        constexpr static string::size_type SIZE_CLIENT_TFT = GetStringLength(BNETProtocol::WhoisTexts::enUS::CLIENT_TFT);
+        constexpr static string::size_type SIZE_LOCATION_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::enUS::LOCATION_PREFIX);
+        constexpr static string::size_type SIZE_LOCATION_SUFFIX = GetStringLength(BNETProtocol::WhoisTexts::enUS::LOCATION_SUFFIX);
+        constexpr static string::size_type SIZE_LOCATION_PRIVATE_GAME = GetStringLength(BNETProtocol::WhoisTexts::enUS::LOCATION_PRIVATE_GAME);
+        constexpr static string::size_type SIZE_LOCATION_PUBLIC_GAME = GetStringLength(BNETProtocol::WhoisTexts::enUS::LOCATION_PUBLIC_GAME);
+        constexpr static string::size_type SIZE_LOCATION_CHAT = GetStringLength(BNETProtocol::WhoisTexts::enUS::LOCATION_CHAT);
+        constexpr static string::size_type SIZE_LAST_SEEN_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::enUS::LAST_SEEN_PREFIX);
+
+        if (msgSize >= spIndex + SIZE_CLIENT_WC3 &&
+            message.substr(spIndex, SIZE_CLIENT_WC3) == BNETProtocol::WhoisTexts::enUS::CLIENT_WC3) {
+          string::size_type tagEndPos = spIndex + SIZE_CLIENT_WC3;
+          uint8_t clientTag = BNETProtocol::WhoisInfoClientTag::ROC;
+          if ((msgSize >= spIndex + SIZE_CLIENT_WC3 + SIZE_CLIENT_TFT) &&
+              (message.substr(tagEndPos, SIZE_CLIENT_TFT) == BNETProtocol::WhoisTexts::enUS::CLIENT_TFT))
+          {
+            clientTag = BNETProtocol::WhoisInfoClientTag::TFT;
+            tagEndPos += SIZE_CLIENT_TFT;
+          }
+          if (msgSize == tagEndPos + 1 && message[tagEndPos] == '.') {
+            // {} is using Warcraft III.
+            // {} is using Warcraft III Frozen Throne.
+            result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE, BNETProtocol::WhoisInfoClientTag::TFT);
+          } else if (
+              (msgSize >= tagEndPos + SIZE_LOCATION_PREFIX) &&
+              (message.substr(
+                tagEndPos,
+                SIZE_LOCATION_PREFIX
+              ) == BNETProtocol::WhoisTexts::enUS::LOCATION_PREFIX) &&
+              (message.substr(msgSize - 2) == BNETProtocol::WhoisTexts::enUS::LOCATION_SUFFIX)
+          ) {
+            if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_PRIVATE_GAME +
+                SIZE_LOCATION_SUFFIX
+              ) && (
+                message.substr(
+                  tagEndPos + SIZE_LOCATION_PREFIX,
+                  SIZE_LOCATION_PRIVATE_GAME
+                ) == BNETProtocol::WhoisTexts::enUS::LOCATION_PRIVATE_GAME
+              )
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_PRIVATE_GAME
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_PRIVATE_GAME
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PRIVATE, clientTag, message.substr(0, spIndex), gameName);
+            } else if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_PUBLIC_GAME +
+                SIZE_LOCATION_SUFFIX
+              ) &&
+              message.substr(
+                tagEndPos + SIZE_LOCATION_PREFIX,
+                SIZE_LOCATION_PUBLIC_GAME
+              ) == BNETProtocol::WhoisTexts::enUS::LOCATION_PUBLIC_GAME
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_PUBLIC_GAME
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_PUBLIC_GAME
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PUBLIC, clientTag, message.substr(0, spIndex), gameName);
+            } else if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_CHAT +
+                SIZE_LOCATION_SUFFIX
+              ) &&
+              message.substr(
+                tagEndPos + SIZE_LOCATION_PREFIX,
+                SIZE_LOCATION_CHAT
+              ) == BNETProtocol::WhoisTexts::enUS::LOCATION_CHAT
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_CHAT
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_CHAT
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_CHAT, clientTag, message.substr(0, spIndex), gameName);
+            }
+          }
+        } else if (
+          msgSize >= SIZE_LAST_SEEN_PREFIX &&
+          message.substr(
+            0,
+            SIZE_LAST_SEEN_PREFIX
+          ) == BNETProtocol::WhoisTexts::enUS::LAST_SEEN_PREFIX
+        ) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::OFFLINE_LAST_SEEN);
+        } else if (message == BNETProtocol::WhoisTexts::enUS::USER_UNKNOWN) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::UNKNOWN);
+        } else if (message == BNETProtocol::WhoisTexts::enUS::USER_OFFLINE) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::OFFLINE_GENERIC);
+        }
+        break;
+      }
+      case PVPGN_LOCALE_ES_ES: {
+        constexpr static string::size_type SIZE_CLIENT_WC3 = GetStringLength(BNETProtocol::WhoisTexts::esES::CLIENT_WC3);
+        constexpr static string::size_type SIZE_CLIENT_TFT = GetStringLength(BNETProtocol::WhoisTexts::esES::CLIENT_TFT);
+        constexpr static string::size_type SIZE_LOCATION_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::esES::LOCATION_PREFIX);
+        constexpr static string::size_type SIZE_LOCATION_SUFFIX = GetStringLength(BNETProtocol::WhoisTexts::esES::LOCATION_SUFFIX);
+        constexpr static string::size_type SIZE_LOCATION_PRIVATE_GAME = GetStringLength(BNETProtocol::WhoisTexts::esES::LOCATION_PRIVATE_GAME);
+        constexpr static string::size_type SIZE_LOCATION_PUBLIC_GAME = GetStringLength(BNETProtocol::WhoisTexts::esES::LOCATION_PUBLIC_GAME);
+        constexpr static string::size_type SIZE_LOCATION_CHAT = GetStringLength(BNETProtocol::WhoisTexts::esES::LOCATION_CHAT);
+        constexpr static string::size_type SIZE_LAST_SEEN_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::esES::LAST_SEEN_PREFIX);
+
+        if (msgSize >= spIndex + SIZE_CLIENT_WC3 &&
+            message.substr(spIndex, SIZE_CLIENT_WC3) == BNETProtocol::WhoisTexts::esES::CLIENT_WC3) {
+          string::size_type tagEndPos = spIndex + SIZE_CLIENT_WC3;
+          uint8_t clientTag = BNETProtocol::WhoisInfoClientTag::ROC;
+          if ((msgSize >= spIndex + SIZE_CLIENT_WC3 + SIZE_CLIENT_TFT) &&
+              (message.substr(tagEndPos, SIZE_CLIENT_TFT) == BNETProtocol::WhoisTexts::esES::CLIENT_TFT))
+          {
+            clientTag = BNETProtocol::WhoisInfoClientTag::TFT;
+            tagEndPos += SIZE_CLIENT_TFT;
+          }
+          if (msgSize == tagEndPos + 1 && message[tagEndPos] == '.') {
+            // {} is using Warcraft III.
+            // {} is using Warcraft III Frozen Throne.
+            result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE, BNETProtocol::WhoisInfoClientTag::TFT);
+          } else if (
+              (msgSize >= tagEndPos + SIZE_LOCATION_PREFIX) &&
+              (message.substr(
+                tagEndPos,
+                SIZE_LOCATION_PREFIX
+              ) == BNETProtocol::WhoisTexts::esES::LOCATION_PREFIX) &&
+              (message.substr(msgSize - 2) == BNETProtocol::WhoisTexts::esES::LOCATION_SUFFIX)
+          ) {
+            if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_PRIVATE_GAME +
+                SIZE_LOCATION_SUFFIX
+              ) && (
+                message.substr(
+                  tagEndPos + SIZE_LOCATION_PREFIX,
+                  SIZE_LOCATION_PRIVATE_GAME
+                ) == BNETProtocol::WhoisTexts::esES::LOCATION_PRIVATE_GAME
+              )
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_PRIVATE_GAME
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_PRIVATE_GAME
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PRIVATE, clientTag, message.substr(0, spIndex), gameName);
+            } else if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_PUBLIC_GAME +
+                SIZE_LOCATION_SUFFIX
+              ) &&
+              message.substr(
+                tagEndPos + SIZE_LOCATION_PREFIX,
+                SIZE_LOCATION_PUBLIC_GAME
+              ) == BNETProtocol::WhoisTexts::esES::LOCATION_PUBLIC_GAME
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_PUBLIC_GAME
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_PUBLIC_GAME
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PUBLIC, clientTag, message.substr(0, spIndex), gameName);
+            } else if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_CHAT +
+                SIZE_LOCATION_SUFFIX
+              ) &&
+              message.substr(
+                tagEndPos + SIZE_LOCATION_PREFIX,
+                SIZE_LOCATION_CHAT
+              ) == BNETProtocol::WhoisTexts::esES::LOCATION_CHAT
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_CHAT
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_CHAT
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_CHAT, clientTag, message.substr(0, spIndex), gameName);
+            }
+          }
+        } else if (
+          msgSize >= SIZE_LAST_SEEN_PREFIX &&
+          message.substr(
+            0,
+            SIZE_LAST_SEEN_PREFIX
+          ) == BNETProtocol::WhoisTexts::esES::LAST_SEEN_PREFIX
+        ) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::OFFLINE_LAST_SEEN);
+        } else if (message == BNETProtocol::WhoisTexts::esES::USER_UNKNOWN) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::UNKNOWN);
+        } else if (message == BNETProtocol::WhoisTexts::esES::USER_OFFLINE) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::OFFLINE_GENERIC);
+        }
+        break;
+      }
+      case PVPGN_LOCALE_DE_DE: {
+        constexpr static string::size_type SIZE_CLIENT_WC3 = GetStringLength(BNETProtocol::WhoisTexts::deDE::CLIENT_WC3);
+        constexpr static string::size_type SIZE_CLIENT_TFT = GetStringLength(BNETProtocol::WhoisTexts::deDE::CLIENT_TFT);
+        constexpr static string::size_type SIZE_LOCATION_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::deDE::LOCATION_PREFIX);
+        constexpr static string::size_type SIZE_LOCATION_SUFFIX = GetStringLength(BNETProtocol::WhoisTexts::deDE::LOCATION_SUFFIX);
+        constexpr static string::size_type SIZE_LOCATION_PRIVATE_GAME = GetStringLength(BNETProtocol::WhoisTexts::deDE::LOCATION_PRIVATE_GAME);
+        constexpr static string::size_type SIZE_LOCATION_PUBLIC_GAME = GetStringLength(BNETProtocol::WhoisTexts::deDE::LOCATION_PUBLIC_GAME);
+        constexpr static string::size_type SIZE_LOCATION_CHAT = GetStringLength(BNETProtocol::WhoisTexts::deDE::LOCATION_CHAT);
+        constexpr static string::size_type SIZE_LAST_SEEN_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::deDE::LAST_SEEN_PREFIX);
+
+        if (msgSize >= spIndex + SIZE_CLIENT_WC3 &&
+            message.substr(spIndex, SIZE_CLIENT_WC3) == BNETProtocol::WhoisTexts::deDE::CLIENT_WC3) {
+          string::size_type tagEndPos = spIndex + SIZE_CLIENT_WC3;
+          uint8_t clientTag = BNETProtocol::WhoisInfoClientTag::ROC;
+          if ((msgSize >= spIndex + SIZE_CLIENT_WC3 + SIZE_CLIENT_TFT) &&
+              (message.substr(tagEndPos, SIZE_CLIENT_TFT) == BNETProtocol::WhoisTexts::deDE::CLIENT_TFT))
+          {
+            clientTag = BNETProtocol::WhoisInfoClientTag::TFT;
+            tagEndPos += SIZE_CLIENT_TFT;
+          }
+          if (msgSize == tagEndPos + 1 && message[tagEndPos] == '.') {
+            // {} is using Warcraft III.
+            // {} is using Warcraft III Frozen Throne.
+            result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE, BNETProtocol::WhoisInfoClientTag::TFT);
+          } else if (
+              (msgSize >= tagEndPos + SIZE_LOCATION_PREFIX) &&
+              (message.substr(
+                tagEndPos,
+                SIZE_LOCATION_PREFIX
+              ) == BNETProtocol::WhoisTexts::deDE::LOCATION_PREFIX) &&
+              (message.substr(msgSize - 2) == BNETProtocol::WhoisTexts::deDE::LOCATION_SUFFIX)
+          ) {
+            if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_PRIVATE_GAME +
+                SIZE_LOCATION_SUFFIX
+              ) && (
+                message.substr(
+                  tagEndPos + SIZE_LOCATION_PREFIX,
+                  SIZE_LOCATION_PRIVATE_GAME
+                ) == BNETProtocol::WhoisTexts::deDE::LOCATION_PRIVATE_GAME
+              )
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_PRIVATE_GAME
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_PRIVATE_GAME
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PRIVATE, clientTag, message.substr(0, spIndex), gameName);
+            } else if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_PUBLIC_GAME +
+                SIZE_LOCATION_SUFFIX
+              ) &&
+              message.substr(
+                tagEndPos + SIZE_LOCATION_PREFIX,
+                SIZE_LOCATION_PUBLIC_GAME
+              ) == BNETProtocol::WhoisTexts::deDE::LOCATION_PUBLIC_GAME
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_PUBLIC_GAME
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_PUBLIC_GAME
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PUBLIC, clientTag, message.substr(0, spIndex), gameName);
+            } else if (
+              msgSize >= tagEndPos + (
+                SIZE_LOCATION_PREFIX +
+                SIZE_LOCATION_CHAT +
+                SIZE_LOCATION_SUFFIX
+              ) &&
+              message.substr(
+                tagEndPos + SIZE_LOCATION_PREFIX,
+                SIZE_LOCATION_CHAT
+              ) == BNETProtocol::WhoisTexts::deDE::LOCATION_CHAT
+            ) {
+              string gameName = message.substr(
+                tagEndPos + (
+                  SIZE_LOCATION_PREFIX +
+                  SIZE_LOCATION_CHAT
+                ), message.size() - (
+                  tagEndPos + (
+                    SIZE_LOCATION_SUFFIX +
+                    SIZE_LOCATION_PREFIX +
+                    SIZE_LOCATION_CHAT
+                  )
+                )
+              );
+              result.emplace(BNETProtocol::WhoisInfoStatus::ONLINE_IN_CHAT, clientTag, message.substr(0, spIndex), gameName);
+            }
+          }
+        } else if (
+          msgSize >= SIZE_LAST_SEEN_PREFIX &&
+          message.substr(
+            0,
+            SIZE_LAST_SEEN_PREFIX
+          ) == BNETProtocol::WhoisTexts::deDE::LAST_SEEN_PREFIX
+        ) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::OFFLINE_LAST_SEEN);
+        } else if (message == BNETProtocol::WhoisTexts::deDE::USER_UNKNOWN) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::UNKNOWN);
+        } else if (message == BNETProtocol::WhoisTexts::deDE::USER_OFFLINE) {
+          result.emplace(BNETProtocol::WhoisInfoStatus::OFFLINE_GENERIC);
+        }
+        break;
+      }
+    }
+
+    return result;
+  }
+
   ////////////////////
   // SEND FUNCTIONS //
   ////////////////////

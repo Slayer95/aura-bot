@@ -49,6 +49,7 @@
 #include "includes.h"
 #include "socket.h"
 #include "config/config_realm.h"
+#include "protocol/bnet_protocol.h"
 
 #include <fstream>
 
@@ -160,6 +161,7 @@ public:
   inline bool                             GetInChat() const { return !m_CurrentChannel.empty(); }
   inline std::string                      GetCurrentChannel() const { return m_CurrentChannel; }
 
+  std::optional<BNETProtocol::WhoisInfo>  ParseWhoisInfo(const std::string& message) const;
   bool                                    GetEnabled() const;
   bool                                    GetPvPGN() const;
   std::string                             GetServer() const;

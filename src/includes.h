@@ -68,6 +68,12 @@
 #include <tuple>
 #include <unordered_set>
 
+std::string::size_type constexpr GetStringLength(const char* str)
+{
+    return *str ? 1 + GetStringLength(str + 1) : 0;
+}
+
+
 #include "constants.h"
 #include "forward.h"
 
