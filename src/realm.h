@@ -162,6 +162,7 @@ public:
   inline std::string                      GetCurrentChannel() const { return m_CurrentChannel; }
 
   std::optional<BNETProtocol::WhoisInfo>  ParseWhoisInfo(const std::string& message) const;
+  bool                                    GetConnected() const;
   bool                                    GetEnabled() const;
   bool                                    GetPvPGN() const;
   std::string                             GetServer() const;

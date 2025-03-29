@@ -54,6 +54,7 @@
 
 #include "../includes.h"
 #include "../config/config.h"
+#include "../hash.h"
 
 namespace BNETProtocol
 {
@@ -308,8 +309,36 @@ namespace BNETProtocol
     inline bool GetIsInGame() { return status == BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PRIVATE || status == BNETProtocol::WhoisInfoStatus::ONLINE_IN_GAME_PUBLIC; }
   };
 
+  [[nodiscard]] inline uint8_t GetSimplifiedLocale(const uint32_t localeID) {
+    switch (localeID) {
+    case 1042:
+      return PVPGN_LOCALE_KO_KR;
+    case 1031:
+      return PVPGN_LOCALE_DE_DE;
+    case 10250:
+      return PVPGN_LOCALE_ES_ES;
+    case 1033:
+    default:
+      return PVPGN_LOCALE_EN_US;
+    }
+  }
+
+  [[nodiscard]] inline bool GetIsCommandConflictsWithWhisper(const uint64_t hashCode, bool hasArgument) {
+    switch (hashCode) {
+      case HashCode("kick"):
+      case HashCode("kill"):
+      case HashCode("serverban"):
+        return true;
+      case HashCode("netinfo"):
+        return hasArgument;
+      default:
+        return false;
+    }
+  }
+
   [[nodiscard]] inline size_t GetMessageSize(const std::vector<uint8_t> message) { return message.size(); }
   [[nodiscard]] inline size_t GetWhisperSize(const std::vector<uint8_t> message, const std::vector<uint8_t> name) { return message.size() + name.size(); }
+ 
       
   // receive functions
 

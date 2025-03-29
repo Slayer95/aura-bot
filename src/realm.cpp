@@ -483,53 +483,51 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
       }
     }
 
-    if (m_LoggedIn) {
-      bool waitForPriority = false;
-      if (m_ChatQueueJoinCallback && GetInChat()) {
-        if (m_ChatQueueJoinCallback->GetIsStale()) {
-          delete m_ChatQueueJoinCallback;
+    bool waitForPriority = false;
+    if (m_LoggedIn && m_ChatQueueJoinCallback && GetInChat()) {
+      if (m_ChatQueueJoinCallback->GetIsStale()) {
+        delete m_ChatQueueJoinCallback;
+        m_ChatQueueJoinCallback = nullptr;
+      } else {
+        if (CheckWithinChatQuota(m_ChatQueueJoinCallback)) {
+          if (SendQueuedMessage(m_ChatQueueJoinCallback)) {
+            delete m_ChatQueueJoinCallback;
+          }
           m_ChatQueueJoinCallback = nullptr;
         } else {
-          if (CheckWithinChatQuota(m_ChatQueueJoinCallback)) {
-            if (SendQueuedMessage(m_ChatQueueJoinCallback)) {
-              delete m_ChatQueueJoinCallback;
-            }
-            m_ChatQueueJoinCallback = nullptr;
-          } else {
-            waitForPriority = true;
-          }
+          waitForPriority = true;
         }
       }
-      if (m_ChatQueueGameHostWhois) {
-        if (m_ChatQueueGameHostWhois->GetIsStale()) {
-          delete m_ChatQueueGameHostWhois;
+    }
+    if (m_LoggedIn && m_ChatQueueGameHostWhois) {
+      if (m_ChatQueueGameHostWhois->GetIsStale()) {
+        delete m_ChatQueueGameHostWhois;
+        m_ChatQueueGameHostWhois = nullptr;
+      } else {
+        if (CheckWithinChatQuota(m_ChatQueueGameHostWhois)) {
+          if (SendQueuedMessage(m_ChatQueueGameHostWhois)) {
+            delete m_ChatQueueGameHostWhois;
+          }
           m_ChatQueueGameHostWhois = nullptr;
         } else {
-          if (CheckWithinChatQuota(m_ChatQueueGameHostWhois)) {
-            if (SendQueuedMessage(m_ChatQueueGameHostWhois)) {
-              delete m_ChatQueueGameHostWhois;
-            }
-            m_ChatQueueGameHostWhois = nullptr;
-          } else {
-            waitForPriority = true;
-          }
+          waitForPriority = true;
         }
       }
-      if (!waitForPriority) {
-        while (!m_ChatQueueMain.empty()) {
-          CQueuedChatMessage* nextMessage = m_ChatQueueMain.front();
-          if (nextMessage->GetIsStale()) {
-            delete nextMessage;
+    }
+    if (!waitForPriority) {
+      while (m_LoggedIn && !m_ChatQueueMain.empty()) {
+        CQueuedChatMessage* nextMessage = m_ChatQueueMain.front();
+        if (nextMessage->GetIsStale()) {
+          delete nextMessage;
+          m_ChatQueueMain.pop();
+        } else {
+          if (CheckWithinChatQuota(nextMessage)) {
+            if (SendQueuedMessage(nextMessage)) {
+              delete nextMessage;
+            }
             m_ChatQueueMain.pop();
           } else {
-            if (CheckWithinChatQuota(nextMessage)) {
-              if (SendQueuedMessage(nextMessage)) {
-                delete nextMessage;
-              }
-              m_ChatQueueMain.pop();
-            } else {
-              break;
-            }
+            break;
           }
         }
       }
@@ -837,6 +835,11 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
       break;
     }
 
+    case CHAT_CALLBACK_RESET: {
+      ResetConnection(false);
+      break;
+    }
+
     default:
       // Do nothing
       break;
@@ -847,17 +850,12 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 
 optional<BNETProtocol::WhoisInfo> CRealm::ParseWhoisInfo(const string& message) const
 {
-  switch (m_Config.m_LocaleID) {
-    case 1042:
-      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_KO_KR);
-    case 1031:
-      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_DE_DE);
-    case 10250:
-      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_ES_ES);
-    case 1033:
-    default:
-      return BNETProtocol::PARSE_WHOIS_INFO(message, PVPGN_LOCALE_EN_US);
-  }
+  return BNETProtocol::PARSE_WHOIS_INFO(message, BNETProtocol::GetSimplifiedLocale(m_Config.m_LocaleID));
+}
+
+bool CRealm::GetConnected() const
+{
+  return m_Socket != nullptr && m_Socket->GetConnected();
 }
 
 bool CRealm::GetEnabled() const

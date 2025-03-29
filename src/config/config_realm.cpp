@@ -27,6 +27,7 @@
 #include "config_bot.h"
 #include "../command.h"
 #include "../util.h"
+#include "../protocol/bnet_protocol.h"
 
 #include <utility>
 #include <algorithm>
@@ -55,7 +56,6 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_WatchableDisplayMode(REALM_OBSERVER_DISPLAY_NONE),
     m_FloodImmune(false),
 
-    m_WhisperErrorReply("That user is not logged on."),
     m_QueryGameLists(false)
 {
   m_CountryShort           = CFG.GetString(m_CFGKeyPrefix + "country_short", "PER");
@@ -187,7 +187,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
 
-  m_WhisperErrorReply      = CFG.GetString(m_CFGKeyPrefix + "protocol.whisper.error_reply", m_WhisperErrorReply);
+  m_WhisperErrorReply      = CFG.GetString(m_CFGKeyPrefix + "protocol.whisper.error_reply", string());
   m_QueryGameLists         = CFG.GetBool(m_CFGKeyPrefix + "queries.games_list.enabled", m_QueryGameLists);
 
   m_Enabled                = CFG.GetBool(m_CFGKeyPrefix + "enabled", true);
@@ -458,6 +458,22 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
 
   m_WhisperErrorReply      = CFG.GetString(m_CFGKeyPrefix + "protocol.whisper.error_reply", m_WhisperErrorReply);
+
+  if (m_WhisperErrorReply.empty()) {
+    switch (BNETProtocol::GetSimplifiedLocale(m_LocaleID)) {
+      case PVPGN_LOCALE_DE_DE:
+        m_WhisperErrorReply = "Dieser Nutzer ist nicht eingeloggt.";
+        break;
+      case PVPGN_LOCALE_ES_ES:
+        m_WhisperErrorReply = "Ese usuario no está conectado.";
+        break;
+      case PVPGN_LOCALE_EN_US:
+      default:
+        m_WhisperErrorReply = "That user is not logged on.";
+        break;
+    }
+  }
+
   m_QueryGameLists         = CFG.GetBool(m_CFGKeyPrefix + "queries.games_list.enabled", m_QueryGameLists);
 
   m_UnverifiedRejectCommands      = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_commands", m_UnverifiedRejectCommands);

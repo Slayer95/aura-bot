@@ -4484,14 +4484,25 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "say <REALM> , <MESSAGE>");
         break;
       }
-      bool IsCommand = Message[0] == '/';
-      if (IsCommand && !GetIsSudo()) {
+      bool isBNETCommand = Message[0] == '/';
+      bool willConflictWithWhisper = false;
+      if (isBNETCommand && !GetIsSudo()) {
         ErrorReply("You are not allowed to send bnet commands.");
         break;
       }
-      if (!IsCommand && m_Aura->GetIsAdvertisingGames()) {
+      if (!isBNETCommand && m_Aura->GetIsAdvertisingGames()) {
         ErrorReply("Cannot send bnet chat messages while the bot is hosting a game lobby.");
         break;
+      }
+      if (isBNETCommand) {
+        string bnetCommand;
+        string::size_type spIndex = Message.find(' ');
+        if (spIndex == string::npos) {
+          bnetCommand = ToLowerCase(Message.substr(1));
+        } else {
+          bnetCommand = ToLowerCase(Message.substr(1, spIndex -1));
+        }
+        willConflictWithWhisper = BNETProtocol::GetIsCommandConflictsWithWhisper(HashCode(bnetCommand), spIndex != string::npos);
       }
       transform(begin(RealmId), end(RealmId), begin(RealmId), [](char c) { return static_cast<char>(std::tolower(c)); });
 
@@ -4502,8 +4513,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         if (bnet->GetIsMirror())
           continue;
         if (ToAllRealms || bnet->GetInputID() == RealmId) {
-          if (IsCommand) {
-            bnet->QueueCommand(Message)->SetEarlyFeedback("Command sent.");
+          if (isBNETCommand) {
+            CQueuedChatMessage* queuedMessage = bnet->QueueCommand(Message);
+            queuedMessage->SetEarlyFeedback("Command sent.");
+            if (willConflictWithWhisper) queuedMessage->SetCallback(CHAT_CALLBACK_RESET, 0);
           } else {
             bnet->QueueChatChannel(Message)->SetEarlyFeedback("Message sent.");
           }
