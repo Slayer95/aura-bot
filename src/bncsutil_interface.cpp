@@ -290,15 +290,15 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   if (m_KeyInfoTFT.size() != 36)
     Print("[BNCS] unable to create TFT key info - invalid TFT key");
 
-  if (realmConfig->m_AuthUseCustomVersionData) {
-    if (realmConfig->m_AuthExeVersion.has_value()) {
-      copy_n(realmConfig->m_AuthExeVersion.value().begin(), 4, m_EXEVersion.begin());
+  if (realmConfig->m_ExeAuthUseCustomVersionData) {
+    if (realmConfig->m_ExeAuthVersion.has_value()) {
+      copy_n(realmConfig->m_ExeAuthVersion.value().begin(), 4, m_EXEVersion.begin());
     }
-    if (realmConfig->m_AuthExeVersionHash.has_value()) {
-      copy_n(realmConfig->m_AuthExeVersionHash.value().begin(), 4, m_EXEVersionHash.begin());
+    if (realmConfig->m_ExeAuthVersionHash.has_value()) {
+      copy_n(realmConfig->m_ExeAuthVersionHash.value().begin(), 4, m_EXEVersionHash.begin());
     }
-    if (!realmConfig->m_AuthExeInfo.empty()) {
-      m_EXEInfo = realmConfig->m_AuthExeInfo;
+    if (!realmConfig->m_ExeAuthInfo.empty()) {
+      m_EXEInfo = realmConfig->m_ExeAuthInfo;
     }
     return true;
   }

@@ -107,14 +107,14 @@ struct CRealmConfig
   std::string m_UserName;                        //
   std::string m_PassWord;                        //
 
-  bool m_AuthUseCustomVersionData;
-  bool m_AuthIgnoreVersionError;
-  uint8_t m_AuthPasswordHashType;                         // pvpgn or battle.net
+  bool m_ExeAuthUseCustomVersionData;
+  bool m_ExeAuthIgnoreVersionError;
+  uint8_t m_LoginHashType;                       // pvpgn or battle.net
 
   std::optional<Version> m_GameVersion;                   // WC3 major+minor version
-  std::optional<std::vector<uint8_t>> m_AuthExeVersion;       // 4 bytes: WC3 version as {build, patch, minor, major}
-  std::optional<std::vector<uint8_t>> m_AuthExeVersionHash;   // 4 bytes
-  std::string m_AuthExeInfo;                                  // filename.exe dd/MM/yy hh::mm:ss size
+  std::optional<std::vector<uint8_t>> m_ExeAuthVersion;       // 4 bytes: WC3 version as {build, patch, minor, major}
+  std::optional<std::vector<uint8_t>> m_ExeAuthVersionHash;   // 4 bytes
+  std::string m_ExeAuthInfo;                                  // filename.exe dd/MM/yy hh::mm:ss size
 
   std::string m_FirstChannel;                    //
   std::set<std::string> m_SudoUsers;             //

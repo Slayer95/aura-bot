@@ -313,7 +313,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
                 SendNetworkConfig();
               } else {
                 if (m_Aura->MatchLogLevel(LOG_LEVEL_ERROR)) {
-                  if (m_Config.m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
+                  if (m_Config.m_LoginHashType == REALM_AUTH_PVPGN) {
                     Print(GetLogPrefix() + "config error - misconfigured <game.install_path>");
                   } else {
                     Print(GetLogPrefix() + "config error - misconfigured <game.install_path>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.roc>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.tft>");
@@ -329,7 +329,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
 
             case BNETProtocol::Magic::AUTH_CHECK: {
               BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(Data);
-              if (m_Config.m_AuthIgnoreVersionError || checkResult.state == BNETProtocol::KeyResult::GOOD)
+              if (m_Config.m_ExeAuthIgnoreVersionError || checkResult.state == BNETProtocol::KeyResult::GOOD)
               {
                 // cd keys accepted
                 DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
@@ -865,7 +865,7 @@ bool CRealm::GetEnabled() const
 
 bool CRealm::GetPvPGN() const
 {
-  return m_Config.m_AuthPasswordHashType == REALM_AUTH_PVPGN;
+  return m_Config.m_LoginHashType == REALM_AUTH_PVPGN;
 }
 
 string CRealm::GetServer() const
@@ -1162,7 +1162,7 @@ bool CRealm::TrySignup()
   if (m_FailedSignup || !m_Config.m_AutoRegister) {
     return false;
   }
-  if (m_Config.m_AuthPasswordHashType != REALM_AUTH_PVPGN) {
+  if (m_Config.m_LoginHashType != REALM_AUTH_PVPGN) {
     return false;
   }
   Signup();
@@ -1171,7 +1171,7 @@ bool CRealm::TrySignup()
 
 void CRealm::Signup()
 {
-  //if (m_Config.m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
+  //if (m_Config.m_LoginHashType == REALM_AUTH_PVPGN) {
   // exclusive to pvpgn logon
   PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "registering new account in PvPGN realm")
   m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config.m_PassWord);
@@ -1181,7 +1181,7 @@ void CRealm::Signup()
 
 bool CRealm::Login()
 {
-  if (m_Config.m_AuthPasswordHashType == REALM_AUTH_PVPGN) {
+  if (m_Config.m_LoginHashType == REALM_AUTH_PVPGN) {
     // pvpgn logon
     DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using pvpgn logon type")
     m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config.m_PassWord);
