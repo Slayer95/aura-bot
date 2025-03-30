@@ -2919,13 +2919,14 @@ optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const s
   return optional<Version>(match->second);
 }
 
-Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const
+Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm, bool& isExact) const
 {
   optional<Version> maybeVersion;
   if (user->GetIsGameSeeker()) {
     const CGameSeeker* seeker = reinterpret_cast<const CGameSeeker*>(user);
     maybeVersion = seeker->GetMaybeGameVersion();
     if (maybeVersion.has_value()) {
+      isExact = true;
       return maybeVersion.value();
     }
   }
@@ -2933,6 +2934,7 @@ Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncoming
   if (fromRealm) {
     maybeVersion = fromRealm->GetExpectedGameVersion();
     if (maybeVersion.has_value()) {
+      isExact = true;
       return maybeVersion.value();
     }
   }
@@ -2941,10 +2943,12 @@ Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncoming
     string playerName = TrimString(ToLowerCase(joinRequest->GetName()));
     maybeVersion = GetOverrideLANVersion(playerName, user->GetRemoteAddress());
     if (maybeVersion.has_value()) {
+      isExact = true;
       return maybeVersion.value();
     }
   }
 
+  isExact = m_SupportedGameVersionsMin == m_SupportedGameVersionsMax;
   return GetVersion();
 }
 
@@ -4794,12 +4798,14 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
     if (matchingRealm) internalRealmId = matchingRealm->GetInternalID();
   }
 
-  Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm);
+  bool isExactVersion = false;
+  Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm, isExactVersion);
 
   GameUser::CGameUser* Player = new GameUser::CGameUser(
     this,
     connection, 
     UID == 0xFF ? GetNewUID() : UID,
+    isExactVersion,
     gameVersion,
     internalRealmId,
     JoinedRealm,

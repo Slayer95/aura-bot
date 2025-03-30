@@ -102,6 +102,7 @@ namespace GameUser
     uint8_t                          m_UID;                          // the player's UID
     uint8_t                          m_OldUID;
     uint8_t                          m_PseudonymUID;
+    bool                             m_GameVersionIsExact;
     Version                          m_GameVersion;
     bool                             m_Verified;                     // if the player has spoof checked or not
     bool                             m_Owner;                        // if the player has spoof checked or not
@@ -154,7 +155,7 @@ namespace GameUser
     std::optional<uint8_t>           m_SelfGameResult;
     std::optional<uint8_t>           m_FinalGameResult;
 
-    CGameUser(CGame* game, CConnection* connection, uint8_t nUID, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
+    CGameUser(CGame* game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
 
     [[nodiscard]] uint32_t GetOperationalRTT() const;
@@ -165,6 +166,7 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
     [[nodiscard]] inline uint8_t                  GetOldUID() const { return m_OldUID; }
     [[nodiscard]] inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
+    [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
     [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
     [[nodiscard]] inline std::string              GetName() const { return m_Name; }
     [[nodiscard]] std::string                     GetLowerName() const;
