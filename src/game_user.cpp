@@ -535,11 +535,6 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             break;
           }
 
-          case GameProtocol::Magic::MAPPART_OK: {
-            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_OK", LOG_C | LOG_P);
-            break;
-          }
-
           case GameProtocol::Magic::MAPPART_ERR: {
             m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_ERR", LOG_C | LOG_P);
             break;
@@ -548,6 +543,11 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           case GameProtocol::Magic::PROTO_BUF: {
             // Serialized protocol buffers
             m_Game->SendAll(Data);
+            break;
+          }
+
+          case GameProtocol::Magic::MAPPART_OK: // spams a lot
+          default: {
             break;
           }
         }
