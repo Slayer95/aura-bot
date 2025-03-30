@@ -492,13 +492,47 @@ assigned hero.
 
 This flag is disabled by default.
 
+## \`--share-units\`
+
+When enabled, this flag allows players in a multiplayer RTS game to share control 
+of their units with their teammates. This feature is particularly useful in 
+team-based matches, where players may need to coordinate strategies, assist allies, 
+or manage units in case a teammate becomes temporarily unavailable.
+
+Shared unit control enables teammates to:
+- Issue movement and attack commands to each other's units.
+- Manage economy and production by controlling allied structures.
+- Provide tactical support by micro-managing units during engagements.
+
+This feature is commonly used in competitive play, cooperative campaigns, and 
+team-based multiplayer modes where coordination is essential.
+
+This flag is disabled by default.
+
+## \`--no-share-units\`
+
+When enabled, this flag prevents players from sharing control of their units with 
+their teammates. Each player retains exclusive control over their own units and 
+structures, ensuring that no unintended actions or strategic interference occur 
+from allies.
+
+Disabling unit sharing may be preferable in games where:
+- Players want to maintain complete individual control over their armies.
+- Tactical miscoordination due to shared control could be a disadvantage.
+- Competitive integrity is a priority, preventing any potential misuse of unit sharing.
+
+This option ensures that each player is fully responsible for their own forces, 
+reinforcing independent strategic decision-making.
+
+This flag is disabled by default.
+
 ## \`--ownerless\`
 
 This flag prevents players from taking ownership of the hosted game.
 
 This flag is disabled by default.
 
-## `--latency-equalizer`
+## \`--latency-equalizer\`
 
 When enabled, this flag activates the latency equalizer, ensuring that all 
 players in a multiplayer session experience similar input delays. This helps 
@@ -515,7 +549,7 @@ This option is equivalent to ``<hosting.latency.equalizer.enabled>`` in `config.
 
 This option is equivalent to ``<map.hosting.latency.equalizer.enabled>`` in map configuration
 
-## `--no-latency-equalizer`
+## \`--no-latency-equalizer\`
 
 When enabled, this flag disables the latency equalizer, allowing players to 
 experience input delays based on their individual network conditions. Players 
@@ -545,7 +579,7 @@ long or even permanent duration may show up when some games start, rendering it 
 
 This flag is disabled by default.
 
-## `--lag-screen`
+## \`--lag-screen\`
 
 When enabled, this flag instructs the game to pause when significant lag issues 
 are detected in a multiplayer session. This ensures that all players experience 
@@ -560,7 +594,7 @@ This option is equivalent to ``<net.lag_screen.enabled>`` in `config.ini`.
 
 This option is equivalent to ``<map.net.lag_screen.enabled>`` in map configuration
 
-## `--no-lag-screen`
+## \`--no-lag-screen\`
 
 When enabled, this flag disables the automatic pausing of the game during lag 
 spikes. Instead of pausing, the game will continue running in real-time, 

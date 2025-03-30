@@ -342,6 +342,8 @@ public:
   std::optional<uint32_t>               m_LobbyCountDownInterval;
   std::optional<uint32_t>               m_LobbyCountDownStartValue;
 
+  std::optional<bool>                   m_ShareUnitsEnabled;
+
   std::optional<uint16_t>               m_Latency;
   std::optional<bool>                   m_LatencyEqualizerEnabled;
   std::optional<uint8_t>                m_LatencyEqualizerFrames;

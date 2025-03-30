@@ -1197,6 +1197,11 @@ Config
 - Default value: |cFF4080C0Aura
 - Error handling: Use default value
 
+## \`hosting.share_units.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`hosting.vote_kick.min_percent\`
 - Type: uint8
 - Default value: 70

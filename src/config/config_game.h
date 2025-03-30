@@ -74,6 +74,8 @@ struct CGameConfig
   uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
   uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
 
+  bool                     m_ShareUnitsEnabled;
+
   uint16_t                 m_LatencyMin;                   // the minimum configurable game refresh latency
   uint16_t                 m_LatencyMax;                   // the maximum configurable game refresh latency
   uint32_t                 m_SyncLimitMaxMilliSeconds;     // constraint for configurable parameters m_SyncLimit * m_Latency

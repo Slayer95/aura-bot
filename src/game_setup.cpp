@@ -1613,9 +1613,12 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 
   if (nCLI->m_GameCheckJoinable.has_value()) SetIsCheckJoinable(nCLI->m_GameCheckJoinable.value());
   if (nCLI->m_GameNotifyJoins.has_value()) SetNotifyJoins(nCLI->m_GameNotifyJoins.value());
-  if (nCLI->m_GameCheckReservation.has_value()) SetCheckReservation(nCLI->m_GameCheckReservation.value());
   if (nCLI->m_GameLobbyReplaceable.has_value()) SetLobbyReplaceable(nCLI->m_GameLobbyReplaceable.value());
   if (nCLI->m_GameLobbyAutoRehosted.has_value()) SetLobbyAutoRehosted(nCLI->m_GameLobbyAutoRehosted.value());
+
+  if (nCLI->m_GameShareUnitsEnabled.has_value()) SetShareUnitsEnabled(nCLI->m_GameShareUnitsEnabled.value());
+
+  if (nCLI->m_GameCheckReservation.has_value()) SetCheckReservation(nCLI->m_GameCheckReservation.value());
 
   if (nCLI->m_GameAutoStartPlayers.has_value()) SetAutoStartPlayers(nCLI->m_GameAutoStartPlayers.value());
   if (nCLI->m_GameAutoStartSeconds.has_value()) SetAutoStartSeconds(nCLI->m_GameAutoStartSeconds.value());

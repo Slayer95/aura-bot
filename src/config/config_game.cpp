@@ -94,6 +94,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownInterval                 = CFG.GetUint32("hosting.game_start.count_down_interval", 500);
   m_LobbyCountDownStartValue               = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
 
+  m_ShareUnitsEnabled                      = CFG.GetBool("hosting.share_units.enabled", true);
+
   m_LatencyMin                             = CFG.GetUint16("hosting.latency.min", 10);
   m_LatencyMax                             = CFG.GetUint16("hosting.latency.max", 500);
 
@@ -236,6 +238,8 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
 
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownInterval, m_LobbyCountDownInterval, m_LobbyCountDownInterval)
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownStartValue, m_LobbyCountDownStartValue, m_LobbyCountDownStartValue)
+
+  INHERIT_MAP_OR_CUSTOM(m_ShareUnitsEnabled, m_ShareUnitsEnabled, m_ShareUnitsEnabled)
 
   INHERIT(m_LatencyMin)
   INHERIT(m_LatencyMax)

@@ -166,6 +166,8 @@ public:
   std::optional<uint32_t>                         m_LobbyCountDownInterval;
   std::optional<uint32_t>                         m_LobbyCountDownStartValue;
 
+  std::optional<bool>                             m_ShareUnitsEnabled;
+
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_ReconnectionMode;
@@ -308,11 +310,15 @@ public:
   void SetLobbyCountDownInterval(const uint32_t nValue) { m_LobbyCountDownInterval = nValue; }
   void SetLobbyCountDownStartValue(const uint32_t nValue) { m_LobbyCountDownStartValue = nValue; }
 
-  void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
-  void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
-  void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
   void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
   void SetNotifyJoins(const bool nNotifyJoins) { m_NotifyJoins = nNotifyJoins; }
+  void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
+  void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
+
+  void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
+
+  void SetShareUnitsEnabled(const bool nShareUnits) { m_ShareUnitsEnabled = nShareUnits; }
+
   void SetResultSource(const uint8_t nResultSource) { m_ResultSource = nResultSource; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
   void SetContext(std::shared_ptr<CCommandContext> nCtx) { m_Ctx = nCtx; }

@@ -684,6 +684,7 @@ public:
   GameUser::CGameUser*                GetUserFromUID(uint8_t UID) const;
   GameUser::CGameUser*                GetUserFromSID(uint8_t SID) const;
   std::string               GetUserNameFromUID(uint8_t UID) const;
+  std::string               GetUserNameFromSID(uint8_t SID) const;
   GameUser::CGameUser*                GetUserFromName(std::string name, bool sensitive) const;
   GameUser::CGameUser*      GetOwner() const;
   bool                      HasOwnerSet() const;

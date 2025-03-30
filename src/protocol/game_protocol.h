@@ -264,7 +264,12 @@ public:
   [[nodiscard]] inline size_t                        GetLength() const {
     size_t result = m_Action.size() + 3;
     return result < 3 ? m_Action.size() : result;
-  }
+  
+  [[nodiscard]] inline uint8_t                       GetUint8(const size_t offset) const { return m_Action[offset]; }
+  [[nodiscard]] inline uint16_t                      GetUint16LE(const size_t offset) const { return ByteArrayToUInt16(m_Action, false, offset); }
+  [[nodiscard]] inline uint16_t                      GetUint16BE(const size_t offset) const { return ByteArrayToUInt16(m_Action, true, offset); }
+  [[nodiscard]] inline uint32_t                      GetUint32LE(const size_t offset) const { return ByteArrayToUInt32(m_Action, false, offset); }
+  [[nodiscard]] inline uint32_t                      GetUint32BE(const size_t offset) const { return ByteArrayToUInt32(m_Action, true, offset); }
 };
 
 //

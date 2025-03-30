@@ -2068,6 +2068,10 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_LobbyCountDownStartValue = CFG.GetUint32("map.hosting.game_start.count_down_ticks", 5);
   }
 
+  if (CFG.Exists("map.hosting.share_units.enabled")) {
+    m_ShareUnitsEnabled = CFG.GetBool("map.hosting.share_units.enabled", false);
+  }
+
   if (CFG.Exists("map.hosting.latency.default")) {
     m_Latency = CFG.GetUint16("map.hosting.latency.default", 100);
   }

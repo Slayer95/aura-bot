@@ -5364,6 +5364,26 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
   }
 
+  bool shouldHoldAction = false;
+  if (actionType == ALLIANCE_SETTINGS && action->GetLength() >= 9 && action->GetUint8(1) < MAX_SLOTS_MODERN) {
+    const bool wantsShare = (action->GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL) > 0;
+    const uint8_t targetSID = action->GetUint8(1);
+    if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
+      if (wantsShare) {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+      } else {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+      }
+      user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
+    }
+
+    if (m_Config.m_ShareUnitsEnabled && wantsShare) {
+      user->m_OnHoldActionsShareTargets.set(targetSID);
+    } else {
+      user->m_OnHoldActionsShareTargets.reset(targetSID);
+    }
+  }
+
   if (actionType == ACTION_CHAT_TRIGGER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
     const vector<uint8_t>& actionBytes = action.GetImmutableAction();
     if (actionBytes.size() >= 10 && m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
@@ -5415,7 +5435,15 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     }
   }
 
-  actionFrame.AddAction(std::move(action));
+  if (user->m_OnHoldActionsShareTargets.count() == 0) {
+    actionFrame.MergeFrame(user->m_OnHoldActionsFrame);
+  }
+
+  if (shouldHoldAction || !user->m_OnHoldActionsFrame.GetIsEmpty()) {
+    user->m_OnHoldActionsFrame.addAction(std::move(action));
+  } else {
+    actionFrame.AddAction(std::move(action));
+  }
 
   switch (actionType) {
     case ACTION_SAVE:
@@ -6744,6 +6772,15 @@ string CGame::GetUserNameFromUID(uint8_t UID) const
   }
 
   return string();
+}
+
+string CGame::GetUserNameFromSID(uint8_t SID) const
+{
+  GameUser::CGameUser* user = GetUserFromSID(SID);
+  if (user) {
+    return user->GetName();
+  }
+  return "Slot " + ToDecString(SID + 1);
 }
 
 GameUser::CGameUser* CGame::GetOwner() const
@@ -9391,7 +9428,7 @@ bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedAction
 
   {
     vector<uint8_t> ActionStart;
-    ActionStart.push_back(ACTION_SHARE_UNITS);
+    ActionStart.push_back(ACTION_ALLIANCE_SETTINGS);
     ActionStart.push_back(SID);
     AppendByteArray(ActionStart, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY, false);
     actionFrame.AddAction(std::move(CIncomingAction(fromUID, ActionStart)));

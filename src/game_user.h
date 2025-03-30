@@ -86,6 +86,9 @@ namespace GameUser
     bool                             m_IsLeaver;
     uint8_t                          m_PingEqualizerOffset;          // how many frames are actions sent by this player offset by ping equalizer
     QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
+    CQueuedActionsFrame              m_OnHoldActionsFrame;           // if anti-share is enabled, holds actions sent by this player until all shared units settings are reverted
+    std::bitset<MAX_SLOTS_MODERN>    m_OnHoldActionsShareTargets;
+    std::bitset<MAX_SLOTS_MODERN>    m_SharingUnitsWithSID;
     uint32_t                         m_PongCounter;
     size_t                           m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
     size_t                           m_SyncCounter;                  // the number of keepalive packets received from this player
@@ -277,6 +280,13 @@ namespace GameUser
     bool AddDelayPingEqualizerFrame();
     bool SubDelayPingEqualizerFrame();
     void SetPingEqualizerFrameNode(QueuedActionsFrameNode* nFrame) { m_PingEqualizerFrameNode = nFrame; }
+
+    inline bool GetIsSharingUnitsWithSlot(const uint8_t SID) { return m_SharingUnitsWithSID.test(SID); }
+    inline void SetIsSharingUnitsWithSlot(const uint8_t SID, const bool wantsShare) {
+      if (wantsShare) m_SharingUnitsWithSID.set(SID);
+      else m_SharingUnitsWithSID.reset(SID);
+    }
+
     inline void SetSyncCounter(const size_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
     inline void AddSyncCounterOffset(const size_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
