@@ -3479,10 +3479,68 @@ void CGame::SendAllActionsCallback()
     default:
       break;
   }
+
+  for (const ActionQueue& actionQueue : frame.actions) {
+    for (const CIncomingAction& action : actionQueue) {
+      const uint8_t actionType = action.GetSniffedType();
+
+      if (actionType == ACTION_CHAT_TRIGGER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
+        const vector<uint8_t>& actionBytes = action.GetImmutableAction();
+        if (actionBytes.size() >= 10 && m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
+          const uint8_t* chatMessageStart = actionBytes.data() + 9;
+          const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
+          if (chatMessageStart < chatMessageEnd) {
+            const GameUser::CGameUser* user = GetUserFromUID(action->GetUID());
+            const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
+            if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
+              m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
+            }
+
+            // Enable --log-level debug to figure out HMC map-specific constants
+            // According to TriggerHappy's original HMC code,
+            // only the first (lower) two bytes are relevant,
+            // and the upper two bytes are zero or can be zeroed in SendHMC().
+            //
+            // TH also expects both uint32_t values to be equal.
+            // But maybe the second one doesn't matter, just like the upper bytes above.
+            //
+            // So if those assumptions, hold,
+            // let N be the first integer output here.
+            //
+            // Then, W3HMC trigger constants are:
+            // <map.w3hmc.trigger = N & 0xFFFF>
+            // <map.w3hmc.trigger = (map_w3hmctid1) | (map_w3hmctid2 << 8)> (in terms of TH's implementation)
+            //
+            // Or, in simpler maths terms:
+            // <map.w3hmc.trigger = N mod 65536>
+            // <map.w3hmc.trigger = (map_w3hmctid1) + (map_w3hmctid2 * 256)> (in terms of TH's implementation)
+
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 1)) + " | 0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
+          }
+        }
+      }
+
+      if (m_CustomStats && action.GetImmutableAction().size() >= 6) {
+        if (!m_CustomStats->RecvAction(action->GetUID(), action)) {
+          delete m_CustomStats;
+          m_CustomStats = nullptr;
+        }
+      }
+
+      if (m_DotaStats && action.GetImmutableAction().size() >= 6) {
+        if (m_DotaStats->ProcessAction(action->GetUID(), action) && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
+          LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started (dota stats class reported game over)")
+          StartGameOverTimer(true);
+        }
+      }
+    }
+  }
+
   for (GameUser::CGameUser* user : frame.leavers) {
     DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] running scheduled deletion")
     user->SetDeleteMe(true);
   }
+
   frame.Reset();
 }
 
@@ -5384,57 +5442,6 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     }
   }
 
-  if (actionType == ACTION_CHAT_TRIGGER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
-    const vector<uint8_t>& actionBytes = action.GetImmutableAction();
-    if (actionBytes.size() >= 10 && m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
-      const uint8_t* chatMessageStart = actionBytes.data() + 9;
-      const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
-      if (chatMessageStart < chatMessageEnd) {
-        const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
-        if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
-          m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
-        }
-
-        // Enable --log-level debug to figure out HMC map-specific constants
-        // According to TriggerHappy's original HMC code,
-        // only the first (lower) two bytes are relevant (respectively <map.w3hmc.trigger_1>, <map.w3hmc.trigger_2>),
-        // and the upper two bytes are zero or can be zeroed in SendHMC().
-        //
-        // TH also expects both uint32_t values to be equal.
-        // But maybe the second one doesn't matter, just like the upper bytes above.
-        //
-        // So if those assumptions, hold,
-        // let N be the first integer output here.
-        //
-        // Then, W3HMC trigger constants are:
-        // <map.w3hmc.trigger_1 = N & 0xFF>
-        // <map.w3hmc.trigger_2 = (N >> 8) & 0xFF>
-        //
-        // Or, in simpler maths terms:
-        // a = N mod 256
-        // b = N mod 65536
-        // x = a
-        // y = (b - a) / 256
-        // <map.w3hmc.trigger_1 = x>
-        // <map.w3hmc.trigger_2 = y>
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 1)) + " | 0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
-      }
-    }
-  }
-
-  if (m_CustomStats && action.GetImmutableAction().size() >= 6) {
-    if (!m_CustomStats->RecvAction(user->GetUID(), action)) {
-      delete m_CustomStats;
-      m_CustomStats = nullptr;
-    }
-  }
-  if (m_DotaStats && action.GetImmutableAction().size() >= 6) {
-    if (m_DotaStats->ProcessAction(user->GetUID(), action) && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started (dota stats class reported game over)")
-      StartGameOverTimer(true);
-    }
-  }
-
   if (user->m_OnHoldActionsShareTargets.count() == 0) {
     actionFrame.MergeFrame(user->m_OnHoldActionsFrame);
   }
@@ -5483,13 +5490,12 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
       actionFrame.callback = ON_SEND_ACTIONS_RESUME;
       break;
     case ACTION_CHAT_TRIGGER: {
-      // Already logged. Do not extract action here, since it has already been moved.
+      // Handled in CGame::SendAllActionsCallback
       break;
     }
     case ACTION_SYNC_INT: {
       // This is the W3MMD action type.
-      // FIXME: more than one action may be sent in a single packet, but the length of each action isn't explicitly represented in the packet
-      // so we ought to parse all the actions and calculate their lengths based on their types
+      // Handled in CGame::SendAllActionsCallback
       break;
     }
     default:
