@@ -83,9 +83,10 @@ struct CGameConfig
   bool                     m_LatencyEqualizerEnabled;    // whether to add a minimum delay proportional to m_Latency to all actions sent by players
   uint8_t                  m_LatencyEqualizerFrames;     // how many frames should the latency equalizer use
 
+  bool                     m_EnableLagScreen;            // whether to pause the game with a lag screen whenever a player falls behind
+  bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
   uint32_t                 m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
   uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
-  bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
 
   uint32_t                 m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;

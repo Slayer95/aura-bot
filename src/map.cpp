@@ -1570,6 +1570,10 @@ void CMap::Load(CConfig* CFG)
     SetMapObservers(MAPOBS_ALLOWED);
   }
 
+  if (m_MapType == "dota") {
+    m_EnableLagScreen = false;
+  }
+
   LoadGameConfigOverrides(*CFG);
   LoadMapSpecificConfig(*CFG);
   LoadGameResultConfig(*CFG);
@@ -1981,6 +1985,10 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_AutoStartRequiresBalance = CFG.GetBool("map.hosting.autostart.requires_balance", false);
   }
 
+  if (CFG.Exists("map.net.lag_screen.enabled")) {
+    m_EnableLagScreen = CFG.GetBool("map.net.lag_screen.enabled", false);
+    CFG.FailIfErrorLast();
+  }
   if (CFG.Exists("map.net.start_lag.sync_limit")) {
     m_LatencyMaxFrames = CFG.GetUint32("map.net.start_lag.sync_limit", 32);
   }
@@ -2048,8 +2056,8 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_LobbyCountDownStartValue = CFG.GetUint32("map.hosting.game_start.count_down_ticks", 5);
   }
 
-  if (CFG.Exists("map.hosting.latency")) {
-    m_Latency = CFG.GetUint16("map.hosting.latency", 100);
+  if (CFG.Exists("map.hosting.latency.default")) {
+    m_Latency = CFG.GetUint16("map.hosting.latency.default", 100);
   }
   if (CFG.Exists("map.hosting.latency.equalizer.enabled")) {
     m_LatencyEqualizerEnabled = CFG.GetBool("map.hosting.latency.equalizer.enabled", false);

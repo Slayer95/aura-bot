@@ -311,6 +311,7 @@ public:
   std::optional<uint8_t>                m_NumPlayersToStartGameOver;
   std::optional<uint8_t>                m_PlayersReadyMode;
   std::optional<bool>                   m_AutoStartRequiresBalance;
+  std::optional<bool>                   m_EnableLagScreen;
   std::optional<uint32_t>               m_LatencyMaxFrames;
   std::optional<uint32_t>               m_LatencySafeFrames;
   std::optional<uint32_t>               m_AutoKickPing;

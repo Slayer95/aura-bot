@@ -52,6 +52,7 @@ public:
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
   uint8_t                                                       m_Color;
+  uint8_t                                                       m_MissingLog;
   int64_t                                                       m_FrameRate;
   int64_t                                                       m_Latency;
   size_t                                                        m_SyncCounter;                  // the number of keepalive packets received from this player
@@ -76,6 +77,7 @@ public:
   int64_t                                                       m_LastPingTime;
 
   int64_t                                                       m_LastProgressReportTime;
+  uint8_t                                                       m_LastProgressReportLog;
 
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
@@ -133,6 +135,7 @@ public:
   void SendOtherPlayersInfo();
   void SendChat(const std::string& message);
   void SendGameLoadedReport();
+  uint8_t GetMissingLog() const;
   void SendProgressReport();
   std::string GetLogPrefix() const;
 };

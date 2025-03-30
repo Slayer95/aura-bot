@@ -23,6 +23,8 @@
 
  */
 
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 #include "async_observer.h"
@@ -58,7 +60,8 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_UID(nUID),
     m_SID(nGame->GetSIDFromUID(nUID)),
     m_Color(nGame->GetColorFromUID(nUID)),
-    m_FrameRate(1),
+    m_MissingLog(0),
+    m_FrameRate(2),
     m_Latency(nGame->GetGameHistory()->GetDefaultLatency()),
     m_SyncCounter(0),
     m_ActionFrameCounter(0),
@@ -71,6 +74,7 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_PlaybackEnded(false),
     m_LastPingTime(APP_MIN_TICKS),
     m_LastProgressReportTime(APP_MIN_TICKS),
+    m_LastProgressReportLog(0),
     m_Name(nName)
 {
   m_Socket->SetLogErrors(true);
@@ -283,9 +287,19 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     const size_t beforeCounter = m_ActionFrameCounter;
     if (PushGameFrames()) {
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
-      if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
-      if (m_FrameRate > 1 && ((Time <= m_LastProgressReportTime + 20 && Ticks <= m_FinishedLoadingTicks + 90000) || Time <= m_LastProgressReportTime + 150000)) {
-        SendProgressReport();
+      //if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
+      if (m_FrameRate > 1) {
+        if ((Time <= m_LastProgressReportTime + 25 && Ticks <= m_FinishedLoadingTicks + 120000) || Time <= m_LastProgressReportTime + 90000) {
+          SendProgressReport();
+          m_MissingLog = GetMissingLog();
+        } else if (Ticks <= m_LastProgressReportTime + 5) {
+          uint8_t missingLog = GetMissingLog();
+          if (m_MissingLog < missingLog) {
+            // Ensure progress reports around 75% 87.5% 91.25% ...
+            SendProgressReport();
+            m_MissingLog = missingLog;
+          }
+        }
       }
     }
     CheckGameOver();
@@ -583,17 +597,30 @@ void CAsyncObserver::SendGameLoadedReport()
     SendChat("Watching replay");
     SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago");
   }
-  SendChat("Use !sync to watch at 1x, !ff to speed-up");
+  if (m_FrameRate > 1) {
+    SendChat("Use !sync to watch at 1x, !ff to fast-forward");
+  } else {
+    SendChat("Use !ff to fast-forward, !sync to watch at 1x");
+  }
 
   m_SentGameLoadedReport = true;
 }
 
+uint8_t CAsyncObserver::GetMissingLog() const
+{
+  constexpr double epsilon = numeric_limits<double>::epsilon();
+  double missing = 1.0 - ((double)m_ActionFrameCounter / (double)m_GameHistory->GetNumActionFrames());
+  if (missing < epsilon) return 0;
+  double missingLog = clamp(-log2(missing), 0.0, 255.0);
+  return static_cast<uint8_t>(missingLog);
+}
+
 void CAsyncObserver::SendProgressReport()
 {
-  double progress = PERCENT_FACTOR * (double)m_ActionFrameCounter / (double)m_GameHistory->GetNumActionFrames();
+  double progress = (double)m_ActionFrameCounter / (double)m_GameHistory->GetNumActionFrames();
   int64_t etaMilliSeconds = m_Latency * static_cast<int64_t>(m_GameHistory->GetNumActionFrames() - m_ActionFrameCounter) / (m_FrameRate - 1);
-  SendChat(ToFormattedString(progress) + "% - Fast-forwarding at " + to_string(m_FrameRate) + "x - ETA: " + ToDurationString(etaMilliSeconds / 1000));
-  m_LastProgressReportTime = GetTicks();
+  SendChat(ToFormattedString(PERCENT_FACTOR * progress) + "% - Fast-forwarding at " + to_string(m_FrameRate) + "x - ETA: " + ToDurationString(etaMilliSeconds / 1000));
+  m_LastProgressReportTime = GetTime();
 }
 
 string CAsyncObserver::GetLogPrefix() const

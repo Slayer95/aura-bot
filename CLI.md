@@ -498,19 +498,38 @@ This flag prevents players from taking ownership of the hosted game.
 
 This flag is disabled by default.
 
-## \`--latency-equalize4\`
+## `--latency-equalizer`
 
-This flag adds a minimum delay to all actions performed by players in the hosted game,
-evening the field in case players' connection quality differ significatively.
+When enabled, this flag activates the latency equalizer, ensuring that all 
+players in a multiplayer session experience similar input delays. This helps 
+to maintain fairness by preventing players with lower latency from having an 
+advantage over those with higher latency.
+
+The equalizer dynamically adjusts input processing times based on the highest 
+latency detected among connected players, keeping the gameplay experience 
+consistent for everyone.
+
+This flag is disabled by default.
+
+This option is equivalent to ``<hosting.latency.equalizer.enabled>`` in `config.ini`.
+
+This option is equivalent to ``<map.hosting.latency.equalizer.enabled>`` in map configuration
+
+## `--no-latency-equalizer`
+
+When enabled, this flag disables the latency equalizer, allowing players to 
+experience input delays based on their individual network conditions. Players 
+with lower latency will receive faster response times, while those with 
+higher latency may experience delays.
+
+This option may be useful in scenarios where reducing input lag for low-latency 
+players is prioritized over maintaining synchronized delays for all players.
 
 This flag is enabled by default.
 
-## \`--no-latency-equalize4\`
+This option is equivalent to ``<hosting.latency.equalizer.enabled>`` in `config.ini`.
 
-This flag prevents a minimum delay from being added to actions performed by players in the hosted game,
-allowing maximum responsiveness during gameplay.
-
-This flag is disabled by default.
+This option is equivalent to ``<map.hosting.latency.equalizer.enabled>`` in map configuration
 
 ## \`--latency-normalize\`
 
@@ -525,6 +544,36 @@ This flag prevents the automatic network synchronization mechanism. When this fl
 long or even permanent duration may show up when some games start, rendering it unplayable.
 
 This flag is disabled by default.
+
+## `--lag-screen`
+
+When enabled, this flag instructs the game to pause when significant lag issues 
+are detected in a multiplayer session. This ensures that all players experience 
+the game at the same pace, preventing unfair advantages or desynchronization.
+
+The game will remain paused until the lag issue is resolved, at which point it 
+will automatically resume.
+
+This flag is enabled by default.
+
+This option is equivalent to ``<net.lag_screen.enabled>`` in `config.ini`.
+
+This option is equivalent to ``<map.net.lag_screen.enabled>`` in map configuration
+
+## `--no-lag-screen`
+
+When enabled, this flag disables the automatic pausing of the game during lag 
+spikes. Instead of pausing, the game will continue running in real-time, 
+potentially causing some players to experience delays or desynchronization.
+
+This option may be preferable for games where uninterrupted action is 
+prioritized over synchronization.
+
+This flag is disabled by default.
+
+This option is equivalent to ``<net.lag_screen.enabled>`` in `config.ini`.
+
+This option is equivalent to ``<map.net.lag_screen.enabled>`` in map configuration
 
 ## \`--hide-ign\`
 

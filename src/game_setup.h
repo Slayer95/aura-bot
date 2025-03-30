@@ -173,6 +173,7 @@ public:
   std::optional<uint8_t>                          m_LeaverHandler;
   std::optional<uint8_t>                          m_UnsafeNameHandler;
   std::optional<uint8_t>                          m_BroadcastErrorHandler;
+  std::optional<bool>                             m_EnableLagScreen;
   std::optional<uint16_t>                         m_LatencyAverage;
   std::optional<uint16_t>                         m_LatencyMaxFrames;
   std::optional<uint16_t>                         m_LatencySafeFrames;
@@ -331,6 +332,7 @@ public:
   void SetLeaverHandler(const uint8_t nValue) { m_LeaverHandler = nValue;}
   void SetUnsafeNameHandler(const uint8_t nValue) { m_UnsafeNameHandler = nValue;}
   void SetBroadcastErrorHandler(const uint8_t nValue) { m_BroadcastErrorHandler = nValue;}
+  void SetEnableLagScreen(const bool nValue) { m_EnableLagScreen = nValue; }
   void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
   void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
   void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }

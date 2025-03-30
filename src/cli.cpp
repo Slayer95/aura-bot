@@ -183,6 +183,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--lobby-auto-kick-ping", m_GameAutoKickPing, "Customizes the maximum allowed ping in a game lobby.");
   app.add_option("--lobby-high-ping", m_GameWarnHighPing, "Customizes the ping at which Aura will issue high-ping warnings.");
   app.add_option("--lobby-safe-ping", m_GameSafeHighPing, "Customizes the ping required for Aura to consider a high-ping player as acceptable again.");
+  app.add_flag(  "--lag-screen,--no-lag-screen{false}", m_GameEnableLagScreen, "Customizes whether to pause the game when players lag behind.");
   app.add_option("--latency", m_GameLatencyAverage, "Sets the refresh period for the game as a ping equalizer, in milliseconds.");
   app.add_option("--latency-max-frames", m_GameLatencyMaxFrames, "Sets a maximum amount of frames clients may fall behind. When exceeded, the lag screen shows up.");
   app.add_option("--latency-safe-frames", m_GameLatencySafeFrames, "Sets a frame difference clients must catch up to in order for the lag screen to go away.");

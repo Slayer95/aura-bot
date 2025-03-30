@@ -1621,6 +1621,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameAutoStartSeconds.has_value()) SetAutoStartSeconds(nCLI->m_GameAutoStartSeconds.value());
   if (nCLI->m_GameAutoStartRequiresBalance.has_value()) SetAutoStartRequiresBalance(nCLI->m_GameAutoStartRequiresBalance.value());
 
+  if (nCLI->m_GameEnableLagScreen.has_value()) SetEnableLagScreen(nCLI->m_GameEnableLagScreen.value());
   if (nCLI->m_GameLatencyAverage.has_value()) SetLatencyAverage(nCLI->m_GameLatencyAverage.value());
   if (nCLI->m_GameLatencyMaxFrames.has_value()) SetLatencyMaxFrames(nCLI->m_GameLatencyMaxFrames.value());
   if (nCLI->m_GameLatencySafeFrames.has_value()) SetLatencySafeFrames(nCLI->m_GameLatencySafeFrames.value());

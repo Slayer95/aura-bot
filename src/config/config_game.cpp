@@ -125,9 +125,10 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LatencyEqualizerEnabled                = CFG.GetBool("hosting.latency.equalizer.enabled", false);
   m_LatencyEqualizerFrames                 = CFG.GetUint8("hosting.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
 
+  m_EnableLagScreen                        = CFG.GetBool("net.lag_screen.enabled", true);
+  m_SyncNormalize                          = CFG.GetBool("net.sync_normalization.enabled", true);
   m_SyncLimit                              = CFG.GetUint32("net.start_lag.sync_limit.default", 32);
   m_SyncLimitSafe                          = CFG.GetUint32("net.stop_lag.sync_limit.default", 8);
-  m_SyncNormalize                          = CFG.GetBool("net.sync_normalization.enabled", true);
   if (m_SyncLimit <= m_SyncLimitSafe) {
     Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
     CFG.SetFailed();
@@ -250,9 +251,10 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
     m_LatencyEqualizerFrames = 1;
   }
 
+  INHERIT_MAP_OR_CUSTOM(m_EnableLagScreen, m_EnableLagScreen, m_EnableLagScreen)
+  INHERIT_CUSTOM(m_SyncNormalize, m_SyncNormalize)
   INHERIT_MAP_OR_CUSTOM(m_SyncLimit, m_LatencyMaxFrames, m_LatencyMaxFrames)
   INHERIT_MAP_OR_CUSTOM(m_SyncLimitSafe, m_LatencySafeFrames, m_LatencySafeFrames)
-  INHERIT_CUSTOM(m_SyncNormalize, m_SyncNormalize)
 
   INHERIT(m_PerfThreshold)
   INHERIT(m_LacksMapKickDelay)

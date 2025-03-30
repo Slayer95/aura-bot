@@ -1440,61 +1440,63 @@ void CGame::UpdateLoaded()
   // we consider a user to have started lagging if they're more than m_SyncLimit keepalives behind
 
   if (!m_Lagging) {
-    string LaggingString;
-    bool startedLagging = false;
-    vector<uint32_t> framesBehind = GetPlayersFramesBehind();
-    uint8_t i = static_cast<uint8_t>(m_Users.size());
-    while (i--) {
-      if (framesBehind[i] > GetSyncLimit() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
-        startedLagging = true;
-        break;
-      }
-    }
-    if (startedLagging) {
-      uint8_t worstLaggerIndex = 0;
-      uint8_t bestLaggerIndex = 0;
-      uint32_t worstLaggerFrames = 0;
-      uint32_t bestLaggerFrames = 0xFFFFFFFF;
-      UserList laggingPlayers;
-      i = static_cast<uint8_t>(m_Users.size());
+    if (m_Config.m_EnableLagScreen) {
+      string LaggingString;
+      bool startedLagging = false;
+      vector<uint32_t> framesBehind = GetPlayersFramesBehind();
+      uint8_t i = static_cast<uint8_t>(m_Users.size());
       while (i--) {
-        if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
-          m_Users[i]->SetLagging(true);
-          m_Users[i]->SetStartedLaggingTicks(Ticks);
-          m_Users[i]->ClearStalePings();
-          laggingPlayers.push_back(m_Users[i]);
-          if (framesBehind[i] > worstLaggerFrames) {
-            worstLaggerIndex = i;
-            worstLaggerFrames = framesBehind[i];
-          }
-          if (framesBehind[i] < bestLaggerFrames) {
-            bestLaggerIndex = i;
-            bestLaggerFrames = framesBehind[i];
-          }
+        if (framesBehind[i] > GetSyncLimit() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
+          startedLagging = true;
+          break;
         }
       }
-      if (laggingPlayers.size() == m_Users.size()) {
-        // Avoid showing everyone as lagging
-        m_Users[bestLaggerIndex]->SetLagging(false);
-        m_Users[bestLaggerIndex]->SetStartedLaggingTicks(0);
-        laggingPlayers.erase(laggingPlayers.begin() + (m_Users.size() - 1 - bestLaggerIndex));
-      }
+      if (startedLagging) {
+        uint8_t worstLaggerIndex = 0;
+        uint8_t bestLaggerIndex = 0;
+        uint32_t worstLaggerFrames = 0;
+        uint32_t bestLaggerFrames = 0xFFFFFFFF;
+        UserList laggingPlayers;
+        i = static_cast<uint8_t>(m_Users.size());
+        while (i--) {
+          if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
+            m_Users[i]->SetLagging(true);
+            m_Users[i]->SetStartedLaggingTicks(Ticks);
+            m_Users[i]->ClearStalePings();
+            laggingPlayers.push_back(m_Users[i]);
+            if (framesBehind[i] > worstLaggerFrames) {
+              worstLaggerIndex = i;
+              worstLaggerFrames = framesBehind[i];
+            }
+            if (framesBehind[i] < bestLaggerFrames) {
+              bestLaggerIndex = i;
+              bestLaggerFrames = framesBehind[i];
+            }
+          }
+        }
+        if (laggingPlayers.size() == m_Users.size()) {
+          // Avoid showing everyone as lagging
+          m_Users[bestLaggerIndex]->SetLagging(false);
+          m_Users[bestLaggerIndex]->SetStartedLaggingTicks(0);
+          laggingPlayers.erase(laggingPlayers.begin() + (m_Users.size() - 1 - bestLaggerIndex));
+        }
 
-      if (!laggingPlayers.empty()) {
-        // start the lag screen
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
-        SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
-        ResetDropVotes();
+        if (!laggingPlayers.empty()) {
+          // start the lag screen
+          DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+          SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
+          ResetDropVotes();
 
-        m_Lagging = true;
-        m_StartedLaggingTime = Time;
-        m_LastLagScreenResetTime = Time;
+          m_Lagging = true;
+          m_StartedLaggingTime = Time;
+          m_LastLagScreenResetTime = Time;
 
-        // print debug information
-        double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_LatencyTicks) / static_cast<double>(1000.);
-        if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
-          LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".", LOG_ALL);
-          LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)", LOG_C);
+          // print debug information
+          double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_LatencyTicks) / static_cast<double>(1000.);
+          if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+            LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".", LOG_ALL);
+            LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)", LOG_C);
+          }
         }
       }
     }
@@ -8670,7 +8672,9 @@ UserList CGame::CalculateNewLaggingPlayers() const
     if (user->GetLagging() || user->GetGProxyDisconnectNoticeSent() || user->GetDisconnectedUnrecoverably()) {
       continue;
     }
-    if (!user->GetFinishedLoading() || user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
+    if (!user->GetFinishedLoading()) {
+      laggingPlayers.push_back(user);
+    } else if (m_Config.m_EnableLagScreen && user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
       laggingPlayers.push_back(user);
     }
   }

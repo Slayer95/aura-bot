@@ -217,42 +217,6 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.auth_custom\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
-## \`global_realm.auth_custom\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.auth_exe_version\`
-- Type: uint8vector
-- Error handling: Abort operation
-
-## \`global_realm.auth_exe_version\`
-- Type: uint8vector
-- Error handling: Abort operation
-
-## \`global_realm.auth_exe_version_hash\`
-- Type: uint8vector
-- Error handling: Abort operation
-
-## \`global_realm.auth_exe_version_hash\`
-- Type: uint8vector
-- Error handling: Abort operation
-
-## \`global_realm.auth_ignore_version_error\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
-## \`global_realm.auth_ignore_version_error\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.auth_password_hash_type\`
 - Type: enum
 - Default value: pvpgn
@@ -447,6 +411,42 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
+## \`global_realm.exe_auth.custom\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`global_realm.exe_auth.custom\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.exe_auth.ignore_version_error\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`global_realm.exe_auth.ignore_version_error\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.exe_auth.version\`
+- Type: uint8vector
+- Error handling: Abort operation
+
+## \`global_realm.exe_auth.version\`
+- Type: uint8vector
+- Error handling: Abort operation
+
+## \`global_realm.exe_auth.version_hash\`
+- Type: uint8vector
+- Error handling: Abort operation
+
+## \`global_realm.exe_auth.version_hash\`
+- Type: uint8vector
+- Error handling: Abort operation
+
 ## \`global_realm.first_channel\`
 - Type: string
 - Default value: The Void
@@ -589,12 +589,12 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.locale\`
+## \`global_realm.licensee\`
 - Type: string
-- Default value: system
+- Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.locale\`
+## \`global_realm.licensee\`
 - Type: string
 - Default value: Empty
 - Error handling: Use default value
@@ -602,13 +602,23 @@ Config
 ## \`global_realm.locale_short\`
 - Type: string
 - Constraints: Min length: 4. Max length: 4.
-- Default value: esPE
+- Default value: esES
+- Error handling: Use default value
+
+## \`global_realm.locale_short\`
+- Type: enum
+- Default value: PVPGN_LOCALE_ES_ES
 - Error handling: Use default value
 
 ## \`global_realm.locale_short\`
 - Type: string
 - Constraints: Min length: 4. Max length: 4.
-- Default value: esPE
+- Default value: esES
+- Error handling: Use default value
+
+## \`global_realm.locale_short\`
+- Type: enum
+- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.logs.console.chat\`
@@ -673,7 +683,7 @@ Config
 
 ## \`global_realm.protocol.whisper.error_reply\`
 - Type: string
-- Default value: Empty
+- Default value: string(
 - Error handling: Use default value
 
 ## \`global_realm.protocol.whisper.error_reply\`
@@ -803,6 +813,26 @@ Config
 
 ## \`global_realm.watchable_games.display_mode\`
 - Type: enum
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.win32.langid\`
+- Type: uint32
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.win32.langid\`
+- Type: uint32
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.win32.lcid\`
+- Type: string
+- Default value: system
+- Error handling: Use default value
+
+## \`global_realm.win32.lcid\`
+- Type: string
 - Default value: Empty
 - Error handling: Use default value
 
@@ -1472,6 +1502,11 @@ Config
 - Error handling: Use default value
 
 ## \`net.ipv6.tcp.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`net.lag_screen.enabled\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value
