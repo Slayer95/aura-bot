@@ -418,11 +418,14 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
             if (m_SyncCounter >= m_Game->GetSyncCounter()) {
               m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] incorrectly ahead of sync", LOG_C | LOG_P);
+              m_Game->EventUserDisconnectGameProtocolError(this, false);
+              Abort = true;
+            } else {
+              m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+              ++m_SyncCounter;
+              m_Game->EventUserKeepAlive(this);
+              break;
             }
-            m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
-            ++m_SyncCounter;
-            m_Game->EventUserKeepAlive(this);
-            break;
           }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {
@@ -504,6 +507,47 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             }
 
             ++m_PongCounter;
+            break;
+          }
+
+          case GameProtocol::Magic::DESYNC: {
+            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::DESYNC", LOG_C | LOG_P);
+            break;
+          }
+
+          case GameProtocol::Magic::GAME_OVER: {
+            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::GAME_OVER", LOG_C | LOG_P);
+            break;
+          }
+
+          case GameProtocol::Magic::LEAVE_ACK: {
+            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::LEAVE_ACK", LOG_C | LOG_P);
+            break;
+          }
+
+          case GameProtocol::Magic::CLIENT_INFO: {
+            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::CLIENT_INFO", LOG_C | LOG_P);
+            break;
+          }
+
+          case GameProtocol::Magic::PEER_SET: {
+            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::PEER_SET", LOG_C | LOG_P);
+            break;
+          }
+
+          case GameProtocol::Magic::MAPPART_OK: {
+            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_OK", LOG_C | LOG_P);
+            break;
+          }
+
+          case GameProtocol::Magic::MAPPART_ERR: {
+            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_ERR", LOG_C | LOG_P);
+            break;
+          }
+
+          case GameProtocol::Magic::PROTO_BUF: {
+            // Serialized protocol buffers
+            m_Game->SendAll(Data);
             break;
           }
         }

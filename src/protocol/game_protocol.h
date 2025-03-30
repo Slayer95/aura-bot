@@ -64,9 +64,12 @@ namespace GameProtocol
     constexpr uint8_t COUNTDOWN_START    = 10u; // 0x0A
     constexpr uint8_t COUNTDOWN_END      = 11u; // 0x0B
     constexpr uint8_t INCOMING_ACTION    = 12u; // 0x0C
+    constexpr uint8_t DESYNC             = 13u; // 0x0D
     constexpr uint8_t CHAT_FROM_HOST     = 15u; // 0x0F
     constexpr uint8_t START_LAG          = 16u; // 0x10
     constexpr uint8_t STOP_LAG           = 17u; // 0x11
+    constexpr uint8_t GAME_OVER          = 20u; // 0x14
+    constexpr uint8_t LEAVE_ACK          = 27u; // 0x1B
     constexpr uint8_t HOST_KICK_PLAYER   = 28u; // 0x1C
     constexpr uint8_t REQJOIN            = 30u; // 0x1E
     constexpr uint8_t LEAVEGAME          = 33u; // 0x21
@@ -83,13 +86,17 @@ namespace GameProtocol
     constexpr uint8_t CHAT_OTHERS        = 52u; // 0x34
     constexpr uint8_t PING_FROM_OTHERS   = 53u; // 0x35
     constexpr uint8_t PONG_TO_OTHERS     = 54u; // 0x36
+    constexpr uint8_t CLIENT_INFO        = 55u; // 0x37
+    constexpr uint8_t PEER_SET           = 59u; // 0x3B
     constexpr uint8_t MAPCHECK           = 61u; // 0x3D
     constexpr uint8_t STARTDOWNLOAD      = 63u; // 0x3F
     constexpr uint8_t MAPSIZE            = 66u; // 0x42
     constexpr uint8_t MAPPART            = 67u; // 0x43
-    constexpr uint8_t MAPPARTNOTOK       = 69u; // 0x45 - just a guess, received this packet after forgetting to send a crc in MAPPART (f7 45 0a 00 01 02 01 00 00 00)
+    constexpr uint8_t MAPPART_OK         = 68u; // 0x44
+    constexpr uint8_t MAPPART_ERR        = 69u; // 0x45 - just a guess, received this packet after forgetting to send a crc in MAPPART (f7 45 0a 00 01 02 01 00 00 00)
     constexpr uint8_t PONG_TO_HOST       = 70u; // 0x46
     constexpr uint8_t INCOMING_ACTION2   = 72u; // 0x48 - received this packet when there are too many actions to fit in W3GS_INCOMING_ACTION
+    constexpr uint8_t PROTO_BUF          = 89u; // 0x59
 
     // Orthogonal to above
     constexpr uint8_t W3GS_HEADER        = 247u;// 0xF7
