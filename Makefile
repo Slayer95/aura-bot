@@ -87,6 +87,7 @@ OBJS = lib/csvparser/csvparser.o \
        src/config/config_irc.o \
        src/config/config_discord.o \
        src/config/config_net.o \
+       src/dbgameplayer.o \
        src/auradb.o \
        src/bncsutil_interface.o \
        src/file_util.o \
