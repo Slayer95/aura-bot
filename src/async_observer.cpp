@@ -280,7 +280,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
   }
 
   if (m_FinishedLoading && !m_PlaybackEnded) {
-    if (!m_SentGameLoadedReport && m_FinishedLoadingTicks + 1000 <= Ticks) {
+    if (!m_SentGameLoadedReport && m_FinishedLoadingTicks + 3000 <= Ticks) {
       // Grace period so that chat messages are visible
       SendGameLoadedReport();
     }
@@ -289,10 +289,10 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
       //if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
       if (m_FrameRate > 1) {
-        if ((Time <= m_LastProgressReportTime + 25 && Ticks <= m_FinishedLoadingTicks + 120000) || Time <= m_LastProgressReportTime + 90000) {
+        if ((Time <= m_LastProgressReportTime + 25 && Ticks <= m_FinishedLoadingTicks + 120000) || Time <= m_LastProgressReportTime + 90) {
           SendProgressReport();
           m_MissingLog = GetMissingLog();
-        } else if (Ticks <= m_LastProgressReportTime + 5) {
+        } else if (Time <= m_LastProgressReportTime + 5) {
           uint8_t missingLog = GetMissingLog();
           if (m_MissingLog < missingLog) {
             // Ensure progress reports around 75% 87.5% 91.25% ...
