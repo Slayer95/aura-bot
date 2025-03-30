@@ -47,6 +47,8 @@
 
 #define MAX_READ_FILE_SIZE 0x18000000
 
+constexpr double PERCENT_FACTOR = 100.;
+
 // aura.h
 
 #define APP_ACTION_DONE 0u

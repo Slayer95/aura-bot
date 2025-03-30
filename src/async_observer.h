@@ -45,7 +45,8 @@ public:
   const CRealm*                                                 m_FromRealm;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
   bool                                                          m_MapReady;
-  bool                                                          m_Desynchronized;
+  bool                                                          m_StateSynchronized;
+  bool                                                          m_TimeSynchronized;
   size_t                                                        m_Offset;
   uint8_t                                                       m_Goal;
   uint8_t                                                       m_UID;
@@ -69,9 +70,12 @@ public:
   bool                                                          m_FinishedLoading;
   int64_t                                                       m_FinishedLoadingTicks;
 
+  bool                                                          m_SentGameLoadedReport;
   bool                                                          m_PlaybackEnded;
   int64_t                                                       m_LastFrameTicks;
   int64_t                                                       m_LastPingTime;
+
+  int64_t                                                       m_LastProgressReportTime;
 
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
@@ -128,6 +132,8 @@ public:
   void Send(const std::vector<uint8_t>& data) final;
   void SendOtherPlayersInfo();
   void SendChat(const std::string& message);
+  void SendGameLoadedReport();
+  void SendProgressReport();
   std::string GetLogPrefix() const;
 };
 

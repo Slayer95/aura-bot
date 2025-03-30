@@ -183,6 +183,19 @@ template <typename T>
   return TrimString(result);
 }
 
+[[nodiscard]] inline std::string ToDurationString(const int64_t seconds)
+{
+  int64_t ss, mm, hh;
+  ss = seconds;
+
+  mm = ss / 60;
+  ss = ss % 60;
+  hh = mm / 60;
+  mm = mm % 60;
+
+  return ToDurationString(hh, mm, ss);
+}
+
 [[nodiscard]] inline std::string ToVersionString(const Version& version)
 {
   return ToDecString(version.first) + "." + ToDecString(version.second);

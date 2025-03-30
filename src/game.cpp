@@ -6284,10 +6284,9 @@ void CGame::UpdateBannableUsers()
 
 void CGame::UpdateUserMapProgression(GameUser::CGameUser* user, const double current, const double expected)
 {
-  constexpr static double percent = 100.;
   uint8_t newDownloadStatus = 100;
   if (current <= expected) {
-    newDownloadStatus = static_cast<uint8_t>(static_cast<uint32_t>(percent * current / expected));
+    newDownloadStatus = static_cast<uint8_t>(static_cast<uint32_t>(PERCENT_FACTOR * current / expected));
   }
 
   if (user->GetMapTransfer().GetStatus() == newDownloadStatus) {
@@ -6313,10 +6312,9 @@ void CGame::UpdateUserMapProgression(GameUser::CGameUser* user, const double cur
 
 void CGame::UpdateUserMapProgression(CAsyncObserver* user, const double current, const double expected)
 {
-  constexpr static double percent = 100.;
   uint8_t newDownloadStatus = 100;
   if (current <= expected) {
-    newDownloadStatus = static_cast<uint8_t>(static_cast<uint32_t>(percent * current / expected));
+    newDownloadStatus = static_cast<uint8_t>(static_cast<uint32_t>(PERCENT_FACTOR * current / expected));
   }
 
   // Note: Updates for every 1% progression translate to a ~10 KB overhead.

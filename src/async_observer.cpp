@@ -51,7 +51,8 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_GameHistory(nGame->GetGameHistory()),
     m_FromRealm(nFromRealm),
     m_MapReady(false),
-    m_Desynchronized(false),
+    m_StateSynchronized(true),
+    m_TimeSynchronized(false),
     m_Offset(0),
     m_Goal(ASYNC_OBSERVER_GOAL_OBSERVER),
     m_UID(nUID),
@@ -66,8 +67,10 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_StartedLoadingTicks(0),
     m_FinishedLoading(false),
     m_FinishedLoadingTicks(0),
+    m_SentGameLoadedReport(false),
     m_PlaybackEnded(false),
     m_LastPingTime(APP_MIN_TICKS),
+    m_LastProgressReportTime(APP_MIN_TICKS),
     m_Name(nName)
 {
   m_Socket->SetLogErrors(true);
@@ -273,10 +276,17 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
   }
 
   if (m_FinishedLoading && !m_PlaybackEnded) {
+    if (!m_SentGameLoadedReport && m_FinishedLoadingTicks + 1000 <= Ticks) {
+      // Grace period so that chat messages are visible
+      SendGameLoadedReport();
+    }
     const size_t beforeCounter = m_ActionFrameCounter;
     if (PushGameFrames()) {
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
       if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
+      if (m_FrameRate > 1 && ((Time <= m_LastProgressReportTime + 20 && Ticks <= m_FinishedLoadingTicks + 90000) || Time <= m_LastProgressReportTime + 150000)) {
+        SendProgressReport();
+      }
     }
     CheckGameOver();
   }
@@ -322,6 +332,11 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
     return false;
   }
   if (!isFlush && m_ActionFrameCounter >= m_GameHistory->GetNumActionFrames()) {
+    if (!m_TimeSynchronized) {
+      if (m_FrameRate > 1) m_FrameRate = 1;
+      m_TimeSynchronized = true;
+      SendChat("You are now synchronized with the live game.");
+    }
     return false;
   }
 
@@ -368,7 +383,7 @@ void CAsyncObserver::OnGameReset(const CGame* nGame)
 
 void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
 {
-  if (m_Desynchronized) return;
+  if (!m_StateSynchronized) return;
 
   if (m_Game && m_Game->GetSyncCounter() <= m_SyncCounter) {
     string text = GetLogPrefix() + "incorrectly ahead of sync";
@@ -387,13 +402,13 @@ void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
 
 void CAsyncObserver::CheckClientGameState()
 {
-  if (m_Desynchronized) return;
+  if (!m_StateSynchronized) return;
 
   size_t nextCheckSumIndex = m_SyncCounter - m_CheckSums.size();
   while (!m_CheckSums.empty() && nextCheckSumIndex < m_GameHistory->GetNumCheckSums()) {
     uint32_t nextCheckSum = m_CheckSums.front();
     if (nextCheckSum != m_GameHistory->GetCheckSum(nextCheckSumIndex)) {
-      m_Desynchronized = true; // how? idfk
+      m_StateSynchronized = false; // how? idfk
       EventDesync();
       break;
     }
@@ -469,21 +484,6 @@ void CAsyncObserver::EventGameLoaded()
   Print(GetLogPrefix() + "finished loading");
   Send(m_GameHistory->m_LoadingRealBuffer);
   Send(m_GameHistory->m_LoadingVirtualBuffer);
-
-  int64_t ss, mm, hh;
-  ss = (GetTicks() - m_GameHistory->GetStartedTicks()) / 1000;
-
-  mm = ss / 60;
-  ss = ss % 60;
-  hh = mm / 60;
-  mm = mm % 60;
-
-  if (m_Game && !m_Game->GetIsGameOver()) {
-    SendChat("Running spectator mode (delay is " + ToDurationString(hh, mm, ss) + ")");
-  } else {
-    SendChat("Watching replay");
-    SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago");
-  }
 }
 
 void CAsyncObserver::EventChatMessage(const CIncomingChatMessage* incomingChatMessage)
@@ -495,7 +495,7 @@ void CAsyncObserver::EventChatMessage(const CIncomingChatMessage* incomingChatMe
       SendChat("Playback rate is limited to 64x");
     } else {
       m_FrameRate *= 2;
-      SendChat("Playback rate set to " + to_string(m_FrameRate) + "x");
+      SendProgressReport();
     }
   } else if (message == "!sync") {
     m_FrameRate = 1;
@@ -565,6 +565,35 @@ void CAsyncObserver::SendChat(const string& message)
     else
       Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 32, CreateByteArray(extraFlags, 4), message));
   }
+}
+
+void CAsyncObserver::SendGameLoadedReport()
+{
+  int64_t ss, mm, hh;
+  ss = (GetTicks() - m_GameHistory->GetStartedTicks()) / 1000;
+
+  mm = ss / 60;
+  ss = ss % 60;
+  hh = mm / 60;
+  mm = mm % 60;
+
+  if (m_Game && !m_Game->GetIsGameOver()) {
+    SendChat("Running spectator mode (delay is " + ToDurationString(hh, mm, ss) + ")");
+  } else {
+    SendChat("Watching replay");
+    SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago");
+  }
+  SendChat("Use !sync to watch at 1x, !ff to speed-up");
+
+  m_SentGameLoadedReport = true;
+}
+
+void CAsyncObserver::SendProgressReport()
+{
+  double progress = PERCENT_FACTOR * (double)m_ActionFrameCounter / (double)m_GameHistory->GetNumActionFrames();
+  int64_t etaMilliSeconds = m_Latency * static_cast<int64_t>(m_GameHistory->GetNumActionFrames() - m_ActionFrameCounter) / (m_FrameRate - 1);
+  SendChat(ToFormattedString(progress) + "% - Fast-forwarding at " + to_string(m_FrameRate) + "x - ETA: " + ToDurationString(etaMilliSeconds / 1000));
+  m_LastProgressReportTime = GetTicks();
 }
 
 string CAsyncObserver::GetLogPrefix() const
