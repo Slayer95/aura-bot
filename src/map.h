@@ -104,6 +104,7 @@ struct MapEssentials
   Version minCompatibleGameVersion;
   Version minSuggestedGameVersion;
   bool isLua;
+  bool foundLua;
   uint32_t editorVersion;
   uint32_t options;
   uint32_t previewImgSize;
@@ -127,6 +128,7 @@ struct MapEssentials
      minCompatibleGameVersion(GAMEVER(1u, 0u)),
      minSuggestedGameVersion(GAMEVER(1u, 0u)),
      isLua(false),
+     foundLua(false),
      editorVersion(0),
      options(0),
      previewImgSize(0)/*,
@@ -611,6 +613,8 @@ public:
 {
   if (fileName == "war3map.j") return true;
   if (fileName == R"(scripts\war3map.j)") return true;
+  if (fileName == "war3map.lua") return true;
+  if (fileName == R"(scripts\war3map.lua)") return true;
   return false;
 }
 

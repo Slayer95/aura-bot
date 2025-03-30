@@ -684,6 +684,8 @@ optional<MapEssentials> CMap::ParseMPQ()
     vector<string> fileList;
     fileList.emplace_back("war3map.j");
     fileList.emplace_back(R"(scripts\war3map.j)");
+    fileList.emplace_back("war3map.lua");
+    fileList.emplace_back(R"(scripts\war3map.lua)");
     fileList.emplace_back("war3map.w3e");
     fileList.emplace_back("war3map.wpm");
     fileList.emplace_back("war3map.doo");
@@ -696,16 +698,20 @@ optional<MapEssentials> CMap::ParseMPQ()
     for (const auto& fileName : fileList) {
       const bool isMapScript = GetMPQPathIsMapScript(fileName);
       if (isMapScript) {
-        // only war3map.j is used when a map has more than one map script file
+        // only one map script file is used if there are more than one
+        // JASS is preferred over Lua; root is preferred over Scripts folder
         if (foundScript) continue;
       } else if (!foundScript) {
         m_Valid = false;
-        m_ErrorMessage = "war3map.j or scripts\\war3map.j not found in MPQ archive";
+        m_ErrorMessage = "war3map.j or war3map.lua not found in MPQ archive";
         break;
       }
       ReadFileFromArchive(fileContents, fileName);
       if (fileContents.empty()) continue;
-      if (isMapScript) foundScript = true;
+      if (isMapScript) {
+        foundScript = true;
+        mapEssentials->foundLua = fileName.substr(fileName.size() - 4) == ".lua";
+      }
       OnLoadMPQSubFile(mapEssentials, cryptos, supportedVersionHeads, fileContents, isMapScript);
     }
 
@@ -828,6 +834,16 @@ optional<MapEssentials> CMap::ParseMPQ()
         mapEssentials->dataSet = static_cast<uint8_t>(RawGameDataSet);
         mapEssentials->editorVersion = RawEditorVersion;
         mapEssentials->isLua = RawScriptingLanguage > 0;
+
+        if (mapEssentials->isLua != mapEssentials->foundLua && m_ErrorMessage.empty()) {
+          m_Valid = false;
+          if (mapEssentials->isLua) {
+            m_ErrorMessage = "map is declared as Lua, but war3map.j was found";
+          } else {
+            m_ErrorMessage = "map is declared as JASS, but war3map.lua was found";
+          }
+        }
+
         mapEssentials->name = RawMapName;
         mapEssentials->author = RawMapAuthor;
         mapEssentials->desc = RawMapDescription;
@@ -1016,7 +1032,7 @@ optional<MapEssentials> CMap::ParseMPQ()
   if (mapEssentials->minCompatibleGameVersion < GAMEVER(1u, 29u) && (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12)) {
     mapEssentials->minCompatibleGameVersion = GAMEVER(1u, 29u);
   }
-  
+
   if (mapEssentials->editorVersion > 0) {
     if (6060 <= mapEssentials->editorVersion) {
       mapEssentials->minSuggestedGameVersion = GAMEVER(1u, 29u);
@@ -1139,10 +1155,6 @@ void CMap::Load(CConfig* CFG)
   if (mapEssentials.has_value()) {
     // If map has Melee flag, group it with other Melee maps in Battle.net game search filter
     m_MapIsMelee = mapEssentials->melee;
-    if (m_MapIsMelee) {
-      DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] found melee map")
-    }
-
     if (mapEssentials->dataSet == 0) {
       m_MapDataSet = mapEssentials->melee ? MAP_DATASET_MELEE : MAP_DATASET_CUSTOM;
     } else {
