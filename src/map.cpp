@@ -2246,6 +2246,8 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
     CFG.SetBool("map.w3mmd.features.prioritize_players", m_MMD.emitPrioritizePlayers);
   }
 
+  m_MMD.useGameOver = CFG.GetBool("map.w3mmd.features.game_over", false);
+
   if (m_MMD.enabled) {
     if (!m_MMD.supported) {
       Print("[MAP] W3MMD cannot be enabled - map does not support it.");

@@ -190,6 +190,7 @@ struct W3MMDConfig
   bool aboutComputers;
   bool emitSkipsVirtualPlayers;
   bool emitPrioritizePlayers;
+  bool useGameOver;
   uint8_t type;
 
   W3MMDConfig()
@@ -198,6 +199,7 @@ struct W3MMDConfig
      aboutComputers(false),
      emitSkipsVirtualPlayers(false),
      emitPrioritizePlayers(false),
+     useGameOver(false),
      type(MMD_TYPE_STANDARD)
   {
   }
@@ -562,6 +564,7 @@ public:
   [[nodiscard]] inline bool                              GetMMDAboutComputers() const { return m_MMD.aboutComputers; }
   [[nodiscard]] inline bool                              GetMMDSupportsVirtualPlayers() const { return m_MMD.emitSkipsVirtualPlayers; }
   [[nodiscard]] inline bool                              GetMMDPrioritizePlayers() const { return m_MMD.emitPrioritizePlayers; }
+  [[nodiscard]] inline bool                              GetMMDUseGameOver() const { return m_MMD.useGameOver; }
   [[nodiscard]] inline uint8_t                           GetMMDType() const { return m_MMD.type; }
 
   // W3HMC

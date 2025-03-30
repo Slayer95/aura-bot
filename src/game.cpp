@@ -1772,7 +1772,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   }
 
   if (m_CustomStats && Time - m_LastCustomStatsUpdateTime >= 30) {
-    if (!m_CustomStats->UpdateQueue() && !GetIsGameOver()) {
+    if (!m_CustomStats->UpdateQueue() && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
       Log("gameover timer started (w3mmd reported game over)");
       StartGameOverTimer(true);
     }
@@ -5409,7 +5409,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     }
   }
   if (m_DotaStats && action.GetImmutableAction().size() >= 6) {
-    if (m_DotaStats->ProcessAction(user->GetUID(), action) && !GetIsGameOver()) {
+    if (m_DotaStats->ProcessAction(user->GetUID(), action) && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started (dota stats class reported game over)")
       StartGameOverTimer(true);
     }
