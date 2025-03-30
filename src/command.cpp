@@ -1358,8 +1358,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (m_Aura->m_Net.m_Config.m_EnableGeoLocalization) {
         FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true));
       }
+      string realmFragment = "Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ";
+      string versionFragment;
+      if (m_TargetGame->m_SupportedGameVersionsMin != m_TargetGame->m_SupportedGameVersionsMax) {
+        versionFragment = " (v" + ToVersionString(targetPlayer->GetGameVersion()) + ")";
+      }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + targetPlayer->GetReconnectionText() + FromFragment + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
-      SendReply("[" + targetPlayer->GetName() + "]. Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName()) + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
+      SendReply("[" + targetPlayer->GetName() + "]. " + realmFragment + versionFragment + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
       if (IsOwner || IsAdmin || IsRootAdmin) {
         SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       }
