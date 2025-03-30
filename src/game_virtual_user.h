@@ -83,10 +83,10 @@ struct CGameVirtualUser
   [[nodiscard]] inline std::string              GetLeftReason() const { return m_LeftReason; }
   [[nodiscard]] inline std::string              GetName() const { return m_Name; }
   [[nodiscard]] std::string                     GetLowerName() const;
-  [[nodiscard]] std::string                     GetDisplayName() const;
+  [[nodiscard]] std::string                     GetDisplayName(std::optional<bool> overrideLoaded = std::nullopt) const;
   [[nodiscard]] inline std::string              GetExtendedName() const { return m_Name + "@@@Virtual"; }
 
-  [[nodiscard]] std::vector<uint8_t>            GetPlayerInfoBytes() const;
+  [[nodiscard]] std::vector<uint8_t>            GetPlayerInfoBytes(std::optional<bool> overrideLoaded = std::nullopt) const;
   [[nodiscard]] std::vector<uint8_t>            GetGameLoadedBytes() const;
   [[nodiscard]] std::vector<uint8_t>            GetGameQuitBytes(const uint8_t leftCode) const;
 

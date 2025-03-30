@@ -58,9 +58,9 @@ string CGameVirtualUser::GetLowerName() const
   return ToLowerCase(m_Name);
 }
 
-string CGameVirtualUser::GetDisplayName() const
+string CGameVirtualUser::GetDisplayName(optional<bool> overrideLoaded) const
 {
-  if (m_Game->GetGameLoaded()) {
+  if (overrideLoaded.value_or(m_Game->GetGameLoaded())) {
     return m_Name;
   } else {
     // This information is important for letting hosts know which !open, !close, commands to execute.
@@ -96,10 +96,10 @@ bool CGameVirtualUser::GetCanSave() const
   return !m_Observer || m_Game->GetHasReferees();
 }
 
-vector<uint8_t> CGameVirtualUser::GetPlayerInfoBytes() const
+vector<uint8_t> CGameVirtualUser::GetPlayerInfoBytes(optional<bool> overrideLoaded) const
 {
   const array<uint8_t, 4> IP = {0, 0, 0, 0};
-  return GameProtocol::SEND_W3GS_PLAYERINFO(m_UID, GetDisplayName(), IP, IP);
+  return GameProtocol::SEND_W3GS_PLAYERINFO(m_UID, GetDisplayName(overrideLoaded), IP, IP);
 }
 
 vector<uint8_t> CGameVirtualUser::GetGameLoadedBytes() const

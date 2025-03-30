@@ -3107,14 +3107,29 @@ void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
   Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
 
-vector<uint8_t> CGame::GetFakeUsersInfo() const
+vector<uint8_t> CGame::GetFakeUsersLobbyInfo() const
 {
+  optional<bool> dontOverride;
   vector<uint8_t> info;
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
     if (m_JoinInProgressVirtualUser.has_value() && fakeUser.GetUID() == m_JoinInProgressVirtualUser->GetUID()) {
       continue;
     }
-    vector<uint8_t> playerInfo = fakeUser.GetPlayerInfoBytes();
+    vector<uint8_t> playerInfo = fakeUser.GetPlayerInfoBytes(dontOverride);
+    AppendByteArrayFast(info, playerInfo);
+  }
+  return info;
+}
+
+vector<uint8_t> CGame::GetFakeUsersLoadedInfo() const
+{
+  optional<bool> overrideLoaded(true);
+  vector<uint8_t> info;
+  for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
+    if (m_JoinInProgressVirtualUser.has_value() && fakeUser.GetUID() == m_JoinInProgressVirtualUser->GetUID()) {
+      continue;
+    }
+    vector<uint8_t> playerInfo = fakeUser.GetPlayerInfoBytes(overrideLoaded);
     AppendByteArrayFast(info, playerInfo);
   }
   return info;
@@ -3137,7 +3152,7 @@ vector<uint8_t> CGame::GetJoinedPlayersInfo() const
 void CGame::SendFakeUsersInfo(CConnection* user) const
 {
   if (!m_FakeUsers.empty()) {
-    Send(user, GetFakeUsersInfo());
+    Send(user, GetFakeUsersLoadedInfo());
   }
 }
 
@@ -6075,7 +6090,7 @@ void CGame::EventGameStartedLoading()
   LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetFakeUsersInfo());
+    AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetFakeUsersLoadedInfo());
     AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetJoinedPlayersInfo());
   }
 

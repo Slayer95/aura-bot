@@ -598,7 +598,8 @@ public:
   std::vector<uint8_t>*                                  GetGameDiscoveryInfoTemplate();
   std::vector<uint8_t>                                   GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
   std::vector<uint8_t>                                   GetSlotInfo() const;
-  std::vector<uint8_t>                                   GetFakeUsersInfo() const;
+  std::vector<uint8_t>                                   GetFakeUsersLobbyInfo() const;
+  std::vector<uint8_t>                                   GetFakeUsersLoadedInfo() const;
   std::vector<uint8_t>                                   GetJoinedPlayersInfo() const;
 
   void                                                   AnnounceToRealm(CRealm* realm);
