@@ -48,6 +48,7 @@
 
 #include "includes.h"
 #include "list.h"
+#include "dbgameplayer.h"
 
 struct CGameLogRecord
 {

@@ -47,6 +47,7 @@
 #define W3MMD_H
 
 #include "includes.h"
+#include "game_structs.h"
 
 //
 // CW3MMD

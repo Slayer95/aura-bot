@@ -442,6 +442,7 @@
     <ClCompile Include="os_util.cpp" />
     <ClCompile Include="socket.cpp" />
     <ClCompile Include="net.cpp" />
+    <ClCompile Include="dbgameplayer.cpp" />
     <ClCompile Include="auradb.cpp" />
     <ClCompile Include="bncsutil_interface.cpp" />
     <ClCompile Include="pjass.cpp" />
@@ -498,6 +499,7 @@
     <ClInclude Include="socket.h" />
     <ClInclude Include="net.h" />
     <ClInclude Include="action.h" />
+    <ClInclude Include="dbgameplayer.h" />
     <ClInclude Include="auradb.h" />
     <ClInclude Include="bncsutil_interface.h" />
     <ClInclude Include="pjass.h" />

@@ -1589,25 +1589,6 @@ CDBBan::CDBBan(string nName, string nServer, string nAuthServer, string nIP, str
 CDBBan::~CDBBan() = default;
 
 //
-// CDBGamePlayer
-//
-
-CDBGamePlayer::CDBGamePlayer(const GameUser::CGameUser* user, const IndexedGameSlot& idxSlot)
-  : m_Name(user->GetName()),
-    m_Server(user->GetRealmHostName()),
-    m_IP(user->GetIPStringStrict()),
-    m_LoadingTime(0),
-    m_LeftTime(0),
-    m_UID(user->GetUID()),
-    m_SID(idxSlot.first),
-    m_Color(idxSlot.second->GetColor()),
-    m_GameResult(GAME_RESULT_UNDECIDED)
-{
-}
-
-CDBGamePlayer::~CDBGamePlayer() = default;
-
-//
 // CDBGameSummary
 //
 
