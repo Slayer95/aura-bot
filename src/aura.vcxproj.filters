@@ -117,6 +117,9 @@
     <ClCompile Include="game_slot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game_structs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="game_virtual_user.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -260,9 +263,6 @@
     <ClInclude Include="save_game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="game.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="connection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -281,7 +281,13 @@
     <ClInclude Include="game_slot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="game_structs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="game_virtual_user.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="aura.h">

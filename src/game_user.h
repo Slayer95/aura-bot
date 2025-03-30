@@ -48,6 +48,7 @@
 
 #include "includes.h"
 #include "connection.h"
+#include "game_structs.h"
 #include "map.h"
 
 //

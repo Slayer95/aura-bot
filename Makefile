@@ -105,6 +105,7 @@ OBJS = lib/csvparser/csvparser.o \
        src/game_user.o \
        src/game_setup.o \
        src/game_slot.o \
+       src/game_structs.o \
        src/game_virtual_user.o \
        src/game.o \
        src/aura.o \

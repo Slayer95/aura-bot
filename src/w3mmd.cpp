@@ -47,6 +47,7 @@
 #include "auradb.h"
 #include "config/config_game.h"
 #include "game.h"
+#include "game_structs.h"
 #include "protocol/game_protocol.h"
 #include "game_slot.h"
 #include "util.h"
