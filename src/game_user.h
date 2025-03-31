@@ -297,7 +297,7 @@ namespace GameUser
     inline void SetRealmVerified(bool nVerified) { m_Verified = nVerified; }
     inline void SetOwner(bool nOwner) { m_Owner = nOwner; }
     inline void SetReserved(bool nReserved) { m_Reserved = nReserved; }
-    inline void SetObserver(bool nObserver) { m_Observer = nObserver; }
+    inline void SetIsObserver(bool nObserver) { m_Observer = nObserver; }
     inline void SetPseudonymUID(uint8_t nUID) { m_PseudonymUID = nUID; }
     inline void SetPowerObserver(bool nPowerObserver) { m_PowerObserver = nPowerObserver; }
     inline void SetWhoisShouldBeSent(bool nWhoisShouldBeSent) { m_WhoisShouldBeSent = nWhoisShouldBeSent; }

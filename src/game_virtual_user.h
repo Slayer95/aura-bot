@@ -90,7 +90,7 @@ struct CGameVirtualUser
   [[nodiscard]] std::vector<uint8_t>            GetGameLoadedBytes() const;
   [[nodiscard]] std::vector<uint8_t>            GetGameQuitBytes(const uint8_t leftCode) const;
 
-  inline void SetObserver(bool nObserver) { m_Observer = nObserver; }
+  inline void SetIsObserver(bool nObserver) { m_Observer = nObserver; }
   inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
   inline void SetHasPlayerIntent(bool nHasPlayerIntent) { m_HasPlayerIntent = nHasPlayerIntent; }
 

@@ -526,6 +526,38 @@ reinforcing independent strategic decision-making.
 
 This flag is disabled by default.
 
+## `--allow-save`
+
+When enabled, this flag allows players to save the game during a multiplayer 
+session. Saving can be useful for long matches, allowing players to resume later 
+without losing progress.
+
+Saving games is particularly beneficial for:
+- **Extended matches**, where a single session may take hours to complete.
+- **Competitive games**, enabling organizers to recover from disconnections or 
+  technical issues.
+- **Co-op campaigns**, where players may want to continue at a later time.
+
+This flag is enabled by default.
+
+## `--no-allow-save`
+
+When enabled, this flag disables the ability to save the game during a 
+multiplayer session. This ensures that games must be completed in a single sitting, 
+which may be desirable for competitive integrity or game modes that do not 
+support reloading.
+
+Disabling game saves may be useful in:
+- **Ranked matches**, where restoring a game state could be exploited.
+- **Fast-paced games**, where interruptions could affect the flow of play.
+- **One-time events or tournaments**, where matches are expected to conclude 
+  in a single session.
+
+This option ensures that all matches must be played from start to finish without 
+the ability to reload a prior state.
+
+This flag is disabled by default.
+
 ## \`--ownerless\`
 
 This flag prevents players from taking ownership of the hosted game.

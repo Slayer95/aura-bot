@@ -3975,7 +3975,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
       const uint8_t replaceSID = GetEmptyObserverSID();
       const uint8_t replaceUID = GetNewUID();
       CreateFakeUserInner(replaceSID, replaceUID, "User[" + ToDecString(replaceSID + 1) + "]", false);
-      m_FakeUsers.back().SetObserver(true);
+      m_FakeUsers.back().SetIsObserver(true);
       CGameSlot* slot = GetSlot(replaceSID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
       slot->SetColor(m_Map->GetVersionMaxSlots());
@@ -4664,7 +4664,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
     m_Slots[SID] = CGameSlot(m_Slots[SID].GetType(), Player->GetUID(), SLOTPROG_RST, SLOTSTATUS_OCCUPIED, 0, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), m_Map->GetLobbyRace(&m_Slots[SID]));
     SetSlotTeamAndColorAuto(SID);
   }
-  Player->SetObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
+  Player->SetIsObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
 
   // send slot info to the new user
   // the SLOTINFOJOIN packet also tells the client their assigned UID and that the join was successful.
@@ -5946,7 +5946,7 @@ void CGame::EventGameStartedLoading()
     }
   }
 
-  if (!m_Config.m_SaveAllowed) {
+  if (!m_Config.m_SaveGameAllowed) {
     for (auto& user : m_Users) {
       user->SetCannotSave();
     }
@@ -7091,12 +7091,12 @@ void CGame::ResolveVirtualUsers()
           virtualUser = GetVirtualUserFromSID(SID);
         }
         // SID was either empty or passive, so we don't need to check GetIsSlotAssignedToSystemVirtualUser() again
-        if (virtualUser && virtualUser->GetTeam() != observerTeam && !GetIsCustomForces()/* && !GetIsSlotAssignedToSystemVirtualUser(SID)*/) {
+        if (virtualUser && slot->GetTeam() != observerTeam && !GetIsCustomForces()/* && !GetIsSlotAssignedToSystemVirtualUser(SID)*/) {
           slot->SetTeam(observerTeam);
           virtualUser->SetIsObserver(slot->GetTeam() == m_Map->GetVersionMaxSlots());
           m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
         }
-        if (virtualUser && virtualUser->GetTeam() == observerTeam) {
+        if (virtualUser && slot->GetTeam() == observerTeam) {
           virtualUser->DisableAllActions();
           virtualUser->SetAllowedConnections(VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER);
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
@@ -7651,10 +7651,10 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
     uint8_t fakeSID = m_FakeUsers[i].GetSID();
     if (fakeSID == SID1) {
       m_FakeUsers[i].SetSID(SID2);
-      m_FakeUsers[i].SetObserver(SID2 == m_Map->GetVersionMaxSlots());
+      m_FakeUsers[i].SetIsObserver(SID2 == m_Map->GetVersionMaxSlots());
     } else if (fakeSID == SID2) {
       m_FakeUsers[i].SetSID(SID1);
-      m_FakeUsers[i].SetObserver(SID1 == m_Map->GetVersionMaxSlots());
+      m_FakeUsers[i].SetIsObserver(SID1 == m_Map->GetVersionMaxSlots());
     }
   }
 
@@ -7662,14 +7662,14 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
   GameUser::CGameUser* PlayerOne = GetUserFromSID(SID1);
   GameUser::CGameUser* PlayerTwo = GetUserFromSID(SID2);
   if (PlayerOne) {
-    PlayerOne->SetObserver(m_Slots[SID1].GetTeam() == m_Map->GetVersionMaxSlots());
+    PlayerOne->SetIsObserver(m_Slots[SID1].GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerOne->GetIsObserver()) {
       PlayerOne->SetPowerObserver(PlayerOne->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       PlayerOne->ClearUserReady();
     }
   }
   if (PlayerTwo) {
-    PlayerTwo->SetObserver(m_Slots[SID2].GetTeam() == m_Map->GetVersionMaxSlots());
+    PlayerTwo->SetIsObserver(m_Slots[SID2].GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerTwo->GetIsObserver()) {
       PlayerTwo->SetPowerObserver(PlayerTwo->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
       PlayerTwo->ClearUserReady();
@@ -7874,7 +7874,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
 
       GameUser::CGameUser* user = GetUserFromUID(slot->GetUID());
       if (user) {
-        user->SetObserver(toObservers);
+        user->SetIsObserver(toObservers);
         if (toObservers) {
           user->SetPowerObserver(!m_UsesCustomReferees && m_Map->GetMapObservers() == MAPOBS_REFEREES);
           user->ClearUserReady();
@@ -7884,7 +7884,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
       } else {
         CGameVirtualUser* virtualUserMatch = GetVirtualUserFromSID(SID);
         if (virtualUserMatch) {
-          virtualUserMatch->SetObserver(toObservers);
+          virtualUserMatch->SetIsObserver(toObservers);
         }
       }
     }
@@ -9575,7 +9575,7 @@ CGameVirtualUser* CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UI
   );
   if (!isCustomForces && !asObserver) SetSlotTeamAndColorAuto(SID);
 
-  m_FakeUsers.emplace_back(this, SID, UID, name).SetObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
+  m_FakeUsers.emplace_back(this, SID, UID, name).SetIsObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   return &m_FakeUsers.back();
 }
