@@ -5443,7 +5443,14 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage*
     {
       // relay the chat message to other users
 
-      bool shouldRelay = !user->GetMuted();
+      bool shouldRelay = true;
+      if (user->GetIsMuted()) {
+        if (user->GetMuteEndTicks() < GetTicks()) {
+          user->UnMute();
+        } else {
+          shouldRelay = false;
+        }
+      }
       const vector<uint8_t>& extraFlags = chatPlayer->GetExtraFlags();
       const bool isLobbyChat = extraFlags.empty();
       if (isLobbyChat == (m_GameLoading || m_GameLoaded)) {
@@ -5960,6 +5967,7 @@ void CGame::EventGameStartedLoading()
   for (auto& user : m_Users) {
     user->SetStatus(USERSTATUS_LOADING_SCREEN);
     user->SetWhoisShouldBeSent(false);
+    user->UnMute();
   }
 
   for (auto& user : m_Users) {

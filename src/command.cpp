@@ -3494,12 +3494,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       }
-      if (targetPlayer->GetMuted()) {
+
+      int64_t muteSeconds = m_TargetGame->GetGameLoading() || m_TargetGame->GetGameLoaded() ? 1200 : 420;
+      if (!targetPlayer->Mute(muteSeconds)) {
         ErrorReply("User [" + targetPlayer->GetName() + "] is already muted.");
         break;
       }
-      targetPlayer->SetMuted(true);
-      SendAll("[" + targetPlayer->GetName() + "] was muted by [" + m_FromName + "]");
+
+      SendAll("[" + targetPlayer->GetName() + "] was muted by [" + m_FromName + "] for " + ToDurationString(muteSeconds));
       break;
     }
 
@@ -5966,7 +5968,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!targetPlayer) {
         break;
       }
-      if (!targetPlayer->GetMuted()) {
+      if (!targetPlayer->GetIsMuted()) {
         // Let this be transparent info.
         // And, more crucially, don't show "cannot unmute yourself" to people who aren't muted.
         ErrorReply("Player [" + targetPlayer->GetName() + "] is not muted.");
@@ -5977,7 +5979,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      targetPlayer->SetMuted(false);
+      if (!targetPlayer->UnMute()) {
+        ErrorReply("Failed to unmute player [" + targetPlayer->GetName() + "]");
+        break;
+      }
       SendAll("[" + targetPlayer->GetName() + "] was unmuted by [" + m_FromName + "]");
       break;
     }

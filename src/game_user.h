@@ -134,6 +134,7 @@ namespace GameUser
     bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
     uint8_t                          m_SmartCommand;
     int64_t                          m_CheckStatusByTicks;
+    int64_t                          m_MuteEndTicks;
 
     bool                             m_GProxy;                       // if the player is using GProxy++
     uint16_t                         m_GProxyPort;                   // port where GProxy will try to reconnect
@@ -241,6 +242,8 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
     [[nodiscard]] bool                         GetIsNativeReferee() const;
     [[nodiscard]] bool                         GetCanUsePublicChat() const;
+    bool                                       Mute(const int64_t seconds);
+    bool                                       UnMute();
     [[nodiscard]] inline bool                  GetWhoisShouldBeSent() const { return m_WhoisShouldBeSent; }
     [[nodiscard]] inline bool                  GetWhoisSent() const { return m_WhoisSent; }
     [[nodiscard]] inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }
@@ -256,7 +259,8 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetLagging() const { return m_Lagging; }
     [[nodiscard]] inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
     [[nodiscard]] inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
-    [[nodiscard]] inline bool                  GetMuted() const { return m_Muted; }
+    [[nodiscard]] inline bool                  GetIsMuted() const { return m_Muted; }
+    [[nodiscard]] inline int64_t               GetMuteEndTicks() const { return m_MuteEndTicks; }
     [[nodiscard]] inline bool                  GetIsActionLocked() const { return m_ActionLocked; }
     [[nodiscard]] inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
     [[nodiscard]] inline bool                  GetLatencySent() const { return m_LatencySent; }
@@ -310,7 +314,7 @@ namespace GameUser
     inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
     inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
     inline void SetKickVote(bool nKickVote) { m_KickVote = nKickVote; }
-    inline void SetMuted(bool nMuted) { m_Muted = nMuted; }
+    inline void SetMuteEndTicks(int64_t nTicks) { m_MuteEndTicks = nTicks; }
     inline void SetActionLocked(bool nActionLocked) { m_ActionLocked = nActionLocked; }
     inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
     inline void SetLatencySent(bool nLatencySent) { m_LatencySent = nLatencySent; }

@@ -118,6 +118,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_SentAutoCommandsHelp(false),
     m_SmartCommand(SMART_COMMAND_NONE),
     m_CheckStatusByTicks(GetTicks() + CHECK_STATUS_LATENCY),
+    m_MuteEndTicks(0),
 
     m_GProxy(false),
     m_GProxyPort(0),
@@ -946,6 +947,23 @@ bool CGameUser::GetCanUsePublicChat() const
   if (GetIsInLoadingScreen()) return false;
   if (!m_Observer || m_PowerObserver || (!m_Game->GetGameLoading() && !m_Game->GetGameLoaded())) return true;
   return !m_Game->GetUsesCustomReferees() && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
+}
+
+bool CGameUser::Mute(const int64_t seconds)
+{
+  int64_t muteEndTicks = GetTicks() + (seconds * 1000);
+  if (m_Muted && m_MuteEndTicks >= muteEndTicks) return false;
+  m_Muted = true;
+  m_MuteEndTicks = muteEndTicks;
+  return true;
+}
+
+bool CGameUser::UnMute()
+{
+  if (!m_Muted) return false;
+  m_Muted = false;
+  m_MuteEndTicks = 0;
+  return true;
 }
 
 bool CGameUser::GetIsOwner(optional<bool> assumeVerified) const
