@@ -43,14 +43,14 @@
 
  */
 
-#include "stats.h"
-#include "aura.h"
-#include "dbgameplayer.h"
-#include "auradb.h"
-#include "game.h"
-#include "game_user.h"
-#include "protocol/game_protocol.h"
-#include "util.h"
+#include "dota.h"
+#include "../aura.h"
+#include "../dbgameplayer.h"
+#include "../auradb.h"
+#include "../game.h"
+#include "../game_user.h"
+#include "../protocol/game_protocol.h"
+#include "../util.h"
 
 using namespace std;
 

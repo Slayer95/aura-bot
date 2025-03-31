@@ -67,8 +67,8 @@
 #include "protocol/game_protocol.h"
 #include "protocol/gps_protocol.h"
 #include "protocol/vlan_protocol.h"
-#include "stats.h"
-#include "w3mmd.h"
+#include "stats/dota.h"
+#include "stats/w3mmd.h"
 #include "irc.h"
 #include "file_util.h"
 

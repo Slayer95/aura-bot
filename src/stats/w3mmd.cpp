@@ -44,12 +44,12 @@
 */
 
 #include "w3mmd.h"
-#include "dbgameplayer.h"
-#include "config/config_game.h"
-#include "game.h"
-#include "protocol/game_protocol.h"
-#include "game_slot.h"
-#include "util.h"
+#include "../dbgameplayer.h"
+#include "../config/config_game.h"
+#include "../game.h"
+#include "../protocol/game_protocol.h"
+#include "../game_slot.h"
+#include "../util.h"
 
 using namespace std;
 

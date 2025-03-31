@@ -465,8 +465,8 @@
     <ClCompile Include="command.cpp" />
     <ClCompile Include="discord.cpp" />
     <ClCompile Include="irc.cpp" />
-    <ClCompile Include="stats.cpp" />
-    <ClCompile Include="w3mmd.cpp" />
+    <ClCompile Include="stats/dota.cpp" />
+    <ClCompile Include="stats/w3mmd.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\CLI11\CLI11.hpp" />
@@ -522,8 +522,8 @@
     <ClInclude Include="command.h" />
     <ClInclude Include="discord.h" />
     <ClInclude Include="irc.h" />
-    <ClInclude Include="stats.h" />
-    <ClInclude Include="w3mmd.h" />
+    <ClInclude Include="stats/dota.h" />
+    <ClInclude Include="stats/w3mmd.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

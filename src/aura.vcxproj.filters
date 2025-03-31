@@ -144,10 +144,10 @@
     <ClCompile Include="irc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stats.cpp">
+    <ClCompile Include="stats/dota.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="w3mmd.cpp">
+    <ClCompile Include="stats/w3mmd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -311,10 +311,10 @@
     <ClInclude Include="irc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stats.h">
+    <ClInclude Include="stats/dota.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="w3mmd.h">
+    <ClInclude Include="stats/w3mmd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

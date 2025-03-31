@@ -21,8 +21,8 @@
 #ifndef AURA_STATS_H_
 #define AURA_STATS_H_
 
-#include "includes.h"
-#include "game_structs.h"
+#include "../includes.h"
+#include "../game_structs.h"
 
 //
 // CDotaStats

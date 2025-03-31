@@ -114,8 +114,8 @@ OBJS = lib/csvparser/csvparser.o \
        src/command.o \
        src/discord.o \
        src/irc.o \
-       src/stats.o \
-       src/w3mmd.o \
+       src/stats/dota.o \
+       src/stats/w3mmd.o \
 
 COBJS = lib/sqlite3/sqlite3.o
 
