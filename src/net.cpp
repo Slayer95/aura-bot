@@ -1004,12 +1004,22 @@ void CNet::HandleUDP(UDPPkt* pkt)
     return;
   }
 
+  bool isExpansion = false;
+  if (memcmp(pkt->buf + 4, ProductID_TFT, 4) == 0) {
+    isExpansion = true;
+  } else if (memcmp(pkt->buf + 4, ProductID_ROC, 4) != 0) {
+    return;
+  }
+
   const Version requestVersion = GAMEVER(1, pkt->buf[8]);
 
   DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
 
   for (const auto& game : m_Aura->GetJoinableGames()) {
     if (!game->GetUDPEnabled() || !game->GetIsStageAcceptingJoins()) {
+      continue;
+    }
+    if (isExpansion != game->GetIsExpansion()) {
       continue;
     }
     if (pkt->buf[8] == 0 || game->GetIsSupportedGameVersion(requestVersion)) {

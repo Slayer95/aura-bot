@@ -154,6 +154,7 @@ public:
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
   inline CGame*                           GetGameBroadcast() const { return m_GameBroadcast; }
+  inline bool                             GetGameIsExpansion() const { return m_GameIsExpansion; }
   inline const Version&                   GetGameVersion() const { return m_GameVersion; }
   inline const Version&                   GetAuthGameVersion() const { return m_AuthGameVersion; }
   inline bool                             GetLoggedIn() const { return m_LoggedIn; }

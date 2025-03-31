@@ -85,7 +85,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   }
 
   vector<string> shortLocales = {"enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"};
-  m_Locale = CFG.GetStringIndex(m_CFGKeyPrefix + "locale_short", shortLocales, PVPGN_LOCALE_ES_ES);
+  m_Locale = CFG.GetStringIndexSensitive(m_CFGKeyPrefix + "locale_short", shortLocales, PVPGN_LOCALE_ES_ES);
 
   if (m_Win32Locale == "system") {
     m_Win32LocaleID = 10250;
@@ -351,7 +351,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
 
   vector<string> shortLocales = {"enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"};
-  m_Locale = CFG.GetStringIndex(m_CFGKeyPrefix + "locale_short", shortLocales, m_Locale);
+  m_Locale = CFG.GetStringIndexSensitive(m_CFGKeyPrefix + "locale_short", shortLocales, m_Locale);
 
   if (m_Win32Locale == "system") {
     m_Win32LocaleID = 10250;

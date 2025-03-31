@@ -1119,6 +1119,9 @@ void CGame::UpdateJoinable()
         if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
           continue;
         }
+        i (GetIsExpansion() != realm->GetGameIsExpansion()) {
+          continue;
+        }
         if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
           continue;
         }

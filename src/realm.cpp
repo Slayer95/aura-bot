@@ -302,9 +302,11 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
                 const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
                 const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
                 const string& exeInfo = m_BNCSUtil->GetEXEInfo();
+                string expansionSuffix = "TFT";
+                if (!m_GameIsExpansion) expansionSuffix = "ROC";
 
                 PRINT_IF(LOG_LEVEL_DEBUG,
-                  GetLogPrefix() + "attempting to auth as WC3: TFT v" +
+                  GetLogPrefix() + "attempting to auth as WC3: " + expansionSuffix + " v" +
                   to_string(exeVersion[3]) + "." + to_string(exeVersion[2]) + std::string(1, char(97 + exeVersion[1])) +
                   " (Build " + to_string(exeVersion[0]) + ") - " +
                   "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
@@ -959,6 +961,7 @@ optional<bool> CRealm::GetIsGameVersionCompatible(const CGame* game) const
 {
   Version realmGameVersion = GetGameVersion();
   if (realmGameVersion.first == 0) return nullopt;
+  if (m_GameIsExpansion != game->GetIsExpansion()) return false;
   return game->GetIsSupportedGameVersion(realmGameVersion);
 }
 
