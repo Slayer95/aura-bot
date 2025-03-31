@@ -356,7 +356,7 @@ public:
   ImmutableUserList                                      GetUnreadyPlayers() const;
   ImmutableUserList                                      GetWaitingReconnectPlayers() const;
   std::optional<Version>                                 GetOverrideLANVersion(const std::string& playerName, const sockaddr_storage* address) const;
-  Version                                                GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm, bool& isExact) const;
+  std::optional<Version>                                 GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const;
   bool                                                   GetIsAutoStartDue() const;
   std::string                                            GetAutoStartText() const;
   std::string                                            GetReadyStatusText() const;

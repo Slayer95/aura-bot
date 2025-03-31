@@ -261,7 +261,8 @@ public:
   [[nodiscard]] inline const std::vector<uint8_t>&   GetImmutableAction() const { return m_Action; }
   [[nodiscard]] inline std::vector<uint8_t>&         GetAction() { return m_Action; }
   [[nodiscard]] inline uint8_t                       GetSniffedType() const { return m_Action.empty() ? GameProtocol::Magic::ZERO : m_Action[0]; }
-  [[nodiscard]] inline size_t                        GetLength() const {
+  [[nodiscard]] inline size_t                        GetLength() const { return m_Action.size(); }
+  [[nodiscard]] inline size_t                        GetOutgoingLength() const {
     size_t result = m_Action.size() + 3;
     return result < 3 ? m_Action.size() : result;
   }
@@ -271,6 +272,16 @@ public:
   [[nodiscard]] uint16_t                             GetUint16BE(const size_t offset) const;
   [[nodiscard]] uint32_t                             GetUint32LE(const size_t offset) const;
   [[nodiscard]] uint32_t                             GetUint32BE(const size_t offset) const;
+
+  [[nodiscard]] inline size_t                        GetStringEndIndex(const size_t offset) {
+    if (m_Action.size() <= offset) return offset;
+    for (size_t i = offset, l = m_Action.size(); i < l; ++i) {
+      if (m_Action[i] == 0) return i;
+    }
+    return m_Action.size();
+  }
+
+  [[nodiscard]] inline std::string                   GetString(const size_t offset) { return std::string(m_Action.data() + offset, m_Action.data() + GetStringEndIndex(offset)); }
 };
 
 //

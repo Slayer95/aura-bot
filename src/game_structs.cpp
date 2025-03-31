@@ -97,7 +97,7 @@ CQueuedActionsFrame::~CQueuedActionsFrame() = default;
 
 void CQueuedActionsFrame::AddAction(CIncomingAction&& action)
 {
-  const uint16_t actionSize = static_cast<uint16_t>(action.GetLength());
+  const uint16_t actionSize = static_cast<uint16_t>(action.GetOutgoingLength());
 
   // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
   // check if adding the next action to the sub actions queue would put us over the limit

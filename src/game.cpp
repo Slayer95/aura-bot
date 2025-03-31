@@ -2750,37 +2750,40 @@ optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const s
   return optional<Version>(match->second);
 }
 
-Version CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm, bool& isExact) const
+optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const
 {
-  optional<Version> maybeVersion;
+  optional<Version> result;
   if (user->GetIsGameSeeker()) {
     const CGameSeeker* seeker = reinterpret_cast<const CGameSeeker*>(user);
-    maybeVersion = seeker->GetMaybeGameVersion();
+    optional<Version> maybeVersion = seeker->GetMaybeGameVersion();
     if (maybeVersion.has_value()) {
-      isExact = true;
-      return maybeVersion.value();
+      result.swap(maybeVersion);
+      return result;
     }
   }
 
   if (fromRealm) {
-    maybeVersion = fromRealm->GetExpectedGameVersion();
+    optional<Version> maybeVersion = fromRealm->GetExpectedGameVersion();
     if (maybeVersion.has_value()) {
-      isExact = true;
-      return maybeVersion.value();
+      result.swap(maybeVersion);
+      return result;
     }
   }
 
   {
     string playerName = TrimString(ToLowerCase(joinRequest->GetName()));
-    maybeVersion = GetOverrideLANVersion(playerName, user->GetRemoteAddress());
+    optional<Version> maybeVersion = GetOverrideLANVersion(playerName, user->GetRemoteAddress());
     if (maybeVersion.has_value()) {
-      isExact = true;
-      return maybeVersion.value();
+      result.swap(maybeVersion);
+      return result;
     }
   }
 
-  isExact = m_SupportedGameVersionsMin == m_SupportedGameVersionsMax;
-  return GetVersion();
+  if (m_SupportedGameVersionsMin == m_SupportedGameVersionsMax) {
+    result = GetVersion();
+  }
+
+  return result;
 }
 
 bool CGame::GetIsAutoStartDue() const
@@ -4629,15 +4632,14 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
     if (matchingRealm) internalRealmId = matchingRealm->GetInternalID();
   }
 
-  bool isExactVersion = false;
-  Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm, isExactVersion);
+  optional<Version> gameVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm);
 
   GameUser::CGameUser* Player = new GameUser::CGameUser(
     this,
     connection, 
     UID == 0xFF ? GetNewUID() : UID,
-    isExactVersion,
-    gameVersion,
+    gameVersion.has_value(),
+    gameVersion.value_or(GetVersion()),
     internalRealmId,
     JoinedRealm,
     joinRequest->GetName(),
@@ -4680,7 +4682,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   SendJoinedPlayersInfo(Player);
 
   // send a map check packet to the new user.
-  SendMapAndVersionCheck(Player, gameVersion);
+  SendMapAndVersionCheck(Player, gameVersion.value_or(GetVersion()));
 
   m_Users.push_back(Player);
 
@@ -4738,8 +4740,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   // This leaves no chance for GProxy handshake
 
   if (!m_JoinInProgressVirtualUser.has_value()) return;
-  bool isExact = false;
-  const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm, isExact);
+  const optional<Version> gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
 
   CAsyncObserver* observer = new CAsyncObserver(connection, this, fromRealm, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
   m_Aura->m_Net.m_GameObservers[connection->GetPort()].push_back(observer);
@@ -4748,7 +4749,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
 
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFOJOIN(observer->GetUID(), observer->GetSocket()->GetPortLE(), observer->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
   observer->SendOtherPlayersInfo();
-  SendMapAndVersionCheck(observer, gameVersion);
+  SendMapAndVersionCheck(observer, gameVersion.value_or(GetVersion()));
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   observer->SendChat("This game is in progress. You can join as an spectator.");
@@ -5249,7 +5250,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     return false;
   }
 
-  if (action.GetLength() > 1027) {
+  if (action.GetLength() > 1024) {
     return false;
   }
 
@@ -5261,7 +5262,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   }
 
   bool shouldHoldAction = false;
-  if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 9 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
+  if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 6 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
     const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL) > 0;
     const uint8_t targetSID = action.GetUint8(1);
     if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
@@ -5282,7 +5283,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   }
 
   if (!shouldHoldAction) {
-    shouldHoldAction = m_EffectiveTicks < user->m_HandicapTicks;
+    shouldHoldAction = m_EffectiveTicks < user->GetHandicapTicks();
   }
 
   if (!shouldHoldAction && user->m_OnHoldActionsShareTargets.count() == 0) {
