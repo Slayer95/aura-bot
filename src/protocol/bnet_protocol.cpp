@@ -1131,7 +1131,6 @@ namespace BNETProtocol
   {
     const uint8_t ProtocolID[]    = {0, 0, 0, 0};
     const uint8_t PlatformID[]    = {54, 56, 88, 73};              // "IX86"
-    const uint8_t ProductID_TFT[] = {80, 88, 51, 87};              // "W3XP"
     const uint8_t Version[]       = {ver.second, 0, 0, 0};
     const uint8_t LocalIP[]       = {127, 0, 0, 1};
     const uint8_t TimeZoneBias[]  = {60, 0, 0, 0};                 // 60 minutes (GMT +0100) but this is probably -0100
@@ -1143,7 +1142,7 @@ namespace BNETProtocol
     packet.push_back(0);                                           // packet length will be assigned later
     AppendByteArray(packet, ProtocolID, 4);                        // Protocol ID
     AppendByteArray(packet, PlatformID, 4);                        // Platform ID
-    AppendByteArray(packet, ProductID_TFT, 4);                     // Product ID (TFT)
+    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);                     // Product ID (TFT)
     AppendByteArray(packet, Version, 4);                           // Version
     AppendByteArrayFast(packet, localeShort);                      // Reverse language (ISO 639-1 concatenated with ISO 3166 alpha-2, and reversed)
     AppendByteArray(packet, LocalIP, 4);                           // Local IP for NAT compatibility

@@ -49,6 +49,9 @@
 
 constexpr double PERCENT_FACTOR = 100.;
 
+constexpr const unsigned char* ProductID_ROC = "WAR3";
+constexpr const unsigned char* ProductID_TFT = "W3XP";
+
 // aura.h
 
 #define APP_ACTION_DONE 0u
@@ -174,13 +177,13 @@ constexpr uint8_t MAP_ALLOW_LUA_NEVER = 0u;
 constexpr uint8_t MAP_ALLOW_LUA_ALWAYS = 1u;
 constexpr uint8_t MAP_ALLOW_LUA_AUTO = 2u;
 
-constexpr const char* HCL_CHARSET_STANDARD = "abcdefghijklmnopqrstuvwxyz0123456789 -=,."; // 41 characters
-constexpr const char* HCL_CHARSET_SMALL = "0123456789abcdef-\" \\"; // 20 characters
+constexpr const unsigned char* HCL_CHARSET_STANDARD = "abcdefghijklmnopqrstuvwxyz0123456789 -=,."; // 41 characters
+constexpr const unsigned char* HCL_CHARSET_SMALL = "0123456789abcdef-\" \\"; // 20 characters
 
 constexpr uint8_t MMD_TYPE_STANDARD = 0u;
 constexpr uint8_t MMD_TYPE_DOTA = 1u;
 
-constexpr const char* AHCL_DEFAULT_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ -=,.!?*_+=|:;"; // 142 characters 
+constexpr const unsigned char* AHCL_DEFAULT_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ -=,.!?*_+=|:;"; // 142 characters 
 
 constexpr uint8_t MAP_TRANSFER_NONE = 0u;
 constexpr uint8_t MAP_TRANSFER_DONE = 1u;

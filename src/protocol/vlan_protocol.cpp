@@ -12,9 +12,6 @@ namespace VLANProtocol
 
   CIncomingVLanSearchGame RECEIVE_VLAN_SEARCHGAME(const vector<uint8_t>& data)
   {
-    const static uint32_t ProductID_ROC  = 1463898675;  // "WAR3"
-    const static uint32_t ProductID_TFT  = 1462982736;  // "W3XP"
-
     // DEBUG_Print( "RECEIVED VLAN_SEARCHGAME");
     // DEBUG_Print(data);
 
@@ -24,27 +21,19 @@ namespace VLANProtocol
     // 4 bytes          -> Version
 
     if (ValidateLength(data) && data.size() >= 12) {
-      uint32_t ProductID = ByteArrayToUInt32(data, false, 4);
       uint32_t Version = ByteArrayToUInt32(data, false, 8);
-      bool TFT = false;
-
-      switch (ProductID)
-      {
-        case ProductID_TFT:
-          TFT = true;
-          // fall through
-        case ProductID_ROC:
-          return CIncomingVLanSearchGame(true, TFT, Version);
-      }
+      if (memcmp(data.data() + 4, ProductID_TFT, 4) == 0)
+        return CIncomingVLanSearchGame(true, true, Version);
+      else if (memcmp(data.data() + 4, ProductID_ROC, 4) == 0)
+        return CIncomingVLanSearchGame(true, false, Version);
+      else
+        return CIncomingVLanSearchGame(false, false, 0);
     }
     return CIncomingVLanSearchGame(false, false, 0);
   }
 
   CIncomingVLanGameInfo* RECEIVE_VLAN_GAMEINFO(const vector<uint8_t>& data)
   {
-    const static uint32_t ProductID_ROC  = 1463898675;  // "WAR3"
-    const static uint32_t ProductID_TFT  = 1462982736;  // "W3XP"
-
     // DEBUG_Print( "RECEIVED VLAN_GAMEINFO");
     // DEBUG_Print(data);
 
@@ -65,7 +54,6 @@ namespace VLANProtocol
 
     if (ValidateLength(data) && data.size() >= 16)
     {
-      uint32_t ProductID = ByteArrayToUInt32(data, false, 4);
       uint32_t Version = ByteArrayToUInt32(data, false, 8);
       uint32_t HostCounter = ByteArrayToUInt32(data, false, 12);
       uint32_t EntryKey = ByteArrayToUInt32(data, false, 16);
@@ -82,9 +70,9 @@ namespace VLANProtocol
 
       bool TFT;
 
-      if (ProductID == ProductID_TFT )
+      if (memcmp(data.data() + 4, ProductID_TFT, 4) == 0)
         TFT = true;
-      else if (ProductID == ProductID_ROC)
+      else if (memcmp(data.data() + 4, ProductID_ROC, 4) == 0)
         TFT = false;
       else
         return nullptr;
@@ -101,19 +89,16 @@ namespace VLANProtocol
 
   vector<uint8_t> SEND_VLAN_SEARCHGAME(bool TFT, const Version& war3Version)
   {
-    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};    // "WAR3"
-    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};    // "W3XP"
-
     vector<uint8_t> packet;
     packet.push_back(VLANProtocol::Magic::VLAN_HEADER);               // VLAN header constant
     packet.push_back(VLANProtocol::Magic::SEARCHGAME);    // VLAN_SEARCHGAME
     packet.push_back(0);                                  // packet length will be assigned later
     packet.push_back(0);                                  // packet length will be assigned later
 
-    if (TFT )
-      AppendByteArray(packet, ProductID_TFT, 4);          // Product ID (TFT)
+    if (TFT)
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);          // Product ID (TFT)
     else
-      AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);          // Product ID (ROC)
 
     AppendByteArray(packet, static_cast<uint32_t>(war3Version.second), false);          // Version
     AssignLength(packet);
@@ -124,9 +109,6 @@ namespace VLANProtocol
 
   vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, const Version& war3Version, uint32_t mapGameType, uint32_t mapFlags, array<uint8_t, 2> mapWidth, array<uint8_t, 2> mapHeight, string gameName, string hostName, uint32_t elapsedTime, string mapPath, array<uint8_t, 4> mapCRC, uint32_t slotsTotal, uint32_t slotsOpen, array<uint8_t, 4> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
-    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};    // "WAR3"
-    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};    // "W3XP"
-
     vector<uint8_t> packet;
 
     if (gameName.empty() || hostName.empty() || mapPath.empty() || mapCRC.size() != 4) {
@@ -154,9 +136,9 @@ namespace VLANProtocol
     packet.push_back(0);                                  // packet length will be assigned later
 
     if (TFT)
-      AppendByteArray(packet, ProductID_TFT, 4);          // Product ID (TFT)
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);          // Product ID (TFT)
     else
-      AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);          // Product ID (ROC)
 
     AppendByteArray(packet, static_cast<uint32_t>(war3Version.second), false);          // Version
     AppendByteArray(packet, hostCounter, false);          // Host Counter
@@ -180,19 +162,16 @@ namespace VLANProtocol
 
   vector<uint8_t> SEND_VLAN_CREATEGAME(bool TFT, const Version& war3Version, uint32_t hostCounter, array<uint8_t, 4> ip, uint16_t port)
   {
-    unsigned char ProductID_ROC[]  = {51, 82, 65, 87};     // "WAR3"
-    unsigned char ProductID_TFT[]  = {80, 88, 51, 87};     // "W3XP"
-
     vector<uint8_t> packet;
     packet.push_back(VLANProtocol::Magic::VLAN_HEADER);               // VLAN header constant
     packet.push_back(VLANProtocol::Magic::CREATEGAME);    // VLAN_CREATEGAME
     packet.push_back(0);                                  // packet length will be assigned later
     packet.push_back(0);                                  // packet length will be assigned later
 
-    if (TFT )
-      AppendByteArray(packet, ProductID_TFT, 4);          // Product ID (TFT)
+    if (TFT)
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);          // Product ID (TFT)
     else
-      AppendByteArray(packet, ProductID_ROC, 4);          // Product ID (ROC)
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);          // Product ID (ROC)
 
     AppendByteArray(packet, static_cast<uint32_t>(war3Version.second), false);          // Version
     AppendByteArray(packet, hostCounter, false);          // Host Counter

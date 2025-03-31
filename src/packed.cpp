@@ -322,13 +322,10 @@ void CPacked::Compress(const bool TFT)
 	AppendByteArray(Header, (uint32_t)m_Decompressed.size(), false);
 	AppendByteArray(Header, (uint32_t)CompressedBlocks.size(), false);
 
-  const uint8_t ProductID_TFT[] = {80, 88, 51, 87}; // "W3XP"
-  const uint8_t ProductID_ROC[] = {51, 82, 65, 87}; // "W3XP"
-
   if (TFT) {
-    AppendByteArray(Header, ProductID_TFT, 4);
+    AppendByteArray(Header, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);
   } else {
-    AppendByteArray(Header, ProductID_ROC, 4);
+    AppendByteArray(Header, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);
   }
 
 	AppendByteArray(Header, static_cast<uint32_t>(m_War3Version.second), false);
