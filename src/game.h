@@ -708,7 +708,7 @@ public:
   bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, const bool isDisconnect);
   inline bool GetIsVerbose() { return m_Verbose; }
-  bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstByte, const uint32_t secondByte);
+  bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstValue, const uint32_t secondValue);
   bool SendChatTriggerSymmetric(const uint8_t UID, const std::string& message, const uint16_t identifier);
   bool GetIsCheckJoinable() const;
   void SetIsCheckJoinable(const bool nCheckIsJoinable);

@@ -3336,7 +3336,7 @@ void CGame::SendAllActionsCallback()
             // only the first (lower) two bytes are relevant,
             // and the upper two bytes are zero or can be zeroed in SendHMC().
             //
-            // TH also expects both uint32_t values to be equal.
+            // TH also expects both uint32_t values at CGame::SendChatTrigger() to be equal.
             // But maybe the second one doesn't matter, just like the upper bytes above.
             //
             // So if those assumptions, hold,
@@ -9284,11 +9284,11 @@ bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, const bool is
   return ShareUnits(fromUser, SID, GetLastActionFrame(), isDisconnect);
 }
 
-bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstByte, const uint32_t secondByte)
+bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstValue, const uint32_t secondValue)
 {
   vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
-  AppendByteArray(packet, firstByte, false);
-  AppendByteArray(packet, secondByte, false);
+  AppendByteArray(packet, firstValue, false);
+  AppendByteArray(packet, secondValue, false);
   vector<uint8_t> action;
   AppendByteArrayFast(packet, message);
   AppendByteArray(action, packet);
