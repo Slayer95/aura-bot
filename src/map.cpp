@@ -2068,8 +2068,11 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_LobbyCountDownStartValue = CFG.GetUint32("map.hosting.game_start.count_down_ticks", 5);
   }
 
-  if (CFG.Exists("map.hosting.share_units.enabled")) {
-    m_ShareUnitsEnabled = CFG.GetBool("map.hosting.share_units.enabled", false);
+  if (CFG.Exists("map.hosting.save_game.allowed")) {
+    m_SaveGameAllowed = CFG.GetBool("map.hosting.save_game.allowed", false);
+  }
+  if (CFG.Exists("map.hosting.share_units.allowed")) {
+    m_ShareUnitsAllowed = CFG.GetBool("map.hosting.share_units.allowed", false);
   }
 
   if (CFG.Exists("map.hosting.latency.default")) {

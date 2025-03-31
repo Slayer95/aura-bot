@@ -166,7 +166,8 @@ public:
   std::optional<uint32_t>                         m_LobbyCountDownInterval;
   std::optional<uint32_t>                         m_LobbyCountDownStartValue;
 
-  std::optional<bool>                             m_ShareUnitsEnabled;
+  std::optional<bool>                             m_ShareUnitsAllowed;
+  std::optional<bool>                             m_SaveGameAllowed;
 
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
@@ -317,7 +318,8 @@ public:
 
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
 
-  void SetShareUnitsEnabled(const bool nShareUnits) { m_ShareUnitsEnabled = nShareUnits; }
+  void SetShareUnitsAllowed(const bool nShareUnits) { m_ShareUnitsAllowed = nShareUnits; }
+  void SetSaveGameAllowed(const bool nSave) { m_SaveGameAllowed = nSave; }
 
   void SetResultSource(const uint8_t nResultSource) { m_ResultSource = nResultSource; }
   void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }

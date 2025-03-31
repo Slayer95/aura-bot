@@ -342,7 +342,8 @@ public:
   std::optional<uint32_t>               m_LobbyCountDownInterval;
   std::optional<uint32_t>               m_LobbyCountDownStartValue;
 
-  std::optional<bool>                   m_ShareUnitsEnabled;
+  std::optional<bool>                   m_SaveGameAllowed;
+  std::optional<bool>                   m_ShareUnitsAllowed;
 
   std::optional<uint16_t>               m_Latency;
   std::optional<bool>                   m_LatencyEqualizerEnabled;

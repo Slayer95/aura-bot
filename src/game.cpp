@@ -5273,7 +5273,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
       user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
     }
 
-    if (m_Config.m_ShareUnitsEnabled && wantsShare) {
+    if (m_Config.m_ShareUnitsAllowed && wantsShare) {
       user->m_OnHoldActionsShareTargets.set(targetSID);
     } else {
       user->m_OnHoldActionsShareTargets.reset(targetSID);
@@ -6025,12 +6025,10 @@ void CGame::EventGameStartedLoading()
     m_SyncPlayers[user] = otherPlayers;
   }
 
-  if (m_Map->GetMapObservers() != MAPOBS_REFEREES) {
-    for (auto& user : m_Users) {
-      if (user->GetIsObserver()) {
-        user->SetCannotPause();
-        user->SetCannotSave();
-      }
+  for (auto& user : m_Users) {
+    if ((m_Map->GetMapObservers() != MAPOBS_REFEREES && user->GetIsObserver()) || !m_Config.m_SaveGameAllowed) {
+      user->SetCannotPause();
+      user->SetCannotSave();
     }
   }
 
