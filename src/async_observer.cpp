@@ -290,10 +290,10 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
       //if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
       if (m_FrameRate > 1) {
-        if ((Time <= m_LastProgressReportTime + 25 && Ticks <= m_FinishedLoadingTicks + 120000) || Time <= m_LastProgressReportTime + 90) {
+        if ((m_LastProgressReportTime + 25 <= Time && Ticks <= m_FinishedLoadingTicks + 120000) || m_LastProgressReportTime + 90 <= Time) {
           SendProgressReport();
           m_MissingLog = GetMissingLog();
-        } else if (Time <= m_LastProgressReportTime + 5) {
+        } else if (m_LastProgressReportTime + 5 <= Time) {
           uint8_t missingLog = GetMissingLog();
           if (m_MissingLog < missingLog) {
             // Ensure progress reports around 75% 87.5% 91.25% ...
@@ -621,7 +621,8 @@ void CAsyncObserver::SendProgressReport()
 {
   double progress = (double)m_ActionFrameCounter / (double)m_GameHistory->GetNumActionFrames();
   int64_t etaMilliSeconds = m_Latency * static_cast<int64_t>(m_GameHistory->GetNumActionFrames() - m_ActionFrameCounter) / (m_FrameRate - 1);
-  SendChat(ToFormattedString(PERCENT_FACTOR * progress) + "% - Fast-forwarding at " + to_string(m_FrameRate) + "x - ETA: " + ToDurationString(etaMilliSeconds / 1000));
+  // Let it fit in chat log (F12)
+  SendChat(ToFormattedString(PERCENT_FACTOR * progress) + "% - Fast-forwarding at " + to_string(m_FrameRate) + "x - ETA " + ToDurationString(etaMilliSeconds / 1000));
   m_LastProgressReportTime = GetTime();
 }
 
