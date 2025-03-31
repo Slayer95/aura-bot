@@ -614,7 +614,7 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.locale_short\`
-- Type: enum
+- Type: stringindexsensitive
 - Default value: PVPGN_LOCALE_ES_ES
 - Error handling: Use default value
 
@@ -625,7 +625,7 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.locale_short\`
-- Type: enum
+- Type: stringindexsensitive
 - Default value: Empty
 - Error handling: Use default value
 

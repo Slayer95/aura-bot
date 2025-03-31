@@ -444,6 +444,30 @@ This flag enables sound notifications when a player joins the hosted game.
 This flag is equivalent to to ``<ui.notify_joins.enabled>`` in `config.ini`.
 This flag is disabled by default.
 
+## \`--tft\`
+
+This flag enables Warcraft III: Frozen Throne Ⓡ support for the hosted game.
+
+A game may only target either Reign of Chaos or Frozen Throne. Therefore, `--tft` is incompatible with `--roc`.
+
+This option is equivalent to ``<hosting.game_versions.expansion.default = TFT>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.game_versions.expansion.default = TFT>`` in map configuration
+
+This flag is enabled by default.
+
+## \`--roc\`
+
+This flag enables Warcraft III: Frozen Throne Ⓡ support for the hosted game.
+
+A game may only target either Reign of Chaos or Frozen Throne. Therefore, `--roc` is incompatible with `--tft`.
+
+This option is equivalent to ``<hosting.game_versions.expansion.default = ROC>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.game_versions.expansion.default = ROC>`` in map configuration
+
+This flag is disabled by default.
+
 ## \`--ffa\`
 
 This flag forces players joining the game into different teams.

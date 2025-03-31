@@ -279,7 +279,7 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
   return false;
 }
 
-bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const optional<Version>& war3DataVersion, const Version& realmGameVersion, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken)
+bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const optional<Version>& war3DataVersion, const bool realmIsExpansion, const Version& realmAuthGameVersion, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken)
 {
   m_KeyInfoROC     = CreateKeyInfo(realmConfig->m_CDKeyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
   m_KeyInfoTFT     = CreateKeyInfo(realmConfig->m_CDKeyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
@@ -287,7 +287,7 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   if (m_KeyInfoROC.size() != 36)
     Print("[BNCS] unable to create ROC key info - invalid ROC key");
 
-  if (m_KeyInfoTFT.size() != 36)
+  if (realmIsExpansion && m_KeyInfoTFT.size() != 36)
     Print("[BNCS] unable to create TFT key info - invalid TFT key");
 
   if (realmConfig->m_ExeAuthUseCustomVersionData) {
@@ -304,10 +304,10 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
   }
 
   if (
-    !war3DataVersion.has_value() || war3DataVersion.value() != realmGameVersion ||
-    !ExtractEXEFeatures(realmGameVersion, war3Path, valueStringFormula, mpqFileName)
+    !war3DataVersion.has_value() || war3DataVersion.value() != realmAuthGameVersion ||
+    !ExtractEXEFeatures(realmAuthGameVersion, war3Path, valueStringFormula, mpqFileName)
   ) {
-    optional<VersionData> versionData = GetDefaultVersionData(realmGameVersion);
+    optional<VersionData> versionData = GetDefaultVersionData(realmAuthGameVersion);
     if (!versionData.has_value()) {
       return false;
     }

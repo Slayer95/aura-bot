@@ -537,21 +537,12 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
-    if (mapWidth.size() != 2 || mapHeight.size() != 2) {
-      Print("[GAMEPROTO] invalid dimensions passed to SEND_W3GS_GAMEINFO");
-      return std::vector<uint8_t>();
-    }
     if (gameName.empty() || hostName.empty() || mapPath.empty()) {
       Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
       return std::vector<uint8_t>();
     }
-    if (mapHash.size() != 4) {
-      Print("[GAMEPROTO] invalid map hash passed to SEND_W3GS_GAMEINFO: " + ByteArrayToDecString(mapHash));
-      return std::vector<uint8_t>();
-    }
-
     const uint8_t Unknown2[] = {1, 0, 0, 0};
     const uint8_t version4[] = {war3Version.second, 0, 0, 0};
 
@@ -571,7 +562,11 @@ namespace GameProtocol
     // make the rest of the packet
 
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::GAMEINFO, 0, 0};
-    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);
+    if (isExpansion) {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);                     // Product ID (TFT)
+    } else {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);                     // Product ID (TFT)
+    }
     AppendByteArray(packet, version4, 4);
     AppendByteArray(packet, hostCounter, false);             // Host Counter
     AppendByteArray(packet, entryKey, false);                // Entry Key
@@ -590,7 +585,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
   {
     if (gameName.empty() || hostName.empty() || mapPath.empty()) {
       Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
@@ -616,7 +611,11 @@ namespace GameProtocol
     // make the rest of the packet
 
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::GAMEINFO, 0, 0};
-    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);
+    if (isExpansion) {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);                     // Product ID (TFT)
+    } else {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);                     // Product ID (TFT)
+    }
     *gameVersionOffset = static_cast<uint16_t>(packet.size());       // Game version
     AppendByteArray(packet, Zeros, 4);
     AppendByteArray(packet, hostCounter, false);                     // Host Counter
@@ -637,12 +636,16 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CREATEGAME(const Version& war3Version, const uint32_t hostCounter)
+  std::vector<uint8_t> SEND_W3GS_CREATEGAME(const bool isExpansion, const Version& war3Version, const uint32_t hostCounter)
   {
     const uint8_t version4[] = {war3Version.second, 0, 0, 0};
 
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CREATEGAME, 16, 0};
-    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);
+    if (isExpansion) {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);                     // Product ID (TFT)
+    } else {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);                     // Product ID (TFT)
+    }
     AppendByteArray(packet, version4, 4);
     AppendByteArray(packet, hostCounter, false); // Host Counter
     return packet;

@@ -1119,7 +1119,7 @@ void CGame::UpdateJoinable()
         if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
           continue;
         }
-        i (GetIsExpansion() != realm->GetGameIsExpansion()) {
+        if (GetIsExpansion() != realm->GetGameIsExpansion()) {
           continue;
         }
         if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
@@ -3687,6 +3687,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
     return info;    
   } else {
     vector<uint8_t> info = GameProtocol::SEND_W3GS_GAMEINFO(
+      GetIsExpansion(),
       gameVersion,
       GetGameType(),
       GetGameFlags(),
@@ -3733,6 +3734,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
 
   return GameProtocol::SEND_W3GS_GAMEINFO_TEMPLATE(
     gameVersionOffset, dynamicInfoOffset,
+    GetIsExpansion(),
     GetGameType(),
     GetGameFlags(),
     GetAnnounceWidth(),
@@ -3800,7 +3802,7 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, const option
 
 void CGame::SendGameDiscoveryCreate(const Version& version) const
 {
-  vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(version, m_HostCounter);
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_CREATEGAME(GetIsExpansion(), version, m_HostCounter);
   m_Aura->m_Net.SendGameDiscovery(packet, m_Config.m_ExtraDiscoveryAddresses);
 }
 

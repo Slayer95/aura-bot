@@ -1630,15 +1630,15 @@ void CMap::Load(CConfig* CFG)
 
 bool CMap::AcquireGameIsExpansion(CConfig* CFG)
 {
-  if (CFG->Exists("map.cfg.hosting.expansion")) { // from CGameSetup
-    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.cfg.hosting.expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
+  if (CFG->Exists("map.cfg.hosting.game_versions.expansion")) { // from CGameSetup
+    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.cfg.hosting.game_versions.expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
     if (!CFG->GetErrorLast()) {
       m_MapTargetGameIsExpansion = isExpansion;
     }
   }
 
-  if (!m_MapTargetGameIsExpansion.has_value() && CFG->Exists("map.hosting.expansion.default")) { // from map.ini
-    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.hosting.expansion.default", {"roc", "tft"}, SELECT_EXPANSION_TFT));
+  if (!m_MapTargetGameIsExpansion.has_value() && CFG->Exists("map.hosting.game_versions.expansion.default")) { // from map.ini
+    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.hosting.game_versions.expansion.default", {"roc", "tft"}, SELECT_EXPANSION_TFT));
     if (!CFG->GetErrorLast()) {
       m_MapTargetGameIsExpansion = isExpansion;
     }

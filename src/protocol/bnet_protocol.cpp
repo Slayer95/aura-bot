@@ -1127,7 +1127,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_INFO(const Version& war3Version, uint32_t localeID, uint32_t languageID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
+  vector<uint8_t> SEND_SID_AUTH_INFO(const bool isExpansion, const Version& war3Version, uint32_t localeID, uint32_t languageID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
   {
     const uint8_t ProtocolID[]    = {0, 0, 0, 0};
     const uint8_t PlatformID[]    = {54, 56, 88, 73};              // "IX86"
@@ -1142,7 +1142,11 @@ namespace BNETProtocol
     packet.push_back(0);                                           // packet length will be assigned later
     AppendByteArray(packet, ProtocolID, 4);                        // Protocol ID
     AppendByteArray(packet, PlatformID, 4);                        // Platform ID
-    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);                     // Product ID (TFT)
+    if (isExpansion) {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);                     // Product ID (TFT)
+    } else {
+      AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_ROC), 4);                     // Product ID (TFT)
+    }
     AppendByteArray(packet, version4, 4);                           // Version
     AppendByteArrayFast(packet, localeShort);                      // Reverse language (ISO 639-1 concatenated with ISO 3166 alpha-2, and reversed)
     AppendByteArray(packet, LocalIP, 4);                           // Local IP for NAT compatibility
@@ -1156,21 +1160,22 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_CHECK(const array<uint8_t, 4>& clientToken, const array<uint8_t, 4>& exeVersion, const array<uint8_t, 4>& exeVersionHash, const vector<uint8_t>& keyInfoROC, const vector<uint8_t>& keyInfoTFT, const string& exeInfo, const string& keyOwnerName)
+  vector<uint8_t> SEND_SID_AUTH_CHECK(const array<uint8_t, 4>& clientToken, const bool isExpansion, const array<uint8_t, 4>& exeVersion, const array<uint8_t, 4>& exeVersionHash, const vector<uint8_t>& keyInfoROC, const vector<uint8_t>& keyInfoTFT, const string& exeInfo, const string& keyOwnerName)
   {
     vector<uint8_t> packet;
-   uint32_t NumKeys = 2;
-    packet.push_back(BNETProtocol::Magic::BNET_HEADER);                         // BNET header constant
-    packet.push_back(BNETProtocol::Magic::AUTH_CHECK);         // SID_AUTH_CHECK
+    uint32_t numKeys = 1;
+    if (isExpansion) ++numKeys;
+    packet.push_back(BNETProtocol::Magic::BNET_HEADER);             // BNET header constant
+    packet.push_back(BNETProtocol::Magic::AUTH_CHECK);              // SID_AUTH_CHECK
     packet.push_back(0);                                            // packet length will be assigned later
     packet.push_back(0);                                            // packet length will be assigned later
     AppendByteArrayFast(packet, clientToken);                       // Client Token
     AppendByteArrayFast(packet, exeVersion);                        // EXE Version
     AppendByteArrayFast(packet, exeVersionHash);                    // EXE Version Hash
-    AppendByteArray(packet, NumKeys, false);                        // number of keys in this packet
+    AppendByteArray(packet, numKeys, false);                        // number of keys in this packet
     AppendByteArray(packet, static_cast<uint32_t>(0), false);       // boolean Using Spawn (32 bit)
     AppendByteArrayFast(packet, keyInfoROC);                        // ROC Key Info
-    AppendByteArrayFast(packet, keyInfoTFT);                        // TFT Key Info
+    if (isExpansion) AppendByteArrayFast(packet, keyInfoTFT);       // TFT Key Info
     AppendByteArrayFast(packet, exeInfo);                           // EXE Info
     AppendByteArrayFast(packet, keyOwnerName);                      // CD Key Owner Name
     AssignLength(packet);

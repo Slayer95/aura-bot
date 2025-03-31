@@ -297,7 +297,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
               m_InfoIX86VerFileName = vector<uint8_t>(infoResult.verFileNameStart, infoResult.verFileNameEnd);
               m_InfoValueStringFormula = vector<uint8_t>(infoResult.valueStringFormulaStart, infoResult.valueStringFormulaEnd);
 
-              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_AuthGameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
+              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_GameIsExpansion, m_AuthGameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
               if (versionSuccess) {
                 const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
                 const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
@@ -312,7 +312,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
                   "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
                 )
 
-                SendAuth(BNETProtocol::SEND_SID_AUTH_CHECK(GetInfoClientToken(), exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, m_Config.m_LicenseeName));
+                SendAuth(BNETProtocol::SEND_SID_AUTH_CHECK(GetInfoClientToken(), m_GameIsExpansion, exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, m_Config.m_LicenseeName));
                 SendAuth(BNETProtocol::SEND_SID_ZERO());
                 SendNetworkConfig();
               } else {
@@ -598,7 +598,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
         return;
       }
       SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
-      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_AuthGameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
+      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameIsExpansion, m_AuthGameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
       m_Socket->DoSend(send_fd);
       m_LastGameListTime       = Time;
       return;
