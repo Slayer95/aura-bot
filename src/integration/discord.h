@@ -26,8 +26,8 @@
 #ifndef AURA_DISCORD_H_
 #define AURA_DISCORD_H_
 
-#include "includes.h"
-#include "config/config_discord.h"
+#include "../includes.h"
+#include "../config/config_discord.h"
 
 #ifndef DISABLE_DPP
 #if defined(_MSC_VER)

@@ -68,7 +68,7 @@
 #include "protocol/gps_protocol.h"
 #include "game.h"
 #include "cli.h"
-#include "irc.h"
+#include "integration/irc.h"
 #include "protocol/vlan_protocol.h"
 #include <utf8/utf8.h>
 

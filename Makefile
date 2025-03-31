@@ -112,8 +112,8 @@ OBJS = lib/csvparser/csvparser.o \
        src/aura.o \
        src/cli.o \
        src/command.o \
-       src/discord.o \
-       src/irc.o \
+       src/integration/discord.o \
+       src/integration/irc.o \
        src/stats/dota.o \
        src/stats/w3mmd.o \
 

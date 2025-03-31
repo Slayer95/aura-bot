@@ -35,7 +35,7 @@
 #include "protocol/game_protocol.h"
 #include "game_setup.h"
 #include "game_user.h"
-#include "irc.h"
+#include "integration/irc.h"
 #include "map.h"
 #include "net.h"
 #include "realm_chat.h"

@@ -31,7 +31,7 @@
 #include "game.h"
 #include "protocol/game_protocol.h"
 #include "hash.h"
-#include "irc.h"
+#include "integration/irc.h"
 #include "map.h"
 #include "realm.h"
 #include "save_game.h"

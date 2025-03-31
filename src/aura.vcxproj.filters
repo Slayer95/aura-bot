@@ -138,16 +138,16 @@
     <ClCompile Include="command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="discord.cpp">
+    <ClCompile Include="integration\discord.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="irc.cpp">
+    <ClCompile Include="integration\irc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stats/dota.cpp">
+    <ClCompile Include="stats\dota.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stats/w3mmd.cpp">
+    <ClCompile Include="stats\w3mmd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -305,16 +305,16 @@
     <ClInclude Include="command.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="discord.h">
+    <ClInclude Include="integration\discord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="irc.h">
+    <ClInclude Include="integration\irc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stats/dota.h">
+    <ClInclude Include="stats\dota.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stats/w3mmd.h">
+    <ClInclude Include="stats\w3mmd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

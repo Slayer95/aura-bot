@@ -54,7 +54,7 @@
 #include "config/config_bot.h"
 #include "config/config_game.h"
 #include "config/config_commands.h"
-#include "irc.h"
+#include "integration/irc.h"
 #include "socket.h"
 #include "net.h"
 #include "dbgameplayer.h"
@@ -69,7 +69,7 @@
 #include "protocol/vlan_protocol.h"
 #include "stats/dota.h"
 #include "stats/w3mmd.h"
-#include "irc.h"
+#include "integration/irc.h"
 #include "file_util.h"
 
 #include <bitset>
