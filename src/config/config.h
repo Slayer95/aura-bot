@@ -132,6 +132,7 @@ public:
 
   [[nodiscard]] float GetFloat(const std::string& key, float x);
   [[nodiscard]] uint8_t GetStringIndex(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);
+  [[nodiscard]] uint8_t GetStringIndexSensitive(const std::string& key, const std::vector<std::string>& fromList, const uint8_t x);
 
   template <typename EnumType, size_t N>
   [[nodiscard]] EnumType GetEnum(const std::string& key, const std::array<std::string, N>& fromList, EnumType x)
@@ -158,8 +159,8 @@ public:
   }
 
   [[nodiscard]] std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSetSensitive(const std::string& key, char separator, bool trimElements, const std::set<std::string> x);
   [[nodiscard]] std::set<std::string> GetSet(const std::string& key, char separator, bool trimElements, const std::set<std::string> x);
-  [[nodiscard]] std::set<std::string> GetSetInsensitive(const std::string& key, char separator, bool trimElements, const std::set<std::string> x);
   [[nodiscard]] std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
 
   [[nodiscard]] std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count);

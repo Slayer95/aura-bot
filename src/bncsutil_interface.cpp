@@ -291,8 +291,8 @@ bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, c
     Print("[BNCS] unable to create TFT key info - invalid TFT key");
 
   if (realmConfig->m_ExeAuthUseCustomVersionData) {
-    if (realmConfig->m_ExeAuthVersion.has_value()) {
-      copy_n(realmConfig->m_ExeAuthVersion.value().begin(), 4, m_EXEVersion.begin());
+    if (realmConfig->m_ExeAuthVersionDetails.has_value()) {
+      copy_n(realmConfig->m_ExeAuthVersionDetails.value().begin(), 4, m_EXEVersion.begin());
     }
     if (realmConfig->m_ExeAuthVersionHash.has_value()) {
       copy_n(realmConfig->m_ExeAuthVersionHash.value().begin(), 4, m_EXEVersionHash.begin());

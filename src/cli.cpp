@@ -148,6 +148,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")->check(CLI::IsMember({"none", "censor", "deny"}));
   app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")->check(CLI::IsMember({"ignore", "exit-main-error", "exit-empty-main-error", "exit-any-error", "exit-empty-any-error", "exit-max-errors"}));
   app.add_option("--game-version", m_GameVersion, "Customizes the main version for the hosted lobby.");
+  app.add_flag(  "--tft,--roc{false}", m_GameIsExpansion, "Customizes whether the hosted lobby will target Reign of Chaos or Frozen Throne clients.");
   app.add_option("--crossplay", m_GameCrossPlayMode, "Customizes the crossplay capabilities of the hosted lobby. Values: none, conservative, optimistic, force")->check(CLI::IsMember({"none", "conservative", "optimistic", "force"}));
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");

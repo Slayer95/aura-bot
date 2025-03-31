@@ -1135,6 +1135,7 @@ void CMap::Load(CConfig* CFG)
     sha1 = mapFileSHA1.value();
   }
 
+  AcquireGameIsExpansion(CFG);
   AcquireGameVersion(CFG);
 
   optional<MapEssentials> mapEssentials;
@@ -1627,6 +1628,31 @@ void CMap::Load(CConfig* CFG)
   //ClearMapFileContents();
 }
 
+bool CMap::AcquireGameIsExpansion(CConfig* CFG)
+{
+  if (CFG->Exists("map.cfg.hosting.expansion")) { // from CGameSetup
+    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.cfg.hosting.expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
+    if (!CFG->GetErrorLast()) {
+      m_MapTargetGameIsExpansion = isExpansion;
+    }
+  }
+
+  if (!m_MapTargetGameIsExpansion.has_value() && CFG->Exists("map.hosting.expansion.default")) { // from map.ini
+    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.hosting.expansion.default", {"roc", "tft"}, SELECT_EXPANSION_TFT));
+    if (!CFG->GetErrorLast()) {
+      m_MapTargetGameIsExpansion = isExpansion;
+    }
+  }
+
+  if (!m_MapTargetGameVersion.has_value()) {
+    // Guaranteed to have a value,
+    // because we don't error anywhere just because the bot owner forgot to specify TFT,
+    // and just default to TFT.
+    m_MapTargetGameIsExpansion = m_Aura->m_GameDefaultConfig->m_GameIsExpansion;
+  }
+
+  return true;
+}
 
 bool CMap::AcquireGameVersion(CConfig* CFG)
 {

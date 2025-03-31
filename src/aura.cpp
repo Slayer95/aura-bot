@@ -2050,7 +2050,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     return false;
   }
 
-  if (!gameSetup->m_Map->GetMapHasGameVersion()) {
+  if (!gameSetup->m_Map->GetMapHasTargetGameVersion()) {
     gameSetup->m_Ctx->ErrorReply("The game version has not been specified", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     if (MatchLogLevel(LOG_LEVEL_WARNING)) {
       Print("[CONFIG] Game cannot be hosted because <hosting.game_versions.main> is missing.");

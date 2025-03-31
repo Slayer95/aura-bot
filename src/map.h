@@ -311,6 +311,7 @@ class CMap
 public:
   CAura* m_Aura;
 
+  std::optional<bool>                   m_MapTargetGameIsExpansion;
   std::optional<Version>                m_MapTargetGameVersion;
   std::optional<uint8_t>                m_NumPlayersToStartGameOver;
   std::optional<uint8_t>                m_PlayersReadyMode;
@@ -457,8 +458,10 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapFlags() const { return m_GameFlags; }
   [[nodiscard]] uint32_t                          GetGameConvertedFlags() const;
   [[nodiscard]] uint32_t                          GetMapGameType() const;
-  [[nodiscard]] inline bool                       GetMapHasGameVersion() const { return m_MapTargetGameVersion.has_value(); }
+  [[nodiscard]] inline bool                       GetMapHasTargetGameVersion() const { return m_MapTargetGameVersion.has_value(); }
   [[nodiscard]] inline Version                    GetMapTargetGameVersion() const { return m_MapTargetGameVersion.value(); }
+  [[nodiscard]] inline bool                       GetMapHasTargetGameIsExpansion() const { return m_MapTargetGameIsExpansion.has_value(); }
+  [[nodiscard]] inline bool                       GetMapTargetGameIsExpansion() const { return m_MapTargetGameIsExpansion.value(); }
   [[nodiscard]] inline uint32_t                   GetMapLocale() const { return m_MapLocale; }
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapDataSet() const { return m_MapDataSet; }
@@ -532,6 +535,7 @@ public:
   void                                            ReplaceTriggerStrings(std::string& container, std::vector<std::string*>& maybeWTSRefs) const;
   std::optional<MapEssentials>                    ParseMPQFromPath(const std::filesystem::path& filePath);
   std::optional<MapEssentials>                    ParseMPQ();
+  bool AcquireGameIsExpansion(CConfig* CFG);
   bool AcquireGameVersion(CConfig* CFG);
   void Load(CConfig* CFG);
   void LoadGameConfigOverrides(CConfig& CFG);

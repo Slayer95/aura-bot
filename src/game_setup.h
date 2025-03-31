@@ -189,6 +189,7 @@ public:
   std::optional<uint8_t>                          m_ResultSource;
   std::optional<bool>                             m_HideLobbyNames;
   std::optional<uint8_t>                          m_HideInGameNames;
+  std::optional<bool>                             m_GameIsExpansion;
   std::optional<Version>                          m_GameVersion;
   std::optional<bool>                             m_LoadInGame;
   std::optional<bool>                             m_EnableJoinObserversInProgress;
@@ -356,6 +357,7 @@ public:
   void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
   void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
   void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
+  void SetGameIsExpansion(const bool nGameIsExpansion) { m_GameIsExpansion = nGameIsExpansion; }
   void SetGameVersion(const Version& nGameVersion) { m_GameVersion = nGameVersion; }
   void SetLoadInGame(const bool nGameLoadInGame) { m_LoadInGame = nGameLoadInGame; }
   void SetEnableJoinObserversInProgress(const bool nGameEnableJoinObserversInProgress) { m_EnableJoinObserversInProgress = nGameEnableJoinObserversInProgress; }

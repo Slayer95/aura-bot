@@ -80,7 +80,9 @@ private:
   CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
 
   CGame*                           m_GameBroadcast;
+  bool                             m_GameIsExpansion;
   Version                          m_GameVersion;
+  Version                          m_AuthGameVersion;
   std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
   std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted or not, or it is pending
   uint16_t                         m_LastGamePort;              // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
@@ -153,6 +155,7 @@ public:
 
   inline CGame*                           GetGameBroadcast() const { return m_GameBroadcast; }
   inline const Version&                   GetGameVersion() const { return m_GameVersion; }
+  inline const Version&                   GetAuthGameVersion() const { return m_AuthGameVersion; }
   inline bool                             GetLoggedIn() const { return m_LoggedIn; }
   inline bool                             GetFailedLogin() const { return m_FailedLogin; }
   inline bool                             GetFailedSignup() const { return m_FailedSignup; }
@@ -173,7 +176,7 @@ public:
   std::string                             GetDataBaseID() const;
   std::string                             GetLogPrefix() const;
   std::optional<Version>                  GetExpectedGameVersion() const;
-  std::optional<Version>                  ResolveGameVersion() const;
+  bool                                    ResolveGameVersion();
   std::optional<bool>                     GetIsGameVersionCompatible(const CGame* game) const;
   inline uint8_t       GetHostCounterID() const { return m_PublicServerID; }
   inline uint32_t      GetInternalID() const { return m_InternalServerID; }

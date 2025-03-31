@@ -87,6 +87,7 @@ public:
   std::optional<std::string>            m_SearchType;
   std::optional<std::string>            m_GameName;
   std::optional<std::string>            m_GameVersion;
+  std::optional<bool>                   m_GameIsExpansion;
   std::optional<bool>                   m_GameTeamsLocked;
   std::optional<bool>                   m_GameTeamsTogether;
   std::optional<bool>                   m_GameAdvancedSharedUnitControl;

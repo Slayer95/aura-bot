@@ -112,10 +112,12 @@ struct CRealmConfig
   bool m_ExeAuthIgnoreVersionError;
   uint8_t m_LoginHashType;                       // pvpgn or battle.net
 
-  std::optional<Version> m_GameVersion;                   // WC3 major+minor version
-  std::optional<std::vector<uint8_t>> m_ExeAuthVersion;       // 4 bytes: WC3 version as {build, patch, minor, major}
-  std::optional<std::vector<uint8_t>> m_ExeAuthVersionHash;   // 4 bytes
-  std::string m_ExeAuthInfo;                                  // filename.exe dd/MM/yy hh::mm:ss size
+  std::optional<bool> m_GameIsExpansion;
+  std::optional<Version> m_GameVersion;                         // WC3 major+minor version
+  std::optional<Version> m_ExeAuthVersion;
+  std::optional<std::vector<uint8_t>> m_ExeAuthVersionDetails;  // 4 bytes: WC3 version as {build, patch, minor, major}
+  std::optional<std::vector<uint8_t>> m_ExeAuthVersionHash;     // 4 bytes
+  std::string m_ExeAuthInfo;                                    // filename.exe dd/MM/yy hh::mm:ss size
 
   std::string m_FirstChannel;                    //
   std::set<std::string> m_SudoUsers;             //

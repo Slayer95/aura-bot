@@ -144,18 +144,25 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_ExeAuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.custom", false);
   m_ExeAuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.ignore_version_error", false);
-  m_LoginHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
+  m_LoginHashType          = CFG.GetStringIndex(m_CFGKeyPrefix + "login.hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
+
+  if (CFG.Exists(m_CFGKeyPrefix + "expansion")) {
+    m_GameIsExpansion   = static_cast<bool>(CFG.GetStringIndex(m_CFGKeyPrefix + "expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
+    CFG.FailIfErrorLast();
+  }
+  
 
   m_GameVersion        = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
-  m_ExeAuthVersion         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version", 4);
+  m_ExeAuthVersion     = CFG.GetMaybeVersion(m_CFGKeyPrefix + "exe_auth.version");
+  m_ExeAuthVersionDetails         = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version_details", 4);
   if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast();
   m_ExeAuthVersionHash     = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version_hash", 4);
   if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast();
   m_ExeAuthInfo            = CFG.GetString(m_CFGKeyPrefix + "exe_auth.info");
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
-  m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
-  m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
+  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
+  m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
   m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", m_LobbyPrefix);
   m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", m_LobbySuffix);
   m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", m_WatchablePrefix);
@@ -274,8 +281,10 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_ExeAuthIgnoreVersionError(nRootConfig->m_ExeAuthIgnoreVersionError),
     m_LoginHashType(nRootConfig->m_LoginHashType),
 
+    m_GameIsExpansion(nRootConfig->m_GameIsExpansion),
     m_GameVersion(nRootConfig->m_GameVersion),
     m_ExeAuthVersion(nRootConfig->m_ExeAuthVersion),
+    m_ExeAuthVersionDetails(nRootConfig->m_ExeAuthVersionDetails),
     m_ExeAuthVersionHash(nRootConfig->m_ExeAuthVersionHash),
     m_ExeAuthInfo(nRootConfig->m_ExeAuthInfo),
 
@@ -404,38 +413,51 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_ExeAuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.custom", m_ExeAuthUseCustomVersionData);
   m_ExeAuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.ignore_version_error", m_ExeAuthIgnoreVersionError);
-  m_LoginHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "auth_password_hash_type", {"pvpgn", "battle.net"}, m_LoginHashType);
+  m_LoginHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "login.hash_type", {"pvpgn", "battle.net"}, m_LoginHashType);
 
-  optional<Version> authWar3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
-  if (authWar3Version.has_value()) m_GameVersion = authWar3Version.value();
+  if (CFG.Exists(m_CFGKeyPrefix + "expansion")) {
+    m_GameIsExpansion   = static_cast<bool>(CFG.GetStringIndex(m_CFGKeyPrefix + "expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
+    CFG.FailIfErrorLast();
+  }
+
+  optional<Version> war3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
+  if (war3Version.has_value()) m_GameVersion = war3Version.value();
+
+  optional<Version> authWar3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "exe_auth.version");
+  if (authWar3Version.has_value()) m_ExeAuthVersion = authWar3Version.value();
+  else if (m_GameVersion.has_value()) m_ExeAuthVersion = m_GameVersion.value();
 
   // These are optional, since they can be figured out with bncsutil.
-  optional<vector<uint8_t>> authExeVersion = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version", 4);
+  optional<vector<uint8_t>> authExeVersion = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version_details", 4);
   if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast();
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version_hash", 4);
   if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast();
   string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "exe_auth.info");
 
   if (m_ExeAuthUseCustomVersionData) {
-    if (authExeVersion.has_value()) m_ExeAuthVersion = authExeVersion.value();
+    if (authExeVersion.has_value()) m_ExeAuthVersionDetails = authExeVersion.value();
     if (authExeVersionHash.has_value()) m_ExeAuthVersionHash = authExeVersionHash.value();
     if (!authExeInfo.empty()) m_ExeAuthInfo = authExeInfo;
   } else {
-    m_ExeAuthVersion.reset();
+    m_ExeAuthVersionDetails.reset();
     m_ExeAuthVersionHash.reset();
     m_ExeAuthInfo.clear();
   }
 
-  if (m_ExeAuthVersion.has_value() && m_GameVersion.has_value()) {
-    if (m_GameVersion->first != m_ExeAuthVersion.value()[3] || m_GameVersion->second != m_ExeAuthVersion.value()[2]) {
-      Print("[CONFIG] Error - mismatch between <" + m_CFGKeyPrefix + "game_version> and <" + m_CFGKeyPrefix + "exe_auth.version>");
+  if (m_ExeAuthVersionDetails.has_value() && m_ExeAuthVersion.has_value()) {
+    if (m_ExeAuthVersion->first != m_ExeAuthVersionDetails.value()[3] || m_ExeAuthVersion->second != m_ExeAuthVersionDetails.value()[2]) {
+      Print("[CONFIG] Error - mismatch between <" + m_CFGKeyPrefix + "exe_auth.version> and <" + m_CFGKeyPrefix + "exe_auth.version_details>");
       CFG.SetFailed();
     }
   }
 
+  if (m_GameVersion.has_value() && m_ExeAuthVersion.has_value() && m_GameVersion.value() != m_ExeAuthVersion.value()) {
+    Print("[CONFIG] Experimental Warning - mismatch between <" + m_CFGKeyPrefix + "game_version> and <" + m_CFGKeyPrefix + "exe_auth.version>");
+  }
+
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
-  m_SudoUsers              = CFG.GetSetInsensitive(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
-  m_Admins                 = CFG.GetSetInsensitive(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
+  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
+  m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
   m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", 0, 16, m_LobbyPrefix);
   m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", 0, 16, m_LobbySuffix);
   m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", 0, 16, m_WatchablePrefix);

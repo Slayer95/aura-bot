@@ -174,14 +174,14 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyVirtualHostName                   = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
   m_NotifyJoins                            = CFG.GetBool("ui.notify_joins.enabled", false);
-  m_IgnoredNotifyJoinPlayers               = CFG.GetSet("ui.notify_joins.exceptions", ',', false, {}); /* do not trim, because LAN names may have trailing whitespace */
+  m_IgnoredNotifyJoinPlayers               = CFG.GetSetSensitive("ui.notify_joins.exceptions", ',', false, {}); /* do not trim, because LAN names may have trailing whitespace */
   m_HideLobbyNames                         = CFG.GetBool("hosting.nicknames.hide_lobby", false);
   m_HideInGameNames                        = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoadInGame                             = CFG.GetBool("hosting.load_in_game.enabled", false);
   m_EnableJoinObserversInProgress          = CFG.GetBool("hosting.join_in_progress.observers", false);
   m_EnableJoinPlayersInProgress            = CFG.GetBool("hosting.join_in_progress.players", false);
 
-  m_LoggedWords                            = CFG.GetSetInsensitive("hosting.log_words", ',', true, {});
+  m_LoggedWords                            = CFG.GetSet("hosting.log_words", ',', true, {});
   m_LogChatTypes                           = CFG.GetBool("hosting.log_non_ascii", false) ? LOG_CHAT_TYPE_NON_ASCII : 0;
   m_LogCommands                            = CFG.GetBool("hosting.log_commands", false);
   m_DesyncHandler                          = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
@@ -192,6 +192,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_PipeConsideredHarmful                  = CFG.GetBool("hosting.name_filter.is_pipe_harmful", true);
   m_UDPEnabled                             = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
+  m_GameIsExpansion                        = static_cast<bool>(CFG.GetStringIndex("hosting.game_versions.expansion.default", {"roc", "tft"}, SELECT_EXPANSION_TFT));
   m_GameVersion                            = CFG.GetMaybeVersion("hosting.game_versions.main");
   CFG.FailIfErrorLast();
   m_CrossPlayMode                          = CFG.GetStringIndex("hosting.game_versions.crossplay.mode", {"none", "conservative", "optimistic", "force"}, CROSSPLAY_MODE_CONSERVATIVE);
@@ -199,6 +200,19 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
 CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared_ptr<CGameSetup> nGameSetup)
 {
+  if (nMap->GetMapHasTargetGameIsExpansion()) {
+    // CMap::AcquireGameIsExpansion() takes care of reading CFG in lieu of CGameSetup
+    m_GameIsExpansion = nMap->GetMapTargetGameIsExpansion();
+  } else {
+    m_GameIsExpansion = nRootConfig->m_GameIsExpansion;
+  }
+  if (nMap->GetMapHasTargetGameVersion()) {
+    // CMap::AcquireGameVersion() takes care of reading CFG in lieu of CGameSetup
+    m_GameVersion = nMap->GetMapTargetGameVersion();
+  } else {
+    m_GameVersion = nRootConfig->m_GameVersion;
+  }
+
   INHERIT(m_VoteKickPercentage)
 
   if (m_VoteKickPercentage > 100)
@@ -312,9 +326,6 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
     m_LogChatTypes |= LOG_CHAT_TYPE_COMMANDS;
   }
 
-  // in fact, this is equivalent to INHERIT_MAP(m_GameVersion, m_MapTargetGameVersion),
-  // since we always set CMap::m_MapTargetGameVersion according to this inheritance
-  INHERIT_MAP_OR_CUSTOM(m_GameVersion, m_MapTargetGameVersion, m_GameVersion)
   INHERIT_CUSTOM(m_CrossPlayMode, m_CrossPlayMode)
   INHERIT(m_VoteKickPercentage)
 }

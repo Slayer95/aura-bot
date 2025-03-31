@@ -60,7 +60,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_MainLogPath                  = CFG.GetPath("bot.log_path", CFG.GetHomeDir() / filesystem::path("aura.log"));
   m_RemoteLogPath                = CFG.GetPath("hosting.log_remote.file", CFG.GetHomeDir() / filesystem::path("remote.log"));
 
-  set<string> supportedGameVersionStrings = CFG.GetSet("hosting.game_versions.supported", ',', true, {});
+  set<string> supportedGameVersionStrings = CFG.GetSetSensitive("hosting.game_versions.supported", ',', true, {});
   set<Version> supportedGameVersions;
   for (const auto& versionString : supportedGameVersionStrings) {
     optional<Version> maybeVersion = ParseGameVersion(versionString);

@@ -280,6 +280,25 @@ uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromLis
     SUCCESS(x)
   }
 
+  string lowerCaseValue = ToLowerCase(it->second);
+  uint8_t maxIndex = static_cast<uint8_t>(fromList.size());
+  for (uint8_t i = 0; i < maxIndex; ++i) {
+    if (lowerCaseValue == fromList[i]) {
+      SUCCESS(i)
+    }
+  }
+
+  CONFIG_ERROR_ALLOWED_VALUES(key, x, fromList)
+}
+
+uint8_t CConfig::GetStringIndexSensitive(const string& key, const vector<string>& fromList, const uint8_t x)
+{
+  m_ValidKeys.insert(key);
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    SUCCESS(x)
+  }
+
   uint8_t maxIndex = static_cast<uint8_t>(fromList.size());
   for (uint8_t i = 0; i < maxIndex; ++i) {
     if (it->second == fromList[i]) {
@@ -478,7 +497,7 @@ vector<string> CConfig::GetList(const string& key, char separator, const vector<
   SUCCESS(Output)
 }
 
-set<string> CConfig::GetSet(const string& key, char separator, bool trimElements, const set<string> x)
+set<string> CConfig::GetSetSensitive(const string& key, char separator, bool trimElements, const set<string> x)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
@@ -504,7 +523,7 @@ set<string> CConfig::GetSet(const string& key, char separator, bool trimElements
   END(Output)
 }
 
-set<string> CConfig::GetSetInsensitive(const string& key, char separator, bool trimElements, const set<string> x)
+set<string> CConfig::GetSet(const string& key, char separator, bool trimElements, const set<string> x)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);

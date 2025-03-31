@@ -124,6 +124,7 @@ struct CGameConfig
   bool                     m_PipeConsideredHarmful;
 
   bool                     m_UDPEnabled;                 // whether this game should be listed in "Local Area Network"
+  bool                     m_GameIsExpansion;
   std::optional<Version>   m_GameVersion;
   uint8_t                  m_CrossPlayMode;
 

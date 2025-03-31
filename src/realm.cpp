@@ -79,7 +79,9 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
 
     m_GameBroadcast(nullptr),
+    m_GameIsExpansion(false),
     m_GameVersion(GAMEVER(0u, 0u)),
+    m_AuthGameVersion(GAMEVER(0u, 0u)),
     m_LastGamePort(6112),
     m_LastGameHostCounter(0),
 
@@ -233,7 +235,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
             case BNETProtocol::Magic::GETADVLISTEX:
               if (m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
                 std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
-                std::vector<uint8_t> War3Version = {m_GameVersion.second, 0, 0, 0};
+                std::vector<uint8_t> War3Version = {m_AuthGameVersion.second, 0, 0, 0};
                 std::string ipString = m_Socket->GetIPString();
                 AppendByteArray(relayPacket, ipString, true);
                 AppendByteArray(relayPacket, static_cast<uint16_t>(6112u), true);
@@ -295,7 +297,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
               m_InfoIX86VerFileName = vector<uint8_t>(infoResult.verFileNameStart, infoResult.verFileNameEnd);
               m_InfoValueStringFormula = vector<uint8_t>(infoResult.valueStringFormulaStart, infoResult.valueStringFormulaEnd);
 
-              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_GameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
+              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_AuthGameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
               if (versionSuccess) {
                 const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
                 const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
@@ -587,16 +589,14 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
       m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
 
       PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "connected to [" + m_HostName + "]")
-      optional<Version> gameVersion = ResolveGameVersion();
-      if (!gameVersion.has_value()) {
-        PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "config error - misconfigured <realm_" + to_string(m_ServerIndex) + ".auth_exe_version>")
+      if (!ResolveGameVersion()) {
+        PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "config error - misconfigured <realm_" + to_string(m_ServerIndex) + ".game_version>")
         Disable();
         m_Socket->Disconnect();
         return;
       }
       SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
-      m_GameVersion = gameVersion.value();
-      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
+      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_AuthGameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
       m_Socket->DoSend(send_fd);
       m_LastGameListTime       = Time;
       return;
@@ -914,24 +914,45 @@ optional<Version> CRealm::GetExpectedGameVersion() const
   return result;
 }
 
-optional<Version> CRealm::ResolveGameVersion() const
+bool CRealm::ResolveGameVersion()
 {
-  optional<Version> result;
   if (m_Config.m_GameVersion.has_value()) {
-    result = m_Config.m_GameVersion.value();
+    m_GameVersion = m_Config.m_GameVersion.value();
   } else {
     const CGame* lobby = m_Aura->GetMostRecentLobby();
     if (lobby) {
-      result = lobby->m_Config.m_GameVersion.value();
+      m_GameVersion = lobby->m_Config.m_GameVersion.value();
     } else if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->m_GameVersion.has_value()) {
-      result = m_Aura->m_GameSetup->m_GameVersion.value();
+      m_GameVersion = m_Aura->m_GameSetup->m_GameVersion.value();
     } else if (m_Aura->m_GameDefaultConfig->m_GameVersion.has_value()) {
-      result = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
+      m_GameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
     } else if (m_Aura->m_GameDataVersion.has_value()) {
-      result = m_Aura->m_GameDataVersion.value();
+      m_GameVersion = m_Aura->m_GameDataVersion.value();
+    } else {
+      return false;
     }
   }
-  return result;
+
+  if (m_Config.m_GameIsExpansion.has_value()) {
+    m_GameIsExpansion = m_Config.m_GameIsExpansion.value();
+  } else {
+    const CGame* lobby = m_Aura->GetMostRecentLobby();
+    if (lobby) {
+      m_GameIsExpansion = lobby->m_Config.m_GameIsExpansion;
+    } else if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->m_GameIsExpansion.has_value()) {
+      m_GameIsExpansion = m_Aura->m_GameSetup->m_GameIsExpansion.value();
+    } else {
+      m_GameIsExpansion = m_Aura->m_GameDefaultConfig->m_GameIsExpansion;
+    }
+  }
+
+  if (m_Config.m_ExeAuthVersion.has_value()) {
+    m_AuthGameVersion = m_Config.m_ExeAuthVersion.value();
+  } else {
+    m_AuthGameVersion = m_GameVersion;
+  }
+
+  return true;
 }
 
 optional<bool> CRealm::GetIsGameVersionCompatible(const CGame* game) const

@@ -198,12 +198,12 @@ Config
 - Error handling: Abort operation
 
 ## \`global_realm.admins\`
-- Type: setinsensitive
+- Type: set
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.admins\`
-- Type: setinsensitive
+- Type: set
 - Default value: Empty
 - Error handling: Use default value
 
@@ -214,16 +214,6 @@ Config
 
 ## \`global_realm.announce_chat\`
 - Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.auth_password_hash_type\`
-- Type: enum
-- Default value: pvpgn
-- Error handling: Use default value
-
-## \`global_realm.auth_password_hash_type\`
-- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 
@@ -432,10 +422,18 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.exe_auth.version\`
-- Type: uint8vector
-- Error handling: Abort operation
+- Type: version
+- Error handling: Use default value
 
 ## \`global_realm.exe_auth.version\`
+- Type: version
+- Error handling: Use default value
+
+## \`global_realm.exe_auth.version_details\`
+- Type: uint8vector
+- Error handling: Abort operation
+
+## \`global_realm.exe_auth.version_details\`
 - Type: uint8vector
 - Error handling: Abort operation
 
@@ -445,6 +443,16 @@ Config
 
 ## \`global_realm.exe_auth.version_hash\`
 - Type: uint8vector
+- Error handling: Abort operation
+
+## \`global_realm.expansion\`
+- Type: enum
+- Default value: SELECT_EXPANSION_TFT
+- Error handling: Abort operation
+
+## \`global_realm.expansion\`
+- Type: enum
+- Default value: SELECT_EXPANSION_TFT
 - Error handling: Abort operation
 
 ## \`global_realm.first_channel\`
@@ -621,6 +629,16 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
+## \`global_realm.login.hash_type\`
+- Type: enum
+- Default value: pvpgn
+- Error handling: Use default value
+
+## \`global_realm.login.hash_type\`
+- Type: enum
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.logs.console.chat\`
 - Type: bool
 - Default value: true
@@ -642,12 +660,12 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.map_transfers.max_size\`
-- Type: int
+- Type: uint32
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.map_transfers.max_size\`
-- Type: int
+- Type: uint32
 - Default value: Empty
 - Error handling: Use default value
 
@@ -722,12 +740,12 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.sudo_users\`
-- Type: setinsensitive
+- Type: set
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.sudo_users\`
-- Type: setinsensitive
+- Type: set
 - Default value: Empty
 - Error handling: Use default value
 
@@ -966,12 +984,17 @@ Config
 - Default value: CROSSPLAY_MODE_CONSERVATIVE
 - Error handling: Use default value
 
+## \`hosting.game_versions.expansion.default\`
+- Type: enum
+- Default value: SELECT_EXPANSION_TFT
+- Error handling: Use default value
+
 ## \`hosting.game_versions.main\`
 - Type: version
 - Error handling: Abort operation
 
 ## \`hosting.game_versions.supported\`
-- Type: set
+- Type: setsensitive
 - Default value: 
 - Error handling: Use default value
 
@@ -981,22 +1004,22 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.games_quota.max_join_in_progress\`
-- Type: int
+- Type: uint16
 - Default value: 0
 - Error handling: Use default value
 
 ## \`hosting.games_quota.max_lobbies\`
-- Type: int
+- Type: uint16
 - Default value: 1
 - Error handling: Use default value
 
 ## \`hosting.games_quota.max_started\`
-- Type: int
+- Type: uint16
 - Default value: 20
 - Error handling: Use default value
 
 ## \`hosting.games_quota.max_total\`
-- Type: int
+- Type: uint32
 - Default value: 20
 - Error handling: Use default value
 
@@ -1112,7 +1135,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.log_words\`
-- Type: setinsensitive
+- Type: set
 - Default value: 
 - Error handling: Use default value
 
@@ -1122,7 +1145,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.map_downloads.repositories\`
-- Type: setinsensitive
+- Type: set
 - Default value: "epicwar" "wc3maps"
 - Error handling: Use default value
 
@@ -1172,7 +1195,7 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.namepace.first_game_id\`
-- Type: int
+- Type: uint32
 - Default value: 100
 - Error handling: Use default value
 
@@ -1191,13 +1214,18 @@ Config
 - Default value: ON_ADV_ERROR_EXIT_ON_MAX_ERRORS
 - Error handling: Use default value
 
+## \`hosting.save_game.allowed\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`hosting.self.virtual_player.name\`
 - Type: string
 - Constraints: Min length: 1. Max length: 15.
 - Default value: |cFF4080C0Aura
 - Error handling: Use default value
 
-## \`hosting.share_units.enabled\`
+## \`hosting.share_units.allowed\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value
@@ -1208,7 +1236,7 @@ Config
 - Error handling: Use default value
 
 ## \`irc.admins\`
-- Type: set
+- Type: setsensitive
 - Default value: Empty
 - Error handling: Use default value
 
@@ -1268,7 +1296,7 @@ Config
 - Error handling: Use default value
 
 ## \`irc.sudo_users\`
-- Type: set
+- Type: setsensitive
 - Default value: Empty
 - Error handling: Use default value
 
@@ -1318,7 +1346,7 @@ Config
 - Error handling: Use default value
 
 ## \`maps.storage.delete_huge.size\`
-- Type: int
+- Type: uint32
 - Default value: 25600
 - Error handling: Use default value
 
@@ -1652,6 +1680,6 @@ Config
 - Error handling: Use default value
 
 ## \`ui.notify_joins.exceptions\`
-- Type: set
+- Type: setsensitive
 - Default value: 
 - Error handling: Use default value

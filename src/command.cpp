@@ -4333,7 +4333,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (!m_TargetGame->GetIsHiddenPlayerNames()) {
         GameUser::CGameUser* targetPlayer = m_TargetGame->GetUserFromName(targetName, false);
-        if (targetPlayer->GetGameVersion() != targetVersion) {
+        if (!targetPlayer->GetGameVersionIsExact() || targetPlayer->GetGameVersion() != targetVersion) {
           targetPlayer->CloseConnection();
           targetPlayer->SetLeftReason("was automatically kicked (game version mismatch)");
           targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
