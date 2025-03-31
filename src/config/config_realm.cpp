@@ -160,7 +160,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", m_LobbySuffix);
   m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", m_WatchablePrefix);
   m_WatchableSuffix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_suffix", m_WatchableSuffix);
-  m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
+  m_MaxUploadSize          = CFG.GetUint32(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", true);
@@ -440,7 +440,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", 0, 16, m_LobbySuffix);
   m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", 0, 16, m_WatchablePrefix);
   m_WatchableSuffix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_suffix", 0, 16, m_WatchableSuffix);
-  m_MaxUploadSize          = CFG.GetInt(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
+  m_MaxUploadSize          = CFG.GetUint32(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", m_ConsoleLogChat);

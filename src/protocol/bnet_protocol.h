@@ -126,44 +126,44 @@ namespace BNETProtocol
   {
     namespace enUS
     {
-      constexpr const unsigned char* CLIENT_WC3 = "is using Warcraft III";
-      constexpr const unsigned char* CLIENT_TFT = " Frozen Throne";
-      constexpr const unsigned char* LOCATION_PREFIX = " and is currently ";
-      constexpr const unsigned char* LOCATION_PRIVATE_GAME = "in private game \"";
-      constexpr const unsigned char* LOCATION_PUBLIC_GAME = "in  game \"";
-      constexpr const unsigned char* LOCATION_CHAT = "in channel \"";
-      constexpr const unsigned char* LAST_SEEN_PREFIX = "User was last seen on: ";
-      constexpr const unsigned char* USER_UNKNOWN = "Unknown user.";
-      constexpr const unsigned char* USER_OFFLINE = "User is offline";
-      constexpr const unsigned char* LOCATION_SUFFIX = "\".";
+      constexpr const char* CLIENT_WC3 = "is using Warcraft III";
+      constexpr const char* CLIENT_TFT = " Frozen Throne";
+      constexpr const char* LOCATION_PREFIX = " and is currently ";
+      constexpr const char* LOCATION_PRIVATE_GAME = "in private game \"";
+      constexpr const char* LOCATION_PUBLIC_GAME = "in  game \"";
+      constexpr const char* LOCATION_CHAT = "in channel \"";
+      constexpr const char* LAST_SEEN_PREFIX = "User was last seen on: ";
+      constexpr const char* USER_UNKNOWN = "Unknown user.";
+      constexpr const char* USER_OFFLINE = "User is offline";
+      constexpr const char* LOCATION_SUFFIX = "\".";
     };
 
     namespace esES
     {
-      constexpr const unsigned char* CLIENT_WC3 = "está usando Warcraft III";
-      constexpr const unsigned char* CLIENT_TFT = " Frozen Throne";
-      constexpr const unsigned char* LOCATION_PREFIX = " y está actualmente dentro ";
-      constexpr const unsigned char* LOCATION_PRIVATE_GAME = "de privado juego \"";
-      constexpr const unsigned char* LOCATION_PUBLIC_GAME = "de  juego \"";
-      constexpr const unsigned char* LOCATION_CHAT = "del canal \"";
-      constexpr const unsigned char* LAST_SEEN_PREFIX = "Usuario última vez visto el: ";
-      constexpr const unsigned char* USER_UNKNOWN = "Usuario desconocido.";
-      constexpr const unsigned char* USER_OFFLINE = "El usuario está desconectado";
-      constexpr const unsigned char* LOCATION_SUFFIX = "\".";
+      constexpr const char* CLIENT_WC3 = "está usando Warcraft III";
+      constexpr const char* CLIENT_TFT = " Frozen Throne";
+      constexpr const char* LOCATION_PREFIX = " y está actualmente dentro ";
+      constexpr const char* LOCATION_PRIVATE_GAME = "de privado juego \"";
+      constexpr const char* LOCATION_PUBLIC_GAME = "de  juego \"";
+      constexpr const char* LOCATION_CHAT = "del canal \"";
+      constexpr const char* LAST_SEEN_PREFIX = "Usuario última vez visto el: ";
+      constexpr const char* USER_UNKNOWN = "Usuario desconocido.";
+      constexpr const char* USER_OFFLINE = "El usuario está desconectado";
+      constexpr const char* LOCATION_SUFFIX = "\".";
     };
 
     namespace deDE
     {
-      constexpr const unsigned char* CLIENT_WC3 = "ist nutzt Warcraft III";
-      constexpr const unsigned char* CLIENT_TFT = " Frozen Throne";
-      constexpr const unsigned char* LOCATION_PREFIX = " und ist ist momentan ";
-      constexpr const unsigned char* LOCATION_PRIVATE_GAME = "im privat Spiel \"";
-      constexpr const unsigned char* LOCATION_PUBLIC_GAME = "im  Spiel \"";
-      constexpr const unsigned char* LOCATION_CHAT = "im Kanal \"";
-      constexpr const unsigned char* LAST_SEEN_PREFIX = "Nutzer zuletzt gesehen am: ";
-      constexpr const unsigned char* USER_UNKNOWN = "Unbekannter Nutzer.";
-      constexpr const unsigned char* USER_OFFLINE = "Nutzer ist offline.";
-      constexpr const unsigned char* LOCATION_SUFFIX = "\""; // trailing period missing in German
+      constexpr const char* CLIENT_WC3 = "ist nutzt Warcraft III";
+      constexpr const char* CLIENT_TFT = " Frozen Throne";
+      constexpr const char* LOCATION_PREFIX = " und ist ist momentan ";
+      constexpr const char* LOCATION_PRIVATE_GAME = "im privat Spiel \"";
+      constexpr const char* LOCATION_PUBLIC_GAME = "im  Spiel \"";
+      constexpr const char* LOCATION_CHAT = "im Kanal \"";
+      constexpr const char* LAST_SEEN_PREFIX = "Nutzer zuletzt gesehen am: ";
+      constexpr const char* USER_UNKNOWN = "Unbekannter Nutzer.";
+      constexpr const char* USER_OFFLINE = "Nutzer ist offline.";
+      constexpr const char* LOCATION_SUFFIX = "\""; // trailing period missing in German
     };
   };
   
@@ -365,7 +365,7 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_SID_PING(const std::array<uint8_t, 4>& pingValue);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_NETGAMEPORT(uint16_t serverPort);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_INFO(const Version& ver, uint32_t localeID, uint32_t languageID, const std::array<uint8_t, 4>& localeShort, const std::string& countryShort, const std::string& country);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_INFO(const Version& war3Version, uint32_t localeID, uint32_t languageID, const std::array<uint8_t, 4>& localeShort, const std::string& countryShort, const std::string& country);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const std::string& exeInfo, const std::string& keyOwnerName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::array<uint8_t, 32>& clientPublicKey, const std::string& accountName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 20>& clientPasswordProof);

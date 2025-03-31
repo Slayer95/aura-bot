@@ -553,6 +553,7 @@ namespace GameProtocol
     }
 
     const uint8_t Unknown2[] = {1, 0, 0, 0};
+    const uint8_t version4[] = {war3Version.second, 0, 0, 0};
 
     // make the stat string
 
@@ -569,11 +570,9 @@ namespace GameProtocol
 
     // make the rest of the packet
 
-    std::vector<uint8_t> packet = {
-      GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::GAMEINFO, 0, 0,
-      80, 88, 51, 87,
-      war3Version.second, 0, 0, 0
-    };
+    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::GAMEINFO, 0, 0};
+    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);
+    AppendByteArray(packet, version4, 4);
     AppendByteArray(packet, hostCounter, false);             // Host Counter
     AppendByteArray(packet, entryKey, false);                // Entry Key
     AppendByteArrayFast(packet, gameName);                   // Game Name
@@ -616,10 +615,8 @@ namespace GameProtocol
 
     // make the rest of the packet
 
-    std::vector<uint8_t> packet = {
-      GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::GAMEINFO, 0, 0,
-      80, 88, 51, 87
-    };
+    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::GAMEINFO, 0, 0};
+    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);
     *gameVersionOffset = static_cast<uint16_t>(packet.size());       // Game version
     AppendByteArray(packet, Zeros, 4);
     AppendByteArray(packet, hostCounter, false);                     // Host Counter
@@ -642,7 +639,11 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_CREATEGAME(const Version& war3Version, const uint32_t hostCounter)
   {
-    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CREATEGAME, 16, 0, 80, 88, 51, 87, war3Version.second, 0, 0, 0};
+    const uint8_t version4[] = {war3Version.second, 0, 0, 0};
+
+    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CREATEGAME, 16, 0};
+    AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);
+    AppendByteArray(packet, version4, 4);
     AppendByteArray(packet, hostCounter, false); // Host Counter
     return packet;
   }

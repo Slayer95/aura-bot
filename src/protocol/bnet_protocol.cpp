@@ -1127,11 +1127,11 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_INFO(const Version& ver, uint32_t localeID, uint32_t languageID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
+  vector<uint8_t> SEND_SID_AUTH_INFO(const Version& war3Version, uint32_t localeID, uint32_t languageID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
   {
     const uint8_t ProtocolID[]    = {0, 0, 0, 0};
     const uint8_t PlatformID[]    = {54, 56, 88, 73};              // "IX86"
-    const uint8_t Version[]       = {ver.second, 0, 0, 0};
+    const uint8_t version4[]      = {war3Version.second, 0, 0, 0};
     const uint8_t LocalIP[]       = {127, 0, 0, 1};
     const uint8_t TimeZoneBias[]  = {60, 0, 0, 0};                 // 60 minutes (GMT +0100) but this is probably -0100
 
@@ -1143,7 +1143,7 @@ namespace BNETProtocol
     AppendByteArray(packet, ProtocolID, 4);                        // Protocol ID
     AppendByteArray(packet, PlatformID, 4);                        // Platform ID
     AppendByteArray(packet, reinterpret_cast<const uint8_t*>(ProductID_TFT), 4);                     // Product ID (TFT)
-    AppendByteArray(packet, Version, 4);                           // Version
+    AppendByteArray(packet, version4, 4);                           // Version
     AppendByteArrayFast(packet, localeShort);                      // Reverse language (ISO 639-1 concatenated with ISO 3166 alpha-2, and reversed)
     AppendByteArray(packet, LocalIP, 4);                           // Local IP for NAT compatibility
     AppendByteArray(packet, TimeZoneBias, 4);                      // Time Zone Bias

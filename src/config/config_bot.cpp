@@ -115,18 +115,18 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   m_LogRemoteMode                = CFG.GetStringIndex("hosting.log_remote.mode", {"none", "file", "network", "mixed"}, LOG_REMOTE_MODE_NETWORK);
   m_LogGameChat                  = CFG.GetStringIndex("hosting.log_chat", {"never", "allowed", "always"}, LOG_GAME_CHAT_NEVER);
-  m_MinHostCounter               = CFG.GetInt("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
+  m_MinHostCounter               = CFG.GetUint32("hosting.namepace.first_game_id", 100) & 0x00FFFFFF;
 
-  m_MaxLobbies                   = CFG.GetInt("hosting.games_quota.max_lobbies", 1);
-  m_MaxStartedGames              = CFG.GetInt("hosting.games_quota.max_started", 20);
-  m_MaxJoinInProgressGames       = CFG.GetInt("hosting.games_quota.max_join_in_progress", 0);
-  m_MaxTotalGames                = CFG.GetInt("hosting.games_quota.max_total", 20);
+  m_MaxLobbies                   = CFG.GetUint16("hosting.games_quota.max_lobbies", 1);
+  m_MaxStartedGames              = CFG.GetUint16("hosting.games_quota.max_started", 20);
+  m_MaxJoinInProgressGames       = CFG.GetUint16("hosting.games_quota.max_join_in_progress", 0);
+  m_MaxTotalGames                = CFG.GetUint32("hosting.games_quota.max_total", 20);
   m_AutoRehostQuotaConservative  = CFG.GetBool("hosting.games_quota.auto_rehost.conservative", false);
 
   m_AutomaticallySetGameOwner    = CFG.GetBool("hosting.game_owner.from_creator", true);
 
   m_EnableDeleteOversizedMaps    = CFG.GetBool("maps.storage.delete_huge.enabled", false);
-  m_MaxSavedMapSize              = CFG.GetInt("maps.storage.delete_huge.size", 0x6400); // 25 MiB
+  m_MaxSavedMapSize              = CFG.GetUint32("maps.storage.delete_huge.size", 0x6400); // 25 MiB
 
   optional<filesystem::path> maybeGreeting = CFG.GetMaybePath("bot.greeting_path");
   if (maybeGreeting.has_value() && !maybeGreeting.value().empty()) {

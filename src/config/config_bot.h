@@ -64,9 +64,9 @@ struct CBotConfig
   uint8_t                                 m_LogGameChat;
   uint32_t                                m_MinHostCounter;              // defines a subspace for game identifiers
 
-  uint32_t                                m_MaxLobbies;                  // maximum number of non-started games
-  uint32_t                                m_MaxStartedGames;             // maximum number of games in progress
-  uint32_t                                m_MaxJoinInProgressGames;           // maximum number of games in progress that can be watched
+  uint16_t                                m_MaxLobbies;                  // maximum number of non-started games
+  uint16_t                                m_MaxStartedGames;             // maximum number of games in progress
+  uint16_t                                m_MaxJoinInProgressGames;      // maximum number of games in progress that can be watched
   uint32_t                                m_MaxTotalGames;               // maximum sum of all active games
   bool                                    m_AutoRehostQuotaConservative;
 
