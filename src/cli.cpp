@@ -198,7 +198,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
-  app.add_flag(  "--share-units,--no-share-units{false}", m_GameShareUnitsEnabled, "Customizes whether sharing control of units with teammates is allowed.");
+  app.add_flag(  "--allow-share-units,--no-allow-share-units{false}", m_GameShareUnitsEnabled, "Customizes whether sharing control of units with teammates is allowed.");
   app.add_option("--winners-source", m_GameResultSource, "Customizes how Aura will determine the winner(s) of the hosted lobby. Values: none, exit, mmd")->check(CLI::IsMember({"none", "exit", "mmd"}));
   app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")->check(CLI::IsMember({"never", "host", "always", "auto"}));
   app.add_flag(  "--hide-ign,--no-hide-ign{false}", m_GameHideLobbyNames, "Whether to hide player names in a hosted game lobby.");

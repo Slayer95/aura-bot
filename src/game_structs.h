@@ -48,7 +48,7 @@
 
 #include "includes.h"
 #include "list.h"
-#include "dbgameplayer.h"
+#include "protocol/game_protocol.h"
 
 struct CGameLogRecord
 {
@@ -182,8 +182,8 @@ struct GameResults
   std::vector<CDBGamePlayer*> drawers;
   std::vector<CDBGamePlayer*> undecided;
 
-  GameResults() = default;
-  ~GameResults() = default;
+  GameResults();
+  ~GameResults();
 
   inline const std::vector<CDBGamePlayer*>& GetWinners() const { return winners; }
   inline const std::vector<CDBGamePlayer*>& GetLosers() const { return losers; }

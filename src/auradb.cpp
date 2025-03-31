@@ -44,6 +44,7 @@
  */
 
 #include "auradb.h"
+#include "dbgameplayer.h"
 #include "net.h"
 #include "util.h"
 #include "config/config.h"

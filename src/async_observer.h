@@ -28,7 +28,7 @@
 
 #include "includes.h"
 #include "connection.h"
-#include "game.h"
+#include "game_structs.h"
 #include "map.h"
 #include "realm.h"
 #include "protocol/game_protocol.h"
@@ -70,6 +70,7 @@ public:
   int64_t                                                       m_StartedLoadingTicks;
   bool                                                          m_FinishedLoading;
   int64_t                                                       m_FinishedLoadingTicks;
+  int64_t                                                       m_GameTicks;
 
   bool                                                          m_SentGameLoadedReport;
   bool                                                          m_PlaybackEnded;
@@ -111,6 +112,7 @@ public:
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
   
+  [[nodiscard]] inline int64_t                  GetGameTicks() const { return m_GameTicks; }
   int64_t                                       GetNextTimedActionByTicks() const;
 
   bool PushGameFrames(bool isFlush = false);

@@ -45,6 +45,7 @@
 
 #include "stats.h"
 #include "aura.h"
+#include "dbgameplayer.h"
 #include "auradb.h"
 #include "game.h"
 #include "game_user.h"

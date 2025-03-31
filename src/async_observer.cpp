@@ -32,7 +32,6 @@
 #include "aura.h"
 #include "config/config_bot.h"
 #include "game.h"
-#include "game_structs.h"
 #include "game_user.h"
 #include "map.h"
 #include "net.h"
@@ -71,6 +70,7 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_StartedLoadingTicks(0),
     m_FinishedLoading(false),
     m_FinishedLoadingTicks(0),
+    m_GameTicks(0),
     m_SentGameLoadedReport(false),
     m_PlaybackEnded(false),
     m_LastPingTime(APP_MIN_TICKS),
@@ -371,6 +371,7 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
         break;
       case GAME_FRAME_TYPE_ACTIONS:  
         gameDurationWanted -= m_Latency;
+        m_GameTicks += m_Latency;
         // falls through
       case GAME_FRAME_TYPE_PAUSED:
         success = true;
@@ -526,7 +527,7 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
     return;
   }
   if (m_StartedLoading) {
-    Print(GetLogPrefix() + "left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
+    Print(GetLogPrefix() + "left the game at [" + ToFormattedTimeStamp(m_GameTicks / 1000) + "] (" + GameProtocol::LeftCodeToString(clientReason) + ")");
     /*
     if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
       Print(GetLogPrefix() + "next frame was not available");

@@ -44,7 +44,7 @@
 */
 
 #include "w3mmd.h"
-#include "auradb.h"
+#include "dbgameplayer.h"
 #include "config/config_game.h"
 #include "game.h"
 #include "protocol/game_protocol.h"

@@ -101,6 +101,7 @@ struct CGameVirtualUser;
 struct CGameVirtualUserReference;
 
 struct AppAction;
+struct CGameLogRecord;
 struct FileChunkCached;
 struct FileChunkTransient;
 struct GameHistory;

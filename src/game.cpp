@@ -57,6 +57,7 @@
 #include "irc.h"
 #include "socket.h"
 #include "net.h"
+#include "dbgameplayer.h"
 #include "auradb.h"
 #include "realm.h"
 #include "map.h"
@@ -3324,7 +3325,7 @@ void CGame::SendAllActionsCallback()
           const uint8_t* chatMessageStart = actionBytes.data() + 9;
           const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
           if (chatMessageStart < chatMessageEnd) {
-            const GameUser::CGameUser* user = GetUserFromUID(action->GetUID());
+            const GameUser::CGameUser* user = GetUserFromUID(action.GetUID());
             const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
             if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
               m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
@@ -3355,14 +3356,14 @@ void CGame::SendAllActionsCallback()
       }
 
       if (m_CustomStats && action.GetImmutableAction().size() >= 6) {
-        if (!m_CustomStats->RecvAction(action->GetUID(), action)) {
+        if (!m_CustomStats->RecvAction(action.GetUID(), action)) {
           delete m_CustomStats;
           m_CustomStats = nullptr;
         }
       }
 
       if (m_DotaStats && action.GetImmutableAction().size() >= 6) {
-        if (m_DotaStats->ProcessAction(action->GetUID(), action) && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
+        if (m_DotaStats->ProcessAction(action.GetUID(), action) && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
           LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started (dota stats class reported game over)")
           StartGameOverTimer(true);
         }
@@ -4737,7 +4738,8 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   // This leaves no chance for GProxy handshake
 
   if (!m_JoinInProgressVirtualUser.has_value()) return;
-  const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
+  bool isExact = false;
+  const Version gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm, isExact);
 
   CAsyncObserver* observer = new CAsyncObserver(connection, this, fromRealm, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
   m_Aura->m_Net.m_GameObservers[connection->GetPort()].push_back(observer);
@@ -5259,9 +5261,9 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   }
 
   bool shouldHoldAction = false;
-  if (actionType == ALLIANCE_SETTINGS && action->GetLength() >= 9 && action->GetUint8(1) < MAX_SLOTS_MODERN) {
-    const bool wantsShare = (action->GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL) > 0;
-    const uint8_t targetSID = action->GetUint8(1);
+  if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 9 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
+    const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL) > 0;
+    const uint8_t targetSID = action.GetUint8(1);
     if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
       if (wantsShare) {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
@@ -5283,7 +5285,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   }
 
   if (shouldHoldAction || !user->m_OnHoldActionsFrame.GetIsEmpty()) {
-    user->m_OnHoldActionsFrame.addAction(std::move(action));
+    user->m_OnHoldActionsFrame.AddAction(std::move(action));
   } else {
     actionFrame.AddAction(std::move(action));
   }

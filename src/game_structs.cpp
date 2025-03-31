@@ -44,6 +44,8 @@
  */
 
 #include "game_structs.h"
+#include "dbgameplayer.h"
+#include "game_user.h"
 
 #include <algorithm>
 
@@ -210,6 +212,14 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
 //
 // GameResults
 //
+
+GameResults::GameResults()
+{
+}
+
+GameResults::~GameResults()
+{
+}
 
 vector<string> GameResults::GetWinnersNames() const
 {

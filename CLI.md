@@ -492,7 +492,7 @@ assigned hero.
 
 This flag is disabled by default.
 
-## \`--share-units\`
+## \`--allow-share-units\`
 
 When enabled, this flag allows players in a multiplayer RTS game to share control 
 of their units with their teammates. This feature is particularly useful in 
@@ -509,7 +509,7 @@ team-based multiplayer modes where coordination is essential.
 
 This flag is disabled by default.
 
-## \`--no-share-units\`
+## \`--no-allow-share-units\`
 
 When enabled, this flag prevents players from sharing control of their units with 
 their teammates. Each player retains exclusive control over their own units and 

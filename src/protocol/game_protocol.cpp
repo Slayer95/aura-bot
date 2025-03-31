@@ -993,6 +993,26 @@ CIncomingAction& CIncomingAction::operator=(CIncomingAction&& other) noexcept
 
 CIncomingAction::~CIncomingAction() = default;
 
+uint16_t CIncomingAction::GetUint16LE(const size_t offset) const
+{
+  return ByteArrayToUInt16(m_Action, false, offset);
+}
+
+uint16_t CIncomingAction::GetUint16BE(const size_t offset) const
+{
+  return ByteArrayToUInt16(m_Action, true, offset);
+}
+
+uint32_t CIncomingAction::GetUint32LE(const size_t offset) const
+{
+  return ByteArrayToUInt32(m_Action, false, offset);
+}
+
+uint32_t CIncomingAction::GetUint32BE(const size_t offset) const
+{
+  return ByteArrayToUInt32(m_Action, true, offset);
+}
+
 //
 // CIncomingChatMessage
 //
