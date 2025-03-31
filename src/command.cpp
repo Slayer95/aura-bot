@@ -5171,7 +5171,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       optional<int64_t> handicapTicks;
       try {
         int64_t parsedSeconds = stol(Args.back());
-        if (parsedTicks < 0 || 300 < parsedSeconds) {
+        if (parsedSeconds < 0 || 300 < parsedSeconds) {
           ErrorReply("Time handicap cannot exceed 300 seconds (5 minutes)");
           break;
         }
@@ -5185,12 +5185,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (targetPlayer->GetHandicapTicks() == handicapTicks.value()) {
-        ErrorReply("Time handicap already set to " + ToDurationString(handicapTicks / 1000));
+        ErrorReply("Time handicap already set to " + ToDurationString(handicapTicks.value() / 1000));
         break;
       }
 
       targetPlayer->SetHandicapTicks(handicapTicks.value());
-      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(handicapTicks / 1000));
+      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(targetPlayer->GetHandicapTicks() / 1000));
       break;
     }
 
