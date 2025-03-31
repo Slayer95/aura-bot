@@ -1250,6 +1250,56 @@ This option is equivalent to ``<hosting.ip_filter.flood_handler>`` in `config.in
 
 This option is equivalent to ``<map.hosting.ip_filter.flood_handler>`` in map configuration
 
+## \`--on-leave\`
+
+This flag customizes how the game host handles players who leave a match 
+before it concludes. The behavior of leavers can significantly impact 
+game balance and the overall experience, especially in team-based or 
+competitive Warcraft 3 matches.
+
+Available values for this flag:
+
+- **none**: Prevents the game from recognizing a player's departure in any way. 
+  Their units remain under their control but idle, and no default victory 
+  conditions are triggered. This option is useful for preventing unintended 
+  match-ending conditions in custom maps that do not handle leaver logic well.
+  
+- **native**: Applies the default Warcraft 3 behavior for leavers. In melee team  
+  games, when a player leaves, their remaining allies automatically gain shared  
+  unit control over the leaver's units and structures. This allows teammates to  
+  continue using their army and economy without needing manual intervention.  
+  Additionally, victory and defeat conditions function as intended by the game  
+  or custom map scripts, ensuring standard gameplay logic remains intact.  
+  
+- **share**: Similar to ``none``, in that it suppresses standard leave actions, 
+  preventing automatic defeat conditions. However, in addition to this, 
+  the leaver’s units and structures are transferred to their allies, granting 
+  them shared control. This option ensures that a team does not suffer an 
+  immediate disadvantage due to a player leaving, as remaining players can 
+  take over the abandoned army and economy.
+
+### Use Cases:
+
+- **none**: 
+  - Prevents unintended match endings when a player leaves.
+  - Useful for certain custom maps where leaver handling should be manually managed.
+  - Keeps the game world intact without triggering victory conditions.
+
+- **native**:
+  - Maintains expected behavior for melee games and properly coded custom maps.
+  - Ensures that the original map logic determines what happens when a player leaves.
+  - Prevents potential unintended side effects from suppressing leave actions.
+
+- **share**:
+  - Ideal for team-based matches where players want to mitigate the impact of a leaver.
+  - Ensures a team can continue playing competitively even if a member disconnects.
+  - Useful in cooperative game modes where unit persistence is desirable.
+
+This flag provides flexibility for different match styles, allowing the host 
+to customize leaver behavior to best suit the game mode and players' expectations.
+
+The default setting is `native`.
+
 ## \`--on-unsafe-name \<ACTION\>\`
 
 This parameter customizes behavior when a player tries to join a game using an unsafe or otherwise problematic name.
