@@ -382,6 +382,10 @@ Commands
 - Syntax: terminator \<ON|OFF\>
 - Syntax: terminator \<NUMBER\>
 
+## \`timehandicap\`
+- Syntax: timehandicap \<SECONDS\>
+- Syntax: timehandicap \<PLAYER\>, \<SECONDS\>
+
 ## \`twrpg\`
 - Syntax: twrpg \<NOMBRE\>
 

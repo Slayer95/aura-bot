@@ -84,6 +84,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_SyncCounter(0),
     m_JoinTicks(GetTicks()),
     m_FinishedLoadingTicks(0),
+    m_HandicapTicks(0),
     m_StartedLaggingTicks(0),
     m_LastGProxyWaitNoticeSentTime(0),
     m_GProxyReconnectKey(rand()),

@@ -5274,13 +5274,18 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     }
 
     if (m_Config.m_ShareUnitsAllowed && wantsShare) {
+      shouldHoldAction = true;
       user->m_OnHoldActionsShareTargets.set(targetSID);
     } else {
       user->m_OnHoldActionsShareTargets.reset(targetSID);
     }
   }
 
-  if (user->m_OnHoldActionsShareTargets.count() == 0) {
+  if (!shouldHoldAction) {
+    shouldHoldAction = m_EffectiveTicks < user->m_HandicapTicks;
+  }
+
+  if (!shouldHoldAction && user->m_OnHoldActionsShareTargets.count() == 0) {
     actionFrame.MergeFrame(user->m_OnHoldActionsFrame);
   }
 

@@ -5125,6 +5125,74 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !TIMEHANDICAP (prevent players actions the first N seconds)
+    //
+
+    case HashCode("timehandicap"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame)
+        break;
+
+      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted()) {
+        ErrorReply("Cannot set a time handicap now.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "timehandicap <SECONDS>");
+        ErrorReply("Usage: " + cmdToken + "timehandicap <PLAYER>, <SECONDS>");
+        break;
+      }
+
+      vector<string> Args = SplitArgs(Payload, 1u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "timehandicap <SECONDS>");
+        ErrorReply("Usage: " + cmdToken + "timehandicap <PLAYER>, <SECONDS>");
+        break;
+      }
+
+      GameUser::CGameUser* targetPlayer = RunTargetPlayerOrSelf(Args.size() >= 2 ? Args[0] : string());
+      if (!targetPlayer) {
+        break;
+      }
+      if (targetPlayer->GetIsObserver()) {
+        ErrorReply("User [" + targetPlayer->GetDisplayName() + "] is an observer.");
+        break;
+      }
+
+      if (targetPlayer != m_GameUser && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot set a time handicap.");
+        break;
+      }
+
+      optional<int64_t> handicapTicks;
+      try {
+        int64_t parsedSeconds = stol(Args.back());
+        if (parsedTicks < 0 || 300 < parsedSeconds) {
+          ErrorReply("Time handicap cannot exceed 300 seconds (5 minutes)");
+          break;
+        }
+        handicapTicks = 1000 * parsedSeconds;
+      } catch (...) {
+      }
+
+      if (!handicapTicks.has_value()) {
+        ErrorReply("Usage: " + cmdToken + "timehandicap <SECONDS>");
+        ErrorReply("Usage: " + cmdToken + "timehandicap <PLAYER>, <SECONDS>");
+      }
+
+      if (targetPlayer->GetHandicapTicks() == handicapTicks.value()) {
+        ErrorReply("Time handicap already set to " + ToDurationString(handicapTicks / 1000));
+        break;
+      }
+
+      targetPlayer->SetHandicapTicks(handicapTicks.value());
+      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(handicapTicks / 1000));
+      break;
+    }
+
+    //
     // !FILL (fill all open slots with computers)
     //
 

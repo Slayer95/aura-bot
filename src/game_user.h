@@ -95,6 +95,7 @@ namespace GameUser
     size_t                           m_SyncCounter;                  // the number of keepalive packets received from this player
     int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
     int64_t                          m_FinishedLoadingTicks;         // GetTicks when the player finished loading the game
+    int64_t                          m_HandicapTicks;
     int64_t                          m_StartedLaggingTicks;          // GetTicks when the player started laggin
     int64_t                          m_LastGProxyWaitNoticeSentTime; // GetTime when the last disconnection notice has been sent when using GProxy++
     uint32_t                         m_GProxyReconnectKey;           // the GProxy++ reconnect key
@@ -213,6 +214,7 @@ namespace GameUser
     [[nodiscard]] bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
     [[nodiscard]] inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
     [[nodiscard]] inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
+    [[nodiscard]] inline int64_t               GetHandicapTicks() const { return m_HandicapTicks; }
 
     [[nodiscard]] inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
     [[nodiscard]] inline int64_t               GetLastGProxyWaitNoticeSentTime() const { return m_LastGProxyWaitNoticeSentTime; }
@@ -293,6 +295,7 @@ namespace GameUser
     inline void SetSyncCounter(const size_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
     inline void AddSyncCounterOffset(const size_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
+    inline void SetHandicapTicks(uint64_t nHandicapTicks) { m_HandicapTicks = nHandicapTicks; }
     inline void SetStartedLaggingTicks(uint64_t nStartedLaggingTicks) { m_StartedLaggingTicks = nStartedLaggingTicks; }
     inline void SetRealmVerified(bool nVerified) { m_Verified = nVerified; }
     inline void SetOwner(bool nOwner) { m_Owner = nOwner; }
