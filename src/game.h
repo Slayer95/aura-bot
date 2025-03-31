@@ -558,7 +558,7 @@ public:
   uint8_t                   GetNewColor() const;
   uint8_t                   GetNewPseudonymUID() const;
   uint8_t                   SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect);
-  void                      ResolveVirtualPlayers();
+  void                      ResolveVirtualUsers();
   void                      ResolveBuffering();
   bool                      GetHasAnyActiveTeam() const;
   bool                      GetHasAnyUser() const;
@@ -587,6 +587,7 @@ public:
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;
   bool                      GetIsSlotReservedForSystemVirtualUser(const uint8_t SID) const;
+  bool                      GetIsSlotAssignedToSystemVirtualUser(const uint8_t SID) const;
 
   // Observer features
   inline std::shared_ptr<GameHistory> GetGameHistory() { return m_GameHistory; }

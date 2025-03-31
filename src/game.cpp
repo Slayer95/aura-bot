@@ -5910,7 +5910,7 @@ void CGame::EventGameStartedLoading()
     ShowPlayerNamesGameStartLoading();
   }
 
-  ResolveVirtualPlayers();
+  ResolveVirtualUsers();
   RunHCLEncoding();
 
   //if (GetNumJoinedUsersOrFake() < 2) {
@@ -5936,6 +5936,37 @@ void CGame::EventGameStartedLoading()
 
   ResolveBuffering();
 
+  if (m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+    for (auto& user : m_Users) {
+      if (user->GetIsObserver()) {
+        // Full observers cannot pause nor save a WC3 game.
+        user->SetCannotPause();
+        user->SetCannotSave();
+      }
+    }
+  }
+
+  if (!m_Config.m_SaveAllowed) {
+    for (auto& user : m_Users) {
+      user->SetCannotSave();
+    }
+  }
+
+  for (auto& user : m_Users) {
+    user->SetStatus(USERSTATUS_LOADING_SCREEN);
+    user->SetWhoisShouldBeSent(false);
+  }
+
+  for (auto& user : m_Users) {
+    UserList otherPlayers;
+    for (auto& otherPlayer : m_Users) {
+      if (otherPlayer != user) {
+        otherPlayers.push_back(otherPlayer);
+      }
+    }
+    m_SyncPlayers[user] = otherPlayers;
+  }
+
   m_GameLoading = true;
 
   // since we use a fake countdown to deal with leavers during countdown the COUNTDOWN_START and COUNTDOWN_END packets are sent in quick succession
@@ -5951,11 +5982,6 @@ void CGame::EventGameStartedLoading()
   {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_COUNTDOWN_END();
     SendAll(packet);
-  }
-
-  for (auto& user : m_Users) {
-    user->SetStatus(USERSTATUS_LOADING_SCREEN);
-    user->SetWhoisShouldBeSent(false);
   }
 
   // record the starting users
@@ -6013,23 +6039,6 @@ void CGame::EventGameStartedLoading()
     const IndexedGameSlot idxSlot = IndexedGameSlot(SID, slot);
     // Do not exclude observers yet, so that they can be searched in commands.
     m_DBGamePlayers.push_back(new CDBGamePlayer(user, idxSlot));
-  }
-
-  for (auto& user : m_Users) {
-    UserList otherPlayers;
-    for (auto& otherPlayer : m_Users) {
-      if (otherPlayer != user) {
-        otherPlayers.push_back(otherPlayer);
-      }
-    }
-    m_SyncPlayers[user] = otherPlayers;
-  }
-
-  for (auto& user : m_Users) {
-    if ((m_Map->GetMapObservers() != MAPOBS_REFEREES && user->GetIsObserver()) || !m_Config.m_SaveGameAllowed) {
-      user->SetCannotPause();
-      user->SetCannotSave();
-    }
   }
 
   if (m_Map->GetHMCEnabled()) {
@@ -6964,7 +6973,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
   }
 }
 
-void CGame::ResolveVirtualPlayers()
+void CGame::ResolveVirtualUsers()
 {
   if (m_RestoredGame) {
     const uint8_t activePlayers = static_cast<uint8_t>(GetNumJoinedUsersOrFake()); // though it shouldn't be possible to manually add fake users
@@ -6987,13 +6996,21 @@ void CGame::ResolveVirtualPlayers()
     const uint8_t SID = GetHMCSID();
     CGameSlot* slot = GetSlot(SID);
     if (slot) {
-      if (slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
-        const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
-        m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-        LOG_APP_IF(LOG_LEVEL_INFO, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
+      if (slot->GetSlotStatus() == SLOTSTATUS_OPEN || slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
+        if (GetNumControllers() < m_Map->GetMapNumControllers()) {
+          const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
+          m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
+          LOG_APP_IF(LOG_LEVEL_INFO, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
+        }
       } else {
-        const CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
-        if (virtualUser) {
+        CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
+        // this is the first virtual user resolved, so no need to check GetIsSlotAssignedToSystemVirtualUser
+        if (virtualUser && virtualUser->GetIsObserver() && !GetIsCustomForces()/* && !GetIsSlotAssignedToSystemVirtualUser(SID)*/) {
+          SetSlotTeamAndColorAuto(SID);
+          virtualUser->SetIsObserver(slot->GetTeam() == m_Map->GetVersionMaxSlots());
+          m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+        }
+        if (virtualUser && !virtualUser->GetIsObserver()) {
           m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
           LOG_APP_IF(LOG_LEVEL_INFO, "W3HMC virtual user assigned to slot " + ToDecString(SID + 1))
         }
@@ -7006,13 +7023,21 @@ void CGame::ResolveVirtualPlayers()
     const uint8_t SID = GetAHCLSID();
     CGameSlot* slot = GetSlot(SID);
     if (slot) {
-      if (slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
-        const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
-        m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-        LOG_APP_IF(LOG_LEVEL_INFO, "AHCL virtual user added at slot " + ToDecString(SID + 1))
+      if (slot->GetSlotStatus() == SLOTSTATUS_OPEN || slot->GetSlotStatus() == SLOTSTATUS_CLOSED) {
+        if (GetNumControllers() < m_Map->GetMapNumControllers()) {
+          const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
+          m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
+          LOG_APP_IF(LOG_LEVEL_INFO, "AHCL virtual user added at slot " + ToDecString(SID + 1))
+        }
       } else {
-        const CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
-        if (virtualUser) {
+        CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
+        // HMC and AHCL are fully compatible, so no need to check GetIsSlotAssignedToSystemVirtualUser
+        if (virtualUser && virtualUser->GetIsObserver() && !GetIsCustomForces()/* && !GetIsSlotAssignedToSystemVirtualUser(SID)*/) {
+          SetSlotTeamAndColorAuto(SID);
+          virtualUser->SetIsObserver(slot->GetTeam() == m_Map->GetVersionMaxSlots());
+          m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+        }
+        if (virtualUser && !virtualUser->GetIsObserver()) {
           m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
           LOG_APP_IF(LOG_LEVEL_INFO, "AHCL virtual user assigned to slot " + ToDecString(SID + 1))
         }
@@ -7060,12 +7085,18 @@ void CGame::ResolveVirtualPlayers()
       if (slot) {
         CGameVirtualUser* virtualUser = nullptr;
         if (isEmptyAvailable) {
-          virtualUser = CreateFakeUserInner(SID, GetNewUID(), GetLobbyVirtualHostName(), true);
+          virtualUser = CreateFakeUserInner(SID, GetNewUID(), GetLobbyVirtualHostName(), observerTeam == m_Map->GetVersionMaxSlots());
           addedVirtualHost = true;
         } else {
           virtualUser = GetVirtualUserFromSID(SID);
         }
-        if (virtualUser) {
+        // SID was either empty or passive, so we don't need to check GetIsSlotAssignedToSystemVirtualUser() again
+        if (virtualUser && virtualUser->GetTeam() != observerTeam && !GetIsCustomForces()/* && !GetIsSlotAssignedToSystemVirtualUser(SID)*/) {
+          slot->SetTeam(observerTeam);
+          virtualUser->SetIsObserver(slot->GetTeam() == m_Map->GetVersionMaxSlots());
+          m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+        }
+        if (virtualUser && virtualUser->GetTeam() == observerTeam) {
           virtualUser->DisableAllActions();
           virtualUser->SetAllowedConnections(VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER);
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
@@ -7539,16 +7570,7 @@ uint8_t CGame::GetPassiveVirtualUserTeamSID(const uint8_t team) const
     if (m_Slots[i].GetTeam() != team) {
       continue;
     }
-    if (m_HMCVirtualUser.has_value() && i == m_HMCVirtualUser->GetSID()) {
-      // HMC works by letting virtual user send triggers
-      continue;
-    }
-    if (m_AHCLVirtualUser.has_value() && i == m_AHCLVirtualUser->GetSID()) {
-      // AHCL works by letting virtual user send actions
-      continue;
-    }
-    if (m_InertVirtualUser.has_value() && i == m_InertVirtualUser->GetSID()) {
-      // WC3Stats parser hack
+    if (GetIsSlotAssignedToSystemVirtualUser(i)) {
       continue;
     }
     if (GetIsVirtualPlayerSlot(i)) {
@@ -9497,6 +9519,18 @@ bool CGame::GetIsSlotReservedForSystemVirtualUser(const uint8_t SID) const
 {
   if (m_Map->GetHMCEnabled() && SID == m_Map->GetHMCSlot()) return true;
   if (m_Map->GetAHCLEnabled() && SID == m_Map->GetAHCLSlot()) return true;
+  return false;
+}
+
+bool CGame::GetIsSlotAssignedToSystemVirtualUser(const uint8_t SID) const
+{
+  // HMC works by letting virtual user send triggers
+  if (m_HMCVirtualUser.has_value() && m_HMCVirtualUser->GetSID() == SID) return true;
+  // AHCL works by letting virtual user send actions
+  if (m_AHCLVirtualUser.has_value() && m_AHCLVirtualUser->GetSID() == SID) return true;
+  // WC3Stats parser hack
+  if (m_InertVirtualUser.has_value() && m_InertVirtualUser->GetSID() == SID) return true;
+  if (m_JoinInProgressVirtualUser.has_value() && m_JoinInProgressVirtualUser->GetSID() == SID) return true;
   return false;
 }
 
