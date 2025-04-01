@@ -52,7 +52,6 @@
 #include <cstdint>
 #include <vector>
 #include <string>
-#include <optional>
 
 struct VersionData
 {

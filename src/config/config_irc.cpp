@@ -27,7 +27,6 @@
 #include "../util.h"
 
 #include <utility>
-#include <algorithm>
 
 using namespace std;
 

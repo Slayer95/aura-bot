@@ -30,7 +30,6 @@
 #include "../protocol/bnet_protocol.h"
 
 #include <utility>
-#include <algorithm>
 
 using namespace std;
 

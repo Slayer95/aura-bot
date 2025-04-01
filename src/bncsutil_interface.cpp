@@ -47,7 +47,6 @@
 
 #include <bncsutil/bncsutil.h>
 
-#include <algorithm>
 #include <cmath>
 
 #include "util.h"

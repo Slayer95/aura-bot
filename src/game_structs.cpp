@@ -47,7 +47,6 @@
 #include "dbgameplayer.h"
 #include "game_user.h"
 
-#include <algorithm>
 
 using namespace std;
 

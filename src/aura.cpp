@@ -77,7 +77,6 @@
 #include <thread>
 #include <cassert>
 #include <fstream>
-#include <algorithm>
 #include <string>
 #include <bitset>
 #include <iterator>

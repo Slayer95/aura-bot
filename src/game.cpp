@@ -75,7 +75,6 @@
 #include <bitset>
 #include <ctime>
 #include <cmath>
-#include <algorithm>
 
 using namespace std;
 
@@ -3662,9 +3661,7 @@ vector<pair<GameUser::CGameUser*, uint32_t>> CGame::GetDescendingSortedRTT() con
        sortableUserPings.emplace_back(user, user->GetRTT());
      }
   }
-  sort(begin(sortableUserPings), end(sortableUserPings), [](const pair<GameUser::CGameUser*, uint32_t> a, const pair<GameUser::CGameUser*, uint32_t> b) {
-    return a.second > b.second;
-  });
+  sort(begin(sortableUserPings), end(sortableUserPings), &GameUser::SortUsersByPairedUint32Descending);
   return sortableUserPings;
 }
 
@@ -4057,14 +4054,11 @@ void CGame::ReportAllPings() const
   if (SortedPlayers.empty()) return;
 
   if (m_Lagging) {
-    sort(begin(SortedPlayers), end(SortedPlayers), [](const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
-      return a->GetNormalSyncCounter() < b->GetNormalSyncCounter();
-    });
+    sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByKeepAlivesAscending);
   } else {
-    sort(begin(SortedPlayers), end(SortedPlayers), [](const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
-      return a->GetOperationalRTT() > b->GetOperationalRTT();
-    });
+    sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByLatencyDescending);
   }
+
   vector<string> pingsText;
   for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
     pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));

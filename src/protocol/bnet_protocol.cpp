@@ -47,7 +47,6 @@
 
 #include "../util.h"
 
-#include <algorithm>
 #include <utility>
 
 using namespace std;

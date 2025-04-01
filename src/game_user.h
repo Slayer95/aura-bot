@@ -176,6 +176,7 @@ namespace GameUser
     [[nodiscard]] std::string                     GetDisplayName() const;
     [[nodiscard]] inline CGame*                   GetGame() { return m_Game; }
     [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
+    [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
     [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
     [[nodiscard]] inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
     [[nodiscard]] inline bool                     GetIsRTTMeasured() const { return m_MeasuredRTT.has_value() || !m_RTTValues.empty(); }
@@ -411,6 +412,22 @@ namespace GameUser
     }
     return JoinVector(userNames, ", ", false);
   }
+
+  [[nodiscard]] inline bool SortUsersByDownloadProgressAscending(const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
+    return a->InspectMapTransfer().GetLastSentOffsetEnd() < b->InspectMapTransfer().GetLastSentOffsetEnd();
+  }
+
+  [[nodiscard]] inline bool SortUsersByKeepAlivesAscending(const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
+    return a->GetNormalSyncCounter() < b->GetNormalSyncCounter();
+  }
+
+  [[nodiscard]] inline bool SortUsersByLatencyDescending(const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
+    return a->GetOperationalRTT() > b->GetOperationalRTT();
+  }
+
+  [[nodiscard]] inline bool SortUsersByPairedUint32Descending(const std::pair<GameUser::CGameUser*, uint32_t> a, const std::pair<GameUser::CGameUser*, uint32_t> b) {
+    return a.second > b.second;
+  };
 };
 
 #endif // AURA_GAMEUSER_H_

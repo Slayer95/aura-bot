@@ -33,7 +33,6 @@
 #include "../net.h"
 
 #include <utility>
-#include <algorithm>
 #include <thread>
 #include <variant>
 

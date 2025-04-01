@@ -28,7 +28,6 @@
 #include "../net.h"
 
 #include <utility>
-#include <algorithm>
 #include <fstream>
 
 using namespace std;

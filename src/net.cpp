@@ -711,7 +711,9 @@ void CNet::UpdateMapTransfers()
     for (auto& user : game->GetUsers()) {
       if (!user->GetMapTransfer().GetIsInProgress()) continue;
       if (downloadersCount >= m_Config.m_MaxDownloaders) continue;
-      downloaderPlayers.push_back(user);
+      // Sort to avoid cache deoptimization
+      auto pos = lower_bound(downloaderPlayers.begin(), downloaderPlayers.end(), user, &GameUser::SortUsersByDownloadProgressAscending);
+      downloaderPlayers.insert(pos, user);
       downloadersCountByGame.insert(game);
       ++downloadersCount;
     }
@@ -725,7 +727,9 @@ void CNet::UpdateMapTransfers()
         continue;
       }
       if (downloadersCount >= m_Config.m_MaxDownloaders) continue;
-      downloaderObservers.push_back(observer);
+      // Sort to avoid cache deoptimization
+      auto pos = lower_bound(downloaderObservers.begin(), downloaderObservers.end(), observer, &CAsyncObserver::SortObserversByDownloadProgressAscending);
+      downloaderObservers.insert(pos, observer);
       downloadersCountByGame.insert(observer->GetGame());
       ++downloadersCount;
     }

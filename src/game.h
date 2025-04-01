@@ -58,7 +58,6 @@
 #include "socket.h"
 #include "config/config_game.h"
 
-#include <algorithm>
 
 //
 // CGame

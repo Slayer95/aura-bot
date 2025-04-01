@@ -43,7 +43,6 @@
 #include <random>
 #include <tuple>
 #include <future>
-#include <algorithm>
 
 #ifndef DISABLE_DPP
 #include <dpp/dpp.h>
@@ -1414,13 +1413,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       vector<GameUser::CGameUser*> SortedPlayers = m_TargetGame->m_Users;
       if (m_TargetGame->GetGameLoaded()) {
-        sort(begin(SortedPlayers), end(SortedPlayers), [](const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
-          return a->GetNormalSyncCounter() < b->GetNormalSyncCounter();
-        });
+        sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByKeepAlivesAscending);
       } else {
-        sort(begin(SortedPlayers), end(SortedPlayers), [](const GameUser::CGameUser* a, const GameUser::CGameUser* b) {
-          return a->GetOperationalRTT() > b->GetOperationalRTT();
-        });
+        sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByLatencyDescending);
       }
       bool anyPing = false;
       vector<string> pingsText;

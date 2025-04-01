@@ -336,14 +336,15 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
       }
     }
     if (startsWithPattern) {
-      inclusionMatches.push_back(make_pair(mapString, static_cast<int>(mapString.length() - fuzzyPattern.length())));
+      pair<string, int> foundMatch = make_pair<string, int>(move(mapString), static_cast<int>(mapString.length() - fuzzyPattern.length()));
+      auto pos = lower_bound(inclusionMatches.begin(), inclusionMatches.end(), foundMatch);
+      inclusionMatches.insert(pos, foundMatch);
       if (inclusionMatches.size() >= FUZZY_SEARCH_MAX_RESULTS) {
         break;
       }
     }
   }
-  if (inclusionMatches.size() > 0) {
-    sort(inclusionMatches.begin(), inclusionMatches.end());
+  if (!inclusionMatches.empty()) {
     return inclusionMatches;
   }
 

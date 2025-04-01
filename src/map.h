@@ -269,26 +269,26 @@ struct MapTransfer
   }
   ~MapTransfer() = default;
 
-  inline bool GetStarted() { return started; }
-  inline int64_t GetStartedTicks() { return startedTicks; }
+  inline bool GetStarted() const { return started; }
+  inline int64_t GetStartedTicks() const { return startedTicks; }
   inline void SetStarted() { started = true; }
   inline void SetStartedTicks(const int64_t ticks) { startedTicks = ticks; }
 
-  inline bool GetFinished() { return finished; }
-  inline int64_t GetFinishedTicks() { return finishedTicks; }
+  inline bool GetFinished() const { return finished; }
+  inline int64_t GetFinishedTicks() const { return finishedTicks; }
   inline void SetFinished() { finished = true; }
   inline void SetFinishedTicks(const int64_t ticks) { finishedTicks = ticks; }
 
-  inline uint8_t GetStatus() { return status; }
+  inline uint8_t GetStatus() const { return status; }
   inline void SetStatus(uint8_t nStatus) { status = nStatus; }
 
-  inline uint32_t GetLastSentOffsetEnd() { return lastSentOffsetEnd; }
+  inline uint32_t GetLastSentOffsetEnd() const { return lastSentOffsetEnd; }
   inline void SetLastSentOffsetEnd(const uint32_t offset) { lastSentOffsetEnd = offset; }
 
-  inline uint32_t GetLastAck() { return lastAck; }
+  inline uint32_t GetLastAck() const { return lastAck; }
   inline void SetLastAck(uint32_t nLastAck) { lastAck = nLastAck; }
 
-  inline uint32_t GetLastCRC32() { return crc32; }
+  inline uint32_t GetLastCRC32() const { return crc32; }
   inline void SetLastCRC32(const uint32_t nCRC32) { crc32 = nCRC32; }
 
   inline void Start() {

@@ -96,6 +96,7 @@ public:
   [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
   [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
+  [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
   [[nodiscard]] inline const CRealm*            GetRealm() { return m_FromRealm; }
 
   [[nodiscard]] inline bool                     GetNotifiedCannotDownload() { return m_NotifiedCannotDownload; }
@@ -140,6 +141,10 @@ public:
   uint8_t GetMissingLog() const;
   void SendProgressReport();
   std::string GetLogPrefix() const;
+
+  [[nodiscard]] inline bool static SortObserversByDownloadProgressAscending(const CAsyncObserver* a, const CAsyncObserver* b) {
+    return a->InspectMapTransfer().GetLastSentOffsetEnd() < b->InspectMapTransfer().GetLastSentOffsetEnd();
+  }  
 };
 
 #endif // AURA_ASYNC_OBSERVER_H_

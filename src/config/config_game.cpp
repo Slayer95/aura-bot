@@ -27,7 +27,6 @@
 #include "../util.h"
 
 #include <utility>
-#include <algorithm>
 
 #define INHERIT(gameConfigKey) this->gameConfigKey = nRootConfig->gameConfigKey;
 

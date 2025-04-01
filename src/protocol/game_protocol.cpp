@@ -43,7 +43,6 @@
 
  */
 
-#include <algorithm>
 #include <utility>
 
 #include "game_protocol.h"
