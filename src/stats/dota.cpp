@@ -376,7 +376,7 @@ optional<GameResults> CDotaStats::GetGameResults(const bool /*undecidedIsLoser*/
   auto it = gameResults->winners.begin();
   while (it != gameResults->winners.end()) {
     // 5 seconds of grace period for players to quit just before the game ends
-    if ((*it)->GetHasLeftGame() && (*it)->GetLeftTime() + 5 < GetGameOverTime()) {
+    if ((*it)->GetHasLeftGame() && (*it)->GetLeftTime() + 5u < GetGameOverTime()) {
       gameResults->losers.push_back(*it);
       it = gameResults->winners.erase(it);
     } else {

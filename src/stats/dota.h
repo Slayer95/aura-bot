@@ -40,7 +40,7 @@ public:
   CGame*                                        m_Game;
   CDBDotAPlayer*                                m_Players[12];
   uint8_t                                       m_Winner;
-  std::optional<int64_t>                        m_GameOverTime;
+  std::optional<uint64_t>                       m_GameOverTime;
 
   explicit CDotaStats(CGame* nGame);
   ~CDotaStats();
