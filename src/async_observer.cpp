@@ -281,16 +281,20 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
   }
 
   if (m_FinishedLoading && !m_PlaybackEnded) {
-    if (!m_SentGameLoadedReport && m_FinishedLoadingTicks + 3000 <= Ticks) {
+    // If we don't wait a few seconds, the message gets lost to the F12 Chat Log ??
+    const bool canSendChat =  m_FinishedLoadingTicks + 3000 <= Ticks;
+    if (!m_SentGameLoadedReport && canSendChat) {
       // Grace period so that chat messages are visible
       SendGameLoadedReport();
     }
     const size_t beforeCounter = m_ActionFrameCounter;
     if (PushGameFrames()) {
+      /*
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
-      //if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
-      if (m_FrameRate > 1) {
-        if ((m_LastProgressReportTime + 25 <= Time && Ticks <= m_FinishedLoadingTicks + 120000) || m_LastProgressReportTime + 90 <= Time) {
+      if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
+      //*/
+      if (m_FrameRate > 1 && canSendChat) {
+        if ((m_LastProgressReportTime + 30 <= Time && Ticks <= m_FinishedLoadingTicks + 120000) || m_LastProgressReportTime + 75 <= Time) {
           SendProgressReport();
           m_MissingLog = GetMissingLog();
         } else if (m_LastProgressReportTime + 5 <= Time) {
@@ -322,10 +326,10 @@ void CAsyncObserver::CheckGameOver()
   if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
     m_PlaybackEnded = true;
     Print(GetLogPrefix() + "playback ended");
-    SendChat("Playback ended");
-    if (!m_TimeoutTicks.has_value()) {
-      SetTimeoutAtLatest(GetTicks() + 3000);
-    }
+    SendChat("Playback ended. Game will exit automatically in 10 seconds.");
+
+    // Kick after 10 seconds
+    SetTimeoutAtLatest(GetTicks() + 10000);
   }
 }
 
