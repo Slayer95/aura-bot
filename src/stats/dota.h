@@ -48,6 +48,7 @@ public:
 
   bool RecvAction(uint8_t UID, const CIncomingAction& action);
   bool UpdateQueue();
+  void FlushQueue();
   void Save(CAura* nAura, CAuraDB* nDB);
   [[nodiscard]] inline bool GetIsSentinelPlayerColor(const uint8_t color) { return 1 <= color && color <= 5; }
   [[nodiscard]] inline bool GetIsScourgePlayerColor(const uint8_t color) { return 7 <= color && color <= 11; }
@@ -57,7 +58,7 @@ public:
   [[nodiscard]] std::vector<CDBGamePlayer*> GetScourgePlayers() const;
   [[nodiscard]] std::optional<GameResults> GetGameResults(const bool undecidedIsLoser) const;
   [[nodiscard]] inline bool GetIsGameOver() const { return m_GameOverTime.has_value(); }
-  [[nodiscard]] inline int64_t GetGameOverTime() const { return m_GameOverTime.value(); }
+  [[nodiscard]] inline uint64_t GetGameOverTime() const { return m_GameOverTime.value(); }
   [[nodiscard]] std::string GetLogPrefix() const;
   void LogMetaData(int64_t recvTicks, const std::string& text) const;
 };

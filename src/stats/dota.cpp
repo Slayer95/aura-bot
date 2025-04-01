@@ -331,6 +331,10 @@ bool CDotaStats::UpdateQueue()
   return true;
 }
 
+void CDotaStats::FlushQueue()
+{
+}
+
 vector<CDBGamePlayer*> CDotaStats::GetSentinelPlayers() const
 {
   vector<CDBGamePlayer*> players;

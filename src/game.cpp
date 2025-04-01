@@ -197,6 +197,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_Remade(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_AUTO),
     m_GameResultSourceOfTruth(nGameSetup->m_ResultSource.has_value() ? nGameSetup->m_ResultSource.value() : nGameSetup->m_Map->GetGameResultSourceOfTruth()),
+    m_Rated(false),
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_BeforePlayingEmptyActions(0),
@@ -336,9 +337,8 @@ void CGame::Reset()
 
   ClearActions();
 
-  if (m_CustomStats) {
-    m_CustomStats->FlushQueue();
-  }
+  if (m_CustomStats) m_CustomStats->FlushQueue();
+  else if (m_DotaStats) m_DotaStats->FlushQueue();
 
   if (m_GameLoaded && RunGameResults()) {
     LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
@@ -979,9 +979,8 @@ string CGame::GetEndDescription() const
      return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + m_GameName + "\"";
 
   string winnersFragment;
-  if (m_CustomStats) {
-    m_CustomStats->FlushQueue();
-  }
+  if (m_CustomStats) m_CustomStats->FlushQueue();
+  else if (m_DotaStats) m_DotaStats->FlushQueue();
 
   if (m_GameResults.has_value()) {
     vector<string> winnerNames = m_GameResults->GetWinnersNames();
@@ -1532,7 +1531,10 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       }
       return false;
     }
+
     if (m_CustomStats) m_CustomStats->FlushQueue();
+    else if (m_DotaStats) m_DotaStats->FlushQueue();
+
     if (m_Aura->GetNewGameIsInQuota()) {
       Remake();
     } else {
@@ -1563,6 +1565,8 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
     if (!m_Exiting) {
       if (m_CustomStats) m_CustomStats->FlushQueue();
+      else if (m_DotaStats) m_DotaStats->FlushQueue();
+
       LOG_APP_IF(LOG_LEVEL_INFO, "is over (no users left)")
       m_Exiting = true;
     }
@@ -6112,16 +6116,13 @@ void CGame::EventGameStartedLoading()
 
   // enable stats
 
-  if (!m_RestoredGame && m_Map->GetMMDEnabled()) {
+  if (m_Rated) {
+    m_Rated = GetIsAPrioriCompatibleWithGameResultsConstraints(m_UnratedReason);
+  }
+
+  if (m_Map->GetMMDEnabled()) {
     if (m_Map->GetMMDType() == MMD_TYPE_DOTA) {
-      // TODO: CGame::GetIsAPrioriCompatibleWithGameResultsConstraints
-      if (m_StartPlayers < 6) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] not using dotastats due to too few users")
-      } else if (!m_ControllersBalanced || !m_FakeUsers.empty()) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] not using dotastats due to imbalance")
-      } else {
-        m_DotaStats = new CDotaStats(this);
-      }
+      m_DotaStats = new CDotaStats(this);
     } else {
       m_CustomStats = new CW3MMD(this);
     }
@@ -6472,9 +6473,9 @@ void CGame::EventGameLoaded()
     }
   }
 
-  string unratedReason;
-  if (!GetIsAPrioriCompatibleWithGameResultsConstraints(unratedReason)) {
-    SendAllChat("This game is unrated because " + unratedReason);
+  if (!m_Rated) {
+    SendAllChat("This game is unrated because " + m_UnratedReason);
+    m_UnratedReason.clear();
   }
 
   // GProxy hangs trying to reconnect
@@ -10003,7 +10004,23 @@ bool CGame::RunGameResults()
 
 bool CGame::GetIsAPrioriCompatibleWithGameResultsConstraints(string& reason) const
 {
-  // TODO: CGame::GetIsAPrioriCompatibleWithGameResultsConstraints
+  // ?_?
+  if (m_RestoredGame) {
+    reason = "game was loaded";
+    return false;
+  }
+
+  // ?_?
+  if (m_Map->GetMMDEnabled() && m_Map->GetMMDType() == MMD_TYPE_DOTA) {
+    if (m_StartPlayers < 6) {
+      reason = "too few users";
+      return false;
+    } else if (!m_ControllersBalanced || !m_FakeUsers.empty()) {
+      reason = "imbalanced";
+      return false;
+    }
+  }
+
   return true;
 }
 
