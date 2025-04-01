@@ -636,7 +636,7 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
   for (auto& serverConnections : m_GameObservers) {
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(fd, send_fd, GAME_USER_CONNECTION_MAX_TIMEOUT);
+      uint8_t result = (*i)->Update(fd, send_fd, GAME_USER_TIMEOUT_VANILLA);
       if (result == ASYNC_OBSERVER_OK) {
         ++i;
         continue;
