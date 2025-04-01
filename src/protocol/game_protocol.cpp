@@ -330,7 +330,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_PLAYERINFO(uint8_t UID, const string& name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP)
+  std::vector<uint8_t> SEND_W3GS_PLAYERINFO(const Version& version, uint8_t UID, const string& name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP)
   {
     if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
       Print("[GAMEPROTO] Invalid player name");
@@ -349,7 +349,12 @@ namespace GameProtocol
     AppendByteArray(packet, PlayerJoinCounter, 4);                  // player join counter
     packet.push_back(UID);                                          // UID
     AppendByteArrayFast(packet, name);                              // player name
-    packet.push_back(1);                                            // ???
+    if (version >= GAMEVER(1u, 31u)) {
+      packet.push_back(2);                                          // ???
+      packet.push_back(0);                                          // ???
+    } else {
+      packet.push_back(1);                                          // ???
+    }
     packet.push_back(0);                                            // ???
     packet.push_back(2);                                            // AF_INET
     packet.push_back(0);                                            // AF_INET continued...
@@ -370,7 +375,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t UID, const string& name)
+  std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(const Version& version, uint8_t UID, const string& name)
   {
     if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
       Print("[GAMEPROTO] Invalid player name");
@@ -389,7 +394,12 @@ namespace GameProtocol
     AppendByteArray(packet, PlayerJoinCounter, 4);                  // player join counter
     packet.push_back(UID);                                          // UID
     AppendByteArrayFast(packet, name);                              // player name
-    packet.push_back(1);                                            // ???
+    if (version >= GAMEVER(1u, 31u)) {
+      packet.push_back(2);                                          // ???
+      packet.push_back(0);                                          // ???
+    } else {
+      packet.push_back(1);                                          // ???
+    }
     packet.push_back(0);                                            // ???
     packet.push_back(2);                                            // AF_INET
     packet.push_back(0);                                            // AF_INET continued...

@@ -136,8 +136,8 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, const std::string& Name);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::array<uint8_t, 2>& port, const std::array<uint8_t, 4>& externalIP, const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REJECTJOIN(uint32_t reason);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO(uint8_t UID, const std::string& name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(uint8_t UID, const std::string& name);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO(const Version& version, uint8_t UID, const std::string& name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(const Version& version, uint8_t UID, const std::string& name);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t UID, uint32_t leftCode);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMELOADED_OTHERS(uint8_t UID);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFO(const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);

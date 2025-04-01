@@ -99,7 +99,7 @@ bool CGameVirtualUser::GetCanSave() const
 vector<uint8_t> CGameVirtualUser::GetPlayerInfoBytes(optional<bool> overrideLoaded) const
 {
   const array<uint8_t, 4> IP = {0, 0, 0, 0};
-  return GameProtocol::SEND_W3GS_PLAYERINFO(m_UID, GetDisplayName(overrideLoaded), IP, IP);
+  return GameProtocol::SEND_W3GS_PLAYERINFO(m_Game->GetVersion(), m_UID, GetDisplayName(overrideLoaded), IP, IP);
 }
 
 vector<uint8_t> CGameVirtualUser::GetGameLoadedBytes() const

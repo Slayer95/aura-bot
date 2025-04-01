@@ -2903,7 +2903,7 @@ array<uint8_t, 4> CGame::GetSourceFileHashBlizz(const Version& version) const
 
 array<uint8_t, 20> CGame::GetMapSHA1(const Version& version) const
 {
-  if (version >= GAMEVER(1u, 31u)) {
+  if (version >= GAMEVER(1u, 30u)) {
     return m_Map->GetMapSHA1();
   } else {
     return m_Map->GetMapScriptsSHA1(version);
@@ -2946,8 +2946,7 @@ void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
   }
 
   const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-
-  Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+  Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(GetVersion(), m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
 }
 
 vector<uint8_t> CGame::GetFakeUsersLobbyInfo() const
@@ -2986,7 +2985,7 @@ vector<uint8_t> CGame::GetJoinedPlayersInfo() const
       continue;
     }
     AppendByteArrayFast(info,
-      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
+      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(GetVersion(), otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
   return info;
@@ -3026,7 +3025,7 @@ void CGame::SendIncomingPlayerInfo(GameUser::CGameUser* user) const
     if (otherPlayer->GetDeleteMe())
       break;
     otherPlayer->Send(
-      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(user->GetUID(), user->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/)
+      GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(GetVersion(), user->GetUID(), user->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/)
     );
   }
 }
@@ -4546,7 +4545,7 @@ void CGame::ShowPlayerNamesGameStartLoading() {
         continue;
       }
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p2->GetUID(), PLAYERLEAVE_LOBBY));
-      Send(p1, GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(p2->GetUID(), p2->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/));
+      Send(p1, GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(GetVersion(), p2->GetUID(), p2->GetDisplayName()/*, user->GetIPv4(), user->GetIPv4Internal()*/));
     }
   }
 }
@@ -9504,7 +9503,7 @@ bool CGame::CreateVirtualHost()
   // we gotta ensure that the virtual host join message is sent after the user's leave message.
   if (!m_Users.empty()) {
     const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(GetVersion(), m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
   }
   return true;
 }
@@ -9580,7 +9579,7 @@ CGameVirtualUser* CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UI
   const bool isCustomForces = GetIsCustomForces();
   if (!m_Users.empty()) {
     const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(UID, name, IP, IP));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(GetVersion(), UID, name, IP, IP));
   }
   m_Slots[SID] = CGameSlot(
     m_Slots[SID].GetType(),
