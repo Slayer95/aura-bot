@@ -60,7 +60,7 @@ using namespace std;
 
 CDotaStats::CDotaStats(CGame* nGame)
   : m_Game(nGame),
-    m_Winner(0)
+    m_Winner(DOTA_WINNER_UNDECIDED)
 {
   Print("[STATS] using dota stats");
 
@@ -77,7 +77,7 @@ CDotaStats::~CDotaStats()
   }
 }
 
-bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
+bool CDotaStats::RecvAction(uint8_t UID, const CIncomingAction& action)
 {
   size_t                      i          = 0;
   const std::vector<uint8_t>& ActionData = action.GetImmutableAction();
@@ -91,7 +91,12 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
 
   do
   {
-    if (ActionData[i] == ACTION_SYNC_INT && ActionData[i + 1] == 0x64 && ActionData[i + 2] == 0x72 && ActionData[i + 3] == 0x2e && ActionData[i + 4] == 0x78 && ActionData[i + 5] == 0x00)
+    if (ActionData[i] == ACTION_SYNC_INT &&
+      ActionData[i + 1] == 'd' &&
+      ActionData[i + 2] == 'r' &&
+      ActionData[i + 3] == '.' &&
+      ActionData[i + 4] == 'x' &&
+      ActionData[i + 5] == 0x00)
     {
       // we think we've found an action with real time replay data (but we can't be 100% sure)
       // next we parse out two nullptr terminated strings and a 4 byte integer
@@ -110,7 +115,7 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
 
           if (ActionData.size() >= i + 12 + Data.size() + Key.size())
           {
-            // the 4 byte int32_teger should be the value
+            // the 4 byte integer should be the value
 
             Value                     = std::vector<uint8_t>(ActionData.begin() + i + 8 + Data.size() + Key.size(), ActionData.begin() + i + 12 + Data.size() + Key.size());
             const string   DataString = string(begin(Data), end(Data));
@@ -151,7 +156,7 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
                   {
                     // check for hero denies
 
-                    if (!((KillerColor <= 5 && VictimColor <= 5) || (KillerColor >= 7 && VictimColor >= 7)))
+                    if (!GetAreSameTeamColors(KillerColor, VictimColor))
                     {
                       // non-leaver killed a non-leaver
 
@@ -190,7 +195,7 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
               {
                 // a tower died
 
-                if ((ValueInt >= 1 && ValueInt <= 5) || (ValueInt >= 7 && ValueInt <= 11))
+                if (GetIsPlayerColor(ValueInt))
                 {
                   if (!m_Players[ValueInt])
                     m_Players[ValueInt] = new CDBDotAPlayer();
@@ -202,7 +207,7 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
               {
                 // a rax died
 
-                if ((ValueInt >= 1 && ValueInt <= 5) || (ValueInt >= 7 && ValueInt <= 11))
+                if (GetIsPlayerColor(ValueInt))
                 {
                   if (!m_Players[ValueInt])
                     m_Players[ValueInt] = new CDBDotAPlayer();
@@ -214,7 +219,7 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
               {
                 // a courier died
 
-                if ((ValueInt >= 1 && ValueInt <= 5) || (ValueInt >= 7 && ValueInt <= 11))
+                if (GetIsPlayerColor(ValueInt))
                 {
                   if (!m_Players[ValueInt])
                     m_Players[ValueInt] = new CDBDotAPlayer();
@@ -232,14 +237,18 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
                 // Value 1 -> sentinel
                 // Value 2 -> scourge
 
-                m_Winner = static_cast<uint8_t>(ValueInt);
+                uint8_t winner = static_cast<uint8_t>(ValueInt);
+                if (winner == DOTA_WINNER_SENTINEL || winner == DOTA_WINNER_SCOURGE) {
+                  m_Winner = winner;
+                }
+                m_GameOverTime = m_Game->GetEffectiveTicks() / 1000;
 
-                if (m_Winner == 1)
-                  Print("[STATS: " + m_Game->GetGameName() + "] detected winner: Sentinel");
-                else if (m_Winner == 2)
-                  Print("[STATS: " + m_Game->GetGameName() + "] detected winner: Scourge");
+                if (m_Winner == DOTA_WINNER_SENTINEL)
+                  Print(GetLogPrefix() + "detected winner: Sentinel");
+                else if (m_Winner == DOTA_WINNER_SCOURGE)
+                  Print(GetLogPrefix() + "detected winner: Scourge");
                 else
-                  Print("[STATS: " + m_Game->GetGameName() + "] detected winner: " + to_string(ValueInt));
+                  Print(GetLogPrefix() + "detected winner: " + to_string(ValueInt));
               }
             }
             else if (DataString.size() <= 2 && DataString.find_first_not_of("1234567890") == string::npos)
@@ -252,7 +261,7 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
               } catch (...) {
               }
 
-              if ((ID >= 1 && ID <= 5) || (ID >= 7 && ID <= 11))
+              if (GetIsPlayerColor(ID))
               {
                 if (!m_Players[ID])
                 {
@@ -314,85 +323,76 @@ bool CDotaStats::ProcessAction(uint8_t UID, const CIncomingAction& action)
       ++i;
   } while (ActionData.size() >= i + 6);
 
-  return m_Winner != 0;
+  return true;
 }
 
-void CDotaStats::Save(CAura* nAura, CAuraDB* DB)
+bool CDotaStats::UpdateQueue()
 {
-  if (DB->Begin())
-  {
-    // since we only record the end game information it's possible we haven't recorded anything yet if the game didn't end with a tree/throne death
-    // this will happen if all the players leave before properly finishing the game
-    // the dotagame stats are always saved (with winner = 0 if the game didn't properly finish)
-    // the dotaplayer stats are only saved if the game is properly finished
+  return true;
+}
 
-    uint32_t Players = 0;
-
-    // check for invalid colours and duplicates
-    // this can only happen if DotA sends us garbage in the "id" value but we should check anyway
-
-    for (uint32_t i = 0; i < 12; ++i)
-    {
-      if (m_Players[i])
-      {
-        const uint8_t Color = m_Players[i]->GetNewColor();
-
-        if (!((Color >= 1 && Color <= 5) || (Color >= 7 && Color <= 11)))
-        {
-          Print("[STATS: " + m_Game->GetGameName() + "] discarding dotaPlayer data, invalid colour found");
-          delete m_Players[i];
-          m_Players[i] = nullptr;
-          continue;
-        }
-
-        for (uint32_t j = i + 1; j < 12; ++j)
-        {
-          if (m_Players[j] && Color == m_Players[j]->GetNewColor())
-          {
-            Print("[STATS: " + m_Game->GetGameName() + "] discarding dotaPlayer data, duplicate colour found");
-            delete m_Players[j];
-            m_Players[j] = nullptr;
-          }
-        }
-      }
-    }
-
-    for (auto& dotaPlayer : m_Players)
-    {
-      if (dotaPlayer)
-      {
-        const uint8_t  Color = dotaPlayer->GetNewColor();
-        const CDBGamePlayer* DBPlayer = m_Game->GetDBPlayerFromColor(Color);
-        const string Name = DBPlayer->GetName();
-        const string Server = DBPlayer->GetServer();
-
-        if (Name.empty())
-          continue;
-
-        uint8_t Win = 0;
-
-        if ((m_Winner == 1 && Color >= 1 && Color <= 5) || (m_Winner == 2 && Color >= 7 && Color <= 11))
-          Win = 1;
-        else if ((m_Winner == 2 && Color >= 1 && Color <= 5) || (m_Winner == 1 && Color >= 7 && Color <= 11))
-          Win = 2;
-
-        nAura->m_DB->UpdateDotAPlayerOnEnd(Name, Server, Win, dotaPlayer);
-        ++Players;
-      }
-    }
-
-    if (DB->Commit())
-      Print("[STATS: " + m_Game->GetGameName() + "] saving " + to_string(Players) + " players");
-    else
-      Print("[STATS: " + m_Game->GetGameName() + "] unable to commit database transaction, data not saved");
+vector<CDBGamePlayer*> CDotaStats::GetSentinelPlayers() const
+{
+  vector<CDBGamePlayer*> players;
+  for (uint8_t color = 1, end = 5; color <= end; color++) {
+    CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(color);
+    if (!dbPlayer) continue;
+    players.push_back(dbPlayer);
   }
-  else
-    Print("[STATS: " + m_Game->GetGameName() + "] unable to begin database transaction, data not saved");
+  return players;
 }
 
-optional<GameResults> CDotaStats::GetGameResults(const bool undecidedIsLoser) const
+vector<CDBGamePlayer*> CDotaStats::GetScourgePlayers() const
 {
-  // TODO: CDotaStats::GetGameResults
+  vector<CDBGamePlayer*> players;
+  for (uint8_t color = 7, end = 11; color <= end; color++) {
+    CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(color);
+    if (!dbPlayer) continue;
+    players.push_back(dbPlayer);
+  }
+  return players;
+}
+
+optional<GameResults> CDotaStats::GetGameResults(const bool /*undecidedIsLoser*/) const
+{
   optional<GameResults> gameResults;
+  if (m_Winner == DOTA_WINNER_UNDECIDED) {
+    return gameResults;
+  }
+
+  vector<CDBGamePlayer*> sentinelPlayers = GetSentinelPlayers();
+  vector<CDBGamePlayer*> scourgePlayers = GetScourgePlayers();
+
+  gameResults.emplace();
+
+  if (m_Winner == DOTA_WINNER_SENTINEL) {
+    gameResults->winners.swap(sentinelPlayers);
+    gameResults->losers.swap(scourgePlayers);
+  } else {
+    gameResults->winners.swap(scourgePlayers);
+    gameResults->losers.swap(sentinelPlayers);
+  }
+
+  auto it = gameResults->winners.begin();
+  while (it != gameResults->winners.end()) {
+    // 5 seconds of grace period for players to quit just before the game ends
+    if ((*it)->GetHasLeftGame() && (*it)->GetLeftTime() + 5 < GetGameOverTime()) {
+      gameResults->losers.push_back(*it);
+      it = gameResults->winners.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
   return gameResults;
+}
+
+string CDotaStats::GetLogPrefix() const
+{
+  return "[DOTA: " + m_Game->GetGameName() + "] ";
+}
+
+void CDotaStats::LogMetaData(int64_t gameTicks, const string& text) const
+{
+  m_Game->Log(text, gameTicks);
 }

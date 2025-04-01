@@ -143,7 +143,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LastUserSeen(GetTicks()),
     m_LastOwnerSeen(GetTicks()),
     m_StartedKickVoteTime(0),
-    m_LastCustomStatsUpdateTime(0),
+    m_LastStatsUpdateTime(0),
     m_GameOver(GAME_ONGOING),
     m_LastLagScreenResetTime(0),
     m_RandomSeed(0),
@@ -405,8 +405,10 @@ void CGame::TrySaveStats() const
       LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to begin transaction game end player data")
     }
   }
-  // store the stats in the database
-  if (m_DotaStats) m_DotaStats->Save(m_Aura, m_Aura->m_DB);
+
+  if (m_DotaStats) {
+    m_Aura->m_DB->SaveDotAStats(m_DotaStats);
+  }
 }
 
 void CGame::ReleaseMapBusyTimedLock() const
@@ -1604,12 +1606,13 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     }
   }
 
-  if (m_CustomStats && Time - m_LastCustomStatsUpdateTime >= 30) {
-    if (!m_CustomStats->UpdateQueue() && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
-      Log("gameover timer started (w3mmd reported game over)");
+  if (Time - m_LastStatsUpdateTime >= 30) {
+    const bool mmdFinished = (m_CustomStats && !m_CustomStats->UpdateQueue()) || (m_DotaStats && !m_DotaStats->UpdateQueue());
+    if (mmdFinished && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
+      Log("gameover timer started (stats reported game over)");
       StartGameOverTimer(true);
     }
-    m_LastCustomStatsUpdateTime = Time;
+    m_LastStatsUpdateTime = Time;
   }
 
   if (GetIsStageAcceptingJoins()) {
@@ -3407,17 +3410,13 @@ void CGame::SendAllActionsCallback()
         }
       }
 
-      if (m_CustomStats && action.GetImmutableAction().size() >= 6) {
-        if (!m_CustomStats->RecvAction(action.GetUID(), action)) {
+      if (action.GetLength() >= 6) {
+        if (m_CustomStats && !m_CustomStats->RecvAction(action.GetUID(), action)) {
           delete m_CustomStats;
           m_CustomStats = nullptr;
-        }
-      }
-
-      if (m_DotaStats && action.GetImmutableAction().size() >= 6) {
-        if (m_DotaStats->ProcessAction(action.GetUID(), action) && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
-          LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started (dota stats class reported game over)")
-          StartGameOverTimer(true);
+        } else if (m_DotaStats && !m_DotaStats->RecvAction(action.GetUID(), action)) {
+          delete m_DotaStats;
+          m_DotaStats = nullptr;
         }
       }
     }
@@ -6115,6 +6114,7 @@ void CGame::EventGameStartedLoading()
 
   if (!m_RestoredGame && m_Map->GetMMDEnabled()) {
     if (m_Map->GetMMDType() == MMD_TYPE_DOTA) {
+      // TODO: CGame::GetIsAPrioriCompatibleWithGameResultsConstraints
       if (m_StartPlayers < 6) {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] not using dotastats due to too few users")
       } else if (!m_ControllersBalanced || !m_FakeUsers.empty()) {
@@ -6608,7 +6608,7 @@ void CGame::Remake()
   m_LastUserSeen = Ticks;
   m_LastOwnerSeen = Ticks;
   m_StartedKickVoteTime = 0;
-  m_LastCustomStatsUpdateTime = 0;
+  m_LastStatsUpdateTime = 0;
   m_GameOver = GAME_ONGOING;
   m_GameOverTime = nullopt;
   m_LastPlayerLeaveTicks = nullopt;
@@ -9973,8 +9973,7 @@ bool CGame::RunGameResults()
     case GAME_RESULT_SOURCE_MMD: {
       if (m_CustomStats) {
         gameResults = m_CustomStats->GetGameResults(m_Map->GetGameResultUndecidedIsLoser());
-      }
-      if (m_DotaStats) {
+      } else if (m_DotaStats) {
         gameResults = m_DotaStats->GetGameResults(m_Map->GetGameResultUndecidedIsLoser());
       }
       break;
@@ -10004,6 +10003,7 @@ bool CGame::RunGameResults()
 
 bool CGame::GetIsAPrioriCompatibleWithGameResultsConstraints(string& reason) const
 {
+  // TODO: CGame::GetIsAPrioriCompatibleWithGameResultsConstraints
   return true;
 }
 

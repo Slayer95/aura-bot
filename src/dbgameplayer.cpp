@@ -54,7 +54,6 @@ CDBGamePlayer::CDBGamePlayer(const GameUser::CGameUser* user, const IndexedGameS
     m_Server(user->GetRealmHostName()),
     m_IP(user->GetIPStringStrict()),
     m_LoadingTime(0),
-    m_LeftTime(0),
     m_UID(user->GetUID()),
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),

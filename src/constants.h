@@ -734,6 +734,12 @@ constexpr uint8_t PJASS_OPTIONS_CHECKGLOBALSINIT = 8u;
 constexpr uint8_t PJASS_OPTIONS_CHECKSTRINGHASH = 9u;
 constexpr uint8_t PJASS_OPTIONS_CHECKNUMBERLITERALS = 10u;
 
+// dota.h
+
+constexpr uint8_t DOTA_WINNER_UNDECIDED = 0u;
+constexpr uint8_t DOTA_WINNER_SENTINEL = 1u;
+constexpr uint8_t DOTA_WINNER_SCOURGE = 2u;
+
 // w3mmd.h
 
 #define MMD_ACTION_TYPE_VAR 0u

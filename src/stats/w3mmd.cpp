@@ -685,8 +685,37 @@ string CW3MMD::GetSenderName(CW3MMDAction* action) const
 
 optional<GameResults> CW3MMD::GetGameResults(const bool undecidedIsLoser) const
 {
-  // TODO: CW3MMD::GetGameResults
   optional<GameResults> gameResults;
+  if (m_GameResults.empty()) {
+    return gameResults;
+  }
+
+  gameResults.emplace();
+  for (const auto& entry : m_SIDToName) {
+    const auto& match = m_GameResults.find(entry.first);
+    vector<CDBGamePlayer*>* resultGroup = nullptr;
+    if (match == m_GameResults.end()) {
+      if (undecidedIsLoser) {
+        resultGroup = &gameResults->losers;
+      } else {
+        resultGroup = &gameResults->undecided;
+      }
+    } else {
+      switch (match->second) {
+        case GAME_RESULT_WINNER:
+          resultGroup = &gameResults->winners;
+          break;
+        case GAME_RESULT_LOSER:
+          resultGroup = &gameResults->losers;
+          break;
+        default:
+          resultGroup = &gameResults->drawers;
+          break;
+      }
+    }
+    resultGroup->push_back(m_Game->GetDBPlayerFromSID(entry.first));
+  }
+
   return gameResults;
 }
 

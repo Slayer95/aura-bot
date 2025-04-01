@@ -60,7 +60,7 @@ private:
   std::string               m_Server;
   std::string               m_IP;
   uint64_t                  m_LoadingTime;
-  uint64_t                  m_LeftTime;
+  std::optional<uint64_t>   m_LeftTime;
   uint8_t                   m_UID;
   uint8_t                   m_SID;
   uint8_t                   m_Color;
@@ -74,7 +74,8 @@ public:
   [[nodiscard]] inline std::string GetServer() const { return m_Server; }
   [[nodiscard]] inline std::string GetIP() const { return m_IP; }
   [[nodiscard]] inline uint64_t    GetLoadingTime() const { return m_LoadingTime; }
-  [[nodiscard]] inline uint64_t    GetLeftTime() const { return m_LeftTime; }
+  [[nodiscard]] inline bool        GetHasLeftGame() const { return m_LeftTime.has_value(); }
+  [[nodiscard]] inline uint64_t    GetLeftTime() const { return m_LeftTime.value(); }
   [[nodiscard]] inline uint8_t     GetUID() const { return m_UID; }
   [[nodiscard]] inline uint8_t     GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t     GetColor() const { return m_Color; }

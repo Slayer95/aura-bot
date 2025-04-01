@@ -50,6 +50,8 @@
 #include "config/config.h"
 #include "game_slot.h"
 #include "game_user.h"
+#include "game.h"
+#include "stats/dota.h"
 #ifdef DISABLE_DPP
 #include <nlohmann/json.hpp>
 #else
@@ -1022,7 +1024,7 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, con
   return GamePlayerSummary;
 }
 
-void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, uint32_t winner, const CDBDotAPlayer* dotaPlayer)
+void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, uint8_t gameResult, const CDBDotAPlayer* dotaPlayer)
 {
   uint32_t kills = dotaPlayer->GetKills();
   uint32_t deaths = dotaPlayer->GetDeaths();
@@ -1044,9 +1046,9 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
   uint32_t Wins   = 0;
   uint32_t Losses = 0;
 
-  if (winner == 1)
+  if (gameResult == GAME_RESULT_WINNER)
     ++Wins;
-  else if (winner == 2)
+  else if (gameResult == GAME_RESULT_LOSER)
     ++Losses;
 
   if (Statement == nullptr)
@@ -1352,6 +1354,79 @@ bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
 
   m_DB->Reset(m_StmtCache[GAME_ADD_IDX]);
   return Success;
+}
+
+void CAuraDB::SaveDotAStats(CDotaStats* dotaStats)
+{
+  if (Begin())
+  {
+    // since we only record the end game information it's possible we haven't recorded anything yet if the game didn't end with a tree/throne death
+    // this will happen if all the players leave before properly finishing the game
+    // the dotagame stats are always saved (with winner = 0 if the game didn't properly finish)
+    // the dotaplayer stats are only saved if the game is properly finished
+
+    uint32_t Players = 0;
+
+    // check for invalid colours and duplicates
+    // this can only happen if DotA sends us garbage in the "id" value but we should check anyway
+
+    for (uint32_t i = 0; i < 12; ++i)
+    {
+      if (dotaStats->m_Players[i])
+      {
+        const uint8_t Color = dotaStats->m_Players[i]->GetNewColor();
+
+        if (!((Color >= 1 && Color <= 5) || (Color >= 7 && Color <= 11)))
+        {
+          Print(dotaStats->GetLogPrefix() + "discarding dotaPlayer data, invalid colour found");
+          delete dotaStats->m_Players[i];
+          dotaStats->m_Players[i] = nullptr;
+          continue;
+        }
+
+        for (uint32_t j = i + 1; j < 12; ++j)
+        {
+          if (dotaStats->m_Players[j] && Color == dotaStats->m_Players[j]->GetNewColor())
+          {
+            Print(dotaStats->GetLogPrefix() + "discarding dotaPlayer data, duplicate colour found");
+            delete dotaStats->m_Players[j];
+            dotaStats->m_Players[j] = nullptr;
+          }
+        }
+      }
+    }
+
+    for (auto& dotaPlayer : dotaStats->m_Players)
+    {
+      if (dotaPlayer)
+      {
+        const uint8_t  Color = dotaPlayer->GetNewColor();
+        const CDBGamePlayer* DBPlayer = dotaStats->m_Game->GetDBPlayerFromColor(Color);
+        const string Name = DBPlayer->GetName();
+        const string Server = DBPlayer->GetServer();
+
+        if (Name.empty())
+          continue;
+
+        uint8_t result = GAME_RESULT_DRAWER;
+
+        if ((dotaStats->m_Winner == DOTA_WINNER_SENTINEL && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == DOTA_WINNER_SCOURGE && Color >= 7 && Color <= 11))
+          result = GAME_RESULT_WINNER;
+        else if ((dotaStats->m_Winner == DOTA_WINNER_SCOURGE && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == DOTA_WINNER_SENTINEL && Color >= 7 && Color <= 11))
+          result = GAME_RESULT_LOSER;
+
+        UpdateDotAPlayerOnEnd(Name, Server, result, dotaPlayer);
+        ++Players;
+      }
+    }
+
+    if (Commit())
+      Print(dotaStats->GetLogPrefix() + "saving " + to_string(Players) + " players");
+    else
+      Print(dotaStats->GetLogPrefix() + "unable to commit database transaction, data not saved");
+  }
+  else
+    Print(dotaStats->GetLogPrefix() + "unable to begin database transaction, data not saved");
 }
 
 CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)

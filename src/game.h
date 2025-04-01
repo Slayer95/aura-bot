@@ -139,7 +139,7 @@ protected:
   int64_t                                                m_LastOwnerSeen;                 // GetTicks when the game owner was last seen in the lobby
   int64_t                                                m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
   int64_t                                                m_StartedKickVoteTime;           // GetTime when the kick vote was started
-  int64_t                                                m_LastCustomStatsUpdateTime;
+  int64_t                                                m_LastStatsUpdateTime;
   uint8_t                                                m_GameOver;
   std::optional<int64_t>                                 m_GameOverTime;                  // GetTime when the game was over
   std::optional<int64_t>                                 m_GameOverTolerance;

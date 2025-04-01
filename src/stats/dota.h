@@ -36,19 +36,30 @@
 
 class CDotaStats
 {
-protected:
-  CGame*         m_Game;
-  CDBDotAPlayer* m_Players[12];
-  uint8_t        m_Winner;
-
 public:
+  CGame*                                        m_Game;
+  CDBDotAPlayer*                                m_Players[12];
+  uint8_t                                       m_Winner;
+  std::optional<int64_t>                        m_GameOverTime;
+
   explicit CDotaStats(CGame* nGame);
   ~CDotaStats();
   CDotaStats(CDotaStats&) = delete;
 
-  bool ProcessAction(uint8_t UID, const CIncomingAction& action);
+  bool RecvAction(uint8_t UID, const CIncomingAction& action);
+  bool UpdateQueue();
   void Save(CAura* nAura, CAuraDB* nDB);
+  [[nodiscard]] inline bool GetIsSentinelPlayerColor(const uint8_t color) { return 1 <= color && color <= 5; }
+  [[nodiscard]] inline bool GetIsScourgePlayerColor(const uint8_t color) { return 7 <= color && color <= 11; }
+  [[nodiscard]] inline bool GetIsPlayerColor(const uint8_t color) { return GetIsSentinelPlayerColor(color) || GetIsScourgePlayerColor(color); }
+  [[nodiscard]] inline bool GetAreSameTeamColors(const uint8_t a, const uint8_t b) { return (a <= 5 && b <= 5) || (a >= 7 && b >= 7); }
+  [[nodiscard]] std::vector<CDBGamePlayer*> GetSentinelPlayers() const;
+  [[nodiscard]] std::vector<CDBGamePlayer*> GetScourgePlayers() const;
   [[nodiscard]] std::optional<GameResults> GetGameResults(const bool undecidedIsLoser) const;
+  [[nodiscard]] inline bool GetIsGameOver() const { return m_GameOverTime.has_value(); }
+  [[nodiscard]] inline int64_t GetGameOverTime() const { return m_GameOverTime.value(); }
+  [[nodiscard]] std::string GetLogPrefix() const;
+  void LogMetaData(int64_t recvTicks, const std::string& text) const;
 };
 
 #endif // AURA_STATS_H_
