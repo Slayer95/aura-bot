@@ -80,6 +80,7 @@ private:
   CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
 
   CGame*                           m_GameBroadcast;
+  CGame*                           m_GameBroadcastPending;
   bool                             m_GameIsExpansion;
   Version                          m_GameVersion;
   Version                          m_AuthGameVersion;
@@ -153,6 +154,7 @@ public:
   inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
+  inline bool                             GetGameBroadcastIsPending() const { return m_GameBroadcastPending != nullptr; }
   inline CGame*                           GetGameBroadcast() const { return m_GameBroadcast; }
   inline bool                             GetGameIsExpansion() const { return m_GameIsExpansion; }
   inline const Version&                   GetGameVersion() const { return m_GameVersion; }
@@ -269,6 +271,10 @@ public:
   void SetConfig(CRealmConfig* CFG);
 
   inline void SetHostCounter(const uint8_t nHostCounter) { m_PublicServerID = nHostCounter; }
+  inline void SetPendingBroadcast(CGame* nGame) {
+    m_GameBroadcast = nGame;
+    m_GameBroadcastPending = nGame;
+  }
 
   private:
 };

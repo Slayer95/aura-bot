@@ -2135,27 +2135,8 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
       continue;
     }
-    if (!realm->GetIsGameVersionCompatible(createdLobby).value_or(true)) {
-      if (MatchLogLevel(LOG_LEVEL_WARNING)) {
-        Print(realm->GetLogPrefix() + "skipping announcement for v" + ToVersionString(realm->GetGameVersion()) + " (check <hosting.game_versions.crossplay.mode>)");
-      }
-      continue;
-    }
 
-    if (createdLobby->GetDisplayMode() == GAME_PUBLIC && realm->GetAnnounceHostToChat()) {
-      realm->QueueGameChatAnnouncement(createdLobby);
-    } else {
-      // Send STARTADVEX3
-      createdLobby->AnnounceToRealm(realm);
-
-      // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
-      // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
-      // so don't rejoin the chat if we're using PVPGN
-
-      if (createdLobby->GetDisplayMode() == GAME_PRIVATE && !realm->GetPvPGN()) {
-        realm->SendEnterChat();
-      }
-    }
+    realm->SetPendingBroadcast(createdLobby);
   }
 
   if (createdLobby->GetDisplayMode() != GAME_PUBLIC ||

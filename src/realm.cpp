@@ -79,6 +79,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
 
     m_GameBroadcast(nullptr),
+    m_GameBroadcastPending(nullptr),
     m_GameIsExpansion(false),
     m_GameVersion(GAMEVER(0u, 0u)),
     m_AuthGameVersion(GAMEVER(0u, 0u)),
@@ -617,6 +618,30 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
       return;
     }
   }
+
+  if (m_LoggedIn && GetGameBroadcastIsPending()) {
+    if (
+      (m_GameBroadcastPending->GetIsExpansion() == GetGameIsExpansion()) &&
+      (m_GameBroadcastPending->GetIsSupportedGameVersion(GetGameVersion()))
+    ) {
+      if (m_GameBroadcastPending->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
+        QueueGameChatAnnouncement(m_GameBroadcastPending);
+      } else {
+        // Send STARTADVEX3
+        m_GameBroadcastPending->AnnounceToRealm(this);
+
+        // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
+        // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
+        // so don't rejoin the chat if we're using PVPGN
+
+        if (m_GameBroadcastPending->GetDisplayMode() == GAME_PRIVATE && !GetPvPGN()) {
+          SendEnterChat();
+        }
+      }
+    }
+
+    m_GameBroadcastPending = nullptr;
+  }
 }
 
 void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, const string& message)
@@ -831,7 +856,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
         } else {
           Print(GetLogPrefix() + " !! lobby is not stale !!");
         }
-      } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion())) {
+      } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion()) && matchLobby->GetIsExpansion() == GetGameIsExpansion()) {
         matchLobby->AnnounceToRealm(this);
       }
       break;
@@ -1476,6 +1501,7 @@ void CRealm::QueueGameUncreate()
 void CRealm::ResetGameBroadcastData()
 {
   m_GameBroadcast = nullptr;
+  m_GameBroadcastPending = nullptr;
   ResetGameBroadcastStatus();
   QueueGameUncreate();
   SendEnterChat();
