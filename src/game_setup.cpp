@@ -1605,6 +1605,42 @@ void CGameSetup::DeleteTemporaryFromMap(CConfig* mapCFG)
   mapCFG->Delete("map.cfg.hosting.game_versions.expansion.default");
 }
 
+void CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
+{
+  if (nCLI->m_GameSavedPath.has_value()) SetGameSavedFile(nCLI->m_GameSavedPath.value());
+  if (nCLI->m_GameMapDownloadTimeout.has_value()) SetDownloadTimeout(nCLI->m_GameMapDownloadTimeout.value());
+
+  if (nCLI->m_GameIsExpansion.has_value()) {
+    SetGameIsExpansion(nCLI->m_GameIsExpansion.value());
+  }
+  if (nCLI->m_GameVersion.has_value()) {
+    optional<Version> maybeVersion = nCLI->GetGameVersion();
+    if (maybeVersion.has_value()) SetGameVersion(maybeVersion.value());
+  }
+}
+
+void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
+{
+  if (nCLI->m_GameName.has_value()) {
+    SetBaseName(nCLI->m_GameName.value());
+  } else {
+    if (mpName.has_value()) {
+      SetBaseName(mpName.value() + "'s game");
+    } else {
+      SetBaseName("Join and play");
+    }
+  }
+  if (mpName.has_value()) {
+    SetCreator(mpName.value());
+  }
+  if (nCLI->m_GameOwner.has_value()) {
+    pair<string, string> owner = SplitAddress(nCLI->m_GameOwner.value());
+    SetOwner(ToLowerCase(owner.first), ToLowerCase(owner.second));
+  } else if (nCLI->m_GameOwnerLess.value_or(false)) {
+    SetOwnerLess(true);
+  }
+}
+
 void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 {
   if (nCLI->m_GameLobbyTimeoutMode.has_value()) SetLobbyTimeoutMode(nCLI->GetGameLobbyTimeoutMode());
@@ -1661,11 +1697,6 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameHideLobbyNames.has_value()) SetHideLobbyNames(nCLI->m_GameHideLobbyNames.value());
   if (nCLI->m_GameHideLoadedNames.has_value()) SetHideInGameNames(nCLI->GetGameHideLoadedNames());
   if (nCLI->m_GameResultSource.has_value()) SetResultSource(nCLI->GetGameResultSource());
-  if (nCLI->m_GameIsExpansion.has_value()) SetGameIsExpansion(nCLI->m_GameIsExpansion.value());
-  if (nCLI->m_GameVersion.has_value()) {
-    optional<Version> maybeVersion = nCLI->GetGameVersion();
-    if (maybeVersion.has_value()) SetGameVersion(maybeVersion.value());
-  }
   if (nCLI->m_GameLoadInGame.has_value()) SetLoadInGame(nCLI->m_GameLoadInGame.value());
   if (nCLI->m_GameEnableJoinObserversInProgress.has_value()) SetEnableJoinObserversInProgress(nCLI->m_GameEnableJoinObserversInProgress.value());
   if (nCLI->m_GameEnableJoinPlayersInProgress.has_value()) SetEnableJoinPlayersInProgress(nCLI->m_GameEnableJoinPlayersInProgress.value());

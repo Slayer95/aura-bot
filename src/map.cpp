@@ -1651,7 +1651,7 @@ bool CMap::AcquireGameIsExpansion(CConfig* CFG)
     }
   }
 
-  if (!m_MapTargetGameVersion.has_value()) {
+  if (!m_MapTargetGameIsExpansion.has_value()) {
     // Guaranteed to have a value,
     // because we don't error anywhere just because the bot owner forgot to specify TFT,
     // and just default to TFT.

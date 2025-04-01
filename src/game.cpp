@@ -197,6 +197,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_Remade(false),
     m_SaveOnLeave(SAVE_ON_LEAVE_AUTO),
     m_GameResultSourceOfTruth(nGameSetup->m_ResultSource.has_value() ? nGameSetup->m_ResultSource.value() : nGameSetup->m_Map->GetGameResultSourceOfTruth()),
+    m_IsSinglePlayer(false),
     m_Rated(false),
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
@@ -1715,11 +1716,22 @@ void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t max
     const int64_t ExpectedSendInterval = oldLatency - m_LastActionLateBy;
     int64_t ThisActionLateBy = ActualSendInterval - ExpectedSendInterval;
 
-    if (ThisActionLateBy > m_Config.m_PerfThreshold && !GetIsSinglePlayerMode()) {
+    if (ThisActionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
       // something is going terribly wrong - Aura is probably starved of resources
       // print a message because even though this will take more resources it should provide some information to the administrator for future reference
       // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
-      LOG_APP_IF(LOG_LEVEL_WARNING, "warning - action should be sent after " + to_string(ExpectedSendInterval) + "ms, but was sent after " + to_string(ActualSendInterval) + "ms [latency is " + to_string(m_LatencyTicks) + "ms]")
+      char buffer[128];
+#ifdef _MSC_VER
+      int length = _snprintf_s(
+        buffer, 128, 127,
+#else
+      int length = snprintf(
+        buffer, 128,
+#endif
+        "warning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
+        ExpectedSendInterval, ActualSendInterval, m_LatencyTicks
+      );
+      LOG_APP_IF(LOG_LEVEL_WARNING, string(buffer, length))
     }
 
     if (ThisActionLateBy > newLatency) {
@@ -4009,12 +4021,14 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
   }
 
   // send the left message if we haven't sent it already
+  // it may only be prematurely sent if this is a lobby
   if (!user->GetLeftMessageSent()) {
     if (user->GetLagging()) {
       DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
     SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetIsLeaver() && user->GetAnyKicked()));
+    if (m_GameLoaded) m_IsSinglePlayer = GetIsSinglePlayerMode();
   }
 
   // abort the countdown if there was one in progress, but only if the user who left is actually a controller, or otherwise relevant.
@@ -6408,6 +6422,8 @@ void CGame::EventGameLoaded()
 
   LOG_APP_IF(LOG_LEVEL_INFO, "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
 
+  m_IsSinglePlayer = GetIsSinglePlayerMode();
+
   // send shortest, longest, and personal load times to each user
 
   const GameUser::CGameUser* Shortest = nullptr;
@@ -6483,7 +6499,7 @@ void CGame::EventGameLoaded()
   }
 
   // GProxy hangs trying to reconnect
-  if (GetIsSinglePlayerMode() && !GetAnyUsingGProxy()) {
+  if (m_IsSinglePlayer && !GetAnyUsingGProxy()) {
     SendAllChat("HINT: Single-user game detected. In-game commands will be DISABLED.");
     // FIXME? This creates a large lag spike client-side.
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.

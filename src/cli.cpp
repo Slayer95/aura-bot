@@ -554,7 +554,7 @@ bool CCLI::CheckGameParameters() const
   return true;
 }
 
-bool CCLI::CheckGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
+bool CCLI::RunGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
 {
   if (!gameSetup->RestoreFromSaveFile()) {
     Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
@@ -702,8 +702,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     } catch (...) {
       return false;
     }
-    if (m_GameSavedPath.has_value()) gameSetup->SetGameSavedFile(m_GameSavedPath.value());
-    if (m_GameMapDownloadTimeout.has_value()) gameSetup->SetDownloadTimeout(m_GameMapDownloadTimeout.value());
+    gameSetup->AcquireCLIEarly(this);
     if (!gameSetup->LoadMapSync()) {
       if (searchType == SEARCH_TYPE_ANY) {
         ctx->ErrorReply("Input does not refer to a valid map, config, or URL.");
@@ -721,7 +720,7 @@ bool CCLI::QueueActions(CAura* nAura) const
       return false;
     }
     if (!gameSetup->m_SaveFile.empty()) {
-      if (!CheckGameLoadParameters(gameSetup)) {
+      if (!RunGameLoadParameters(gameSetup)) {
         return false;
       }
     }
@@ -748,24 +747,7 @@ bool CCLI::QueueActions(CAura* nAura) const
         return false;
       }
     }
-    if (m_GameName.has_value()) {
-      gameSetup->SetBaseName(m_GameName.value());
-    } else {
-      if (userName.has_value()) {
-        gameSetup->SetBaseName(userName.value() + "'s game");
-      } else {
-        gameSetup->SetBaseName("Join and play");
-      }
-    }
-    if (userName.has_value()) {
-      gameSetup->SetCreator(userName.value());
-    }
-    if (m_GameOwner.has_value()) {
-      pair<string, string> owner = SplitAddress(m_GameOwner.value());
-      gameSetup->SetOwner(ToLowerCase(owner.first), ToLowerCase(owner.second));
-    } else if (m_GameOwnerLess.value_or(false)) {
-      gameSetup->SetOwnerLess(true);
-    }
+    gameSetup->AcquireHost(this, userName);
     gameSetup->AcquireCLISimple(this);
     gameSetup->SetActive();
     AppAction hostAction = AppAction(APP_ACTION_TYPE_HOST, 0);

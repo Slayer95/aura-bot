@@ -510,10 +510,23 @@ void CAsyncObserver::EventChatMessage(const CIncomingChatMessage* incomingChatMe
   string message = incomingChatMessage->GetMessage();
   Print(GetLogPrefix() + ": " + message);
   if (message == "!ff") {
+    // 2x 4x 6x 8x 16x 32x 64x
     if (m_FrameRate >= 64) {
       SendChat("Playback rate is limited to 64x");
     } else {
-      m_FrameRate *= 2;
+      switch (m_FrameRate) {
+        // Smooth out acceleration around 8x, since
+        // 1 - many computers cannot handle such a large speed
+        // 2 - vanilla WC3 cannot actually handle speeds above 8x
+        case 4: case 8:
+          m_FrameRate = m_FrameRate * 3 / 2;
+          break;
+        case 6: case 12:
+          m_FrameRate = m_FrameRate *  4 / 3;
+          break;
+        default:
+          m_FrameRate *= 2;
+      }
       SendProgressReport();
     }
   } else if (message == "!sync") {

@@ -146,7 +146,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
     CFG.SetFailed();
   }
 
-  m_PerfThreshold                          = CFG.GetUint32("bot.perf_limit", 150);
+  m_PerfThreshold                          = static_cast<int64_t>(CFG.GetUint32("bot.perf_limit", 150));
   m_LacksMapKickDelay                      = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
   m_LogDelay                               = CFG.GetUint32("hosting.log_delay", 180); // default: 3 minutes
 

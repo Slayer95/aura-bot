@@ -368,6 +368,8 @@ public:
 
   void ClearExtraOptions();
   void ExportTemporaryToMap(CConfig* MapCFG);
+  void AcquireCLIEarly(const CCLI* nCLI);
+  void AcquireHost(const CCLI* nCLI, const std::optional<std::string>& mpName);
   void AcquireCLISimple(const CCLI* nCLI);
   void static DeleteTemporaryFromMap(CConfig* MapCFG);
 

@@ -202,6 +202,7 @@ protected:
   bool                                                   m_Remade;
   uint8_t                                                m_SaveOnLeave;
   uint8_t                                                m_GameResultSourceOfTruth;
+  bool                                                   m_IsSinglePlayer;
   bool                                                   m_Rated;
   std::string                                            m_UnratedReason;
   bool                                                   m_HMCEnabled;

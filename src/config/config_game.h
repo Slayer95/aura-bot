@@ -90,7 +90,7 @@ struct CGameConfig
   uint32_t                 m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
   uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
 
-  uint32_t                 m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
+  int64_t                  m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                 m_LacksMapKickDelay;
   uint32_t                 m_LogDelay;
 

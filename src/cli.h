@@ -202,7 +202,7 @@ public:
   [[nodiscard]] uint8_t GetGameResultSource() const;
   [[nodiscard]] std::optional<Version> GetGameVersion() const;
   [[nodiscard]] bool CheckGameParameters() const;
-  [[nodiscard]] bool CheckGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;
+  [[nodiscard]] bool RunGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;
 
   void RunInfoActions() const;
   void OverrideConfig(CAura* nAura) const;
