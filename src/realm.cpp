@@ -163,10 +163,345 @@ uint32_t CRealm::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
   return 0;
 }
 
-void CRealm::Update(fd_set* fd, fd_set* send_fd)
+void CRealm::EventConnectionTimeOut()
+{
+  // the connection attempt timed out (10 seconds)
+  NetworkHost host = NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort);
+  m_Aura->m_Net.OnThrottledConnectionError(host);
+  PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "failed to connect to [" + m_HostName + ":" + to_string(m_Config.m_ServerPort) + "]")
+  PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting " + to_string(m_Aura->m_Net.GetThrottleTime(host, m_MinReconnectDelay)) + " seconds to retry")
+  m_Socket->Reset();
+  //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
+  m_LastDisconnectedTime = GetTime();
+  m_WaitingToConnect     = true;
+}
+
+void CRealm::EventConnected(fd_set* fd, fd_set* send_fd)
+{
+  // the connection attempt completed
+  m_Aura->m_Net.OnThrottledConnectionSuccess(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
+  ++m_SessionID;
+  m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
+
+  PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "connected to [" + m_HostName + "]")
+  if (!ResolveGameVersion()) {
+    PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "config error - misconfigured <realm_" + to_string(m_ServerIndex) + ".game_version>")
+    Disable();
+    m_Socket->Disconnect();
+    return;
+  }
+  SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
+  SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameIsExpansion, m_AuthGameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
+  m_Socket->DoSend(send_fd);
+  m_LastGameListTime = GetTime();
+}
+
+void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
 {
   const int64_t Time = GetTime();
 
+  // the socket is connected and everything appears to be working properly
+  if (m_Socket->DoRecv(fd)) {
+
+    // extract as many packets as possible from the socket's receive buffer and process them
+    string*              RecvBuffer         = m_Socket->GetBytes();
+    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
+    uint32_t             LengthProcessed    = 0;
+    bool Abort                              = false;
+
+    // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
+
+    while (Bytes.size() >= 4) {
+      // bytes 2 and 3 contain the length of the packet
+      const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
+      if (Length < 4) {
+        Abort = true;
+        break;
+      }
+      if (Bytes.size() < Length) break;
+      const vector<uint8_t> Data = vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+
+      // byte 0 is always 255
+      if (Bytes[0] == BNETProtocol::Magic::BNET_HEADER)
+      {
+        // Any BNET packet is fine to reset app-level inactivity timeout.
+        m_NullPacketsSent = 0;
+
+        switch (Bytes[1])
+        {
+          case BNETProtocol::Magic::ZERO:
+            // warning: we do not respond to NULL packets with a NULL packet of our own
+            // this is because PVPGN servers are programmed to respond to NULL packets so it will create a vicious cycle of useless traffic
+            // official battle.net servers do not respond to NULL packets
+            break;
+
+          case BNETProtocol::Magic::GETADVLISTEX:
+            if (m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
+              std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
+              std::vector<uint8_t> War3Version = {m_AuthGameVersion.second, 0, 0, 0};
+              std::string ipString = m_Socket->GetIPString();
+              AppendByteArray(relayPacket, ipString, true);
+              AppendByteArray(relayPacket, static_cast<uint16_t>(6112u), true);
+              AppendByteArray(relayPacket, War3Version);
+              AppendByteArrayFast(relayPacket, Data);
+              AssignLength(relayPacket);
+              DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net.m_Config.m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)")
+              m_Aura->m_Net.Send(&(m_Aura->m_Net.m_Config.m_UDPForwardAddress), relayPacket);
+            }
+
+            break;
+
+          case BNETProtocol::Magic::ENTERCHAT: {
+            BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
+            if (enterChatResult.success) {
+              m_ChatNickName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
+              ResetGameBroadcastStatus();
+              AutoJoinChat();
+            }
+
+            break;
+          }
+
+          case BNETProtocol::Magic::CHATEVENT: {
+            BNETProtocol::IncomingChatResult chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
+            if (chatEventResult.success) {
+              ProcessChatEvent(chatEventResult.type, GetStringAddressRange(chatEventResult.userStart, chatEventResult.userEnd), GetStringAddressRange(chatEventResult.messageStart, chatEventResult.messageEnd));
+            }
+            break;
+          }
+
+          case BNETProtocol::Magic::CHECKAD:
+            //BNETProtocol::RECEIVE_SID_CHECKAD(Data);
+            break;
+
+          case BNETProtocol::Magic::STARTADVEX3:
+            if (m_GameBroadcast) {
+              if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
+                m_Aura->EventBNETGameRefreshSuccess(this);
+              } else {
+                PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish hosted game")
+                m_Aura->EventBNETGameRefreshError(this);
+              }
+            }
+            break;
+
+          case BNETProtocol::Magic::PING:
+            SendAuth(BNETProtocol::SEND_SID_PING(BNETProtocol::RECEIVE_SID_PING(Data)));
+            break;
+
+          case BNETProtocol::Magic::AUTH_INFO: {
+            BNETProtocol::AuthInfoResult infoResult = BNETProtocol::RECEIVE_SID_AUTH_INFO(Data);
+            if (!infoResult.success)
+              break;
+
+            copy_n(infoResult.logonType, 4, m_InfoLogonType.begin());
+            copy_n(infoResult.serverToken, 4, m_InfoServerToken.begin());
+            copy_n(infoResult.mpqFileTime, 8, m_InfoMPQFileTime.begin());
+            m_InfoIX86VerFileName = vector<uint8_t>(infoResult.verFileNameStart, infoResult.verFileNameEnd);
+            m_InfoValueStringFormula = vector<uint8_t>(infoResult.valueStringFormulaStart, infoResult.valueStringFormulaEnd);
+
+            bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_GameIsExpansion, m_AuthGameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
+            if (versionSuccess) {
+              const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
+              const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
+              const string& exeInfo = m_BNCSUtil->GetEXEInfo();
+              string expansionSuffix = "TFT";
+              if (!m_GameIsExpansion) expansionSuffix = "ROC";
+
+              PRINT_IF(LOG_LEVEL_DEBUG,
+                GetLogPrefix() + "attempting to auth as WC3: " + expansionSuffix + " v" +
+                to_string(exeVersion[3]) + "." + to_string(exeVersion[2]) + std::string(1, char(97 + exeVersion[1])) +
+                " (Build " + to_string(exeVersion[0]) + ") - " +
+                "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
+              )
+
+              SendAuth(BNETProtocol::SEND_SID_AUTH_CHECK(GetInfoClientToken(), m_GameIsExpansion, exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, m_Config.m_LicenseeName));
+              SendAuth(BNETProtocol::SEND_SID_ZERO());
+              SendNetworkConfig();
+            } else {
+              if (m_Aura->MatchLogLevel(LOG_LEVEL_ERROR)) {
+                if (m_Config.m_LoginHashType.value() == REALM_AUTH_PVPGN) {
+                  Print(GetLogPrefix() + "config error - misconfigured <game.install_path>");
+                } else {
+                  Print(GetLogPrefix() + "config error - misconfigured <game.install_path>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.roc>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.tft>");
+                }
+                Print(GetLogPrefix() + "bncsutil key hash failed, disconnecting...");
+              }
+              Disable();
+              m_Socket->Disconnect();
+            }
+
+            break;
+          }
+
+          case BNETProtocol::Magic::AUTH_CHECK: {
+            BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(Data);
+            if (m_Config.m_ExeAuthIgnoreVersionError || checkResult.state == BNETProtocol::KeyResult::GOOD)
+            {
+              // cd keys accepted
+              DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
+              m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
+              SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config.m_UserName));
+            }
+            else
+            {
+              // cd keys not accepted
+              switch (checkResult.state)
+              {
+                case BNETProtocol::KeyResult::ROC_KEY_IN_USE:
+                  PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...")
+                  break;
+
+                case BNETProtocol::KeyResult::TFT_KEY_IN_USE:
+                  PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...");
+                  break;
+
+                case BNETProtocol::KeyResult::OLD_GAME_VERSION:
+                case BNETProtocol::KeyResult::INVALID_VERSION:
+                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersion()) + ">")
+                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersionHash()) + ">")
+                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - version not supported, or version hash invalid, disconnecting...")
+                  break;
+
+                default:
+                  PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - cd keys not accepted, disconnecting...")
+                  break;
+              }
+
+              Disable();
+              m_Socket->Disconnect();
+            }
+
+            break;
+          }
+
+          case BNETProtocol::Magic::AUTH_ACCOUNTLOGON: {
+            BNETProtocol::AuthLoginResult loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(Data);
+            if (loginResult.success) {
+              copy_n(loginResult.salt, 32, m_LoginSalt.begin());
+              copy_n(loginResult.serverPublicKey, 32, m_LoginServerPublicKey.begin());
+              DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config.m_UserName + "] OK")
+              Login();
+            } else {
+              DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config.m_UserName + "] invalid")
+              if (!TrySignup()) {
+                Disable();
+                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "logon failed - invalid username, disconnecting")
+                m_Socket->Disconnect();
+              }
+            }
+
+            break;
+          }
+
+          case BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF:
+            if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
+              OnLoginOkay();
+            } else {
+              m_FailedLogin = true;
+              Disable();
+              PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - invalid password, disconnecting")
+              m_Socket->Disconnect();
+            }
+            break;
+
+          case BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP:
+            if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
+              OnSignupOkay();
+            } else {
+              m_FailedSignup = true;
+              Disable();
+              PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "sign up failed, disconnecting")
+              m_Socket->Disconnect();
+            }
+            break;
+
+          case BNETProtocol::Magic::FRIENDLIST:
+            m_Friends = BNETProtocol::RECEIVE_SID_FRIENDLIST(Data);
+            break;
+
+          case BNETProtocol::Magic::CLANMEMBERLIST:
+            m_Clan = BNETProtocol::RECEIVE_SID_CLANMEMBERLIST(Data);
+            break;
+
+          case BNETProtocol::Magic::GETGAMEINFO:
+            PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got SID_GETGAMEINFO: " + ByteArrayToHexString(Data))
+            break;
+
+          case BNETProtocol::Magic::HOSTGAME: {
+            if (!GetIsReHoster()) {
+              break;
+            }
+
+            optional<CConfig> hostedGameConfig = BNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(Data);
+            if (!hostedGameConfig.has_value()) {
+              PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got invalid SID_HOSTGAME message")
+              break;
+            }
+            shared_ptr<CCommandContext> ctx = nullptr;
+            shared_ptr<CGameSetup> gameSetup = nullptr;
+            try {
+              ctx = make_shared<CCommandContext>(m_Aura, string(), false, &cout);
+              gameSetup = make_shared<CGameSetup>(m_Aura, ctx, &(hostedGameConfig.value()));
+            } catch (...) {
+              PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "hostgame memory allocation failure")
+              break;
+            }
+            if (!gameSetup->GetMapLoaded()) {
+              PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
+              break;
+            }
+            gameSetup->SetDisplayMode(hostedGameConfig->GetBool("rehost.game.private", false) ? GAME_PRIVATE : GAME_PUBLIC);
+            gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, hostedGameConfig->GetString("rehost.game.name", 1, 31, "Rehosted Game"));
+            gameSetup->SetActive();
+            gameSetup->LoadMap();
+            break;
+          }
+        }
+      }
+
+      LengthProcessed += Length;
+      Bytes = vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
+    }
+
+    if (Abort) {
+      RecvBuffer->clear();
+    } else if (LengthProcessed > 0) {
+      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
+    }
+  }
+
+  if (m_Socket->HasError() || m_Socket->HasFin()) {
+    return;
+  }
+
+  if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
+    // Many PvPGN servers do not implement TCP Keep Alive. However, all PvPGN servers reply to BNET protocol null packets.
+    int64_t expectedNullsSent = ((Time - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TIME) / REALM_APP_KEEPALIVE_INTERVAL) + 1;
+    if (expectedNullsSent > REALM_APP_KEEPALIVE_MAX_MISSED) {
+      PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "socket inactivity timeout")
+      ResetConnection(false);
+      return;
+    }
+    if (m_NullPacketsSent < expectedNullsSent) {
+      SendAuth(BNETProtocol::SEND_SID_ZERO());
+      ++m_NullPacketsSent;
+      m_Socket->Flush();
+    }
+  }
+
+  TrySendPendingChats();
+  CheckPendingGameBroadcast();
+
+  if (Time - m_LastGameListTime >= 90) {
+    TrySendGetGamesList();
+  }
+
+  m_Socket->DoSend(send_fd);
+}
+
+void CRealm::Update(fd_set* fd, fd_set* send_fd)
+{
   // we return at the end of each if statement so we don't have to deal with errors related to the order of the if statements
   // that means it might take a few ms longer to complete a task involving multiple steps (in this case, reconnecting) due to blocking or sleeping
   // but it's not a big deal at all, maybe 100ms in the worst possible case (based on a 50ms blocking time)
@@ -183,8 +518,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
     //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
   }
 
-  if (m_Socket->HasError() || m_Socket->HasFin())
-  {
+  if (m_Socket->HasError() || m_Socket->HasFin()) {
     // the socket has an error, or the server terminated the connection
     NetworkHost host = NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort);
     if (m_Socket->GetConnecting()) {
@@ -195,366 +529,18 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
     return;
   }
 
-  if (m_Socket->GetConnected())
-  {
-    // the socket is connected and everything appears to be working properly
-
-    if (m_Socket->DoRecv(fd)) {
-
-      // extract as many packets as possible from the socket's receive buffer and process them
-      string*              RecvBuffer         = m_Socket->GetBytes();
-      std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-      uint32_t             LengthProcessed    = 0;
-      bool Abort                              = false;
-
-      // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
-
-      while (Bytes.size() >= 4) {
-        // bytes 2 and 3 contain the length of the packet
-        const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
-        if (Length < 4) {
-          Abort = true;
-          break;
-        }
-        if (Bytes.size() < Length) break;
-        const vector<uint8_t> Data = vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
-
-        // byte 0 is always 255
-        if (Bytes[0] == BNETProtocol::Magic::BNET_HEADER)
-        {
-          // Any BNET packet is fine to reset app-level inactivity timeout.
-          m_NullPacketsSent = 0;
-
-          switch (Bytes[1])
-          {
-            case BNETProtocol::Magic::ZERO:
-              // warning: we do not respond to NULL packets with a NULL packet of our own
-              // this is because PVPGN servers are programmed to respond to NULL packets so it will create a vicious cycle of useless traffic
-              // official battle.net servers do not respond to NULL packets
-              break;
-
-            case BNETProtocol::Magic::GETADVLISTEX:
-              if (m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
-                std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
-                std::vector<uint8_t> War3Version = {m_AuthGameVersion.second, 0, 0, 0};
-                std::string ipString = m_Socket->GetIPString();
-                AppendByteArray(relayPacket, ipString, true);
-                AppendByteArray(relayPacket, static_cast<uint16_t>(6112u), true);
-                AppendByteArray(relayPacket, War3Version);
-                AppendByteArrayFast(relayPacket, Data);
-                AssignLength(relayPacket);
-                DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net.m_Config.m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)")
-                m_Aura->m_Net.Send(&(m_Aura->m_Net.m_Config.m_UDPForwardAddress), relayPacket);
-              }
-
-              break;
-
-            case BNETProtocol::Magic::ENTERCHAT: {
-              BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
-              if (enterChatResult.success) {
-                m_ChatNickName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
-                ResetGameBroadcastStatus();
-                AutoJoinChat();
-              }
-
-              break;
-            }
-
-            case BNETProtocol::Magic::CHATEVENT: {
-              BNETProtocol::IncomingChatResult chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
-              if (chatEventResult.success) {
-                ProcessChatEvent(chatEventResult.type, GetStringAddressRange(chatEventResult.userStart, chatEventResult.userEnd), GetStringAddressRange(chatEventResult.messageStart, chatEventResult.messageEnd));
-              }
-              break;
-            }
-
-            case BNETProtocol::Magic::CHECKAD:
-              //BNETProtocol::RECEIVE_SID_CHECKAD(Data);
-              break;
-
-            case BNETProtocol::Magic::STARTADVEX3:
-              if (m_GameBroadcast) {
-                if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
-                  m_Aura->EventBNETGameRefreshSuccess(this);
-                } else {
-                  PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish hosted game")
-                  m_Aura->EventBNETGameRefreshError(this);
-                }
-              }
-              break;
-
-            case BNETProtocol::Magic::PING:
-              SendAuth(BNETProtocol::SEND_SID_PING(BNETProtocol::RECEIVE_SID_PING(Data)));
-              break;
-
-            case BNETProtocol::Magic::AUTH_INFO: {
-              BNETProtocol::AuthInfoResult infoResult = BNETProtocol::RECEIVE_SID_AUTH_INFO(Data);
-              if (!infoResult.success)
-                break;
-
-              copy_n(infoResult.logonType, 4, m_InfoLogonType.begin());
-              copy_n(infoResult.serverToken, 4, m_InfoServerToken.begin());
-              copy_n(infoResult.mpqFileTime, 8, m_InfoMPQFileTime.begin());
-              m_InfoIX86VerFileName = vector<uint8_t>(infoResult.verFileNameStart, infoResult.verFileNameEnd);
-              m_InfoValueStringFormula = vector<uint8_t>(infoResult.valueStringFormulaStart, infoResult.valueStringFormulaEnd);
-
-              bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_GameIsExpansion, m_AuthGameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
-              if (versionSuccess) {
-                const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
-                const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
-                const string& exeInfo = m_BNCSUtil->GetEXEInfo();
-                string expansionSuffix = "TFT";
-                if (!m_GameIsExpansion) expansionSuffix = "ROC";
-
-                PRINT_IF(LOG_LEVEL_DEBUG,
-                  GetLogPrefix() + "attempting to auth as WC3: " + expansionSuffix + " v" +
-                  to_string(exeVersion[3]) + "." + to_string(exeVersion[2]) + std::string(1, char(97 + exeVersion[1])) +
-                  " (Build " + to_string(exeVersion[0]) + ") - " +
-                  "version hash <" + ByteArrayToDecString(exeVersionHash) + ">"
-                )
-
-                SendAuth(BNETProtocol::SEND_SID_AUTH_CHECK(GetInfoClientToken(), m_GameIsExpansion, exeVersion, exeVersionHash, m_BNCSUtil->GetKeyInfoROC(), m_BNCSUtil->GetKeyInfoTFT(), exeInfo, m_Config.m_LicenseeName));
-                SendAuth(BNETProtocol::SEND_SID_ZERO());
-                SendNetworkConfig();
-              } else {
-                if (m_Aura->MatchLogLevel(LOG_LEVEL_ERROR)) {
-                  if (m_Config.m_LoginHashType == REALM_AUTH_PVPGN) {
-                    Print(GetLogPrefix() + "config error - misconfigured <game.install_path>");
-                  } else {
-                    Print(GetLogPrefix() + "config error - misconfigured <game.install_path>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.roc>, or <realm_" + to_string(m_ServerIndex) + ".cd_key.tft>");
-                  }
-                  Print(GetLogPrefix() + "bncsutil key hash failed, disconnecting...");
-                }
-                Disable();
-                m_Socket->Disconnect();
-              }
-
-              break;
-            }
-
-            case BNETProtocol::Magic::AUTH_CHECK: {
-              BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(Data);
-              if (m_Config.m_ExeAuthIgnoreVersionError || checkResult.state == BNETProtocol::KeyResult::GOOD)
-              {
-                // cd keys accepted
-                DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "version OK")
-                m_BNCSUtil->HELP_SID_AUTH_ACCOUNTLOGON();
-                SendAuth(BNETProtocol::SEND_SID_AUTH_ACCOUNTLOGON(m_BNCSUtil->GetClientKey(), m_Config.m_UserName));
-              }
-              else
-              {
-                // cd keys not accepted
-                switch (checkResult.state)
-                {
-                  case BNETProtocol::KeyResult::ROC_KEY_IN_USE:
-                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...")
-                    break;
-
-                  case BNETProtocol::KeyResult::TFT_KEY_IN_USE:
-                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...");
-                    break;
-
-                  case BNETProtocol::KeyResult::OLD_GAME_VERSION:
-                  case BNETProtocol::KeyResult::INVALID_VERSION:
-                      PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersion()) + ">")
-                      PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "config error - rejected <realm_" + to_string(m_ServerIndex) + ".auth_exe_version_hash = " + ByteArrayToDecString(m_BNCSUtil->GetEXEVersionHash()) + ">")
-                      PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - version not supported, or version hash invalid, disconnecting...")
-                    break;
-
-                  default:
-                    PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - cd keys not accepted, disconnecting...")
-                    break;
-                }
-
-                Disable();
-                m_Socket->Disconnect();
-              }
-
-              break;
-            }
-
-            case BNETProtocol::Magic::AUTH_ACCOUNTLOGON: {
-              BNETProtocol::AuthLoginResult loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(Data);
-              if (loginResult.success) {
-                copy_n(loginResult.salt, 32, m_LoginSalt.begin());
-                copy_n(loginResult.serverPublicKey, 32, m_LoginServerPublicKey.begin());
-                DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config.m_UserName + "] OK")
-                Login();
-              } else {
-                DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "username [" + m_Config.m_UserName + "] invalid")
-                if (!TrySignup()) {
-                  Disable();
-                  PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "logon failed - invalid username, disconnecting")
-                  m_Socket->Disconnect();
-                }
-              }
-
-              break;
-            }
-
-            case BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF:
-              if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
-                OnLoginOkay();
-              } else {
-                m_FailedLogin = true;
-                Disable();
-                PRINT_IF(LOG_LEVEL_ERROR, GetLogPrefix() + "logon failed - invalid password, disconnecting")
-                m_Socket->Disconnect();
-              }
-              break;
-
-            case BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP:
-              if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
-                OnSignupOkay();
-              } else {
-                m_FailedSignup = true;
-                Disable();
-                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "sign up failed, disconnecting")
-                m_Socket->Disconnect();
-              }
-              break;
-
-            case BNETProtocol::Magic::FRIENDLIST:
-              m_Friends = BNETProtocol::RECEIVE_SID_FRIENDLIST(Data);
-              break;
-
-            case BNETProtocol::Magic::CLANMEMBERLIST:
-              m_Clan = BNETProtocol::RECEIVE_SID_CLANMEMBERLIST(Data);
-              break;
-
-            case BNETProtocol::Magic::GETGAMEINFO:
-              PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got SID_GETGAMEINFO: " + ByteArrayToHexString(Data))
-              break;
-
-            case BNETProtocol::Magic::HOSTGAME: {
-              if (!GetIsReHoster()) {
-                break;
-              }
-
-              optional<CConfig> hostedGameConfig = BNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(Data);
-              if (!hostedGameConfig.has_value()) {
-                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "got invalid SID_HOSTGAME message")
-                break;
-              }
-              shared_ptr<CCommandContext> ctx = nullptr;
-              shared_ptr<CGameSetup> gameSetup = nullptr;
-              try {
-                ctx = make_shared<CCommandContext>(m_Aura, string(), false, &cout);
-                gameSetup = make_shared<CGameSetup>(m_Aura, ctx, &(hostedGameConfig.value()));
-              } catch (...) {
-                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "hostgame memory allocation failure")
-                break;
-              }
-              if (!gameSetup->GetMapLoaded()) {
-                PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
-                break;
-              }
-              gameSetup->SetDisplayMode(hostedGameConfig->GetBool("rehost.game.private", false) ? GAME_PRIVATE : GAME_PUBLIC);
-              gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, hostedGameConfig->GetString("rehost.game.name", 1, 31, "Rehosted Game"));
-              gameSetup->SetActive();
-              gameSetup->LoadMap();
-              break;
-            }
-          }
-        }
-
-        LengthProcessed += Length;
-        Bytes = vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
-      }
-
-      if (Abort) {
-        RecvBuffer->clear();
-      } else if (LengthProcessed > 0) {
-        *RecvBuffer = RecvBuffer->substr(LengthProcessed);
-      }
-    }
-
-    if (m_Socket->HasError() || m_Socket->HasFin()) {
-      return;
-    }
-
-    if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
-      // Many PvPGN servers do not implement TCP Keep Alive. However, all PvPGN servers reply to BNET protocol null packets.
-      int64_t expectedNullsSent = ((Time - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TIME) / REALM_APP_KEEPALIVE_INTERVAL) + 1;
-      if (expectedNullsSent > REALM_APP_KEEPALIVE_MAX_MISSED) {
-        PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "socket inactivity timeout")
-        ResetConnection(false);
-        return;
-      }
-      if (m_NullPacketsSent < expectedNullsSent) {
-        SendAuth(BNETProtocol::SEND_SID_ZERO());
-        ++m_NullPacketsSent;
-        m_Socket->Flush();
-      }
-    }
-
-    bool waitForPriority = false;
-    if (m_LoggedIn && m_ChatQueueJoinCallback && GetInChat()) {
-      if (m_ChatQueueJoinCallback->GetIsStale()) {
-        delete m_ChatQueueJoinCallback;
-        m_ChatQueueJoinCallback = nullptr;
-      } else {
-        if (CheckWithinChatQuota(m_ChatQueueJoinCallback)) {
-          if (SendQueuedMessage(m_ChatQueueJoinCallback)) {
-            delete m_ChatQueueJoinCallback;
-          }
-          m_ChatQueueJoinCallback = nullptr;
-        } else {
-          waitForPriority = true;
-        }
-      }
-    }
-    if (m_LoggedIn && m_ChatQueueGameHostWhois) {
-      if (m_ChatQueueGameHostWhois->GetIsStale()) {
-        delete m_ChatQueueGameHostWhois;
-        m_ChatQueueGameHostWhois = nullptr;
-      } else {
-        if (CheckWithinChatQuota(m_ChatQueueGameHostWhois)) {
-          if (SendQueuedMessage(m_ChatQueueGameHostWhois)) {
-            delete m_ChatQueueGameHostWhois;
-          }
-          m_ChatQueueGameHostWhois = nullptr;
-        } else {
-          waitForPriority = true;
-        }
-      }
-    }
-    if (!waitForPriority) {
-      while (m_LoggedIn && !m_ChatQueueMain.empty()) {
-        CQueuedChatMessage* nextMessage = m_ChatQueueMain.front();
-        if (nextMessage->GetIsStale()) {
-          delete nextMessage;
-          m_ChatQueueMain.pop();
-        } else {
-          if (CheckWithinChatQuota(nextMessage)) {
-            if (SendQueuedMessage(nextMessage)) {
-              delete nextMessage;
-            }
-            m_ChatQueueMain.pop();
-          } else {
-            break;
-          }
-        }
-      }
-    }
-
-    if (Time - m_LastGameListTime >= 90) {
-      TrySendGetGamesList();
-    }
-
-    m_Socket->DoSend(send_fd);
+  if (m_Socket->GetConnected()) {
+    UpdateConnected(fd, send_fd);
     return;
   }
 
-  if (!m_Socket->GetConnected() && !m_Socket->GetConnecting() && !m_WaitingToConnect)
-  {
+  if (!m_Socket->GetConnected() && !m_Socket->GetConnecting() && !m_WaitingToConnect) {
     // the socket was disconnected
     ResetConnection(false);
     return;
   }
 
-  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && GetIsDueReconnect())
-  {
+  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && GetIsDueReconnect()) {
     // attempt to connect to battle.net
 
     if (!m_FirstConnect) {
@@ -577,70 +563,17 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
       m_Socket->m_HasError = true;
     }
     m_WaitingToConnect          = false;
-    m_LastConnectionAttemptTime = Time;
+    m_LastConnectionAttemptTime = GetTime();
   }
 
-  if (m_Socket->GetConnecting())
-  {
+  if (m_Socket->GetConnecting()) {
     // we are currently attempting to connect to battle.net
 
-    if (m_Socket->CheckConnect())
-    {
-      // the connection attempt completed
-      m_Aura->m_Net.OnThrottledConnectionSuccess(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
-      ++m_SessionID;
-      m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
-
-      PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "connected to [" + m_HostName + "]")
-      if (!ResolveGameVersion()) {
-        PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "config error - misconfigured <realm_" + to_string(m_ServerIndex) + ".game_version>")
-        Disable();
-        m_Socket->Disconnect();
-        return;
-      }
-      SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
-      SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameIsExpansion, m_AuthGameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
-      m_Socket->DoSend(send_fd);
-      m_LastGameListTime       = Time;
-      return;
+    if (m_Socket->CheckConnect()) {
+      EventConnected(fd, send_fd);
+    } else if (GetTime() - m_LastConnectionAttemptTime >= 10) {
+      EventConnectionTimeOut();
     }
-    else if (Time - m_LastConnectionAttemptTime >= 10)
-    {
-      // the connection attempt timed out (10 seconds)
-      NetworkHost host = NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort);
-      m_Aura->m_Net.OnThrottledConnectionError(host);
-      PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "failed to connect to [" + m_HostName + ":" + to_string(m_Config.m_ServerPort) + "]")
-      PRINT_IF(LOG_LEVEL_INFO, GetLogPrefix() + "waiting " + to_string(m_Aura->m_Net.GetThrottleTime(host, m_MinReconnectDelay)) + " seconds to retry")
-      m_Socket->Reset();
-      //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
-      m_LastDisconnectedTime = Time;
-      m_WaitingToConnect     = true;
-      return;
-    }
-  }
-
-  if (m_LoggedIn && GetGameBroadcastIsPending()) {
-    if (
-      (m_GameBroadcastPending->GetIsExpansion() == GetGameIsExpansion()) &&
-      (m_GameBroadcastPending->GetIsSupportedGameVersion(GetGameVersion()))
-    ) {
-      if (m_GameBroadcastPending->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
-        QueueGameChatAnnouncement(m_GameBroadcastPending);
-      } else {
-        // Send STARTADVEX3
-        m_GameBroadcastPending->AnnounceToRealm(this);
-
-        // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
-        // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
-        // so don't rejoin the chat if we're using PVPGN
-
-        if (m_GameBroadcastPending->GetDisplayMode() == GAME_PRIVATE && !GetPvPGN()) {
-          SendEnterChat();
-        }
-      }
-    }
-
-    m_GameBroadcastPending = nullptr;
   }
 }
 
@@ -892,7 +825,7 @@ bool CRealm::GetEnabled() const
 
 bool CRealm::GetPvPGN() const
 {
-  return m_Config.m_LoginHashType == REALM_AUTH_PVPGN;
+  return m_Config.m_Type == REALM_TYPE_PVPGN;
 }
 
 string CRealm::GetServer() const
@@ -1211,7 +1144,7 @@ bool CRealm::TrySignup()
   if (m_FailedSignup || !m_Config.m_AutoRegister) {
     return false;
   }
-  if (m_Config.m_LoginHashType != REALM_AUTH_PVPGN) {
+  if (m_Config.m_LoginHashType.value() != REALM_AUTH_PVPGN) {
     return false;
   }
   Signup();
@@ -1220,7 +1153,7 @@ bool CRealm::TrySignup()
 
 void CRealm::Signup()
 {
-  //if (m_Config.m_LoginHashType == REALM_AUTH_PVPGN) {
+  //if (m_Config.m_LoginHashType.value() == REALM_AUTH_PVPGN) {
   // exclusive to pvpgn logon
   PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "registering new account in PvPGN realm")
   m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config.m_PassWord);
@@ -1230,7 +1163,7 @@ void CRealm::Signup()
 
 bool CRealm::Login()
 {
-  if (m_Config.m_LoginHashType == REALM_AUTH_PVPGN) {
+  if (m_Config.m_LoginHashType.value() == REALM_AUTH_PVPGN) {
     // pvpgn logon
     DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "using pvpgn logon type")
     m_BNCSUtil->HELP_PvPGNPasswordHash(m_Config.m_PassWord);
@@ -1423,6 +1356,90 @@ void CRealm::TryQueueChat(const string& message, const string& user, bool isPriv
   }
 }
 
+void CRealm::TrySendPendingChats()
+{
+  bool waitForPriority = false;
+  if (m_LoggedIn && m_ChatQueueJoinCallback && GetInChat()) {
+    if (m_ChatQueueJoinCallback->GetIsStale()) {
+      delete m_ChatQueueJoinCallback;
+      m_ChatQueueJoinCallback = nullptr;
+    } else {
+      if (CheckWithinChatQuota(m_ChatQueueJoinCallback)) {
+        if (SendQueuedMessage(m_ChatQueueJoinCallback)) {
+          delete m_ChatQueueJoinCallback;
+        }
+        m_ChatQueueJoinCallback = nullptr;
+      } else {
+        waitForPriority = true;
+      }
+    }
+  }
+  if (m_LoggedIn && m_ChatQueueGameHostWhois) {
+    if (m_ChatQueueGameHostWhois->GetIsStale()) {
+      delete m_ChatQueueGameHostWhois;
+      m_ChatQueueGameHostWhois = nullptr;
+    } else {
+      if (CheckWithinChatQuota(m_ChatQueueGameHostWhois)) {
+        if (SendQueuedMessage(m_ChatQueueGameHostWhois)) {
+          delete m_ChatQueueGameHostWhois;
+        }
+        m_ChatQueueGameHostWhois = nullptr;
+      } else {
+        waitForPriority = true;
+      }
+    }
+  }
+  if (!waitForPriority) {
+    while (m_LoggedIn && !m_ChatQueueMain.empty()) {
+      CQueuedChatMessage* nextMessage = m_ChatQueueMain.front();
+      if (nextMessage->GetIsStale()) {
+        delete nextMessage;
+        m_ChatQueueMain.pop();
+      } else {
+        if (CheckWithinChatQuota(nextMessage)) {
+          if (SendQueuedMessage(nextMessage)) {
+            delete nextMessage;
+          }
+          m_ChatQueueMain.pop();
+        } else {
+          break;
+        }
+      }
+    }
+  }
+}
+
+void CRealm::CheckPendingGameBroadcast()
+{
+  if (!m_LoggedIn || !GetGameBroadcastIsPending()) {
+    return;
+  }
+
+  if (
+    (m_GameBroadcastPending->GetIsExpansion() != GetGameIsExpansion()) ||
+    !(m_GameBroadcastPending->GetIsSupportedGameVersion(GetGameVersion()))
+  ) {
+    m_GameBroadcastPending = nullptr;
+    return;
+  }
+
+  if (m_GameBroadcastPending->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
+    QueueGameChatAnnouncement(m_GameBroadcastPending);
+  } else {
+    // Send STARTADVEX3
+    m_GameBroadcastPending->AnnounceToRealm(this);
+
+    // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
+    // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
+    // so don't rejoin the chat if we're using PVPGN
+
+    if (m_GameBroadcastPending->GetDisplayMode() == GAME_PRIVATE && !GetPvPGN()) {
+      SendEnterChat();
+    }
+  }
+
+  m_GameBroadcastPending = nullptr;
+}
 
 void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
 {

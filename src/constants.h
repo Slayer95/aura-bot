@@ -515,6 +515,9 @@ constexpr uint8_t LOG_REMOTE_MODE_MIXED = 3u;
 
 // config_realm.h
 
+constexpr uint8_t REALM_TYPE_PVPGN = 0u;
+constexpr uint8_t REALM_TYPE_BATTLENET_CLASSIC = 1u;
+
 constexpr uint8_t REALM_AUTH_PVPGN = 0u;
 constexpr uint8_t REALM_AUTH_BATTLENET = 1u;
 

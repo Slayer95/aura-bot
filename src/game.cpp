@@ -6474,8 +6474,12 @@ void CGame::EventGameLoaded()
   }
 
   if (!m_Rated) {
-    SendAllChat("This game is unrated because " + m_UnratedReason);
-    m_UnratedReason.clear();
+    if (m_UnratedReason.empty) {
+      //SendAllChat("This game is unrated");
+    } else {
+      //SendAllChat("This game is unrated because " + m_UnratedReason);
+      m_UnratedReason.clear();
+    }
   }
 
   // GProxy hangs trying to reconnect

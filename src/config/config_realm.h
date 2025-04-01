@@ -100,6 +100,7 @@ struct CRealmConfig
 
   std::string m_HostName;                        // server address to connect to
   uint16_t m_ServerPort;
+  std::optional<uint8_t> m_Type;                 // pvpgn or classic.battle.net - optional for global_realm, but required at the end of the chain
 
   bool m_AutoRegister;
   bool m_UserNameCaseSensitive;
@@ -110,7 +111,7 @@ struct CRealmConfig
 
   bool m_ExeAuthUseCustomVersionData;
   bool m_ExeAuthIgnoreVersionError;
-  uint8_t m_LoginHashType;                       // pvpgn or battle.net
+  std::optional<uint8_t> m_LoginHashType;        // pvpgn or classic.battle.net - optional for global_realm, but required at the end of the chain
 
   std::optional<bool> m_GameIsExpansion;
   std::optional<Version> m_GameVersion;                         // WC3 major+minor version

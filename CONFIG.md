@@ -631,13 +631,13 @@ Config
 
 ## \`global_realm.login.hash_type\`
 - Type: enum
-- Default value: pvpgn
-- Error handling: Use default value
+- Default value: REALM_TYPE_PVPGN
+- Error handling: Abort operation
 
 ## \`global_realm.login.hash_type\`
 - Type: enum
-- Default value: Empty
-- Error handling: Use default value
+- Default value: pvpgn
+- Error handling: Abort operation
 
 ## \`global_realm.logs.console.chat\`
 - Type: bool
@@ -748,6 +748,16 @@ Config
 - Type: set
 - Default value: Empty
 - Error handling: Use default value
+
+## \`global_realm.type\`
+- Type: enum
+- Default value: REALM_TYPE_PVPGN
+- Error handling: Abort operation
+
+## \`global_realm.type\`
+- Type: enum
+- Default value: REALM_TYPE_PVPGN
+- Error handling: Abort operation
 
 ## \`global_realm.unique_name\`
 - Type: string

@@ -212,11 +212,16 @@ public:
   // processing functions
 
   uint32_t SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
+  void EventConnectionTimeOut();
+  void EventConnected(fd_set* fd, fd_set* send_fd);
+  void UpdateConnected(fd_set* fd, fd_set* send_fd);
   void Update(fd_set* fd, fd_set* send_fd);
   void ProcessChatEvent(const uint32_t eventType, const std::string& fromUser, const std::string& nMessage);
   uint8_t CountChatQuota();
   bool CheckWithinChatQuota(CQueuedChatMessage* message);
   bool SendQueuedMessage(CQueuedChatMessage* message);
+  void TrySendPendingChats();
+  void CheckPendingGameBroadcast();
 
   // functions to send packets to battle.net
 
@@ -272,7 +277,7 @@ public:
 
   inline void SetHostCounter(const uint8_t nHostCounter) { m_PublicServerID = nHostCounter; }
   inline void SetPendingBroadcast(CGame* nGame) {
-    m_GameBroadcast = nGame;
+    m_GameBroadcast = nullptr;
     m_GameBroadcastPending = nGame;
   }
 

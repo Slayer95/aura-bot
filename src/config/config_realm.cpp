@@ -132,6 +132,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name");
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", 6112);
+  m_Type                   = CFG.GetStringIndex(m_CFGKeyPrefix + "type", {"pvpgn", "classic.battle.net"}, REALM_TYPE_PVPGN);
 
   m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
   m_UserNameCaseSensitive  = CFG.GetBool(m_CFGKeyPrefix + "username.case_sensitive", false);
@@ -142,8 +143,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_LicenseeName           = CFG.GetString(m_CFGKeyPrefix + "licensee", m_LicenseeName);
 
   m_ExeAuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.custom", false);
-  m_ExeAuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.ignore_version_error", false);
-  m_LoginHashType          = CFG.GetStringIndex(m_CFGKeyPrefix + "login.hash_type", {"pvpgn", "battle.net"}, REALM_AUTH_PVPGN);
+  m_ExeAuthIgnoreVersionError     = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.ignore_version_error", false);
+
+  if (CFG.Exists(m_CFGKeyPrefix + "login.hash_type")) {
+    m_LoginHashType        = CFG.GetStringIndex(m_CFGKeyPrefix + "login.hash_type", {"pvpgn", "classic.battle.net"}, REALM_TYPE_PVPGN);
+    CFG.FailIfErrorLast();
+  }
 
   if (CFG.Exists(m_CFGKeyPrefix + "expansion")) {
     m_GameIsExpansion   = static_cast<bool>(CFG.GetStringIndex(m_CFGKeyPrefix + "expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
@@ -268,6 +273,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
     m_HostName(nRootConfig->m_HostName),
     m_ServerPort(nRootConfig->m_ServerPort),
+    m_Type(nRootConfig->m_Type.value_or(REALM_TYPE_PVPGN)),
 
     m_AutoRegister(nRootConfig->m_AutoRegister),
     m_UserNameCaseSensitive(nRootConfig->m_UserNameCaseSensitive),
@@ -309,6 +315,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 {
   m_HostName               = ToLowerCase(CFG.GetString(m_CFGKeyPrefix + "host_name", m_HostName));
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", m_ServerPort);
+
+  if (CFG.Exists(m_CFGKeyPrefix + "type")) {
+    m_Type = CFG.GetStringIndex(m_CFGKeyPrefix + "type", {"pvpgn", "classic.battle.net"}, REALM_TYPE_PVPGN);
+    CFG.FailIfErrorLast();
+  }
+  
   m_UniqueName             = CFG.GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
   m_CanonicalName          = CFG.GetString(m_CFGKeyPrefix + "canonical_name", m_UniqueName); // may be shared by several servers
   m_InputID                = CFG.GetString(m_CFGKeyPrefix + "input_id", m_UniqueName); // expected unique
@@ -412,7 +424,15 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_ExeAuthUseCustomVersionData   = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.custom", m_ExeAuthUseCustomVersionData);
   m_ExeAuthIgnoreVersionError = CFG.GetBool(m_CFGKeyPrefix + "exe_auth.ignore_version_error", m_ExeAuthIgnoreVersionError);
-  m_LoginHashType   = CFG.GetStringIndex(m_CFGKeyPrefix + "login.hash_type", {"pvpgn", "battle.net"}, m_LoginHashType);
+
+  if (CFG.Exists(m_CFGKeyPrefix + "login.hash_type")) {
+    m_LoginHashType = CFG.GetStringIndex(m_CFGKeyPrefix + "login.hash_type", {"pvpgn", "classic.battle.net"}, REALM_AUTH_PVPGN);
+    CFG.FailIfErrorLast();
+  } else if (!m_LoginHashType.has_value()) {
+    static_assert(REALM_TYPE_PVPGN == REALM_AUTH_PVPGN);
+    static_assert(REALM_TYPE_BATTLENET_CLASSIC == REALM_AUTH_BATTLENET);
+    m_LoginHashType = m_Type;
+  }
 
   if (CFG.Exists(m_CFGKeyPrefix + "expansion")) {
     m_GameIsExpansion   = static_cast<bool>(CFG.GetStringIndex(m_CFGKeyPrefix + "expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));

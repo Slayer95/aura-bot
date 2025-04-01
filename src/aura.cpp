@@ -2132,6 +2132,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
       // Do not display external games in those realms.
       continue;
     }
+
     if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
       continue;
     }
