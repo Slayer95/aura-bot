@@ -427,8 +427,8 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
               ++m_SyncCounter;
               m_Game->EventUserKeepAlive(this);
-              break;
             }
+            break;
           }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {

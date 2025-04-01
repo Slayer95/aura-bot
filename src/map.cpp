@@ -679,7 +679,7 @@ optional<MapEssentials> CMap::ParseMPQ()
   vector<Version> supportedVersionHeads = m_Aura->GetSupportedVersionsCrossPlayRangeHeads();
   map<Version, MapCrypto> cryptos;
   for (const auto& version : supportedVersionHeads) {
-    cryptos[version] = MapCrypto();
+    cryptos.emplace(version, MapCrypto());
   }
 
   string fileContents;
@@ -721,7 +721,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
     for (const auto& version : supportedVersionHeads) {
       auto mapCryptoProcessor = cryptos.find(version);
-      mapEssentials->fragmentHashes[version] = MapFragmentHashes();
+      mapEssentials->fragmentHashes.emplace(version, MapFragmentHashes());
       // make sure to instantiate MapFragmentHashes anyway, so that mapEssentials is in a valid state
       // (note: contents are wrapped in std::optional)
       if (mapCryptoProcessor->second.errored) {

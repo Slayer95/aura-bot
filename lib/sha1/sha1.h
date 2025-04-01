@@ -82,7 +82,10 @@ public:
 
   // Constructor and Destructor
   CSHA1();
-  virtual ~CSHA1();
+  ~CSHA1();
+
+  CSHA1(const CSHA1&) = delete;
+  CSHA1& operator=(const CSHA1&) = delete;
 
   uint32_t m_state[5];
   uint32_t m_count[2];

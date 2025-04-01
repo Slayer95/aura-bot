@@ -2743,7 +2743,7 @@ bool CGame::SetLayoutOneVsAll(const GameUser::CGameUser* targetPlayer)
   return true;
 }
 
-optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const sockaddr_storage* address) const
+optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const sockaddr_storage* /*address*/) const
 {
   auto match = m_Config.m_GameVersionsByLANPlayerNames.find(playerName);
   if (match == m_Config.m_GameVersionsByLANPlayerNames.end()) {

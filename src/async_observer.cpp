@@ -286,7 +286,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       // Grace period so that chat messages are visible
       SendGameLoadedReport();
     }
-    const size_t beforeCounter = m_ActionFrameCounter;
+    //const size_t beforeCounter = m_ActionFrameCounter;
     if (PushGameFrames()) {
       /*
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);

@@ -39,6 +39,9 @@ void CSHA1::Reset()
 
   m_count[0] = 0;
   m_count[1] = 0;
+
+  memset(m_buffer, 0, sizeof(m_buffer));
+  memset(m_digest, 0, sizeof(m_digest));
 }
 
 void CSHA1::Transform(uint32_t state[5], const uint8_t buffer[64])
