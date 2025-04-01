@@ -6474,7 +6474,7 @@ void CGame::EventGameLoaded()
   }
 
   if (!m_Rated) {
-    if (m_UnratedReason.empty) {
+    if (m_UnratedReason.empty()) {
       //SendAllChat("This game is unrated");
     } else {
       //SendAllChat("This game is unrated because " + m_UnratedReason);

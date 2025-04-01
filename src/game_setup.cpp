@@ -596,11 +596,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
 
 shared_ptr<CMap> CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool silent)
 {
-  if (m_GameVersion.has_value()) {
-    // <map.cfg.hosting.game_versions.main> is temporary
-    // overrides <map.hosting.game_versions.main>
-    mapCFG->SetString("map.cfg.hosting.game_versions.main", ToVersionString(m_GameVersion.value()));
-  }
+  ExportTemporaryToMap(mapCFG);
 
   shared_ptr<CMap> map = nullptr;
   try {
@@ -656,11 +652,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
   CConfig MapCFG;
   MapCFG.SetBool("map.cfg.partial", true); // temporary
   MapCFG.SetUint8("map.cfg.schema_number", MAP_CONFIG_SCHEMA_NUMBER);
-  if (m_GameVersion.has_value()) {
-    // <map.cfg.hosting.game_versions.main> is temporary
-    // overrides <map.hosting.game_versions.main>
-    MapCFG.SetString("map.cfg.hosting.game_versions.main", ToVersionString(m_GameVersion.value()));
-  }
+  ExportTemporaryToMap(&MapCFG);
   if (m_StandardPaths) MapCFG.SetBool("map.standard_path", true);
   MapCFG.Set("map.path", R"(Maps\Download\)" + baseFileName);
   string localPath = isInMapsFolder && !m_StandardPaths ? fileName : PathToString(filePath);
@@ -1587,6 +1579,30 @@ void CGameSetup::ClearExtraOptions()
     delete m_MapExtraOptions;
     m_MapExtraOptions = nullptr;
   }
+}
+
+void CGameSetup::ExportTemporaryToMap(CConfig* mapCFG)
+{
+  if (m_GameVersion.has_value()) {
+    // <map.cfg.hosting.game_versions.main> is temporary
+    // overrides <map.hosting.game_versions.main>
+    mapCFG->SetString("map.cfg.hosting.game_versions.main", ToVersionString(m_GameVersion.value()));
+  }
+  if (m_GameIsExpansion.has_value()) {
+    // <map.cfg.hosting.game_versions.expansion.default> is temporary
+    // overrides <map.hosting.game_versions.expansion.default>
+    if (m_GameIsExpansion.value()) {
+      mapCFG->SetString("map.cfg.hosting.game_versions.expansion.default", "tft");
+    } else {
+      mapCFG->SetString("map.cfg.hosting.game_versions.expansion.default", "roc");
+    }
+  }
+}
+
+void CGameSetup::DeleteTemporaryFromMap(CConfig* mapCFG)
+{
+  mapCFG->Delete("map.cfg.hosting.game_versions.main");
+  mapCFG->Delete("map.cfg.hosting.game_versions.expansion.default");
 }
 
 void CGameSetup::AcquireCLISimple(const CCLI* nCLI)

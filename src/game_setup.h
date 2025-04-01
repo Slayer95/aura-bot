@@ -366,8 +366,10 @@ public:
   void SetLogCommands(const bool nLogCommands) { m_LogCommands = nLogCommands; }
   void SetAutoStartRequiresBalance(const bool nRequiresBalance) { m_AutoStartRequiresBalance = nRequiresBalance; }
 
-  void AcquireCLISimple(const CCLI* nCLI);
   void ClearExtraOptions();
+  void ExportTemporaryToMap(CConfig* MapCFG);
+  void AcquireCLISimple(const CCLI* nCLI);
+  void static DeleteTemporaryFromMap(CConfig* MapCFG);
 
   void OnGameCreate();
   [[nodiscard]] bool Update();

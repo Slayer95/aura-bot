@@ -47,6 +47,7 @@
 #include "aura.h"
 #include "util.h"
 #include "file_util.h"
+#include "game_setup.h"
 #include "game_slot.h"
 #include "pjass.h"
 #include <crc32/crc32.h>
@@ -1626,7 +1627,7 @@ void CMap::Load(CConfig* CFG)
       Print("[MAP] " + ErrorMessage);
     } else if (m_MapLoaderIsPartial) {
       CFG->Delete("map.cfg.partial");
-      CFG->Delete("map.cfg.hosting.game_versions.main");
+      CGameSetup::DeleteTemporaryFromMap(CFG);
       m_MapLoaderIsPartial = false;
     }
   }
@@ -1636,8 +1637,8 @@ void CMap::Load(CConfig* CFG)
 
 bool CMap::AcquireGameIsExpansion(CConfig* CFG)
 {
-  if (CFG->Exists("map.cfg.hosting.game_versions.expansion")) { // from CGameSetup
-    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.cfg.hosting.game_versions.expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
+  if (CFG->Exists("map.cfg.hosting.game_versions.expansion.default")) { // from CGameSetup
+    bool isExpansion = static_cast<bool>(CFG->GetStringIndex("map.cfg.hosting.game_versions.expansion.default", {"roc", "tft"}, SELECT_EXPANSION_TFT));
     if (!CFG->GetErrorLast()) {
       m_MapTargetGameIsExpansion = isExpansion;
     }
@@ -1654,9 +1655,15 @@ bool CMap::AcquireGameIsExpansion(CConfig* CFG)
     // Guaranteed to have a value,
     // because we don't error anywhere just because the bot owner forgot to specify TFT,
     // and just default to TFT.
+    Print("[MAP] defaulting to root expansion setting");
     m_MapTargetGameIsExpansion = m_Aura->m_GameDefaultConfig->m_GameIsExpansion;
   }
 
+  if (m_MapTargetGameIsExpansion.value()) {
+    Print("[MAP] Targetting TFT");
+  } else {
+    Print("[MAP] Targetting ROC");
+  }
   return true;
 }
 
@@ -1676,6 +1683,9 @@ bool CMap::AcquireGameVersion(CConfig* CFG)
   }
   if (!m_MapTargetGameVersion.has_value() && m_Aura->m_GameDefaultConfig->m_GameVersion.has_value()) { // from config.ini
     m_MapTargetGameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
+  }
+  if (m_MapTargetGameVersion.has_value()) {
+    Print("[MAP] Targetting " + ToVersionString(m_MapTargetGameVersion.value()));
   }
   return m_MapTargetGameVersion.has_value();
 }
