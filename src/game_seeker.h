@@ -46,7 +46,7 @@ public:
   CGameSeeker(CConnection* nConnection, uint8_t nType);
   ~CGameSeeker();
 
-  inline const bool HasGameVersion() const { return m_GameVersion.has_value(); }
+  inline bool HasGameVersion() const { return m_GameVersion.has_value(); }
   inline const std::optional<Version>& GetMaybeGameVersion() const { return m_GameVersion; }
   inline const Version& GetGameVersion() const { return m_GameVersion.value(); }
 

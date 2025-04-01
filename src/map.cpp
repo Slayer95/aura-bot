@@ -558,7 +558,11 @@ void CMap::UpdateCryptoNonScripts(map<Version, MapCrypto>& cryptos, const Versio
   match->second.sha1.Update(reinterpret_cast<const uint8_t*>(fileContents.data()), fileContents.size());
 }
 
+#ifndef DISABLE_PJASS
 void CMap::OnLoadMPQSubFile(optional<MapEssentials>& mapEssentials, map<Version, MapCrypto>& cryptos, const vector<Version>& supportedVersionHeads, const string& fileContents, const bool isMapScript)
+#else
+void CMap::OnLoadMPQSubFile(optional<MapEssentials>& /*mapEssentials*/, map<Version, MapCrypto>& cryptos, const vector<Version>& supportedVersionHeads, const string& fileContents, const bool isMapScript)
+#endif
 {
   if (!isMapScript) {
     for (const auto& version: supportedVersionHeads) {

@@ -29,6 +29,8 @@
 #include "../includes.h"
 #include "../config/config_discord.h"
 
+#include <atomic>
+
 #ifndef DISABLE_DPP
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -36,7 +38,6 @@
 #endif
 
 #include <dpp/dpp.h>
-#include <atomic>
 
 #if defined(_MSC_VER)
 #pragma warning(pop)

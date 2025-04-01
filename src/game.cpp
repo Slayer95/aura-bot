@@ -3449,7 +3449,7 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   }
   uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
   string versionPrefix;
-  if (mapSize > 0x20000000 || version <= GAMEVER(1u, 28u) && mapSize > 0x8000000 || version <= GAMEVER(1u, 26u) && mapSize > 0x800000 || version <= GAMEVER(1u, 23u) && mapSize > 0x400000) {
+  if (mapSize > 0x20000000 || (version <= GAMEVER(1u, 28u) && mapSize > 0x8000000) || (version <= GAMEVER(1u, 26u) && mapSize > 0x800000) || (version <= GAMEVER(1u, 23u) && mapSize > 0x400000)) {
     versionPrefix = "[" + ToVersionString(version) + ".UnlockMapSize] ";
   } else {
     versionPrefix = "[" + ToVersionString(version) + "] ";
@@ -6314,7 +6314,7 @@ void CGame::EventGameBeforeLoaded()
 
 void CGame::EventGameLoaded()
 {
-  const int64_t Time = GetTime(), Ticks = GetTicks();
+  const int64_t Ticks = GetTicks();
 
   m_LastActionSentTicks = Ticks;
   m_FinishedLoadingTicks = Ticks;
@@ -9935,7 +9935,7 @@ bool CGame::CheckGameResults(const GameResults& gameResults) const
   //bool canWinMultipleTeams;
   //bool undecidedIsLoser;
 
-  gameResults;
+  //gameResults;
   return false;
 }
 
