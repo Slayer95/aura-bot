@@ -5272,7 +5272,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
       user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
     }
 
-    if (m_Config.m_ShareUnitsAllowed && wantsShare) {
+    if (!m_Config.m_ShareUnitsAllowed && wantsShare) {
       shouldHoldAction = true;
       user->m_OnHoldActionsShareTargets.set(targetSID);
     } else {
