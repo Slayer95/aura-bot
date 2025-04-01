@@ -200,22 +200,22 @@ constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE = 4u;
 constexpr uint8_t MAP_TRANSFER_CHECK_BUFFERBLOAT = 5u;
 
 // game.h
-#define SLOTS_ALIGNMENT_CHANGED (1 << 0)
-#define SLOTS_DOWNLOAD_PROGRESS_CHANGED (1 << 1)
-#define SLOTS_HCL_INJECTED (1 << 2)
+constexpr uint8_t SLOTS_ALIGNMENT_CHANGED = (1 << 0);
+constexpr uint8_t SLOTS_DOWNLOAD_PROGRESS_CHANGED = (1 << 1);
+constexpr uint8_t SLOTS_HCL_INJECTED = (1 << 2);
 
-#define SAVE_ON_LEAVE_NEVER 0u
-#define SAVE_ON_LEAVE_AUTO 1u
-#define SAVE_ON_LEAVE_ALWAYS 2u
+constexpr uint8_t SAVE_ON_LEAVE_NEVER = 0u;
+constexpr uint8_t SAVE_ON_LEAVE_AUTO = 1u;
+constexpr uint8_t SAVE_ON_LEAVE_ALWAYS = 2u;
 
-#define CUSTOM_LAYOUT_NONE 0u
-#define CUSTOM_LAYOUT_ONE_VS_ALL 1u
-#define CUSTOM_LAYOUT_HUMANS_VS_AI 2u
-#define CUSTOM_LAYOUT_FFA 4u
-#define CUSTOM_LAYOUT_DRAFT 8u
-#define CUSTOM_LAYOUT_LOCKTEAMS 15u
-#define CUSTOM_LAYOUT_COMPACT 16u
-#define CUSTOM_LAYOUT_ISOPLAYERS 32u
+constexpr uint8_t CUSTOM_LAYOUT_NONE = 0u;
+constexpr uint8_t CUSTOM_LAYOUT_ONE_VS_ALL = 1u;
+constexpr uint8_t CUSTOM_LAYOUT_HUMANS_VS_AI = 2u;
+constexpr uint8_t CUSTOM_LAYOUT_FFA = 4u;
+constexpr uint8_t CUSTOM_LAYOUT_DRAFT = 8u;
+constexpr uint8_t CUSTOM_LAYOUT_LOCKTEAMS = 15u;
+constexpr uint8_t CUSTOM_LAYOUT_COMPACT = 16u;
+constexpr uint8_t CUSTOM_LAYOUT_ISOPLAYERS = 32u;
 
 constexpr uint16_t REFRESH_PERIOD_MIN_SUGGESTED = 30;
 constexpr uint16_t REFRESH_PERIOD_MAX_SUGGESTED = 300;
@@ -448,6 +448,7 @@ constexpr uint8_t ACTION_SYNC_INT = 107u;
 constexpr uint32_t ALLIANCE_SETTINGS_ALLY = 0x1Fu;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_VISION = 0x20u;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_CONTROL = 0x40u;
+constexpr uint32_t ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY = ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_VICTORY = 0x400u;
 
 #define MAX_PLAYER_NAME_SIZE 15
@@ -561,6 +562,10 @@ constexpr uint8_t ON_UNSAFE_NAME_DENY = 2u;
 constexpr uint8_t ON_PLAYER_LEAVE_NONE = 0u;
 constexpr uint8_t ON_PLAYER_LEAVE_NATIVE = 1u;
 constexpr uint8_t ON_PLAYER_LEAVE_SHARE_UNITS = 2u;
+
+constexpr uint8_t ON_SHARE_UNITS_NATIVE = 0u;
+constexpr uint8_t ON_SHARE_UNITS_KICK = 1u;
+constexpr uint8_t ON_SHARE_UNITS_RESTRICT = 2u;
 
 constexpr uint8_t SELECT_EXPANSION_ROC = 0u;
 constexpr uint8_t SELECT_EXPANSION_TFT = 1u;

@@ -166,7 +166,6 @@ public:
   std::optional<uint32_t>                         m_LobbyCountDownInterval;
   std::optional<uint32_t>                         m_LobbyCountDownStartValue;
 
-  std::optional<bool>                             m_ShareUnitsAllowed;
   std::optional<bool>                             m_SaveGameAllowed;
 
   std::optional<uint8_t>                          m_AutoStartPlayers;
@@ -174,6 +173,7 @@ public:
   std::optional<uint8_t>                          m_ReconnectionMode;
   std::optional<uint8_t>                          m_IPFloodHandler;
   std::optional<uint8_t>                          m_LeaverHandler;
+  std::optional<uint8_t>                          m_ShareUnitsHandler;
   std::optional<uint8_t>                          m_UnsafeNameHandler;
   std::optional<uint8_t>                          m_BroadcastErrorHandler;
   std::optional<bool>                             m_EnableLagScreen;
@@ -319,7 +319,6 @@ public:
 
   void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
 
-  void SetShareUnitsAllowed(const bool nShareUnits) { m_ShareUnitsAllowed = nShareUnits; }
   void SetSaveGameAllowed(const bool nSave) { m_SaveGameAllowed = nSave; }
 
   void SetResultSource(const uint8_t nResultSource) { m_ResultSource = nResultSource; }
@@ -339,6 +338,7 @@ public:
   void SetReconnectionMode(const uint8_t nValue) { m_ReconnectionMode = nValue;}
   void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
   void SetLeaverHandler(const uint8_t nValue) { m_LeaverHandler = nValue;}
+  void SetShareUnitsHandler(const uint8_t nValue) { m_ShareUnitsHandler = nValue; }
   void SetUnsafeNameHandler(const uint8_t nValue) { m_UnsafeNameHandler = nValue;}
   void SetBroadcastErrorHandler(const uint8_t nValue) { m_BroadcastErrorHandler = nValue;}
   void SetEnableLagScreen(const bool nValue) { m_EnableLagScreen = nValue; }

@@ -959,6 +959,11 @@ Config
 - Default value: ON_PLAYER_LEAVE_NATIVE
 - Error handling: Use default value
 
+## \`hosting.game_protocol.share_handler\`
+- Type: enum
+- Default value: ON_SHARE_UNITS_NATIVE
+- Error handling: Use default value
+
 ## \`hosting.game_ready.mode\`
 - Type: enum
 - Default value: READY_MODE_EXPECT_RACE
@@ -1223,11 +1228,6 @@ Config
 - Type: string
 - Constraints: Min length: 1. Max length: 15.
 - Default value: |cFF4080C0Aura
-- Error handling: Use default value
-
-## \`hosting.share_units.allowed\`
-- Type: bool
-- Default value: true
 - Error handling: Use default value
 
 ## \`hosting.vote_kick.min_percent\`

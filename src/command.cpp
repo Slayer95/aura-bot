@@ -5128,10 +5128,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("timehandicap"): {
       UseImplicitHostedGame();
 
-      if (!m_TargetGame)
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
         break;
 
-      if (!m_TargetGame->GetIsLobbyStrict() || m_TargetGame->GetCountDownStarted()) {
+      if (m_TargetGame->GetCountDownStarted() && !GetIsSudo()) {
         ErrorReply("Cannot set a time handicap now.");
         break;
       }
@@ -5184,8 +5184,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      targetPlayer->SetHandicapTicks(handicapTicks.value());
-      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(targetPlayer->GetHandicapTicks() / 1000));
+      targetPlayer->SetHandicapTicks(m_TargetGame->GetEffectiveTicks() + handicapTicks.value());
+      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(handicapTicks.value() / 1000));
       break;
     }
 

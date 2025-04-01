@@ -88,6 +88,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_StartedLaggingTicks(0),
     m_LastGProxyWaitNoticeSentTime(0),
     m_GProxyReconnectKey(rand()),
+    m_SID(0xFF),
     m_UID(nUID),
     m_OldUID(0xFF),
     m_PseudonymUID(0xFF),
@@ -131,6 +132,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_TotalDisconnectTicks(0),
 
     m_TeamCaptain(0),
+    m_AntiAbuseCounter(0),
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
 {
@@ -265,6 +267,11 @@ bool CGameUser::SubDelayPingEqualizerFrame()
   m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->prev;
   --m_PingEqualizerOffset;
   return true;
+}
+
+void CGameUser::ReleaseOnHoldActions()
+{
+  GetPingEqualizerFrame().MergeFrame(GetOnHoldActionsFrame());
 }
 
 CRealm* CGameUser::GetRealm(bool mustVerify) const

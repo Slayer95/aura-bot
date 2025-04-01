@@ -516,40 +516,6 @@ assigned hero.
 
 This flag is disabled by default.
 
-## \`--allow-share-units\`
-
-When enabled, this flag allows players in a multiplayer RTS game to share control 
-of their units with their teammates. This feature is particularly useful in 
-team-based matches, where players may need to coordinate strategies, assist allies, 
-or manage units in case a teammate becomes temporarily unavailable.
-
-Shared unit control enables teammates to:
-- Issue movement and attack commands to each other's units.
-- Manage economy and production by controlling allied structures.
-- Provide tactical support by micro-managing units during engagements.
-
-This feature is commonly used in competitive play, cooperative campaigns, and 
-team-based multiplayer modes where coordination is essential.
-
-This flag is disabled by default.
-
-## \`--no-allow-share-units\`
-
-When enabled, this flag prevents players from sharing control of their units with 
-their teammates. Each player retains exclusive control over their own units and 
-structures, ensuring that no unintended actions or strategic interference occur 
-from allies.
-
-Disabling unit sharing may be preferable in games where:
-- Players want to maintain complete individual control over their armies.
-- Tactical miscoordination due to shared control could be a disadvantage.
-- Competitive integrity is a priority, preventing any potential misuse of unit sharing.
-
-This option ensures that each player is fully responsible for their own forces, 
-reinforcing independent strategic decision-making.
-
-This flag is disabled by default.
-
 ## `--allow-save`
 
 When enabled, this flag allows players to save the game during a multiplayer 
@@ -1276,12 +1242,12 @@ This option is equivalent to ``<map.hosting.ip_filter.flood_handler>`` in map co
 
 ## \`--on-leave\`
 
-This flag customizes how the game host handles players who leave a match 
+This option customizes how the game host handles players who leave a match 
 before it concludes. The behavior of leavers can significantly impact 
 game balance and the overall experience, especially in team-based or 
 competitive Warcraft 3 matches.
 
-Available values for this flag:
+Available values for this option:
 
 - **none**: Prevents the game from recognizing a player's departure in any way. 
   Their units remain under their control but idle, and no default victory 
@@ -1319,10 +1285,101 @@ Available values for this flag:
   - Ensures a team can continue playing competitively even if a member disconnects.
   - Useful in cooperative game modes where unit persistence is desirable.
 
-This flag provides flexibility for different match styles, allowing the host 
+This option provides flexibility for different match styles, allowing the host 
 to customize leaver behavior to best suit the game mode and players' expectations.
 
 The default setting is `native`.
+
+## \`--on-share\`
+
+This option customizes how the game handles unit sharing between players.  
+Unit sharing allows players to grant allies control over their units at any time,  
+without requiring the recipient's consent. This can be useful in team-based matches  
+for cooperative play, assisting teammates, or managing another player's forces.  
+However, some game modes or competitive scenarios may require restrictions on unit sharing.
+
+Available values for this flag:
+
+- native: Allows players to freely share unit control with their allies at any time.  
+  This is the default Warcraft 3 behavior and is commonly used in team-based games  
+  where coordination is encouraged.  
+
+- kick: Enforces strict rules against unit sharing by instantly kicking any player  
+  who grants shared unit control to another. This setting is useful for preventing  
+  any form of unintended or unfair assistance in competitive matches or custom  
+  game modes that require individual control integrity.  
+
+- restrict: Prevents shared unit control from being used by blocking the player  
+  who receives shared control from issuing any actions. If the original player  
+  (the sharer) does not revoke the shared control within 5 seconds, they are  
+  kicked from the game. This ensures that unit sharing cannot be exploited while  
+  still allowing a brief window for mistakes to be corrected.  
+
+### Potential Dangers:
+
+#### native:
+- Players can enable shared control without realizing its consequences, allowing  
+  teammates to issue unwanted commands that disrupt their strategy.  
+- Malicious players could interfere with an ally’s game by mismanaging their army  
+  or economy.  
+- In competitive matches, this setting may enable unfair assistance, where one player  
+  manages multiple armies to gain an advantage.  
+
+#### kick:
+- A player who enables shared control, even momentarily, is immediately removed  
+  from the game, which may feel overly punitive.  
+- Malicious players could trick others into enabling shared control, causing them  
+  to be kicked unfairly.  
+- A player under pressure in a fast-paced game may toggle unit sharing without  
+  thinking, leading to an unintended removal.  
+
+#### restrict:
+- **Critical gameplay impact**: In a real-time strategy (RTS) game, every second  
+  matters. Blocking a player's ability to issue commands for up to 5 seconds  
+  can be devastating, especially in battles or high-pressure situations.  
+- **Severe disadvantage in combat**: A player who receives shared control will  
+  suddenly be unable to move units, cast spells, or control their economy. If this  
+  happens during an attack, their forces may be wiped out due to inaction.  
+- **Unintended team sabotage**: If an ally mistakenly shares control at a crucial  
+  moment, it could cost their teammate an entire engagement, base, or even the game.  
+- **Confusion and frustration**: Players who receive shared control may not  
+  immediately realize why their controls are locked, leading to unnecessary panic  
+  or accusations of bugs.  
+- **Potential for abuse**: While the sharer is the one who faces removal if they  
+  do not revoke control, a coordinated group of players could still use this system  
+  to disrupt a game by repeatedly enabling shared control to distract or disadvantage  
+  others.  
+
+### Use Cases:
+
+- **native**:  
+  - Ideal for team-based games where coordination is encouraged.  
+  - Allows players to share control freely for strategic advantages.  
+  - Matches standard Warcraft 3 behavior, making it suitable for most maps.  
+
+- **kick**:  
+  - Enforces strict individual control by immediately removing players who  
+    attempt to share units.  
+  - Best suited for competitive modes where unit sharing is considered an  
+    unfair advantage.
+
+- **restrict**:  
+  - Blocks shared unit control without immediately removing the offending player.  
+  - Provides an 5-second grace period to revoke shared control before kicking  
+    the player, preventing accidental violations.  
+  - Ensures fair play while still allowing for minor mistakes to be corrected.  
+  - However, **game hosts must be fully aware of the risks**, as the action-blocking  
+    effect can critically harm gameplay and lead to significant losses in key moments.  
+
+This flag provides hosts with flexible options to control how unit sharing  
+functions, ensuring that it aligns with the intended balance and fairness  
+of a given game mode.  
+
+Defaults to `native`.  
+
+This option is equivalent to ``<hosting.game_protocol.share_handler>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.game_protocol.share_handler>`` in map configuration
 
 ## \`--on-unsafe-name \<ACTION\>\`
 

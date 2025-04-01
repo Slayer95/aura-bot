@@ -3359,6 +3359,54 @@ void CGame::SendAllActionsCallback()
         }
       }
 
+      if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 6 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
+        GameUser::CGameUser* user = GetUserFromUID(action.GetUID());
+        const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) > 0;
+        const uint8_t targetSID = action.GetUint8(1);
+        if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
+          if (wantsShare) {
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+          } else {
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+          }
+          user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
+          GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
+          if (targetUser) {
+            if (
+              (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam()) &&
+              (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS)
+            ) {
+              targetUser->SetHasControlOverUnitsFromSlot(user->GetSID(), wantsShare);
+              if (wantsShare && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
+                int64_t timeout = user->GetAntiAbuseTimeout();
+                if (!user->GetAntiShareKicked()) {
+                  user->AddKickReason(GameUser::KickReason::ANTISHARE);
+                  user->KickAtLatest(GetTicks() + timeout);
+                  user->AddAbuseCounter();
+                }
+                user->SetLeftCode(PLAYERLEAVE_LOST);
+                user->SetLeftReason("autokicked - antishare");
+                SendChat(user, "[ANTISHARE] You will be kicked out of the game unless you remove Shared Unit Control within " + ToDurationString(timeout / 1000) + ".");
+                SendChat(targetUser, "[ANTISHARE] You may not perform further actions until [" + user->GetDisplayName() + "] removes Shared Unit Control.");
+              }
+              if (
+                !wantsShare && !targetUser->GetHasControlOverAnyAlliedUnits() &&
+                targetUser->GetHandicapTicks() <= m_EffectiveTicks
+              ) {
+                targetUser->ReleaseOnHoldActions();
+              }
+            }
+          }
+          if (!wantsShare && user->GetAntiShareKicked() && !user->GetIsSharingUnitsWithAnyAllies()) {
+            user->ResetLeftReason();
+            user->RemoveKickReason(GameUser::KickReason::ANTISHARE);
+            if (!user->GetAnyKicked() && user->GetKickQueued()) {
+              user->ClearKickByTicks();
+            }
+          }
+        }
+      }
+
       if (m_CustomStats && action.GetImmutableAction().size() >= 6) {
         if (!m_CustomStats->RecvAction(action.GetUID(), action)) {
           delete m_CustomStats;
@@ -4376,6 +4424,7 @@ void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
     return;
   }
 
+  user->DisableReconnect();
   user->CloseConnection();
   // left reason, left code already assigned when queued
 }
@@ -4484,6 +4533,18 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
 
   user->SetLeftMessageSent(true);
   user->SetStatus(USERSTATUS_ENDED);
+
+  if (user->GetAntiShareKicked()) {
+    for (auto& otherUser : m_Users) {
+      if (!otherUser->GetHasControlOverUnitsFromSlot(user->GetSID())) {
+        continue;
+      }
+      otherUser->SetHasControlOverUnitsFromSlot(user->GetSID(), false);
+      if (!otherUser->GetHasControlOverAnyAlliedUnits() && m_EffectiveTicks <= otherUser->GetHandicapTicks()) {
+        otherUser->ReleaseOnHoldActions();
+      }
+    }
+  }
 }
 
 bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
@@ -5259,38 +5320,55 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
   }
 
-  bool shouldHoldAction = false;
   if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 6 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
-    const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL) > 0;
+    const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) > 0;
     const uint8_t targetSID = action.GetUint8(1);
     if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
       if (wantsShare) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to grant shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
       } else {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to take away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
       }
-      user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
+      GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
+      if (targetUser && wantsShare) {
+        switch (m_Config.m_ShareUnitsHandler) {
+          case ON_SHARE_UNITS_NATIVE:
+            break;
+
+          case ON_SHARE_UNITS_RESTRICT:
+            if (
+              (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS) &&
+              (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
+            ) {
+              // This is a well-behaved map (at least if it's melee).
+              // Handle restriction on CGame::SendAllActionsCallback
+              break;
+            }
+
+            // either the map is not well-behaved, or the client is rogue/griefer - instakick
+            // falls through
+
+          case ON_SHARE_UNITS_KICK:
+          default:
+            user->SetLeftCode(PLAYERLEAVE_LOST);
+            user->SetLeftReason("autokicked - antishare");
+            SendChat(user, "[ANTISHARE] You have been automatically kicked out of the game.");
+            // Treat as unrecoverable protocol error
+            return false;
+        }
+      }
     }
-
-    if (!m_Config.m_ShareUnitsAllowed && wantsShare) {
-      shouldHoldAction = true;
-      user->m_OnHoldActionsShareTargets.set(targetSID);
-    } else {
-      user->m_OnHoldActionsShareTargets.reset(targetSID);
-    }
   }
 
-  if (!shouldHoldAction) {
-    shouldHoldAction = m_EffectiveTicks < user->GetHandicapTicks();
+  bool shouldHoldAction = m_EffectiveTicks < user->GetHandicapTicks();
+  if (!shouldHoldAction && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
+    shouldHoldAction = user->GetHasControlOverAnyAlliedUnits();
   }
 
-  if (!shouldHoldAction && user->m_OnHoldActionsShareTargets.count() == 0) {
-    actionFrame.MergeFrame(user->m_OnHoldActionsFrame);
-  }
-
-  if (shouldHoldAction || !user->m_OnHoldActionsFrame.GetIsEmpty()) {
-    user->m_OnHoldActionsFrame.AddAction(std::move(action));
+  if (shouldHoldAction) {
+    user->GetOnHoldActionsFrame().AddAction(std::move(action));
   } else {
+    actionFrame.MergeFrame(user->GetOnHoldActionsFrame());
     actionFrame.AddAction(std::move(action));
   }
 
@@ -5935,6 +6013,10 @@ void CGame::EventGameStartedLoading()
     UpdateReadyCounters();
   }
 
+  for (const auto& user : m_Users) {
+    user->SetSID(GetSIDFromUID(user->GetUID()));
+  }
+
   m_ReconnectProtocols = CalcActiveReconnectProtocols();
   if (m_GProxyEmptyActions > 0 && m_ReconnectProtocols == RECONNECT_ENABLED_GPROXY_EXTENDED) {
     m_GProxyEmptyActions = 0;
@@ -6046,7 +6128,7 @@ void CGame::EventGameStartedLoading()
   }
 
   for (const auto& user : m_Users) {
-    const uint8_t SID = GetSIDFromUID(user->GetUID());
+    const uint8_t SID = user->GetSID();
     const CGameSlot* slot = InspectSlot(SID);
     const IndexedGameSlot idxSlot = IndexedGameSlot(SID, slot);
     // Do not exclude observers yet, so that they can be searched in commands.

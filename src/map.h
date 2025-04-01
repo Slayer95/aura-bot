@@ -344,7 +344,6 @@ public:
   std::optional<uint32_t>               m_LobbyCountDownStartValue;
 
   std::optional<bool>                   m_SaveGameAllowed;
-  std::optional<bool>                   m_ShareUnitsAllowed;
 
   std::optional<uint16_t>               m_Latency;
   std::optional<bool>                   m_LatencyEqualizerEnabled;
@@ -362,6 +361,7 @@ public:
   std::optional<uint8_t>                m_ReconnectionMode;
   std::optional<uint8_t>                m_IPFloodHandler;
   std::optional<uint8_t>                m_LeaverHandler;
+  std::optional<uint8_t>                m_ShareUnitsHandler;
   std::optional<uint8_t>                m_UnsafeNameHandler;
   std::optional<uint8_t>                m_BroadcastErrorHandler;
   std::optional<bool>                   m_PipeConsideredHarmful;

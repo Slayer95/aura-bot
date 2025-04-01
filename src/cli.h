@@ -136,7 +136,6 @@ public:
   std::optional<bool>                   m_GameNotifyJoins;
   std::optional<bool>                   m_GameLobbyReplaceable;
   std::optional<bool>                   m_GameLobbyAutoRehosted;
-  std::optional<bool>                   m_GameShareUnitsAllowed;
   std::optional<bool>                   m_GameSaveAllowed;
   std::optional<bool>                   m_GameCheckReservation;
   std::optional<std::string>            m_GameHCL;
@@ -155,6 +154,7 @@ public:
   std::optional<std::string>            m_GameDisplayMode;
   std::optional<std::string>            m_GameIPFloodHandler;
   std::optional<std::string>            m_GameLeaverHandler;
+  std::optional<std::string>            m_GameShareUnitsHandler;
   std::optional<std::string>            m_GameUnsafeNameHandler;
   std::optional<std::string>            m_GameBroadcastErrorHandler;
   std::optional<std::string>            m_GameCrossPlayMode;
@@ -194,6 +194,7 @@ public:
   [[nodiscard]] uint8_t GetGameDisplayType() const;
   [[nodiscard]] uint8_t GetGameIPFloodHandler() const;
   [[nodiscard]] uint8_t GetGameLeaverHandler() const;
+  [[nodiscard]] uint8_t GetGameShareUnitsHandler() const;
   [[nodiscard]] uint8_t GetGameUnsafeNameHandler() const;
   [[nodiscard]] uint8_t GetGameBroadcastErrorHandler() const;
   [[nodiscard]] uint8_t GetGameCrossPlayMode() const;

@@ -94,7 +94,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownStartValue               = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
 
   m_SaveGameAllowed                        = CFG.GetBool("hosting.save_game.allowed", true);
-  m_ShareUnitsAllowed                      = CFG.GetBool("hosting.share_units.allowed", true);
+  m_ShareUnitsHandler                      = CFG.GetStringIndex("hosting.game_protocol.share_handler", {"native", "kick", "restrict"}, ON_SHARE_UNITS_NATIVE);
 
   m_LatencyMin                             = CFG.GetUint16("hosting.latency.min", 10);
   m_LatencyMax                             = CFG.GetUint16("hosting.latency.max", 500);
@@ -254,7 +254,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownStartValue, m_LobbyCountDownStartValue, m_LobbyCountDownStartValue)
 
   INHERIT_MAP_OR_CUSTOM(m_SaveGameAllowed, m_SaveGameAllowed, m_SaveGameAllowed)
-  INHERIT_MAP_OR_CUSTOM(m_ShareUnitsAllowed, m_ShareUnitsAllowed, m_ShareUnitsAllowed)
+  INHERIT_MAP_OR_CUSTOM(m_ShareUnitsHandler, m_ShareUnitsHandler, m_ShareUnitsHandler)
 
   INHERIT(m_LatencyMin)
   INHERIT(m_LatencyMax)

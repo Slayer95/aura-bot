@@ -64,6 +64,7 @@ namespace GameUser
     constexpr uint8_t HIGH_PING = 2u;
     constexpr uint8_t SPOOFER = 4u;
     constexpr uint8_t ABUSER = 8u;
+    constexpr uint8_t ANTISHARE = 16u;
   };
 
   class CGameUser final : public CConnection
@@ -88,7 +89,7 @@ namespace GameUser
     uint8_t                          m_PingEqualizerOffset;          // how many frames are actions sent by this player offset by ping equalizer
     QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
     CQueuedActionsFrame              m_OnHoldActionsFrame;           // if anti-share is enabled, holds actions sent by this player until all shared units settings are reverted
-    std::bitset<MAX_SLOTS_MODERN>    m_OnHoldActionsShareTargets;
+    std::bitset<MAX_SLOTS_MODERN>    m_ControllingUnitsFromSID;
     std::bitset<MAX_SLOTS_MODERN>    m_SharingUnitsWithSID;
     uint32_t                         m_PongCounter;
     size_t                           m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
@@ -101,6 +102,7 @@ namespace GameUser
     uint32_t                         m_GProxyReconnectKey;           // the GProxy++ reconnect key
     std::optional<int64_t>           m_KickByTicks;
     std::optional<int64_t>           m_LastGProxyAckTicks;           // GetTime when we last acknowledged GProxy++ packet
+    uint8_t                          m_SID;                          // the player's SID - this is well defined only after the game starts loading
     uint8_t                          m_UID;                          // the player's UID
     uint8_t                          m_OldUID;
     uint8_t                          m_PseudonymUID;
@@ -153,6 +155,7 @@ namespace GameUser
     std::string                      m_PinnedMessage;
 
     // Actions
+    uint8_t                          m_AntiAbuseCounter;
     uint8_t                          m_RemainingSaves;
     uint8_t                          m_RemainingPauses;
     std::optional<uint8_t>           m_SelfGameResult;
@@ -166,6 +169,7 @@ namespace GameUser
     [[nodiscard]] uint32_t GetRTT() const;
     [[nodiscard]] std::string GetConnectionErrorString() const;
     [[nodiscard]] inline bool                     GetIsReady() const { return m_Ready; }
+    [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
     [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
     [[nodiscard]] inline uint8_t                  GetOldUID() const { return m_OldUID; }
     [[nodiscard]] inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
@@ -198,6 +202,7 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetPingEqualizerOffset() const { return m_PingEqualizerOffset; }
     [[nodiscard]] uint32_t                        GetPingEqualizerDelay() const;
     [[nodiscard]] inline QueuedActionsFrameNode*  GetPingEqualizerFrameNode() const { return m_PingEqualizerFrameNode; }
+    [[nodiscard]] inline CQueuedActionsFrame&     GetOnHoldActionsFrame() { return m_OnHoldActionsFrame; }
     [[nodiscard]] CQueuedActionsFrame&            GetPingEqualizerFrame();
     [[nodiscard]] CRealm*                         GetRealm(bool mustVerify) const;
     [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
@@ -254,6 +259,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetPingKicked() const { return (m_KickReason & GameUser::KickReason::HIGH_PING) != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetSpoofKicked() const { return (m_KickReason & GameUser::KickReason::SPOOFER) != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetAbuseKicked() const { return (m_KickReason & GameUser::KickReason::ABUSER) != GameUser::KickReason::NONE; }
+    [[nodiscard]] inline bool                  GetAntiShareKicked() const { return (m_KickReason & GameUser::KickReason::ANTISHARE) != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetAnyKicked() const { return m_KickReason != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetHasHighPing() const { return m_HasHighPing; }
     [[nodiscard]] inline bool                  GetKickQueued() const { return m_KickByTicks.has_value(); }
@@ -276,6 +282,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetCanPause() { return m_RemainingPauses > 0; }
     [[nodiscard]] inline bool                  GetCanSave() { return m_RemainingSaves > 0; }
 
+    inline void SetSID(const uint8_t nSID) { m_SID = nSID; }
     inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
     inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
     inline void SetIsLeaver(bool nIsLeaver) { m_IsLeaver = nIsLeaver; }
@@ -289,12 +296,24 @@ namespace GameUser
     void AdvanceActiveGameFrame();
     bool AddDelayPingEqualizerFrame();
     bool SubDelayPingEqualizerFrame();
-    void SetPingEqualizerFrameNode(QueuedActionsFrameNode* nFrame) { m_PingEqualizerFrameNode = nFrame; }
+    inline void SetPingEqualizerFrameNode(QueuedActionsFrameNode* nFrame) { m_PingEqualizerFrameNode = nFrame; }
+    void ReleaseOnHoldActions();
 
-    inline bool GetIsSharingUnitsWithSlot(const uint8_t SID) { return m_SharingUnitsWithSID.test(SID); }
+    inline void AddAbuseCounter() { ++m_AntiAbuseCounter; }
+    inline int64_t GetAntiAbuseTimeout() const { return 5000 / (1 << m_AntiAbuseCounter); }
+
+    inline bool GetIsSharingUnitsWithAnyAllies() const { return m_SharingUnitsWithSID.any(); }
+    inline bool GetIsSharingUnitsWithSlot(const uint8_t SID) const { return m_SharingUnitsWithSID.test(SID); }
     inline void SetIsSharingUnitsWithSlot(const uint8_t SID, const bool wantsShare) {
       if (wantsShare) m_SharingUnitsWithSID.set(SID);
       else m_SharingUnitsWithSID.reset(SID);
+    }
+
+    inline bool GetHasControlOverAnyAlliedUnits() const { return m_ControllingUnitsFromSID.any(); }
+    inline bool GetHasControlOverUnitsFromSlot(const uint8_t SID) const { return m_ControllingUnitsFromSID.test(SID); }
+    inline void SetHasControlOverUnitsFromSlot(const uint8_t SID, const bool wantsShare) {
+      if (wantsShare) m_ControllingUnitsFromSID.set(SID);
+      else m_ControllingUnitsFromSID.reset(SID);
     }
 
     inline void SetSyncCounter(const size_t nSyncCounter) { m_SyncCounter = nSyncCounter; }

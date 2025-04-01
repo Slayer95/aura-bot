@@ -75,7 +75,6 @@ struct CGameConfig
   uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
 
   bool                     m_SaveGameAllowed;
-  bool                     m_ShareUnitsAllowed;
 
   uint16_t                 m_LatencyMin;                   // the minimum configurable game refresh latency
   uint16_t                 m_LatencyMax;                   // the maximum configurable game refresh latency
@@ -119,6 +118,7 @@ struct CGameConfig
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
   uint8_t                  m_LeaverHandler;
+  uint8_t                  m_ShareUnitsHandler;
   uint8_t                  m_UnsafeNameHandler;         // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care
   uint8_t                  m_BroadcastErrorHandler;     // under which circumstances should a game lobby be closed given that we failed to announce the game in one or more realms
   bool                     m_PipeConsideredHarmful;

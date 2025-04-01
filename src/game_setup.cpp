@@ -1616,7 +1616,6 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameLobbyReplaceable.has_value()) SetLobbyReplaceable(nCLI->m_GameLobbyReplaceable.value());
   if (nCLI->m_GameLobbyAutoRehosted.has_value()) SetLobbyAutoRehosted(nCLI->m_GameLobbyAutoRehosted.value());
 
-  if (nCLI->m_GameShareUnitsAllowed.has_value()) SetShareUnitsAllowed(nCLI->m_GameShareUnitsAllowed.value());
   if (nCLI->m_GameSaveAllowed.has_value()) SetSaveGameAllowed(nCLI->m_GameSaveAllowed.value());
 
   if (nCLI->m_GameCheckReservation.has_value()) SetCheckReservation(nCLI->m_GameCheckReservation.value());
@@ -1663,6 +1662,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameReconnectionMode.has_value()) SetReconnectionMode(nCLI->GetGameReconnectionMode());
   if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
   if (nCLI->m_GameLeaverHandler.has_value()) SetLeaverHandler(nCLI->GetGameLeaverHandler());
+  if (nCLI->m_GameShareUnitsHandler.has_value()) SetShareUnitsHandler(nCLI->GetGameShareUnitsHandler());
   if (nCLI->m_GameUnsafeNameHandler.has_value()) SetUnsafeNameHandler(nCLI->GetGameUnsafeNameHandler());
   if (nCLI->m_GameBroadcastErrorHandler.has_value()) SetBroadcastErrorHandler(nCLI->GetGameBroadcastErrorHandler());
   if (nCLI->m_GameCrossPlayMode.has_value()) SetCrossPlayMode(nCLI->GetGameCrossPlayMode());

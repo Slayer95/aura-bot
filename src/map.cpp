@@ -679,7 +679,8 @@ optional<MapEssentials> CMap::ParseMPQ()
   vector<Version> supportedVersionHeads = m_Aura->GetSupportedVersionsCrossPlayRangeHeads();
   map<Version, MapCrypto> cryptos;
   for (const auto& version : supportedVersionHeads) {
-    cryptos.emplace(version, MapCrypto());
+    //cryptos[version].emplace(version, MapCrypto());
+    cryptos[version];
   }
 
   string fileContents;
@@ -721,7 +722,8 @@ optional<MapEssentials> CMap::ParseMPQ()
 
     for (const auto& version : supportedVersionHeads) {
       auto mapCryptoProcessor = cryptos.find(version);
-      mapEssentials->fragmentHashes.emplace(version, MapFragmentHashes());
+      //mapEssentials->fragmentHashes.emplace(version, MapFragmentHashes());
+      mapEssentials->fragmentHashes[version];
       // make sure to instantiate MapFragmentHashes anyway, so that mapEssentials is in a valid state
       // (note: contents are wrapped in std::optional)
       if (mapCryptoProcessor->second.errored) {
@@ -2101,9 +2103,6 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.save_game.allowed")) {
     m_SaveGameAllowed = CFG.GetBool("map.hosting.save_game.allowed", false);
   }
-  if (CFG.Exists("map.hosting.share_units.allowed")) {
-    m_ShareUnitsAllowed = CFG.GetBool("map.hosting.share_units.allowed", false);
-  }
 
   if (CFG.Exists("map.hosting.latency.default")) {
     m_Latency = CFG.GetUint16("map.hosting.latency.default", 100);
@@ -2124,6 +2123,9 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   }
   if (CFG.Exists("map.hosting.game_protocol.leaver_handler")) {
     m_LeaverHandler = CFG.GetStringIndex("map.hosting.game_protocol.leaver_handler", {"none", "native", "share"}, ON_PLAYER_LEAVE_NATIVE);
+  }
+  if (CFG.Exists("map.hosting.game_protocol.share_handler")) {
+    m_ShareUnitsHandler = CFG.GetStringIndex("map.hosting.game_protocol.share_handler", {"native", "kick", "restrict"}, ON_SHARE_UNITS_NATIVE);
   }
   if (CFG.Exists("map.hosting.name_filter.unsafe_handler")) {
     m_UnsafeNameHandler = CFG.GetStringIndex("map.hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);

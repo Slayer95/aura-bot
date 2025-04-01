@@ -145,6 +145,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
   app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
   app.add_option("--on-leave", m_GameLeaverHandler, "Customizes how to deal with leaver players. Values: none, native, share")->check(CLI::IsMember({"none", "native", "share"}));
+  app.add_option("--on-share-units", m_GameShareUnitsHandler, "Customizes how to deal with attempts to share control of units with teammates. Values: native, kick, restrict")->check(CLI::IsMember({"native", "kick", "restrict"}));
   app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")->check(CLI::IsMember({"none", "censor", "deny"}));
   app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")->check(CLI::IsMember({"ignore", "exit-main-error", "exit-empty-main-error", "exit-any-error", "exit-empty-any-error", "exit-max-errors"}));
   app.add_option("--game-version", m_GameVersion, "Customizes the main version for the hosted lobby.");
@@ -199,7 +200,6 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--check-reservation,--no-check-reservation{false}", m_GameCheckReservation, "Enforces only players in the reserved list be able to join the game.");
   app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
-  app.add_flag(  "--allow-share-units,--no-allow-share-units{false}", m_GameShareUnitsAllowed, "Customizes whether sharing control of units with teammates is allowed.");
   app.add_flag(  "--allow-save,--no-allow-save{false}", m_GameSaveAllowed, "Customizes whether saving the game is allowed.");
   app.add_option("--winners-source", m_GameResultSource, "Customizes how Aura will determine the winner(s) of the hosted lobby. Values: none, exit, mmd")->check(CLI::IsMember({"none", "exit", "mmd"}));
   app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")->check(CLI::IsMember({"never", "host", "always", "auto"}));
@@ -438,6 +438,21 @@ uint8_t CCLI::GetGameLeaverHandler() const
     }
   }
   return leaverHandler;
+}
+
+uint8_t CCLI::GetGameShareUnitsHandler() const
+{
+  uint8_t shareUnitsHandler = ON_SHARE_UNITS_NATIVE;
+  if (m_GameShareUnitsHandler.has_value()) {
+    if (m_GameShareUnitsHandler.value() == "native") {
+      shareUnitsHandler = ON_SHARE_UNITS_NATIVE;
+    } else if (m_GameShareUnitsHandler.value() == "kick") {
+      shareUnitsHandler = ON_SHARE_UNITS_KICK;
+    } else if (m_GameShareUnitsHandler.value() == "restrict") {
+      shareUnitsHandler = ON_SHARE_UNITS_RESTRICT;
+    }
+  }
+  return shareUnitsHandler;
 }
 
 uint8_t CCLI::GetGameUnsafeNameHandler() const
