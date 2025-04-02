@@ -179,7 +179,7 @@ constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;
 // May also choose a chunk size different from the max cache chunk size.
 constexpr uint32_t MAP_FILE_PROCESSING_CHUNK_SIZE = 0x800000;
 
-constexpr uint8_t MAP_CONFIG_SCHEMA_NUMBER = 3;
+constexpr uint8_t MAP_CONFIG_SCHEMA_NUMBER = 4;
 
 constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_NONE = 0u;
 constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_MPQ = 1u;
