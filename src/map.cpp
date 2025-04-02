@@ -224,7 +224,7 @@ uint32_t CMap::GetMapGameType() const
         AuthenticatedMakerBlizzard = 1 << 3
         OfficialMeleeGame = 1 << 5
 
-    SavedGame = 1 << 9
+        SavedGame = 1 << 9
         PrivateGame = 1 << 11
 
         MakerUser = 1 << 13

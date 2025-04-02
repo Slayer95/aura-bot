@@ -286,6 +286,10 @@ namespace GameUser
 
     inline void SetSID(const uint8_t nSID) { m_SID = nSID; }
     inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
+    inline void AddLeftReason(const std::string& nLeftReason) {
+      if (m_LeftReason.empty()) SetLeftReason(nLeftReason);
+      else m_LeftReason.append(" - " + nLeftReason);
+    }
     inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
     inline void SetIsLeaver(bool nIsLeaver) { m_IsLeaver = nIsLeaver; }
     inline void SetStatus(uint8_t nStatus) { m_Status = nStatus; }

@@ -3090,7 +3090,7 @@ void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version, co
   // Otherwise, they immediately leave the lobby.
   const uint32_t clampedMapSize = m_Map->GetMapSizeClamped(version);
   if (clampedMapSize < m_Map->GetMapSize()) {
-    DLOG_APP_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedSize / (float)(1024. * 1024.)) + " MB")
+    DLOG_APP_IF(LOG_LEVEL_TRACE,  "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedSize / (float)(1024. * 1024.)) + " MB")
   }
   if (version >= GAMEVER(1u, 23u)) {
     user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
@@ -4047,6 +4047,10 @@ void CGame::SendGameDiscoveryInfo()
  */
 void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* send_fd)
 {
+  if (!user->GetMapChecked()) {
+    user->AddLeftReason("map not validated");
+  }
+
   if (m_Exiting) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
   } else {
@@ -4965,7 +4969,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* cli
             reason = "disabled";
             break;
           case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
-            LOG_APP_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
             // falls through
           case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
             reason = "too large";
@@ -5994,7 +5998,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* cl
             reason = "disabled";
             break;
           case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
-            LOG_APP_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
             // falls through
           case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
             reason = "too large";
