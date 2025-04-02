@@ -143,6 +143,7 @@ public:
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
   inline bool                             GetGameBroadcastIsPending() const { return m_GameBroadcastPending != nullptr; }
+  inline CGame*                           GetGameBroadcastPending() const { return m_GameBroadcastPending; }
   inline CGame*                           GetGameBroadcast() const { return m_GameBroadcast; }
   inline bool                             GetGameIsExpansion() const { return m_GameIsExpansion; }
   inline const Version&                   GetGameVersion() const { return m_GameVersion; }

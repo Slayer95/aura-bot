@@ -77,6 +77,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapOptions(0),
     m_MapEditorVersion(0),
     m_MapDataSet(MAP_DATASET_DEFAULT),
+    m_MapRequiresExpansion(false),
     m_MapIsLua(false),
     m_MapIsMelee(false),
     m_MapMinGameVersion(GAMEVER(1u, 0u)),
@@ -840,6 +841,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
         mapEssentials->dataSet = static_cast<uint8_t>(RawGameDataSet);
         mapEssentials->editorVersion = RawEditorVersion;
+        mapEssentials->isExpansion = FileFormat >= 25;
         mapEssentials->isLua = RawScriptingLanguage > 0;
 
         if (mapEssentials->isLua != mapEssentials->foundLua && m_ErrorMessage.empty()) {
@@ -1183,6 +1185,7 @@ void CMap::Load(CConfig* CFG)
     m_MapNumTeams = mapEssentials->numTeams;
     m_MapMinGameVersion = mapEssentials->minCompatibleGameVersion;
     m_MapMinSuggestedGameVersion = mapEssentials->minSuggestedGameVersion;
+    m_MapRequiresExpansion = mapEssentials->isExpansion;
     m_MapIsLua = mapEssentials->isLua;
     m_MapEditorVersion = mapEssentials->editorVersion;
     m_MapOptions = mapEssentials->options;
@@ -1394,6 +1397,12 @@ void CMap::Load(CConfig* CFG)
     m_MapDataSet = CFG->GetUint8("map.data_set", m_MapDataSet);
   } else {
     CFG->SetUint8("map.data_set", m_MapDataSet);
+  }
+
+  if (CFG->Exists("map.expansion")) {
+    m_MapRequiresExpansion = CFG->GetBool("map.expansion", m_MapRequiresExpansion);
+  } else {
+    CFG->SetBool("map.expansion", m_MapRequiresExpansion);
   }
 
   if (CFG->Exists("map.lua")) {

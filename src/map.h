@@ -103,6 +103,7 @@ struct MapEssentials
   uint8_t numTeams;
   Version minCompatibleGameVersion;
   Version minSuggestedGameVersion;
+  bool isExpansion;
   bool isLua;
   bool foundLua;
   uint32_t editorVersion;
@@ -127,6 +128,7 @@ struct MapEssentials
      numTeams(0),
      minCompatibleGameVersion(GAMEVER(1u, 0u)),
      minSuggestedGameVersion(GAMEVER(1u, 0u)),
+     isExpansion(false),
      isLua(false),
      foundLua(false),
      editorVersion(0),
@@ -392,6 +394,7 @@ private:
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;
   uint8_t                         m_MapDataSet;
+  bool                            m_MapRequiresExpansion;
   bool                            m_MapIsLua;
   bool                            m_MapIsMelee;
   Version                         m_MapMinGameVersion;
@@ -465,6 +468,9 @@ public:
   [[nodiscard]] inline uint32_t                   GetMapLocale() const { return m_MapLocale; }
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapDataSet() const { return m_MapDataSet; }
+  [[nodiscard]] inline bool                       GetMapRequiresExpansion() const { return m_MapRequiresExpansion; }
+  [[nodiscard]] inline bool                       GetMapScriptIsLua() const { m_MapIsLua; }
+  [[nodiscard]] inline bool                       GetMapIsMelee() const { m_MapIsMelee; }
   [[nodiscard]] inline const Version&             GetMapMinGameVersion() const { return m_MapMinGameVersion; }
   [[nodiscard]] inline const Version&             GetMapMinSuggestedGameVersion() const { return m_MapMinSuggestedGameVersion; }
   [[nodiscard]] uint8_t                           GetMapLayoutStyle() const;

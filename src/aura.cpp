@@ -2066,6 +2066,10 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     gameSetup->m_Ctx->ErrorReply("map requires v" + ToVersionString(gameSetup->GetMap()->GetMapMinGameVersion()), CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
+  if (!gameSetup->GetMap()->GetMapTargetGameIsExpansion() && gameSetup->GetMap()->GetMapRequiresExpansion()) {
+    gameSetup->m_Ctx->ErrorReply("map requires The Frozen Throne", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
+    return false;
+  }
 
   if (!GetNewGameIsInQuota()) {
     if (m_Lobbies.size() == 1) {

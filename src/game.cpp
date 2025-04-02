@@ -1015,7 +1015,7 @@ string CGame::GetEndDescription() const
 
   string winnersFragment;
 
-  if (RunGameResults()) {
+  if (m_GameResults.has_value()) {
     vector<string> winnerNames = m_GameResults->GetWinnersNames();
     if (winnerNames.size() > 2) {
       winnersFragment = "Winners: [" + winnerNames[0] + "], and others";
@@ -3847,7 +3847,7 @@ void CGame::AnnounceDecreateToRealms()
       realm->ResetGameBroadcastData();
     }
 
-    if (realm->GetGameBroadcastIsPending() == this) {
+    if (realm->GetGameBroadcastPending() == this) {
       realm->ResetGameBroadcastPending();
     }
   }
