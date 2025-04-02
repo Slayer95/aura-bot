@@ -361,6 +361,11 @@ namespace GameUser
         m_KickByTicks = nKickByTicks;
       }
     }
+    inline void CheckStillKicked() {
+      if (!GetAnyKicked() && GetKickQueued()) {
+        ClearKickByTicks();
+      }
+    }
     inline void ResetLeftReason() { m_LeftReason.clear(); }
     inline void SetUserReady(bool nReady) { m_UserReady = nReady; }
     inline void ClearUserReady() { m_UserReady = std::nullopt; }

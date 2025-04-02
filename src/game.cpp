@@ -3483,9 +3483,7 @@ void CGame::SendAllActionsCallback()
           if (!wantsShare && user->GetAntiShareKicked() && !user->GetIsSharingUnitsWithAnyAllies()) {
             user->ResetLeftReason();
             user->RemoveKickReason(GameUser::KickReason::ANTISHARE);
-            if (!user->GetAnyKicked() && user->GetKickQueued()) {
-              user->ClearKickByTicks();
-            }
+            user->CheckStillKicked();
           }
         }
       }
@@ -4927,6 +4925,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
 void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* clientMap)
 {
   int64_t Ticks = GetTicks();
+  const bool isFirstCheck = !user->GetMapChecked();
 
   user->SetMapChecked(true);
   const uint32_t expectedMapSize = m_Map->GetMapSizeClamped(user->GetGameVersion());
@@ -4946,8 +4945,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* cli
       } else {
         mapTransfer.SetLastAck(clientMap->GetFileSize());
       }
-    } else if (!user->GetNotifiedCannotDownload()) {
-      user->SetNotifiedCannotDownload();
+    } else if (isFirstCheck) {
       user->SetTimeoutAtLatest(Ticks + m_Config.m_LacksMapKickDelay);
 
       if (GetMapSiteURL().empty()) {
@@ -5956,6 +5954,7 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* clientMap)
 {
   int64_t Ticks = GetTicks();
+  bool isFirstCheck = !user->GetMapChecked();
 
   user->SetMapChecked(true);
   const uint32_t expectedMapSize = m_Map->GetMapSizeClamped(user->GetGameVersion());
@@ -5976,38 +5975,46 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* cl
         mapTransfer.SetLastAck(clientMap->GetFileSize());
       }
     } else if (!user->GetMapKicked()) {
-      user->AddKickReason(GameUser::KickReason::MAP_MISSING);
-      user->KickAtLatest(Ticks + m_Config.m_LacksMapKickDelay);
-
-      if (GetMapSiteURL().empty()) {
-        SendChat(user, "" + user->GetName() + ", please download the map before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
-      } else {
-        SendChat(user, "" + user->GetName() + ", please download the map from <" + GetMapSiteURL() + "> before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
+      const bool willKick = !user->GetIsReserved();
+      if (isFirstCheck) {
+        string fromURL, kickFragment;
+        if (!GetMapSiteURL().empty()) {
+          fromURL = " from <" + GetMapSiteURL() + ">";
+        }
+        if (willKick) {
+           kickFragment = " (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)";
+        }
+        SendChat(user, user->GetName() + ", please download the map" + fromURL + " before joining." + kickFragment);
       }
 
-      if (!user->HasLeftReason()) {
-        string reason;
-        switch (checkResult) {
-          case MAP_TRANSFER_CHECK_INVALID:
-            reason = "invalid";
-            break;
-          case MAP_TRANSFER_CHECK_MISSING:
-            reason = "missing";
-            break;
-          case MAP_TRANSFER_CHECK_DISABLED:
-            reason = "disabled";
-            break;
-          case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
-            // falls through
-          case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
-            reason = "too large";
-            break;
-          case MAP_TRANSFER_CHECK_BUFFERBLOAT:
-            reason = "bufferbloat";
-            break;
+      if (willKick) {
+        user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+        user->KickAtLatest(Ticks + m_Config.m_LacksMapKickDelay);
+
+        if (!user->HasLeftReason()) {
+          string reason;
+          switch (checkResult) {
+            case MAP_TRANSFER_CHECK_INVALID:
+              reason = "invalid";
+              break;
+            case MAP_TRANSFER_CHECK_MISSING:
+              reason = "missing";
+              break;
+            case MAP_TRANSFER_CHECK_DISABLED:
+              reason = "disabled";
+              break;
+            case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
+              LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
+              // falls through
+            case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
+              reason = "too large";
+              break;
+            case MAP_TRANSFER_CHECK_BUFFERBLOAT:
+              reason = "bufferbloat";
+              break;
+          }
+          user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (" + reason + ")");
         }
-        user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (" + reason + ")");
       }
     }
   } else if (user->GetMapTransfer().GetStarted()) {
@@ -6070,9 +6077,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
     }
   } else {
     user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
-    if (!user->GetAnyKicked() && user->GetKickQueued()) {
-      user->ClearKickByTicks();
-    }
+    user->CheckStillKicked();
     if (user->GetHasHighPing()) {
       bool HasHighPing = LatencyMilliseconds >= m_Config.m_SafeHighPing;
       if (!HasHighPing) {
@@ -8584,11 +8589,10 @@ void CGame::AddToReserved(const string& name)
       break;
     }
 
-    // Reserved users are never kicked for latency reasons.
+    // Reserved users are never kicked for latency reasons nor map missing.
     user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
-    if (!user->GetAnyKicked() && user->GetKickQueued()) {
-      user->ClearKickByTicks();
-    }
+    user->RemoveKickReason(GameUser::KickReason::MAP_MISSING);
+    user->CheckStillKicked();
   }
 }
 
@@ -8616,6 +8620,12 @@ bool CGame::ReserveAll()
     if (user->GetIsReserved()) continue;
     user->SetReserved(true);
     m_Reserved.push_back(user->GetLowerName());
+
+    // Reserved users are never kicked for latency reasons nor map missing.
+    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
+    user->RemoveKickReason(GameUser::KickReason::MAP_MISSING);
+    user->CheckStillKicked();
+
     anyAdded = true;
   }
   return anyAdded;
@@ -8953,9 +8963,7 @@ void CGame::SetOwner(const string& name, const string& realm)
 
     // Owner is never kicked for latency reasons.
     user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
-    if (!user->GetAnyKicked() && user->GetKickQueued()) {
-      user->ClearKickByTicks();
-    }
+    user->CheckStillKicked();
   }
 }
 

@@ -67,7 +67,6 @@ CAsyncObserver::CAsyncObserver(CGame* nGame, CConnection* nConnection, uint8_t n
     m_Latency(nGame->GetGameHistory()->GetDefaultLatency()),
     m_SyncCounter(0),
     m_ActionFrameCounter(0),
-    m_NotifiedCannotDownload(false),
     m_StartedLoading(false),
     m_StartedLoadingTicks(0),
     m_FinishedLoading(false),

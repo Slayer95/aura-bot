@@ -67,8 +67,6 @@ public:
   OptionalTimedUint32                                           m_MeasuredRTT;
   */
 
-  bool                                                          m_NotifiedCannotDownload;
-
   bool                                                          m_StartedLoading;
   int64_t                                                       m_StartedLoadingTicks;
   bool                                                          m_FinishedLoading;
@@ -101,9 +99,6 @@ public:
   [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
   [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
   [[nodiscard]] inline const CRealm*            GetRealm() { return m_FromRealm; }
-
-  [[nodiscard]] inline bool                     GetNotifiedCannotDownload() { return m_NotifiedCannotDownload; }
-  inline void                                   SetNotifiedCannotDownload() { m_NotifiedCannotDownload = true; }
 
   [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
   [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }

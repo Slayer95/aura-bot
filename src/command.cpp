@@ -3370,9 +3370,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       targetPlayer->SetDownloadAllowed(true);
       targetPlayer->GetMapTransfer().Start();
       targetPlayer->RemoveKickReason(GameUser::KickReason::MAP_MISSING);
-      if (!targetPlayer->GetAnyKicked() && targetPlayer->GetKickQueued()) {
-        targetPlayer->ClearKickByTicks();
-      }
+      targetPlayer->CheckStillKicked();
       break;
     }
 
