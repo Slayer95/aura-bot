@@ -29,9 +29,12 @@
 #include "includes.h"
 #include "connection.h"
 
-#define GAMESEEKER_OK 0u
-#define GAMESEEKER_DESTROY 1u
-#define GAMESEEKER_PROMOTED 2u
+enum class GameSeekerStatus : uint8_t
+{
+  kOk = 0u,
+  kDestroy = 1u,
+  kPromoted = 2u,
+};
 
 //
 // CGameSeeker
@@ -55,7 +58,7 @@ public:
   void SetTimeout(const int64_t nTicks);
   bool CloseConnection();
   void Init();
-  [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
+  [[nodiscard]] GameSeekerStatus Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
   // other functions
 

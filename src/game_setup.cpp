@@ -469,7 +469,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
     return SEARCH_RESULT(MATCH_TYPE_NONE, filesystem::path());
   }
 
-  size_t resultCount = min(FUZZY_SEARCH_MAX_RESULTS, static_cast<int>(allResults.size()));
+  size_t resultCount = min(FILE_SEARCH_FUZZY_MAX_RESULTS, allResults.size());
   partial_sort(
     allResults.begin(),
     allResults.begin() + resultCount,
@@ -1729,3 +1729,5 @@ CGameSetup::~CGameSetup()
 
   m_Map.reset();
 }
+
+#undef SEARCH_RESULT

@@ -32,8 +32,12 @@
 #include <filesystem>
 #include <CLI11/CLI11.hpp>
 
-#define CLI_ACTION_ABOUT 1
-#define CLI_ACTION_EXAMPLES 2
+enum class CLIAction : uint8_t
+{
+  kNone = 0u,
+  kAbout = 1u,
+  kExamples = 2u,
+};
 
 // CLIResult
 
@@ -57,7 +61,7 @@ public:
   std::optional<std::filesystem::path>  m_HomePath;
   bool                                  m_UseStandardPaths;
 
-  uint8_t                               m_InfoAction;
+  CLIAction                             m_InfoAction;
 
   bool                                  m_Verbose;
   std::optional<bool>                   m_LAN;

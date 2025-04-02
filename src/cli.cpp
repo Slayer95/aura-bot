@@ -46,7 +46,7 @@ using namespace std;
 
 CCLI::CCLI()
  : m_UseStandardPaths(false),
-   m_InfoAction(0),
+   m_InfoAction(CLIAction::kNone),
    m_Verbose(false),
    m_ExecAuth(CommandAuth::kAuto)
 {
@@ -262,9 +262,9 @@ CLIResult CCLI::Parse(const int argc, char** argv)
 
   if (about || examples) {
     if (about) {
-      m_InfoAction = CLI_ACTION_ABOUT;
+      m_InfoAction = CLIAction::kAbout;
     } else if (examples) {
-      m_InfoAction = CLI_ACTION_EXAMPLES;
+      m_InfoAction = CLIAction::kExamples;
     }
     return CLIResult::kInfoAndQuit;
   }
@@ -575,19 +575,21 @@ bool CCLI::RunGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
 void CCLI::RunInfoActions() const
 {
   switch (m_InfoAction) {
-    case CLI_ACTION_ABOUT: {
+    case CLIAction::kAbout: {
       Print("Aura " + string(AURA_VERSION));
       Print("Aura is a permissive-licensed open source project.");
       Print("Say hi at <" + string(AURA_ISSUES_URL) + ">");
       break;
     }
-    case CLI_ACTION_EXAMPLES: {
+    case CLIAction::kExamples: {
       Print("Usage: aura [MAP NAME] [GAME NAME]");
       Print(R"(Example: aura monolith "creep invasion")");
       Print(R"(Example: aura "lost temple" "2v2")");
       Print("See additional options at CLI.md");
       break;
     }
+    default:
+      break;
   }
 }
 

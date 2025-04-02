@@ -48,11 +48,6 @@
 
 using namespace std;
 
-#ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(x) (void)(x)
-#endif
-
-
 //
 // CSocket
 //
@@ -228,10 +223,8 @@ void CSocket::Reset()
   m_HasFin = false;
 }
 
-void CSocket::SendReply(const sockaddr_storage* address, const vector<uint8_t>& message)
+void CSocket::SendReply(const sockaddr_storage* /*address*/, const vector<uint8_t>& /*message*/)
 {
-  UNREFERENCED_PARAMETER(address);
-  UNREFERENCED_PARAMETER(message);
 }
 
 //
@@ -481,9 +474,8 @@ void CStreamIOSocket::Flush()
   m_SendBuffer.clear();
 }
 
-void CStreamIOSocket::SendReply(const sockaddr_storage* address, const vector<uint8_t>& message)
+void CStreamIOSocket::SendReply(const sockaddr_storage* /*address*/, const vector<uint8_t>& message)
 {
-  UNREFERENCED_PARAMETER(address);
   PutBytes(message);
 }
 
@@ -967,7 +959,7 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
     delete address;
     return nullptr;
   }
-  if (bytesRead < MIN_UDP_PACKET_SIZE) {
+  if (bytesRead < W3GS_UDP_MIN_PACKET_SIZE) {
     delete address;
     return nullptr;
   }

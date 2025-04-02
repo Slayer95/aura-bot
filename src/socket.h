@@ -172,7 +172,6 @@ typedef int32_t SOCKET;
 #define ADDRESS_LENGTH_TYPE socklen_t
 #endif
 
-#define MIN_UDP_PACKET_SIZE 4
 #define INET_ADDRSTRLEN_IPV4 16
 
 #ifndef INADDR_MULTICAST_START

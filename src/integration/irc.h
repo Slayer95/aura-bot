@@ -49,9 +49,6 @@
 #include "../includes.h"
 #include "../config/config_irc.h"
 
-#define LF ('\x0A')
-#define IRC_TCP_KEEPALIVE_IDLE_TIME 300
-
 class CIRC
 {
 public:

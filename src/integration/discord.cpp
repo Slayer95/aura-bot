@@ -36,7 +36,7 @@
 #include <thread>
 #include <variant>
 
-#define THINKING_PUBLIC false
+constexpr bool ThinkingMode_kPublic = false;
 
 using namespace std;
 
@@ -105,7 +105,7 @@ bool CDiscord::Init()
     } catch (...) {
       if (!GetIsUserAllowed(event.command.get_issuing_user().id)) return;
     }
-    event.thinking(THINKING_PUBLIC);
+    event.thinking(ThinkingMode_kPublic);
     m_CommandQueue.push(new dpp::slashcommand_t(event));
   });
 

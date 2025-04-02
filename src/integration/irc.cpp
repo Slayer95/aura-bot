@@ -54,6 +54,9 @@
 
 #include <utility>
 
+constexpr char LF = ('\x0A');
+constexpr uint32_t IRC_TCP_KEEPALIVE_IDLE_TIME = 300;
+
 using namespace std;
 
 //////////////

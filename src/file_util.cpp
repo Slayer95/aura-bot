@@ -339,7 +339,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
       pair<string, int> foundMatch = make_pair<string, int>(move(mapString), static_cast<int>(mapString.length() - fuzzyPattern.length()));
       auto pos = lower_bound(inclusionMatches.begin(), inclusionMatches.end(), foundMatch);
       inclusionMatches.insert(pos, foundMatch);
-      if (inclusionMatches.size() >= FUZZY_SEARCH_MAX_RESULTS) {
+      if (inclusionMatches.size() >= FILE_SEARCH_FUZZY_MAX_RESULTS) {
         break;
       }
     }
@@ -349,7 +349,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   }
 
   // 2. Try fuzzy searching
-  string::size_type maxDistance = FUZZY_SEARCH_MAX_DISTANCE;
+  string::size_type maxDistance = FILE_SEARCH_FUZZY_MAX_DISTANCE;
   if (fuzzyPattern.size() < 3 * (maxDistance - 4)) {
     // This formula approximates how PS !esdata fuzzy-matches
     // It's my hope that it works here as well.
@@ -375,7 +375,7 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
     }
   }
 
-  size_t resultCount = min(FUZZY_SEARCH_MAX_RESULTS, static_cast<int>(distances.size()));
+  size_t resultCount = min(FILE_SEARCH_FUZZY_MAX_RESULTS, distances.size());
   partial_sort(
     distances.begin(),
     distances.begin() + resultCount,

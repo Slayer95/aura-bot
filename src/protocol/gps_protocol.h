@@ -46,11 +46,6 @@
 
 #include "../includes.h"
 
-#define REJECTGPS_INVALID 1
-#define REJECTGPS_NOTFOUND 2
-
-#define GPS_ACK_PERIOD 10000u
-
 namespace GPSProtocol
 {
   namespace Magic

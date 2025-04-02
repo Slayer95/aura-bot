@@ -52,31 +52,31 @@
 
 #include <sqlite3/sqlite3.h>
 
-#define MAP_TYPE_NONE 0
-#define MAP_TYPE_MELEE 1
-#define MAP_TYPE_DOTA 2
-#define MAP_TYPE_TWRPG 3
+constexpr uint8_t MAP_TYPE_NONE = 0;
+constexpr uint8_t MAP_TYPE_MELEE = 1;
+constexpr uint8_t MAP_TYPE_DOTA = 2;
+constexpr uint8_t MAP_TYPE_TWRPG = 3;
 
-#define MAP_DATA_TYPE_NONE 0u
-#define MAP_DATA_TYPE_UNIT 1u
-#define MAP_DATA_TYPE_ITEM 2u
-#define MAP_DATA_TYPE_DESTRUCTABLE 3u
+constexpr uint8_t MAP_DATA_TYPE_NONE = 0u;
+constexpr uint8_t MAP_DATA_TYPE_UNIT = 1u;
+constexpr uint8_t MAP_DATA_TYPE_ITEM = 2u;
+constexpr uint8_t MAP_DATA_TYPE_DESTRUCTABLE = 3u;
 // ... Others
-#define MAP_DATA_TYPE_ANY 255u
+constexpr uint8_t MAP_DATA_TYPE_ANY = 255u;
 
-#define FROM_ADD_IDX 0u
-#define FROM_CHECK_IDX 1u
-#define LATEST_GAME_IDX 2u
-#define ALIAS_ADD_IDX 3u
-#define ALIAS_CHECK_IDX 4u
-#define USER_BAN_CHECK_IDX 5u
-#define IP_BAN_CHECK_IDX 6u
-#define MODERATOR_CHECK_IDX 7u
-#define GAME_ADD_IDX 8u
-#define PLAYER_SUMMARY_IDX 9u
-#define UPDATE_PLAYER_START_IDX 10u
-#define UPDATE_PLAYER_END_IDX 11u
-#define STMT_CACHE_SIZE 12u
+constexpr uint8_t FROM_ADD_IDX = 0u;
+constexpr uint8_t FROM_CHECK_IDX = 1u;
+constexpr uint8_t LATEST_GAME_IDX = 2u;
+constexpr uint8_t ALIAS_ADD_IDX = 3u;
+constexpr uint8_t ALIAS_CHECK_IDX = 4u;
+constexpr uint8_t USER_BAN_CHECK_IDX = 5u;
+constexpr uint8_t IP_BAN_CHECK_IDX = 6u;
+constexpr uint8_t MODERATOR_CHECK_IDX = 7u;
+constexpr uint8_t GAME_ADD_IDX = 8u;
+constexpr uint8_t PLAYER_SUMMARY_IDX = 9u;
+constexpr uint8_t UPDATE_PLAYER_START_IDX = 10u;
+constexpr uint8_t UPDATE_PLAYER_END_IDX = 11u;
+constexpr uint8_t STMT_CACHE_SIZE = 12u;
 
 /**************
  *** SCHEMA ***

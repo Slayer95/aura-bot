@@ -26,6 +26,8 @@
 #ifndef AURA_CONSTANTS_H_
 #define AURA_CONSTANTS_H_
 
+#include <string>
+
 // includes.h
 
 constexpr uint8_t LOG_LEVEL_EMERGENCY = 1;
@@ -76,6 +78,11 @@ constexpr uint8_t LOG_C = 1u;
 constexpr uint8_t LOG_P = 2u;
 constexpr uint8_t LOG_R = 4u;
 constexpr uint8_t LOG_ALL = LOG_C | LOG_P | LOG_R;
+
+// fileutil.h
+
+constexpr size_t FILE_SEARCH_FUZZY_MAX_RESULTS = 5;
+constexpr std::string::size_type FILE_SEARCH_FUZZY_MAX_DISTANCE = 10;
 
 // map.h
 
@@ -231,7 +238,7 @@ constexpr uint8_t GAME_OVER_TRUSTED = 1u;
 constexpr uint8_t GAME_OVER_MMD = 2u;
 
 constexpr uint8_t HIDDEN_PLAYERS_NONE = 0u;
-constexpr uint8_t HIDDEN_PLAYERS_LOBBY = 1u
+constexpr uint8_t HIDDEN_PLAYERS_LOBBY = 1u;
 constexpr uint8_t HIDDEN_PLAYERS_GAME = 2u;
 constexpr uint8_t HIDDEN_PLAYERS_ALL = 3u;
 
@@ -414,6 +421,8 @@ constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
 
 // game_protocol.h
 
+constexpr int W3GS_UDP_MIN_PACKET_SIZE = 4;
+
 constexpr uint8_t GAME_NONE = 0; // this case isn't part of the protocol, it's for internal use only
 constexpr uint8_t GAME_FULL = 2;
 constexpr uint8_t GAME_PUBLIC = 16;
@@ -469,6 +478,12 @@ constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER = 1u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_PLAYER = 2u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_ANY = VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER | VIRTUAL_USER_ALLOW_CONNECTIONS_PLAYER;
 
+// gps_protocol.h
+
+constexpr uint32_t REJECTGPS_INVALID = 1;
+constexpr uint32_t REJECTGPS_NOTFOUND = 2;
+constexpr int64_t GPS_ACK_PERIOD = 10000u;
+
 // chat.h
 
 constexpr uint8_t FROM_GAME = (1 << 0);
@@ -517,10 +532,6 @@ constexpr uint8_t REALM_TYPE_BATTLENET_CLASSIC = 1u;
 
 constexpr uint8_t REALM_AUTH_PVPGN = 0u;
 constexpr uint8_t REALM_AUTH_BATTLENET = 1u;
-
-constexpr uint8_t COMMANDS_ALLOWED_NONE = 0u;
-constexpr uint8_t COMMANDS_ALLOWED_UNVERIFIED = 1u;
-constexpr uint8_t COMMANDS_ALLOWED_VERIFIED = 2u;
 
 constexpr uint8_t REALM_OBSERVER_DISPLAY_NONE = 0u;
 constexpr uint8_t REALM_OBSERVER_DISPLAY_LOW_PRIORITY = 1u;
@@ -680,8 +691,8 @@ constexpr uint8_t RECONNECT_ENABLED_GPROXY_EXTENDED = 2;
 constexpr size_t MAX_INCOMING_CONNECTIONS = 255;
 constexpr float GAME_USER_CONNECTION_MAX_TIMEOUT = 5000.;
 constexpr float GAME_USER_CONNECTION_MIN_TIMEOUT = 500.;
-constexpr float GAME_USER_TIMEOUT_VANILLA = 70000.;
-constexpr float GAME_USER_TIMEOUT_RECONNECTABLE = 20000.;
+constexpr int64_t GAME_USER_TIMEOUT_VANILLA = 70000;
+constexpr int64_t GAME_USER_TIMEOUT_RECONNECTABLE = 20000;
 
 constexpr uint16_t GAME_DEFAULT_UDP_PORT = 6112u;
 constexpr uint8_t UDP_DISCOVERY_MAX_EXTRA_ADDRESSES = 30u;
@@ -692,6 +703,13 @@ constexpr uint8_t NET_PROTOCOL_UDP = 1u;
 // Exponential backoff starts at twice this value (45x2=90 seconds)
 constexpr int64_t NET_BASE_RECONNECT_DELAY = 45;
 constexpr uint8_t NET_RECONNECT_MAX_BACKOFF = 12;
+
+// realm.h
+
+constexpr uint32_t REALM_TCP_KEEPALIVE_IDLE_TIME = 900;
+constexpr int64_t REALM_APP_KEEPALIVE_IDLE_TIME = 180;
+constexpr int64_t REALM_APP_KEEPALIVE_INTERVAL = 30;
+constexpr int64_t REALM_APP_KEEPALIVE_MAX_MISSED = 4;
 
 // realm_chat.h
 

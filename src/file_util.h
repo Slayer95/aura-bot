@@ -46,9 +46,6 @@ CODE PORTED FROM THE ORIGINAL GHOST PROJECT
 #ifndef AURA_FILEUTIL_H_
 #define AURA_FILEUTIL_H_
 
-#define FUZZY_SEARCH_MAX_RESULTS 5
-#define FUZZY_SEARCH_MAX_DISTANCE 10
-
 #include "includes.h"
 #include <fstream>
 #include <filesystem>

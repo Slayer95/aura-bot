@@ -88,19 +88,19 @@ void CGameSeeker::Init()
   }
 }
 
-uint8_t CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
+GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 {
   if (m_DeleteMe || !m_Socket || m_Socket->HasError()) {
-    return GAMESEEKER_DESTROY;
+    return GameSeekerStatus::kDestroy;
   }
 
   const int64_t Ticks = GetTicks();
 
   if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
-    return GAMESEEKER_DESTROY;
+    return GameSeekerStatus::kDestroy;
   }
 
-  uint8_t result = GAMESEEKER_OK;
+  GameSeekerStatus result = GameSeekerStatus::kOk;
   bool Abort = false;
   if (m_Type == INCON_TYPE_KICKED_PLAYER) {
     m_Socket->Discard(fd);
@@ -141,7 +141,7 @@ uint8_t CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
             joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
-              result = GAMESEEKER_PROMOTED;
+              result = GameSeekerStatus::kPromoted;
               m_Type = INCON_TYPE_PLAYER;
               m_Socket = nullptr;
             }
@@ -196,19 +196,19 @@ uint8_t CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort && result != GAMESEEKER_PROMOTED) {
-      result = GAMESEEKER_DESTROY;
+    if (Abort && result != GameSeekerStatus::kPromoted) {
+      result = GameSeekerStatus::kDestroy;
       RecvBuffer->clear();
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
   } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
-    return GAMESEEKER_DESTROY;
+    return GameSeekerStatus::kDestroy;
   }
 
   // At this point, m_Socket may have been transferred to GameUser::CGameUser
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
-    return GAMESEEKER_DESTROY;
+    return GameSeekerStatus::kDestroy;
   }
 
   m_Socket->DoSend(send_fd);

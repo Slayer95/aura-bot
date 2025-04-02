@@ -620,8 +620,8 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
     int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(fd, send_fd, timeout);
-      if (result == GAMESEEKER_OK) {
+      GameSeekerStatus result = (*i)->Update(fd, send_fd, timeout);
+      if (result == GameSeekerStatus::kOk) {
         ++i;
         continue;
       }
@@ -983,7 +983,7 @@ GameUser::CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const
 
 void CNet::HandleUDP(UDPPkt* pkt)
 {
-  // pkt->buf->length at least MIN_UDP_PACKET_SIZE
+  // pkt->buf->length at least W3GS_UDP_MIN_PACKET_SIZE
 
   if (pkt->sender->ss_family != AF_INET && pkt->sender->ss_family != AF_INET6) {
     return;
