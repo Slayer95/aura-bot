@@ -28,24 +28,24 @@
 
 // includes.h
 
-#define LOG_LEVEL_EMERGENCY 1
-#define LOG_LEVEL_ALERT 2
-#define LOG_LEVEL_CRITICAL 3
-#define LOG_LEVEL_ERROR 4
-#define LOG_LEVEL_WARNING 5
-#define LOG_LEVEL_NOTICE 6
-#define LOG_LEVEL_INFO 7
-#define LOG_LEVEL_DEBUG 8
-#define LOG_LEVEL_TRACE 9
-#define LOG_LEVEL_TRACE2 10
-#define LOG_LEVEL_TRACE3 11
+constexpr uint8_t LOG_LEVEL_EMERGENCY = 1;
+constexpr uint8_t LOG_LEVEL_ALERT = 2;
+constexpr uint8_t LOG_LEVEL_CRITICAL = 3;
+constexpr uint8_t LOG_LEVEL_ERROR = 4;
+constexpr uint8_t LOG_LEVEL_WARNING = 5;
+constexpr uint8_t LOG_LEVEL_NOTICE = 6;
+constexpr uint8_t LOG_LEVEL_INFO = 7;
+constexpr uint8_t LOG_LEVEL_DEBUG = 8;
+constexpr uint8_t LOG_LEVEL_TRACE = 9;
+constexpr uint8_t LOG_LEVEL_TRACE2 = 10;
+constexpr uint8_t LOG_LEVEL_TRACE3 = 11;
 
-#define ANTI_SPOOF_NONE 0
-#define ANTI_SPOOF_BASIC 1
-#define ANTI_SPOOF_EXTENDED 2
-#define ANTI_SPOOF_FULL 3
+constexpr uint8_t ANTI_SPOOF_NONE = 0;
+constexpr uint8_t ANTI_SPOOF_BASIC = 1;
+constexpr uint8_t ANTI_SPOOF_EXTENDED = 2;
+constexpr uint8_t ANTI_SPOOF_FULL = 3;
 
-#define MAX_READ_FILE_SIZE 0x18000000
+constexpr size_t MAX_READ_FILE_SIZE = 0x18000000;
 
 constexpr double PERCENT_FACTOR = 100.;
 
@@ -54,23 +54,23 @@ constexpr unsigned char ProductID_TFT[4] = {80, 88, 51, 87};
 
 // aura.h
 
-#define APP_ACTION_DONE 0u
-#define APP_ACTION_ERROR 1u
-#define APP_ACTION_WAIT 2u
-#define APP_ACTION_TIMEOUT 3u
+constexpr uint8_t APP_ACTION_DONE = 0u;
+constexpr uint8_t APP_ACTION_ERROR = 1u;
+constexpr uint8_t APP_ACTION_WAIT = 2u;
+constexpr uint8_t APP_ACTION_TIMEOUT = 3u;
 
-#define APP_ACTION_TYPE_UPNP 0u
-#define APP_ACTION_TYPE_HOST 1u
+constexpr uint8_t APP_ACTION_TYPE_UPNP = 0u;
+constexpr uint8_t APP_ACTION_TYPE_HOST = 1u;
 
-#define APP_ACTION_MODE_TCP 0u
-#define APP_ACTION_MODE_UDP 1u
+constexpr uint8_t APP_ACTION_MODE_TCP = 0u;
+constexpr uint8_t APP_ACTION_MODE_UDP = 1u;
 
-#define SERVICE_TYPE_NONE 0
-#define SERVICE_TYPE_GAME 1
-#define SERVICE_TYPE_REALM 2
-#define SERVICE_TYPE_IRC 3
-#define SERVICE_TYPE_DISCORD 4
-#define SERVICE_TYPE_INVALID 255
+constexpr uint8_t SERVICE_TYPE_NONE = 0;
+constexpr uint8_t SERVICE_TYPE_GAME = 1;
+constexpr uint8_t SERVICE_TYPE_REALM = 2;
+constexpr uint8_t SERVICE_TYPE_IRC = 3;
+constexpr uint8_t SERVICE_TYPE_DISCORD = 4;
+constexpr uint8_t SERVICE_TYPE_INVALID = 255;
 
 constexpr uint8_t LOG_C = 1u;
 constexpr uint8_t LOG_P = 2u;
@@ -99,22 +99,22 @@ constexpr uint8_t MAPFLAG_UNITSHARE = 4u;
 constexpr uint8_t MAPFLAG_RANDOMHERO = 8u;
 constexpr uint8_t MAPFLAG_RANDOMRACES = 16u;
 
-#define MAPOPT_HIDEMINIMAP (1 << 0)
-#define MAPOPT_MODIFYALLYPRIORITIES (1 << 1)
-#define MAPOPT_MELEE (1 << 2) // the bot cares about this one...
-#define MAPOPT_REVEALTERRAIN (1 << 4)
-#define MAPOPT_FIXEDPLAYERSETTINGS (1 << 5) // and this one...
-#define MAPOPT_CUSTOMFORCES (1 << 6)        // and this one, the rest don't affect the bot's logic
-#define MAPOPT_CUSTOMTECHTREE (1 << 7)
-#define MAPOPT_CUSTOMABILITIES (1 << 8)
-#define MAPOPT_CUSTOMUPGRADES (1 << 9)
-#define MAPOPT_WATERWAVESONCLIFFSHORES (1 << 11)
-#define MAPOPT_HASTERRAINFOG (1 << 12)
-#define MAPOPT_REQUIRESEXPANSION (1 << 13)
-#define MAPOPT_ITEMCLASSIFICATION (1 << 14)
-#define MAPOPT_WATERTINTING (1 << 15)
-#define MAPOPT_ACCURATERANDOM (1 << 16)
-#define MAPOPT_ABILITYSKINS (1 << 17)
+constexpr uint32_t MAPOPT_HIDEMINIMAP = (1 << 0);
+constexpr uint32_t MAPOPT_MODIFYALLYPRIORITIES = (1 << 1);
+constexpr uint32_t MAPOPT_MELEE = (1 << 2); // the bot cares about this one...
+constexpr uint32_t MAPOPT_REVEALTERRAIN = (1 << 4);
+constexpr uint32_t MAPOPT_FIXEDPLAYERSETTINGS = (1 << 5); // and this one...
+constexpr uint32_t MAPOPT_CUSTOMFORCES = (1 << 6);        // and this one, the rest don't affect the bot's logic
+constexpr uint32_t MAPOPT_CUSTOMTECHTREE = (1 << 7);
+constexpr uint32_t MAPOPT_CUSTOMABILITIES = (1 << 8);
+constexpr uint32_t MAPOPT_CUSTOMUPGRADES = (1 << 9);
+constexpr uint32_t MAPOPT_WATERWAVESONCLIFFSHORES = (1 << 11);
+constexpr uint32_t MAPOPT_HASTERRAINFOG = (1 << 12);
+constexpr uint32_t MAPOPT_REQUIRESEXPANSION = (1 << 13);
+constexpr uint32_t MAPOPT_ITEMCLASSIFICATION = (1 << 14);
+constexpr uint32_t MAPOPT_WATERTINTING = (1 << 15);
+constexpr uint32_t MAPOPT_ACCURATERANDOM = (1 << 16);
+constexpr uint32_t MAPOPT_ABILITYSKINS = (1 << 17);
 
 constexpr uint8_t MAPFILTER_MAKER_USER = 1;
 constexpr uint8_t MAPFILTER_MAKER_BLIZZARD = 2;
@@ -130,21 +130,21 @@ constexpr uint8_t MAPFILTER_OBS_FULL = 1;
 constexpr uint8_t MAPFILTER_OBS_ONDEATH = 2;
 constexpr uint8_t MAPFILTER_OBS_NONE = 4;
 
-#define MAPGAMETYPE_UNKNOWN0 (1) // always set except for saved games?
-#define MAPGAMETYPE_BLIZZARD (1 << 3)
-#define MAPGAMETYPE_MELEE (1 << 5)
-#define MAPGAMETYPE_SAVEDGAME (1 << 9)
-#define MAPGAMETYPE_PRIVATEGAME (1 << 11)
-#define MAPGAMETYPE_MAKERUSER (1 << 13)
-#define MAPGAMETYPE_MAKERBLIZZARD (1 << 14)
-#define MAPGAMETYPE_TYPEMELEE (1 << 15)
-#define MAPGAMETYPE_TYPESCENARIO (1 << 16)
-#define MAPGAMETYPE_SIZESMALL (1 << 17)
-#define MAPGAMETYPE_SIZEMEDIUM (1 << 18)
-#define MAPGAMETYPE_SIZELARGE (1 << 19)
-#define MAPGAMETYPE_OBSFULL (1 << 20)
-#define MAPGAMETYPE_OBSONDEATH (1 << 21)
-#define MAPGAMETYPE_OBSNONE (1 << 22)
+constexpr uint32_t MAPGAMETYPE_UNKNOWN0 = (1); // always set except for saved games?
+constexpr uint32_t MAPGAMETYPE_BLIZZARD = (1 << 3);
+constexpr uint32_t MAPGAMETYPE_MELEE = (1 << 5);
+constexpr uint32_t MAPGAMETYPE_SAVEDGAME = (1 << 9);
+constexpr uint32_t MAPGAMETYPE_PRIVATEGAME = (1 << 11);
+constexpr uint32_t MAPGAMETYPE_MAKERUSER = (1 << 13);
+constexpr uint32_t MAPGAMETYPE_MAKERBLIZZARD = (1 << 14);
+constexpr uint32_t MAPGAMETYPE_TYPEMELEE = (1 << 15);
+constexpr uint32_t MAPGAMETYPE_TYPESCENARIO = (1 << 16);
+constexpr uint32_t MAPGAMETYPE_SIZESMALL = (1 << 17);
+constexpr uint32_t MAPGAMETYPE_SIZEMEDIUM = (1 << 18);
+constexpr uint32_t MAPGAMETYPE_SIZELARGE = (1 << 19);
+constexpr uint32_t MAPGAMETYPE_OBSFULL = (1 << 20);
+constexpr uint32_t MAPGAMETYPE_OBSONDEATH = (1 << 21);
+constexpr uint32_t MAPGAMETYPE_OBSNONE = (1 << 22);
 
 constexpr uint8_t MAPLAYOUT_ANY = 0u;
 constexpr uint8_t MAPLAYOUT_CUSTOM_FORCES = 1u;
@@ -219,38 +219,38 @@ constexpr uint8_t CUSTOM_LAYOUT_ISOPLAYERS = 32u;
 
 constexpr uint16_t REFRESH_PERIOD_MIN_SUGGESTED = 30;
 constexpr uint16_t REFRESH_PERIOD_MAX_SUGGESTED = 300;
-#define GAME_BANNABLE_MAX_HISTORY_SIZE 32
+constexpr uint8_t GAME_BANNABLE_MAX_HISTORY_SIZE = 32;
 
-#define GAME_PAUSES_PER_PLAYER 3u
-#define GAME_SAVES_PER_PLAYER 1u
-#define GAME_SAVES_PER_REFEREE_ANTIABUSE 3u
-#define GAME_SAVES_PER_REFEREE_DEFAULT 255u
+constexpr uint8_t GAME_PAUSES_PER_PLAYER = 3u;
+constexpr uint8_t GAME_SAVES_PER_PLAYER = 1u;
+constexpr uint8_t GAME_SAVES_PER_REFEREE_ANTIABUSE = 3u;
+constexpr uint8_t GAME_SAVES_PER_REFEREE_DEFAULT = 255u;
 
-#define GAME_ONGOING 0u
-#define GAME_OVER_TRUSTED 1u
-#define GAME_OVER_MMD 2u
+constexpr uint8_t GAME_ONGOING = 0u;
+constexpr uint8_t GAME_OVER_TRUSTED = 1u;
+constexpr uint8_t GAME_OVER_MMD = 2u;
 
-#define HIDDEN_PLAYERS_NONE 0u
-#define HIDDEN_PLAYERS_LOBBY 1u
-#define HIDDEN_PLAYERS_GAME 2u
-#define HIDDEN_PLAYERS_ALL 3u
+constexpr uint8_t HIDDEN_PLAYERS_NONE = 0u;
+constexpr uint8_t HIDDEN_PLAYERS_LOBBY = 1u
+constexpr uint8_t HIDDEN_PLAYERS_GAME = 2u;
+constexpr uint8_t HIDDEN_PLAYERS_ALL = 3u;
 
-#define HIGH_PING_KICK_DELAY 10000u
-#define MAX_SCOPE_BANS 100u
-#define REALM_HOST_COOLDOWN_TICKS 30000u
-#define AUTO_REHOST_COOLDOWN_TICKS 180000u
+constexpr int64_t HIGH_PING_KICK_DELAY = 10000;
+constexpr uint8_t MAX_SCOPE_BANS = 100u;
+constexpr int64_t REALM_HOST_COOLDOWN_TICKS = 30000;
+constexpr int64_t AUTO_REHOST_COOLDOWN_TICKS = 180000;
 
-#define ON_SEND_ACTIONS_NONE 0u
-#define ON_SEND_ACTIONS_PAUSE 1u
-#define ON_SEND_ACTIONS_RESUME 2u
+constexpr uint8_t ON_SEND_ACTIONS_NONE = 0u;
+constexpr uint8_t ON_SEND_ACTIONS_PAUSE = 1u;
+constexpr uint8_t ON_SEND_ACTIONS_RESUME = 2u;
 
-#define PING_EQUALIZER_PERIOD_TICKS 10000u
-#define PING_EQUALIZER_DEFAULT_FRAMES 7u
+constexpr int64_t PING_EQUALIZER_PERIOD_TICKS = 10000;
+constexpr uint8_t PING_EQUALIZER_DEFAULT_FRAMES = 7u;
 
 // 10 players x 150 APM x (1 min / 60000 ms) x (100 ms latency) = 2.5
-#define DEFAULT_ACTIONS_PER_FRAME 3u
+constexpr size_t DEFAULT_ACTIONS_PER_FRAME = 3u;
 
-#define SYNCHRONIZATION_CHECK_MIN_FRAMES 5u
+constexpr uint8_t SYNCHRONIZATION_CHECK_MIN_FRAMES = 5u;
 
 constexpr uint8_t BUFFERING_ENABLED_NONE = 0u;
 constexpr uint8_t BUFFERING_ENABLED_PLAYING = 1u;
@@ -343,25 +343,25 @@ constexpr uint8_t INCON_TYPE_OBSERVER = 5u;
 
 // game_user.h
 
-#define CONSISTENT_PINGS_COUNT 3u
-#define MAXIMUM_PINGS_COUNT 6u
-#define MAX_PING_WEIGHT 4u
+constexpr uint8_t CONSISTENT_PINGS_COUNT = 3u;
+constexpr uint8_t MAXIMUM_PINGS_COUNT = 6u;
+constexpr uint32_t MAX_PING_WEIGHT = 4u;
 
-#define SMART_COMMAND_NONE 0u
-#define SMART_COMMAND_GO 1u
+constexpr uint8_t SMART_COMMAND_NONE = 0u;
+constexpr uint8_t SMART_COMMAND_GO = 1u;
 
-#define GAME_USER_UNVERIFIED_KICK_TICKS 60000u
-#define AUTO_REALM_VERIFY_LATENCY 5000u
-#define CHECK_STATUS_LATENCY 5000u
-#define READY_REMINDER_PERIOD 20000u
+constexpr int64_t GAME_USER_UNVERIFIED_KICK_TICKS = 60000;
+constexpr int64_t AUTO_REALM_VERIFY_LATENCY = 5000;
+constexpr int64_t CHECK_STATUS_LATENCY = 5000;
+constexpr int64_t READY_REMINDER_PERIOD = 20000;
 
-#define SYSTEM_RTT_POLLING_PERIOD 10000u
+constexpr int64_t SYSTEM_RTT_POLLING_PERIOD = 10000;
 
-#define USERSTATUS_LOBBY 0u
-#define USERSTATUS_LOADING_SCREEN 1u
-#define USERSTATUS_PLAYING 2u
-#define USERSTATUS_ENDING 3u
-#define USERSTATUS_ENDED 4u
+constexpr uint8_t USERSTATUS_LOBBY = 0u;
+constexpr uint8_t USERSTATUS_LOADING_SCREEN = 1u;
+constexpr uint8_t USERSTATUS_PLAYING = 2u;
+constexpr uint8_t USERSTATUS_ENDING = 3u;
+constexpr uint8_t USERSTATUS_ENDED = 4u;
 
 // game_async_observer.h
 
@@ -374,23 +374,23 @@ constexpr uint8_t ASYNC_OBSERVER_PROMOTED = 2u;
 
 // game_setup.h
 
-#define SEARCH_TYPE_ONLY_MAP 1
-#define SEARCH_TYPE_ONLY_CONFIG 2
-#define SEARCH_TYPE_ONLY_FILE 3
-#define SEARCH_TYPE_ANY 7
+constexpr uint8_t SEARCH_TYPE_ONLY_MAP = 1;
+constexpr uint8_t SEARCH_TYPE_ONLY_CONFIG = 2;
+constexpr uint8_t SEARCH_TYPE_ONLY_FILE = 3;
+constexpr uint8_t SEARCH_TYPE_ANY = 7;
 
-#define MATCH_TYPE_NONE 0u
-#define MATCH_TYPE_MAP 1u
-#define MATCH_TYPE_CONFIG 2u
-#define MATCH_TYPE_INVALID 4u
-#define MATCH_TYPE_FORBIDDEN 8u
+constexpr uint8_t MATCH_TYPE_NONE = 0u;
+constexpr uint8_t MATCH_TYPE_MAP = 1u;
+constexpr uint8_t MATCH_TYPE_CONFIG = 2u;
+constexpr uint8_t MATCH_TYPE_INVALID = 4u;
+constexpr uint8_t MATCH_TYPE_FORBIDDEN = 8u;
 
-#define RESOLUTION_OK 0
-#define RESOLUTION_ERR 1
-#define RESOLUTION_BAD_NAME 2
+constexpr uint8_t RESOLUTION_OK = 0;
+constexpr uint8_t RESOLUTION_ERR = 1;
+constexpr uint8_t RESOLUTION_BAD_NAME = 2;
 
-#define SETUP_USE_STANDARD_PATHS true
-#define SETUP_PROTECT_ARBITRARY_TRAVERSAL false
+constexpr bool SETUP_USE_STANDARD_PATHS = true;
+constexpr bool SETUP_PROTECT_ARBITRARY_TRAVERSAL = false;
 
 #ifdef _WIN32
 #define FILE_EXTENSIONS_MAP {L".w3x", L".w3m"}
@@ -400,27 +400,24 @@ constexpr uint8_t ASYNC_OBSERVER_PROMOTED = 2u;
 #define FILE_EXTENSIONS_CONFIG {".ini"}
 #endif
 
-#define GAMESETUP_STEP_MAIN 0
-#define GAMESETUP_STEP_RESOLUTION 1
-#define GAMESETUP_STEP_SUGGESTIONS 2
-#define GAMESETUP_STEP_DOWNLOAD 3
+constexpr uint8_t GAMESETUP_STEP_MAIN = 0;
+constexpr uint8_t GAMESETUP_STEP_RESOLUTION = 1;
+constexpr uint8_t GAMESETUP_STEP_SUGGESTIONS = 2;
+constexpr uint8_t GAMESETUP_STEP_DOWNLOAD = 3;
 
-#define MAP_ONREADY_SET_ACTIVE 1
-#define MAP_ONREADY_HOST 2
-#define MAP_ONREADY_ALIAS 3
+constexpr uint8_t MAP_ONREADY_SET_ACTIVE = 1;
+constexpr uint8_t MAP_ONREADY_HOST = 2;
+constexpr uint8_t MAP_ONREADY_ALIAS = 3;
 
-#define SUGGESTIONS_TIMEOUT 3000u
-#define GAMESETUP_STALE_TICKS 180000u
+constexpr int64_t SUGGESTIONS_TIMEOUT = 3000;
+constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
 
 // game_protocol.h
 
-#define GAME_NONE 0 // this case isn't part of the protocol, it's for internal use only
-#define GAME_FULL 2
-#define GAME_PUBLIC 16
-#define GAME_PRIVATE 17
-
-#define GAMETYPE_CUSTOM 1
-#define GAMETYPE_BLIZZARD 9
+constexpr uint8_t GAME_NONE = 0; // this case isn't part of the protocol, it's for internal use only
+constexpr uint8_t GAME_FULL = 2;
+constexpr uint8_t GAME_PUBLIC = 16;
+constexpr uint8_t GAME_PRIVATE = 17;
 
 constexpr uint8_t PLAYERLEAVE_DISCONNECT = 1u;
 constexpr uint8_t PLAYERLEAVE_LOST = 7u;
@@ -451,7 +448,7 @@ constexpr uint32_t ALLIANCE_SETTINGS_SHARED_CONTROL = 0x40u;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY = ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_VICTORY = 0x400u;
 
-#define MAX_PLAYER_NAME_SIZE 15
+constexpr size_t MAX_PLAYER_NAME_SIZE = 15;
 
 constexpr uint8_t CHAT_RECV_ALL = 0;
 constexpr uint8_t CHAT_RECV_ALLY = 1;
@@ -474,34 +471,34 @@ constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_ANY = VIRTUAL_USER_ALLOW_CONNEC
 
 // chat.h
 
-#define FROM_GAME (1 << 0)
-#define FROM_BNET (1 << 1)
-#define FROM_IRC (1 << 2)
-#define FROM_DISCORD (1 << 3)
-#define FROM_OTHER (1 << 7)
+constexpr uint8_t FROM_GAME = (1 << 0);
+constexpr uint8_t FROM_BNET = (1 << 1);
+constexpr uint8_t FROM_IRC = (1 << 2);
+constexpr uint8_t FROM_DISCORD = (1 << 3);
+constexpr uint8_t FROM_OTHER = (1 << 7);
 
-#define CHAT_SEND_SOURCE_ALL (1 << 0)
-#define CHAT_SEND_TARGET_ALL (1 << 1)
-#define CHAT_LOG_INCIDENT (1 << 2)
-#define CHAT_TYPE_INFO (1 << 3)
-#define CHAT_TYPE_DONE (1 << 4)
-#define CHAT_TYPE_ERROR (1 << 5)
-#define CHAT_WRITE_TARGETS (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT)
-#define CHAT_RESPONSE_TYPES (CHAT_TYPE_INFO | CHAT_TYPE_DONE | CHAT_TYPE_ERROR)
+constexpr uint8_t CHAT_SEND_SOURCE_ALL = (1 << 0);
+constexpr uint8_t CHAT_SEND_TARGET_ALL = (1 << 1);
+constexpr uint8_t CHAT_LOG_INCIDENT = (1 << 2);
+constexpr uint8_t CHAT_TYPE_INFO = (1 << 3);
+constexpr uint8_t CHAT_TYPE_DONE = (1 << 4);
+constexpr uint8_t CHAT_TYPE_ERROR = (1 << 5);
+constexpr uint8_t CHAT_WRITE_TARGETS = (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
+constexpr uint8_t CHAT_RESPONSE_TYPES = (CHAT_TYPE_INFO | CHAT_TYPE_DONE | CHAT_TYPE_ERROR);
 
-#define USER_PERMISSIONS_GAME_PLAYER (1 << 0)
-#define USER_PERMISSIONS_GAME_OWNER (1 << 1)
-#define USER_PERMISSIONS_CHANNEL_VERIFIED (1 << 2)
-#define USER_PERMISSIONS_CHANNEL_ADMIN (1 << 3)
-#define USER_PERMISSIONS_CHANNEL_ROOTADMIN (1 << 4)
-#define USER_PERMISSIONS_BOT_SUDO_SPOOFABLE (1 << 6)
-#define USER_PERMISSIONS_BOT_SUDO_OK (1 << 7)
+constexpr uint16_t USER_PERMISSIONS_GAME_PLAYER = (1 << 0);
+constexpr uint16_t USER_PERMISSIONS_GAME_OWNER = (1 << 1);
+constexpr uint16_t USER_PERMISSIONS_CHANNEL_VERIFIED = (1 << 2);
+constexpr uint16_t USER_PERMISSIONS_CHANNEL_ADMIN = (1 << 3);
+constexpr uint16_t USER_PERMISSIONS_CHANNEL_ROOTADMIN = (1 << 4);
+constexpr uint16_t USER_PERMISSIONS_BOT_SUDO_SPOOFABLE = (1 << 6);
+constexpr uint16_t USER_PERMISSIONS_BOT_SUDO_OK = (1 << 7);
 
-#define SET_USER_PERMISSIONS_ALL (0xFFFF)
+constexpr uint16_t SET_USER_PERMISSIONS_ALL = (0xFFFF);
 
-#define COMMAND_TOKEN_MATCH_NONE 0
-#define COMMAND_TOKEN_MATCH_PRIVATE 1
-#define COMMAND_TOKEN_MATCH_BROADCAST 2
+constexpr uint8_t COMMAND_TOKEN_MATCH_NONE = 0;
+constexpr uint8_t COMMAND_TOKEN_MATCH_PRIVATE = 1;
+constexpr uint8_t COMMAND_TOKEN_MATCH_BROADCAST = 2;
 
 // config_bot.h
 constexpr uint8_t LOG_GAME_CHAT_NEVER = 0u;
@@ -618,70 +615,67 @@ constexpr uint8_t MAX_GAME_VERSION_OVERRIDES = 24;
 
 // config_discord.h
 
-#define FILTER_ALLOW_ALL 0
-#define FILTER_DENY_ALL 1
-#define FILTER_ALLOW_LIST 2
-#define FILTER_DENY_LIST 3
+constexpr uint8_t FILTER_ALLOW_ALL = 0;
+constexpr uint8_t FILTER_DENY_ALL = 1;
+constexpr uint8_t FILTER_ALLOW_LIST = 2;
+constexpr uint8_t FILTER_DENY_LIST = 3;
 
 // config_commands.h
 
-#define REALM_AUTH_PVPGN 0
-#define REALM_AUTH_BATTLENET 1
+constexpr uint8_t COMMAND_PERMISSIONS_DISABLED = 0;
+constexpr uint8_t COMMAND_PERMISSIONS_SUDO = 1;
+constexpr uint8_t COMMAND_PERMISSIONS_SUDO_UNSAFE = 2;
+constexpr uint8_t COMMAND_PERMISSIONS_ROOTADMIN = 3;
+constexpr uint8_t COMMAND_PERMISSIONS_ADMIN = 4;
+constexpr uint8_t COMMAND_PERMISSIONS_VERIFIED_OWNER = 5;
+constexpr uint8_t COMMAND_PERMISSIONS_OWNER = 6;
+constexpr uint8_t COMMAND_PERMISSIONS_VERIFIED = 7;
+constexpr uint8_t COMMAND_PERMISSIONS_AUTO = 8;
+constexpr uint8_t COMMAND_PERMISSIONS_POTENTIAL_OWNER = 9;
+constexpr uint8_t COMMAND_PERMISSIONS_START_GAME = 10;
+constexpr uint8_t COMMAND_PERMISSIONS_UNVERIFIED = 11;
 
-#define COMMAND_PERMISSIONS_DISABLED 0
-#define COMMAND_PERMISSIONS_SUDO 1
-#define COMMAND_PERMISSIONS_SUDO_UNSAFE 2
-#define COMMAND_PERMISSIONS_ROOTADMIN 3
-#define COMMAND_PERMISSIONS_ADMIN 4
-#define COMMAND_PERMISSIONS_VERIFIED_OWNER 5
-#define COMMAND_PERMISSIONS_OWNER 6
-#define COMMAND_PERMISSIONS_VERIFIED 7
-#define COMMAND_PERMISSIONS_AUTO 8
-#define COMMAND_PERMISSIONS_POTENTIAL_OWNER 9
-#define COMMAND_PERMISSIONS_START_GAME 10
-#define COMMAND_PERMISSIONS_UNVERIFIED 11
-
-#define COMMANDS_ALLOWED_NONE 0
-#define COMMANDS_ALLOWED_UNVERIFIED 1
-#define COMMANDS_ALLOWED_VERIFIED 2
+constexpr uint8_t COMMANDS_ALLOWED_NONE = 0;
+constexpr uint8_t COMMANDS_ALLOWED_UNVERIFIED = 1;
+constexpr uint8_t COMMANDS_ALLOWED_VERIFIED = 2;
 
 // net.h
 
-#define HEALTH_STANDBY 0
-#define HEALTH_PROGRESS 1
-#define HEALTH_OKAY 2
-#define HEALTH_ERROR 3
+constexpr uint8_t HEALTH_STANDBY = 0;
+constexpr uint8_t HEALTH_PROGRESS = 1;
+constexpr uint8_t HEALTH_OKAY = 2;
+constexpr uint8_t HEALTH_ERROR = 3;
 
-#define CONNECTION_TYPE_DEFAULT 0
-#define CONNECTION_TYPE_LOOPBACK (1 << 0)
-#define CONNECTION_TYPE_CUSTOM_PORT (1 << 1)
-#define CONNECTION_TYPE_CUSTOM_IP_ADDRESS (1 << 2)
-#define CONNECTION_TYPE_VPN (1 << 3)
-#define CONNECTION_TYPE_IPV6 (1 << 4)
+constexpr uint8_t CONNECTION_TYPE_DEFAULT = 0;
+constexpr uint8_t CONNECTION_TYPE_LOOPBACK = (1 << 0);
+constexpr uint8_t CONNECTION_TYPE_CUSTOM_PORT = (1 << 1);
+constexpr uint8_t CONNECTION_TYPE_CUSTOM_IP_ADDRESS = (1 << 2);
+constexpr uint8_t CONNECTION_TYPE_VPN = (1 << 3);
+constexpr uint8_t CONNECTION_TYPE_IPV6 = (1 << 4);
 
-#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE 0
-#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL 1
-#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_API 2
-#define NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID 3
+constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE = 0;
+constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL = 1;
+constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_API = 2;
+constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID = 3;
 
-#define ACCEPT_IPV4 (1 << 0)
-#define ACCEPT_IPV6 (1 << 1)
-#define ACCEPT_ANY (ACCEPT_IPV4 | ACCEPT_IPV6)
+constexpr uint8_t ACCEPT_IPV4 = (1 << 0);
+constexpr uint8_t ACCEPT_IPV6 = (1 << 1);
+constexpr uint8_t ACCEPT_ANY = (ACCEPT_IPV4 | ACCEPT_IPV6);
 
-#define HEALTH_CHECK_PUBLIC_IPV4 (1 << 0)
-#define HEALTH_CHECK_PUBLIC_IPV6 (1 << 1)
-#define HEALTH_CHECK_LOOPBACK_IPV4 (1 << 2)
-#define HEALTH_CHECK_LOOPBACK_IPV6 (1 << 3)
-#define HEALTH_CHECK_REALM (1 << 4)
-#define HEALTH_CHECK_ALL (HEALTH_CHECK_PUBLIC_IPV4 | HEALTH_CHECK_PUBLIC_IPV6 | HEALTH_CHECK_LOOPBACK_IPV4 | HEALTH_CHECK_LOOPBACK_IPV6 | HEALTH_CHECK_REALM)
-#define HEALTH_CHECK_VERBOSE (1 << 5)
+constexpr uint8_t HEALTH_CHECK_PUBLIC_IPV4 = (1 << 0);
+constexpr uint8_t HEALTH_CHECK_PUBLIC_IPV6 = (1 << 1);
+constexpr uint8_t HEALTH_CHECK_LOOPBACK_IPV4 = (1 << 2);
+constexpr uint8_t HEALTH_CHECK_LOOPBACK_IPV6 = (1 << 3);
+constexpr uint8_t HEALTH_CHECK_REALM = (1 << 4);
+constexpr uint8_t HEALTH_CHECK_ALL = (HEALTH_CHECK_PUBLIC_IPV4 | HEALTH_CHECK_PUBLIC_IPV6 | HEALTH_CHECK_LOOPBACK_IPV4 | HEALTH_CHECK_LOOPBACK_IPV6 | HEALTH_CHECK_REALM);
+constexpr uint8_t HEALTH_CHECK_VERBOSE = (1 << 5);
 
-#define GAME_TEST_TIMEOUT 3000
-#define IP_ADDRESS_API_TIMEOUT 3000
+constexpr int64_t GAME_TEST_TIMEOUT = 3000;
+constexpr int64_t IP_ADDRESS_API_TIMEOUT = 3000;
 
-#define RECONNECT_DISABLED 0
-#define RECONNECT_ENABLED_GPROXY_BASIC 1
-#define RECONNECT_ENABLED_GPROXY_EXTENDED 2
+constexpr uint8_t RECONNECT_DISABLED = 0;
+constexpr uint8_t RECONNECT_ENABLED_GPROXY_BASIC = 1;
+constexpr uint8_t RECONNECT_ENABLED_GPROXY_EXTENDED = 2;
 
 constexpr size_t MAX_INCOMING_CONNECTIONS = 255;
 constexpr float GAME_USER_CONNECTION_MAX_TIMEOUT = 5000.;
@@ -689,11 +683,11 @@ constexpr float GAME_USER_CONNECTION_MIN_TIMEOUT = 500.;
 constexpr float GAME_USER_TIMEOUT_VANILLA = 70000.;
 constexpr float GAME_USER_TIMEOUT_RECONNECTABLE = 20000.;
 
-#define GAME_DEFAULT_UDP_PORT 6112u
-#define UDP_DISCOVERY_MAX_EXTRA_ADDRESSES 30u
+constexpr uint16_t GAME_DEFAULT_UDP_PORT = 6112u;
+constexpr uint8_t UDP_DISCOVERY_MAX_EXTRA_ADDRESSES = 30u;
 
-#define NET_PROTOCOL_TCP 0u
-#define NET_PROTOCOL_UDP 1u
+constexpr uint8_t NET_PROTOCOL_TCP = 0u;
+constexpr uint8_t NET_PROTOCOL_UDP = 1u;
 
 // Exponential backoff starts at twice this value (45x2=90 seconds)
 constexpr int64_t NET_BASE_RECONNECT_DELAY = 45;
@@ -745,36 +739,36 @@ constexpr uint8_t DOTA_WINNER_SCOURGE = 2u;
 
 // w3mmd.h
 
-#define MMD_ACTION_TYPE_VAR 0u
-#define MMD_ACTION_TYPE_FLAG 1u
-#define MMD_ACTION_TYPE_EVENT 2u
-#define MMD_ACTION_TYPE_BLANK 3u
-#define MMD_ACTION_TYPE_CUSTOM 4u
+constexpr uint8_t MMD_ACTION_TYPE_VAR = 0u;
+constexpr uint8_t MMD_ACTION_TYPE_FLAG = 1u;
+constexpr uint8_t MMD_ACTION_TYPE_EVENT = 2u;
+constexpr uint8_t MMD_ACTION_TYPE_BLANK = 3u;
+constexpr uint8_t MMD_ACTION_TYPE_CUSTOM = 4u;
 
-#define MMD_DEFINITION_TYPE_INIT 0u
-#define MMD_DEFINITION_TYPE_VAR 1u
-#define MMD_DEFINITION_TYPE_EVENT 2u
+constexpr uint8_t MMD_DEFINITION_TYPE_INIT = 0u;
+constexpr uint8_t MMD_DEFINITION_TYPE_VAR = 1u;
+constexpr uint8_t MMD_DEFINITION_TYPE_EVENT = 2u;
 
-#define MMD_INIT_TYPE_VERSION 0u
-#define MMD_INIT_TYPE_PLAYER 1u
+constexpr uint8_t MMD_INIT_TYPE_VERSION = 0u;
+constexpr uint8_t MMD_INIT_TYPE_PLAYER = 1u;
 
-#define MMD_VALUE_TYPE_INT 0u
-#define MMD_VALUE_TYPE_REAL 1u
-#define MMD_VALUE_TYPE_STRING 2u
+constexpr uint8_t MMD_VALUE_TYPE_INT = 0u;
+constexpr uint8_t MMD_VALUE_TYPE_REAL = 1u;
+constexpr uint8_t MMD_VALUE_TYPE_STRING = 2u;
 
-#define MMD_OPERATOR_SET 0u
-#define MMD_OPERATOR_ADD 1u
-#define MMD_OPERATOR_SUBTRACT 2u
+constexpr uint8_t MMD_OPERATOR_SET = 0u;
+constexpr uint8_t MMD_OPERATOR_ADD = 1u;
+constexpr uint8_t MMD_OPERATOR_SUBTRACT = 2u;
 
-#define MMD_FLAG_LOSER 0u
-#define MMD_FLAG_DRAWER 1u
-#define MMD_FLAG_WINNER 2u
-#define MMD_FLAG_LEAVER 3u
-#define MMD_FLAG_PRACTICE 4u
+constexpr uint8_t MMD_FLAG_LOSER = 0u;
+constexpr uint8_t MMD_FLAG_DRAWER = 1u;
+constexpr uint8_t MMD_FLAG_WINNER = 2u;
+constexpr uint8_t MMD_FLAG_LEAVER = 3u;
+constexpr uint8_t MMD_FLAG_PRACTICE = 4u;
 
-#define MMD_PROCESSING_INITIAL_DELAY 60000
-#define MMD_PROCESSING_STREAM_DEF_DELAY 60000
-#define MMD_PROCESSING_STREAM_ACTION_DELAY 180000
+constexpr int64_t MMD_PROCESSING_INITIAL_DELAY = 60000;
+constexpr int64_t MMD_PROCESSING_STREAM_DEF_DELAY = 60000;
+constexpr int64_t MMD_PROCESSING_STREAM_ACTION_DELAY = 180000;
 
 constexpr uint32_t MMD_MAX_ARITY = 64u;
 
