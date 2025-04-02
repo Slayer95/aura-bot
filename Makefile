@@ -21,12 +21,6 @@ ifeq ($(AURASTATIC),1)
   LFLAGS += -static
 endif
 
-ifeq ($(AURALINKPJASS),0)
-  CXXFLAGS += -DDISABLE_PJASS
-else
-  LFLAGS += -lpjass
-endif
-
 ifeq ($(AURALINKMINIUPNP),0)
   CXXFLAGS += -DDISABLE_MINIUPNP
 else
