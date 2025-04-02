@@ -338,9 +338,6 @@ void CGame::Reset()
 
   ClearActions();
 
-  if (m_CustomStats) m_CustomStats->FlushQueue();
-  else if (m_DotaStats) m_DotaStats->FlushQueue();
-
   if (m_GameLoaded && RunGameResults()) {
     LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
   }
@@ -356,11 +353,7 @@ void CGame::Reset()
 
   ClearBannableUsers();
 
-  delete m_CustomStats;
-  m_CustomStats = nullptr;
-
-  delete m_DotaStats;
-  m_DotaStats = nullptr;
+  DestroyStats();
 
   for (const auto& ptr : m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
@@ -380,6 +373,37 @@ void CGame::Reset()
   }
 
   m_Aura->m_Net.OnGameReset(this);
+}
+
+bool CGame::QueueStatsAction(const CIncomingAction& action)
+{
+  if (m_CustomStats) {
+    if (!m_CustomStats->RecvAction(action.GetUID(), action)) {
+      DestroyStats();
+    }
+  } else if (m_DotaStats) {
+    if (!m_DotaStats->RecvAction(action.GetUID(), action)) {
+      DestroyStats();
+    }
+  }
+  return true;
+}
+
+bool CGame::UpdateStatsQueue() const
+{
+  // return false if game over was detected
+  if (m_CustomStats) {
+    return m_CustomStats->UpdateQueue();
+  } else if (m_DotaStats) {
+    return m_DotaStats->UpdateQueue();
+  }
+  return true;
+}
+
+void CGame::FlushStatsQueue() const
+{
+  if (m_CustomStats) m_CustomStats->FlushQueue();
+  else if (m_DotaStats) m_DotaStats->FlushQueue();
 }
 
 void CGame::TrySaveStats() const
@@ -409,6 +433,16 @@ void CGame::TrySaveStats() const
 
   if (m_DotaStats) {
     m_Aura->m_DB->SaveDotAStats(m_DotaStats);
+  }
+}
+
+void CGame::DestroyStats() {
+  if (m_CustomStats) {
+    delete m_CustomStats;
+    m_CustomStats = nullptr;
+  } else if (m_DotaStats) {
+    delete m_DotaStats;
+    m_DotaStats = nullptr;
   }
 }
 
@@ -980,10 +1014,8 @@ string CGame::GetEndDescription() const
      return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + m_GameName + "\"";
 
   string winnersFragment;
-  if (m_CustomStats) m_CustomStats->FlushQueue();
-  else if (m_DotaStats) m_DotaStats->FlushQueue();
 
-  if (m_GameResults.has_value()) {
+  if (RunGameResults()) {
     vector<string> winnerNames = m_GameResults->GetWinnersNames();
     if (winnerNames.size() > 2) {
       winnersFragment = "Winners: [" + winnerNames[0] + "], and others";
@@ -1533,8 +1565,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       return false;
     }
 
-    if (m_CustomStats) m_CustomStats->FlushQueue();
-    else if (m_DotaStats) m_DotaStats->FlushQueue();
+    FlushStatsQueue();
 
     if (m_Aura->GetNewGameIsInQuota()) {
       Remake();
@@ -1565,9 +1596,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // end the game if there aren't any users left
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
     if (!m_Exiting) {
-      if (m_CustomStats) m_CustomStats->FlushQueue();
-      else if (m_DotaStats) m_DotaStats->FlushQueue();
-
+      //FlushStatsQueue();
       LOG_APP_IF(LOG_LEVEL_INFO, "is over (no users left)")
       m_Exiting = true;
     }
@@ -1612,8 +1641,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   }
 
   if (Time - m_LastStatsUpdateTime >= 30) {
-    const bool mmdFinished = (m_CustomStats && !m_CustomStats->UpdateQueue()) || (m_DotaStats && !m_DotaStats->UpdateQueue());
-    if (mmdFinished && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
+    if (!UpdateStatsQueue() && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
       Log("gameover timer started (stats reported game over)");
       StartGameOverTimer(true);
     }
@@ -3427,13 +3455,7 @@ void CGame::SendAllActionsCallback()
       }
 
       if (action.GetLength() >= 6) {
-        if (m_CustomStats && !m_CustomStats->RecvAction(action.GetUID(), action)) {
-          delete m_CustomStats;
-          m_CustomStats = nullptr;
-        } else if (m_DotaStats && !m_DotaStats->RecvAction(action.GetUID(), action)) {
-          delete m_DotaStats;
-          m_DotaStats = nullptr;
-        }
+        QueueStatsAction(action);
       }
     }
   }
@@ -9994,6 +10016,9 @@ bool CGame::RunGameResults()
   if (m_GameResults.has_value()) return true;
 
   optional<GameResults> gameResults;
+
+  FlushStatsQueue();
+
   switch (GetGameResultSourceOfTruth()) {
     case GAME_RESULT_SOURCE_MMD: {
       if (m_CustomStats) {

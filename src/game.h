@@ -775,7 +775,12 @@ public:
   bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
   bool CheckGameResults(const GameResults& gameResults) const;
   void SetSelfReportedGameResultForPlayer(const uint8_t UID, const uint8_t gameResult) const;
+
+  bool QueueStatsAction(const CIncomingAction& action);
+  bool UpdateStatsQueue() const;
+  void FlushStatsQueue() const;
   void TrySaveStats() const;
+  void DestroyStats();
 
   void                      RunHCLEncoding();
   bool                      SendHMC(const std::string& message);
