@@ -3824,6 +3824,10 @@ void CGame::AnnounceDecreateToRealms()
       realm->ResetGameChatAnnouncement();
       realm->ResetGameBroadcastData();
     }
+
+    if (realm->GetGameBroadcastIsPending() == this) {
+      realm->ResetGameBroadcastPending();
+    }
   }
 }
 

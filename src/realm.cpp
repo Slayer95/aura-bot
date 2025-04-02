@@ -150,6 +150,8 @@ CRealm::~CRealm()
   if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
     m_Aura->m_GameSetup->RemoveCreator();
   }
+
+  m_Aura->m_Net.OnRealmDestroy(this);
 }
 
 uint32_t CRealm::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
@@ -1518,7 +1520,6 @@ void CRealm::QueueGameUncreate()
 void CRealm::ResetGameBroadcastData()
 {
   m_GameBroadcast = nullptr;
-  m_GameBroadcastPending = nullptr;
   ResetGameBroadcastStatus();
   QueueGameUncreate();
   SendEnterChat();

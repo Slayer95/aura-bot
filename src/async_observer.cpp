@@ -400,6 +400,13 @@ void CAsyncObserver::OnGameReset(const CGame* nGame)
   }
 }
 
+void CAsyncObserver::OnRealmDestroy(const CRealm* nRealm)
+{
+  if (m_FromRealm == nRealm) {
+    m_FromRealm = nullptr;
+  }
+}
+
 void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
 {
   if (!m_StateSynchronized) return;

@@ -120,6 +120,7 @@ public:
   inline void FlushGameFrames() { PushGameFrames(true); }
   void CheckGameOver();
   void OnGameReset(const CGame* nGame);
+  void OnRealmDestroy(const CRealm* nRealm);
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();
   void UpdateDownloadProgression(const uint8_t downloadProgression);

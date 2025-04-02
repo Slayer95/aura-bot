@@ -243,6 +243,10 @@ public:
 
   void ResolveGameBroadcastStatus(bool nResult) { m_GameBroadcastStatus = nResult; }
   void ResetGameBroadcastData();
+
+  inline void SetPendingBroadcast(CGame* nGame) { m_GameBroadcastPending = nGame; }
+  inline void ResetGameBroadcastPending() { m_GameBroadcastPending = nullptr; }
+
   void ResetConnection(bool hadError);
   void ResetGameChatAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
   void ResetGameBroadcastStatus() { m_GameBroadcastStatus = std::nullopt; }
@@ -264,10 +268,6 @@ public:
   void SetConfig(CRealmConfig* CFG);
 
   inline void SetHostCounter(const uint8_t nHostCounter) { m_PublicServerID = nHostCounter; }
-  inline void SetPendingBroadcast(CGame* nGame) {
-    m_GameBroadcast = nullptr;
-    m_GameBroadcastPending = nGame;
-  }
 
   private:
 };

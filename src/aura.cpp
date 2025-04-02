@@ -1383,8 +1383,7 @@ void CAura::EventGameDeleted(CGame* game)
     m_AutoReHosted = false;
   }
 
-  if (game->GetIsLobbyOrMirror()) {
-    Print("[AURA] deleting lobby [" + game->GetGameName() + "]");
+  if (game->GetIsStageAcceptingJoins()) {
     if (game->GetUDPEnabled()) {
       game->SendGameDiscoveryDecreate();
     }
@@ -1392,7 +1391,14 @@ void CAura::EventGameDeleted(CGame* game)
       if (realm->GetGameBroadcast() == game) {
         realm->ResetGameBroadcastData();
       }
+      if (realm->GetGameBroadcastPending() == game) {
+        realm->ResetGameBroadcastPending();
+      }
     }
+  }
+
+  if (game->GetIsLobbyOrMirror()) {
+    Print("[AURA] deleting lobby [" + game->GetGameName() + "]");
   } else {
     Print("[AURA] deleting game [" + game->GetGameName() + "]");
     if ((game->GetEffectiveTicks() / 1000) < 180) {

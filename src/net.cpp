@@ -1936,6 +1936,15 @@ void CNet::OnGameReset(const CGame* game)
   }
 }
 
+void CNet::OnRealmDestroy(const CRealm* realm)
+{
+  for (auto& serverConnections : m_GameObservers) {
+    for (auto& connection : serverConnections.second) {
+      connection->OnRealmDestroy(realm);
+    }
+  }
+}
+
 void CNet::GracefulExit()
 {
   ResetHealthCheck();

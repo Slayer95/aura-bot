@@ -209,6 +209,7 @@ public:
   void                                   OnUserKicked(GameUser::CGameUser* user, bool deferred = false);
   void                                   RegisterGameSeeker(CConnection* connection, uint8_t nType);
   void                                   OnGameReset(const CGame* nGame);
+  void                                   OnRealmDestroy(const CRealm* nRealm);
   void                                   GracefulExit();
   bool                                   CheckGracefulExit() const;
   bool                                   GetIsStandby() const;

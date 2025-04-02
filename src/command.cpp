@@ -4602,10 +4602,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         for (auto& bnet : m_Aura->m_Realms) {
           if (!m_TargetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
           bnet->ResetGameBroadcastData();
+          bnet->ResetGameBroadcastPending();
           bnet->QueueGameChatAnnouncement(m_TargetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
         }
       } else {
         targetRealm->ResetGameBroadcastData();
+        targetRealm->ResetGameBroadcastPending();
         targetRealm->QueueGameChatAnnouncement(m_TargetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
       }
       break;
