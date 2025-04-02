@@ -465,7 +465,7 @@ void CGame::ReleaseMapBusyTimedLock() const
 
   const bool deleteTooLarge = (
     m_Aura->m_Config.m_EnableDeleteOversizedMaps &&
-    (ByteArrayToUInt32(m_Map->GetMapSize(), false) > m_Aura->m_Config.m_MaxSavedMapSize * 1024) &&
+    (m_Map->GetMapSize() > m_Aura->m_Config.m_MaxSavedMapSize * 1024) &&
     // Ensure the mapcache ini file has been created before trying to delete from disk
     m_Aura->m_CFGCacheNamesByMapNames.find(m_Map->GetServerPath()) != m_Aura->m_CFGCacheNamesByMapNames.end()
   );
@@ -2835,6 +2835,38 @@ optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const
   return result;
 }
 
+Version CGame::GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const
+{
+  string lowerName = ToLowerCase(joinRequest->GetName());
+  auto versionErrors = m_VersionErrors.find(lowerName);
+  if (versionErrors == m_VersionErrors.end() || versionErrors->second.size() == m_SupportedGameVersions.count()) {
+    return GetVersion();
+  }
+
+  bool onlyRangeHeads = true;
+  for (uint8_t i = 0; i < 2; ++i) {
+    Version version = m_SupportedGameVersionsMin;
+    while (version != m_SupportedGameVersionsMax) {
+      // First check m_SupportedGameVersionsMin
+      // Afterwards, check range heads in ascending order
+      // Finally, check all remaining versions in ascending order
+      if (onlyRangeHeads && version != m_SupportedGameVersionsMin && GetScriptsVersionRangeHead(version) != version) {
+        version = GetNextVersion(version);
+        continue;
+      }
+      if (versionErrors->second.find(version) != versionErrors->second.end()) {
+        version = GetNextVersion(version);
+        continue;
+      }
+      return version;
+    }
+    onlyRangeHeads = false;
+  }
+
+  // If all versions failed, just use the default version
+  return GetVersion();
+}
+
 bool CGame::GetIsAutoStartDue() const
 {
   if (m_Users.empty() || m_CountDownStarted || m_AutoStartRequirements.empty()) {
@@ -3052,14 +3084,18 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
   }
 }
 
-void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version) const
+void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version, const string& name) const
 {
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
+  const uint32_t clampedMapSize = m_Map->GetMapSizeClamped(version);
+  if (clampedMapSize < m_Map->GetMapSize()) {
+    DLOG_APP_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedSize / (float)(1024. * 1024.)) + " MB")
+  }
   if (version >= GAMEVER(1u, 23u)) {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
   } else {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, m_Map->GetMapSize(), m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version)));
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version)));
   }
 }
 
@@ -3096,7 +3132,7 @@ uint8_t CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& ma
   // in addition to this, the throughput is limited by the configuration value bot_maxdownloadspeed
   // in summary: the actual throughput is MIN( 1.4 * 1000 / ping, 1400, bot_maxdownloadspeed ) in KB/sec assuming only one user is downloading the map
 
-  const uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  const uint32_t mapSize = m_Map->GetMapSize();
 
   if (mapTransfer.GetLastSentOffsetEnd() == 0 && (
       mapTransfer.GetLastSentOffsetEnd() < mapTransfer.GetLastAck() + 1442 * m_Aura->m_Net.m_Config.m_MaxParallelMapPackets &&
@@ -3532,9 +3568,9 @@ std::string CGame::GetAnnounceText(const CRealm* realm) const
   if (realm) {
     version = realm->GetGameVersion();
   }
-  uint32_t mapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  uint32_t mapSize = m_Map->GetMapSize();
   string versionPrefix;
-  if (mapSize > 0x20000000 || (version <= GAMEVER(1u, 28u) && mapSize > 0x8000000) || (version <= GAMEVER(1u, 26u) && mapSize > 0x800000) || (version <= GAMEVER(1u, 23u) && mapSize > 0x400000)) {
+  if (mapSize > 0x20000000 || (version <= GAMEVER(1u, 28u) && mapSize > MAX_MAP_SIZE_1_28) || (version <= GAMEVER(1u, 26u) && mapSize > MAX_MAP_SIZE_1_26) || (version <= GAMEVER(1u, 23u) && mapSize > MAX_MAP_SIZE_1_23)) {
     versionPrefix = "[" + ToVersionString(version) + ".UnlockMapSize] ";
   } else {
     versionPrefix = "[" + ToVersionString(version) + "] ";
@@ -4040,9 +4076,24 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
     }
     m_SyncPlayers.erase(user);
     m_HadLeaver = true;
-  } else if (!m_LobbyLoading && m_Config.m_LobbyOwnerReleaseLANLeaver) {
-    if (MatchOwnerName(user->GetName()) && m_OwnerRealm == user->GetRealmHostName() && user->GetRealmHostName().empty()) {
-      ReleaseOwner();
+  } else {
+    if (!user->GetMapChecked() && !user->GetGameVersionIsExact() && !m_Map->GetMapSizeIsNativeSupported(m_SupportedGameVersionsMin)) {
+      // Crossplay enabled, but the map size is too large for some supported versions.
+      // There's a chance the user left because they joined a default-1.27 lobby over LAN, but they are running 1.26.
+      // Interestingly enough, 1.27 clients have no problem joining a default-1.26 lobby
+      // They even send W3GS_MAPSIZE packets reporting 8 MB.
+      string lowerName = user->GetLowerName();
+      auto match = m_VersionErrors.find(lowerName);
+      if (match == m_VersionErrors.end()) {
+        m_VersionErrors[lowerName] = set<Version>{user->GetGameVersion()};
+      } else if (m_VersionErrors.size() < MAX_GAME_VERSION_ERROR_USERS_STORED) {
+        match->second.insert(move(user->GetGameVersion()));
+      }
+    }
+    if (!m_LobbyLoading && m_Config.m_LobbyOwnerReleaseLANLeaver) {
+      if (MatchOwnerName(user->GetName()) && m_OwnerRealm == user->GetRealmHostName() && user->GetRealmHostName().empty()) {
+        ReleaseOwner();
+      }
     }
   }
 
@@ -4741,7 +4792,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
     connection, 
     UID == 0xFF ? GetNewUID() : UID,
     gameVersion.has_value(),
-    gameVersion.value_or(GetVersion()),
+    gameVersion.value_or(GuessIncomingPlayerVersion(connection, joinRequest, matchingRealm)),
     internalRealmId,
     JoinedRealm,
     joinRequest->GetName(),
@@ -4784,7 +4835,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   SendJoinedPlayersInfo(Player);
 
   // send a map check packet to the new user.
-  SendMapAndVersionCheck(Player, gameVersion.value_or(GetVersion()));
+  SendMapAndVersionCheck(Player, Player->GetGameVersion(), Player->GetName());
 
   m_Users.push_back(Player);
 
@@ -4844,14 +4895,22 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   if (!m_JoinInProgressVirtualUser.has_value()) return;
   const optional<Version> gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
 
-  CAsyncObserver* observer = new CAsyncObserver(connection, this, fromRealm, m_JoinInProgressVirtualUser->GetUID(), joinRequest->GetName());
+  CAsyncObserver* observer = new CAsyncObserver(
+    this,
+    connection,
+    m_JoinInProgressVirtualUser->GetUID(),
+    gameVersion.has_value(),
+    gameVersion.value_or(GuessIncomingPlayerVersion(connection, joinRequest, fromRealm)),
+    fromRealm,
+    joinRequest->GetName()
+  );
   m_Aura->m_Net.m_GameObservers[connection->GetPort()].push_back(observer);
   connection->SetSocket(nullptr);
   connection->SetDeleteMe(true);
 
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFOJOIN(observer->GetUID(), observer->GetSocket()->GetPortLE(), observer->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
   observer->SendOtherPlayersInfo();
-  SendMapAndVersionCheck(observer, gameVersion.value_or(GetVersion()));
+  SendMapAndVersionCheck(observer, observer->GetGameVersion(), observer->GetName());
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   observer->SendChat("This game is in progress. You can join as an spectator.");
@@ -4864,12 +4923,14 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
 void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* clientMap)
 {
   int64_t Ticks = GetTicks();
-  const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+
+  user->SetMapChecked(true);
+  const uint32_t expectedMapSize = m_Map->GetMapSizeClamped(user->GetGameVersion());
   UpdateUserMapProgression(user, clientMap->GetFileSize(), expectedMapSize);
 
   if (clientMap->GetFlag() != 1 || clientMap->GetFileSize() != expectedMapSize) {
     // observer doesn't have the map
-    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(), false /* cannot start manual download for observers */);
+    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(), user->GetGameVersion(), false /* cannot start manual download for observers */);
     if (checkResult == MAP_TRANSFER_CHECK_ALLOWED) {
       MapTransfer& mapTransfer = user->GetMapTransfer();
       if (!mapTransfer.GetStarted() && clientMap->GetFlag() == 1) {
@@ -4903,7 +4964,10 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, CIncomingMapFileSize* cli
           case MAP_TRANSFER_CHECK_DISABLED:
             reason = "disabled";
             break;
-          case MAP_TRANSFER_CHECK_TOO_LARGE:
+          case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
+            LOG_APP_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
+            // falls through
+          case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
             reason = "too large";
             break;
           case MAP_TRANSFER_CHECK_BUFFERBLOAT:
@@ -5888,12 +5952,14 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* clientMap)
 {
   int64_t Ticks = GetTicks();
-  const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+
+  user->SetMapChecked(true);
+  const uint32_t expectedMapSize = m_Map->GetMapSizeClamped(user->GetGameVersion());
   UpdateUserMapProgression(user, clientMap->GetFileSize(), expectedMapSize);
 
   if (clientMap->GetFlag() != 1 || clientMap->GetFileSize() != expectedMapSize) {
     // user doesn't have the map
-    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(false), user->GetDownloadAllowed());
+    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(false), user->GetGameVersion(), user->GetDownloadAllowed());
     if (checkResult == MAP_TRANSFER_CHECK_ALLOWED) {
       MapTransfer& mapTransfer = user->GetMapTransfer();
       if (!mapTransfer.GetStarted() && clientMap->GetFlag() == 1) {
@@ -5927,7 +5993,10 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* cl
           case MAP_TRANSFER_CHECK_DISABLED:
             reason = "disabled";
             break;
-          case MAP_TRANSFER_CHECK_TOO_LARGE:
+          case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
+            LOG_APP_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
+            // falls through
+          case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
             reason = "too large";
             break;
           case MAP_TRANSFER_CHECK_BUFFERBLOAT:
@@ -6210,6 +6279,7 @@ void CGame::EventGameStartedLoading()
   }
 
   if (!m_Config.m_EnableJoinObserversInProgress && !m_Config.m_EnableJoinPlayersInProgress) {
+    m_VersionErrors.clear();
     if (GetUDPEnabled()) {
       SendGameDiscoveryDecreate();
     }
@@ -7547,7 +7617,7 @@ uint8_t CGame::GetHostUID() const
   }
 }
 
-uint8_t CGame::CheckCanTransferMap(const CConnection* /*connection*/, const CRealm* realm, const bool gotPermission)
+uint8_t CGame::CheckCanTransferMap(const CConnection* connection, const CRealm* realm, const Version& version, const bool gotPermission)
 {
   if (!m_Map->GetMapFileIsValid()) {
     return m_Map->HasMismatch() ? MAP_TRANSFER_CHECK_INVALID : MAP_TRANSFER_CHECK_MISSING;
@@ -7555,8 +7625,11 @@ uint8_t CGame::CheckCanTransferMap(const CConnection* /*connection*/, const CRea
   if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
     return MAP_TRANSFER_CHECK_DISABLED;
   }
+  if (!m_Map->GetMapSizeIsNativeSupported(version)) {
+    return MAP_TRANSFER_CHECK_TOO_LARGE_VERSION;
+  }
 
-  const uint32_t expectedMapSize = ByteArrayToUInt32(m_Map->GetMapSize(), false);
+  const uint32_t expectedMapSize = m_Map->GetMapSize();
   uint32_t maxTransferSize = m_Aura->m_Net.m_Config.m_MaxUploadSize;
   if (realm) {
     maxTransferSize = realm->GetMaxUploadSize();
@@ -7564,7 +7637,7 @@ uint8_t CGame::CheckCanTransferMap(const CConnection* /*connection*/, const CRea
   bool isTooLarge = expectedMapSize > maxTransferSize * 1024;
 
   if (!(gotPermission || (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !isTooLarge))) {
-    return m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC ? MAP_TRANSFER_CHECK_TOO_LARGE : MAP_TRANSFER_CHECK_DISABLED;
+    return m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC ? MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG : MAP_TRANSFER_CHECK_DISABLED;
   }
   if (m_Aura->m_Config.m_MaxStartedGames <= m_Aura->m_StartedGames.size()) {
     return MAP_TRANSFER_CHECK_BUFFERBLOAT;

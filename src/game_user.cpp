@@ -101,6 +101,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_PowerObserver(false),
     m_WhoisShouldBeSent(false),
     m_WhoisSent(false),
+    m_MapChecked(false),
     m_MapReady(false),
     m_Ready(false),
     m_KickReason(KickReason::NONE),

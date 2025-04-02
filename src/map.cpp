@@ -70,6 +70,7 @@ using namespace std;
 
 CMap::CMap(CAura* nAura, CConfig* CFG)
   : m_Aura(nAura),
+    m_MapSize(0),
     m_MapServerPath(CFG->GetPath("map.local_path", filesystem::path())),
     m_MapFileIsValid(false),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)), // from CGameSetup or !cachemaps
@@ -97,7 +98,6 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_UseStandardPaths(CFG->GetBool("map.standard_path", false)),
     m_JASSValid(false)
 {
-  m_MapSize.fill(0);
   m_MapWidth.fill(0);
   m_MapHeight.fill(0);
   m_MapCRC32.fill(0);
@@ -128,6 +128,30 @@ bool CMap::GetMapIsGameVersionSupported(const Version& nVersion) const
   Version headVersion = GetScriptsVersionRangeHead(nVersion);
   return m_MapMinGameVersion < nVersion && (m_MapScriptsBlizz.find(headVersion) != m_MapScriptsBlizz.end()) && (m_MapScriptsSHA1.find(headVersion) != m_MapScriptsSHA1.end());
 };
+
+uint32_t CMap::GetMapSizeClamped(const Version& nVersion) const
+{
+  if (nVersion <= GAMEVER(1u, 23u)) {
+    if (m_MapSize > MAX_MAP_SIZE_1_23) return MAX_MAP_SIZE_1_23;
+  } else if (nVersion <= GAMEVER(1u, 26u)) {
+    if (m_MapSize > MAX_MAP_SIZE_1_26) return MAX_MAP_SIZE_1_26;
+  } else if (nVersion <= GAMEVER(1u, 28u)) {
+    if (m_MapSize > MAX_MAP_SIZE_1_28) return MAX_MAP_SIZE_1_28;
+  }
+  return m_MapSize;
+}
+
+bool CMap::GetMapSizeIsNativeSupported(const Version& nVersion) const
+{
+  if (nVersion <= GAMEVER(1u, 23u)) {
+    if (m_MapSize > MAX_MAP_SIZE_1_23) return false;
+  } else if (nVersion <= GAMEVER(1u, 26u)) {
+    if (m_MapSize > MAX_MAP_SIZE_1_26) return false;
+  } else if (nVersion <= GAMEVER(1u, 28u)) {
+    if (m_MapSize > MAX_MAP_SIZE_1_28) return false;
+  }
+  return true;
+}
 
 uint32_t CMap::GetGameConvertedFlags() const
 {
@@ -1204,9 +1228,9 @@ void CMap::Load(CConfig* CFG)
 
   array<uint8_t, 5> mapContentMismatch = {0, 0, 0, 0, 0};
 
-  vector<uint8_t> cfgFileSize = CFG->GetUint8Vector("map.size", 4);
-  if (cfgFileSize.empty() == !mapFileSize.has_value()) {
-    if (cfgFileSize.empty()) {
+  optional<uint32_t> cfgFileSize = CFG->GetMaybeUint32("map.size");
+  if (cfgFileSize.has_value() == mapFileSize.has_value()) {
+    if (!cfgFileSize.has_value()) {
       CFG->SetFailed();
       if (m_ErrorMessage.empty()) {
         if (CFG->Exists("map.size")) {
@@ -1216,16 +1240,15 @@ void CMap::Load(CConfig* CFG)
         }
       }
     } else {
-      mapContentMismatch[0] = ByteArrayToUInt32(cfgFileSize, 0, false) != mapFileSize.value();
-      copy_n(cfgFileSize.begin(), 4, m_MapSize.begin());
+      mapContentMismatch[0] = cfgFileSize.value() != mapFileSize.value();
+      m_MapSize = cfgFileSize.value();
     }
   } else if (mapFileSize.has_value()) {
-    vector<uint8_t> mapFileSizeVector = CreateByteArray(static_cast<uint32_t>(mapFileSize.value()), false);
-    CFG->SetUint8Vector("map.size", mapFileSizeVector);
-    cfgFileSize.swap(mapFileSizeVector);
-    copy_n(cfgFileSize.begin(), 4, m_MapSize.begin());
+    cfgFileSize = static_cast<uint32_t>(mapFileSize.value());
+    CFG->SetUint32("map.size", cfgFileSize.value());
+    m_MapSize = cfgFileSize.value();
   } else {
-    copy_n(cfgFileSize.begin(), 4, m_MapSize.begin());
+    m_MapSize = cfgFileSize.value();
   }
 
   vector<uint8_t> cfgCRC32 = CFG->GetUint8Vector("map.file_hash.crc32", 4);
@@ -1568,13 +1591,12 @@ void CMap::Load(CConfig* CFG)
   }
 
   {
-    uint32_t resolvedMapSize = ByteArrayToUInt32(m_MapSize, false);
     Version minVanillaVersionFromMapSize = GAMEVER(1u, 0u);
-    if (resolvedMapSize > 0x8000000) {
+    if (m_MapSize > MAX_MAP_SIZE_1_28) {
       minVanillaVersionFromMapSize = GAMEVER(1u, 29u);
-    } else if (resolvedMapSize > 0x800000) {
+    } else if (m_MapSize > MAX_MAP_SIZE_1_26) {
       minVanillaVersionFromMapSize = GAMEVER(1u, 27u);
-    } else if (resolvedMapSize > 0x400000) {
+    } else if (m_MapSize > MAX_MAP_SIZE_1_23) {
       minVanillaVersionFromMapSize = GAMEVER(1u, 24u);
     }
     if (m_MapMinSuggestedGameVersion < minVanillaVersionFromMapSize) {
@@ -1781,7 +1803,7 @@ bool CMap::CheckMapFileIntegrity()
     return m_MapFileIsValid;
   }
 
-  bool sizeOK = reloadedFileSize.has_value() && reloadedFileSize.value() == ByteArrayToUInt32(m_MapSize, false);
+  bool sizeOK = reloadedFileSize.has_value() && reloadedFileSize.value() == m_MapSize;
   bool crcOK = reloadedCRC.has_value() && reloadedCRC.value() == ByteArrayToUInt32(m_MapCRC32, true);
   bool shaOK = reloadedSHA1.has_value() && memcmp(reloadedSHA1->data(), m_MapSHA1.data(), 20) == 0;
   if (!sizeOK) {
@@ -1907,7 +1929,7 @@ string CMap::CheckProblems()
   if (m_ClientMapPath.find('/') != string::npos)
     Print(R"(warning - map.path contains forward slashes '/' but it must use Windows style back slashes '\')");
 
-  else/* if (HasMapFileContents() && m_MapFileContents->size() != ByteArrayToUInt32(m_MapSize, false))
+  else/* if (HasMapFileContents() && m_MapFileContents->size() != m_MapSize)
   {
     m_Valid = false;
     m_ErrorMessage = "nonmatching <map.size> detected";

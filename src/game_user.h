@@ -116,7 +116,8 @@ namespace GameUser
     bool                             m_PowerObserver;                // if the player is a referee - referees can be demoted to full observers
     bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
     bool                             m_WhoisSent;                    // if we've sent a battle.net /whois for this player yet (for spoof checking)
-    bool                             m_MapReady;                     // if we're allowed to download the map or not (used with permission based map downloads)
+    bool                             m_MapChecked;                   // if we received any W3GS_MAPSIZE packet from the client
+    bool                             m_MapReady;                     // if we received a valid W3GS_MAPSIZE packet from the client matching the map size
     std::optional<bool>              m_UserReady;
     bool                             m_Ready;
     std::optional<int64_t>           m_ReadyReminderLastTicks;
@@ -254,6 +255,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetWhoisSent() const { return m_WhoisSent; }
     [[nodiscard]] inline bool                  GetDownloadAllowed() const { return m_DownloadAllowed; }
     [[nodiscard]] inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
+    [[nodiscard]] inline bool                  GetMapChecked() const { return m_MapChecked; }
     [[nodiscard]] inline bool                  GetMapReady() const { return m_MapReady; }
     [[nodiscard]] inline bool                  GetMapKicked() const { return (m_KickReason & GameUser::KickReason::MAP_MISSING) != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetPingKicked() const { return (m_KickReason & GameUser::KickReason::HIGH_PING) != GameUser::KickReason::NONE; }
@@ -329,6 +331,7 @@ namespace GameUser
     inline void SetPowerObserver(bool nPowerObserver) { m_PowerObserver = nPowerObserver; }
     inline void SetWhoisShouldBeSent(bool nWhoisShouldBeSent) { m_WhoisShouldBeSent = nWhoisShouldBeSent; }
     inline void SetDownloadAllowed(bool nDownloadAllowed) { m_DownloadAllowed = nDownloadAllowed; }
+    inline void SetMapChecked(bool nChecked) { m_MapChecked = nChecked; }
     inline void SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
     inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
     inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }

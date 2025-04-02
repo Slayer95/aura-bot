@@ -2168,15 +2168,15 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   }
 
   Version gameVersion = createdLobby->m_Config.m_GameVersion.value();
-  uint32_t mapSize = ByteArrayToUInt32(createdLobby->GetMap()->GetMapSize(), false);
-  if (mapSize > 0x20000000) {
+  const uint32_t mapSize = createdLobby->GetMap()->GetMapSize();
+  if (mapSize > MAX_MAP_SIZE_RF) {
     // Reforged
     Print("[AURA] warning - hosting game beyond 512 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (gameVersion <= GAMEVER(1u, 28u) && mapSize > 0x8000000) {
+  } else if (gameVersion <= GAMEVER(1u, 28u) && mapSize > MAX_MAP_SIZE_1_28) {
     Print("[AURA] warning - hosting game beyond 128 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (gameVersion <= GAMEVER(1u, 26u) && mapSize > 0x800000) {
+  } else if (gameVersion <= GAMEVER(1u, 26u) && mapSize > MAX_MAP_SIZE_1_26) {
     Print("[AURA] warning - hosting game beyond 8 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
-  } else if (gameVersion <= GAMEVER(1u, 23u) && mapSize > 0x400000) {
+  } else if (gameVersion <= GAMEVER(1u, 23u) && mapSize > MAX_MAP_SIZE_1_23) {
     Print("[AURA] warning - hosting game beyond 4 MB map size limit: [" + createdLobby->GetMap()->GetServerFileName() + "]");
   }
   if (gameVersion < createdLobby->GetMap()->GetMapMinSuggestedGameVersion()) {

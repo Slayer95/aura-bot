@@ -375,7 +375,7 @@ public:
   AHCLConfig                            m_AHCL;
 
 private:
-  std::array<uint8_t, 4>                       m_MapSize;                // config value: <map.size> (4 bytes)
+  uint32_t                                     m_MapSize;                // config value: <map.size> (4 bytes)
   std::array<uint8_t, 2>                       m_MapWidth;               // config value: <map.width> (2 bytes)
   std::array<uint8_t, 2>                       m_MapHeight;              // config value: <map.height> (2 bytes)
   std::array<uint8_t, 4>                       m_MapCRC32;               // config value: <map.file_hash.crc32> (4 bytes) -> this is the real full CRC
@@ -449,7 +449,10 @@ public:
   [[nodiscard]] inline bool                              GetMPQErrored() const { return m_MapMPQResult.has_value() && !m_MapMPQResult.value(); }
   [[nodiscard]] inline const std::string&                GetConfigName() const { return m_CFGName; }
   [[nodiscard]] inline const std::string&                GetClientPath() const { return m_ClientMapPath; }
-  [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapSize() const { return m_MapSize; }
+  [[nodiscard]] inline uint32_t                          GetMapSize() const { return m_MapSize; }
+  [[nodiscard]] inline float                             GetMapSizeMB() const { return (float)m_MapSize / (float)(1024. * 1024.); }
+  [[nodiscard]] uint32_t                                 GetMapSizeClamped(const Version& version) const;
+  [[nodiscard]] bool                                     GetMapSizeIsNativeSupported(const Version& version) const;
   [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapCRC32() const { return m_MapCRC32; } // <map.file_hash.crc32>, but also legacy <map_hash> and <map.crc32>
   [[nodiscard]] inline const std::array<uint8_t, 20>&    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
   [[nodiscard]] const std::array<uint8_t, 4>&            GetMapScriptsBlizz(const Version& nVersion) const; // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>

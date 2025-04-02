@@ -98,6 +98,7 @@ protected:
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
   std::vector<std::string>                               m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>                                  m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
+  std::map<std::string, std::set<Version>>               m_VersionErrors;
   std::vector<CGameVirtualUser>                          m_FakeUsers;                     // the fake player's UIDs (lower 8 bits) and SIDs (higher 8 bits) (if present)
   std::shared_ptr<CMap>                                  m_Map;                           // map data
   uint32_t                                               m_GameFlags;
@@ -359,6 +360,7 @@ public:
   ImmutableUserList                                      GetWaitingReconnectPlayers() const;
   std::optional<Version>                                 GetOverrideLANVersion(const std::string& playerName, const sockaddr_storage* address) const;
   std::optional<Version>                                 GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const;
+  Version                                                GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const;
   bool                                                   GetIsAutoStartDue() const;
   std::string                                            GetAutoStartText() const;
   std::string                                            GetReadyStatusText() const;
@@ -439,7 +441,7 @@ public:
   void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;
   void                                                   SendFakeUsersInfo(CConnection* user) const;
   void                                                   SendJoinedPlayersInfo(CConnection* user) const;
-  void                                                   SendMapAndVersionCheck(CConnection* user, const Version& gameVersion) const;
+  void                                                   SendMapAndVersionCheck(CConnection* user, const Version& gameVersion, const std::string& name) const;
   void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
   void                                                   SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
@@ -600,7 +602,7 @@ public:
   void                                EventObserverDisconnectProtocolError(CAsyncObserver* user);
 
   // Map transfer
-  uint8_t                   CheckCanTransferMap(const CConnection* connection, const CRealm* realm, const bool gotPermission);
+  uint8_t                   CheckCanTransferMap(const CConnection* connection, const CRealm* realm, const Version& version, const bool gotPermission);
   inline SharedByteArray    GetLoadedMapChunk() { return m_LoadedMapChunk; }
   void                      SetLoadedMapChunk(SharedByteArray nLoadedMapChunk) { m_LoadedMapChunk = nLoadedMapChunk; }
   void                      ClearLoadedMapChunk() { m_LoadedMapChunk.reset(); }

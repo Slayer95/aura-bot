@@ -676,7 +676,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz)
+  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz)
   {
     if (mapPath.empty()) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
@@ -685,14 +685,14 @@ namespace GameProtocol
 
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::MAPCHECK, 0, 0, 1, 0, 0, 0};
     AppendByteArrayFast(packet, mapPath); // <map.path>
-    AppendByteArrayFast(packet, mapSize); // <map.size>
+    AppendByteArray(packet, mapSize, false); // <map.size>
     AppendByteArrayFast(packet, mapCRC32); // <map.file_hash.crc32>
     AppendByteArrayFast(packet, mapScriptsHashBlizz);  // <map.scripts_hash.blizz>
     AssignLength(packet);
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const std::array<uint8_t, 4>& mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::array<uint8_t, 20>& mapScriptsHashSHA1)
+  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::array<uint8_t, 20>& mapScriptsHashSHA1)
   {
     if (mapPath.empty()) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
@@ -701,7 +701,7 @@ namespace GameProtocol
 
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::MAPCHECK, 0, 0, 1, 0, 0, 0};
     AppendByteArrayFast(packet, mapPath); // <map.path>
-    AppendByteArrayFast(packet, mapSize); // <map.size>
+    AppendByteArray(packet, mapSize, false); // <map.size>
     AppendByteArrayFast(packet, mapCRC32); // <map.file_hash.crc32>
     AppendByteArrayFast(packet, mapScriptsHashBlizz);  // <map.scripts_hash.blizz>
     AppendByteArrayFast(packet, mapScriptsHashSHA1); // <map.scripts_hash.sha1>

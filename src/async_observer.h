@@ -44,7 +44,8 @@ public:
   MapTransfer                                                   m_MapTransfer;
   const CRealm*                                                 m_FromRealm;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
-  bool                                                          m_MapReady;
+  bool                                                          m_MapChecked;                   // if we received any W3GS_MAPSIZE packet from the client
+  bool                                                          m_MapReady;                     // if we received a valid W3GS_MAPSIZE packet from the client matching the map size
   bool                                                          m_StateSynchronized;
   bool                                                          m_TimeSynchronized;
   size_t                                                        m_Offset;
@@ -52,6 +53,8 @@ public:
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
   uint8_t                                                       m_Color;
+  bool                                                          m_GameVersionIsExact;
+  Version                                                       m_GameVersion;
   uint8_t                                                       m_MissingLog;
   int64_t                                                       m_FrameRate;
   int64_t                                                       m_Latency;
@@ -83,7 +86,7 @@ public:
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
 
-  CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRealm* nFromRealm, uint8_t nUID, const std::string& nName);
+  CAsyncObserver(CGame* nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const std::string& nName);
   ~CAsyncObserver();
 
   // processing functions
@@ -102,6 +105,8 @@ public:
   [[nodiscard]] inline bool                     GetNotifiedCannotDownload() { return m_NotifiedCannotDownload; }
   inline void                                   SetNotifiedCannotDownload() { m_NotifiedCannotDownload = true; }
 
+  [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
+  [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
   [[nodiscard]] inline const std::string&       GetName() { return m_Name; }
   [[nodiscard]] inline CGame*                   GetGame() { return m_Game; }
 
@@ -109,6 +114,11 @@ public:
   [[nodiscard]] inline std::string              GetLeftReason() { return m_LeftReason; }
   inline void                                   SetLeftReason(const std::string& reason) { m_LeftReason = reason; }
   inline void                                   SetLeftReasonGeneric(const std::string& reason) { if (m_LeftReason.empty()) m_LeftReason = reason; }
+
+  [[nodiscard]] inline bool                     GetMapChecked() const { return m_MapChecked; }
+  inline void                                   SetMapChecked(bool nChecked) { m_MapChecked = nChecked; }
+  [[nodiscard]] inline bool                     GetMapReady() const { return m_MapReady; }
+  inline void                                   SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
 
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }

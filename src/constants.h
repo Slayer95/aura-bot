@@ -86,6 +86,11 @@ constexpr std::string::size_type FILE_SEARCH_FUZZY_MAX_DISTANCE = 10;
 
 // map.h
 
+constexpr uint32_t MAX_MAP_SIZE_1_23 = 0x400000;
+constexpr uint32_t MAX_MAP_SIZE_1_26 = 0x800000;
+constexpr uint32_t MAX_MAP_SIZE_1_28 = 0x8000000;
+constexpr uint32_t MAX_MAP_SIZE_RF = 0x20000000;
+
 constexpr uint8_t MAPSPEED_SLOW = 1u;
 constexpr uint8_t MAPSPEED_NORMAL = 2u;
 constexpr uint8_t MAPSPEED_FAST = 3u;
@@ -203,8 +208,9 @@ constexpr uint8_t MAP_TRANSFER_CHECK_ALLOWED = 0u;
 constexpr uint8_t MAP_TRANSFER_CHECK_INVALID = 1u;
 constexpr uint8_t MAP_TRANSFER_CHECK_MISSING = 2u;
 constexpr uint8_t MAP_TRANSFER_CHECK_DISABLED = 3u;
-constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE = 4u;
-constexpr uint8_t MAP_TRANSFER_CHECK_BUFFERBLOAT = 5u;
+constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE_VERSION = 4u;
+constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG = 5u;
+constexpr uint8_t MAP_TRANSFER_CHECK_BUFFERBLOAT = 6u;
 
 // game.h
 constexpr uint8_t SLOTS_ALIGNMENT_CHANGED = (1 << 0);
@@ -227,6 +233,8 @@ constexpr uint8_t CUSTOM_LAYOUT_ISOPLAYERS = 32u;
 constexpr uint16_t REFRESH_PERIOD_MIN_SUGGESTED = 30;
 constexpr uint16_t REFRESH_PERIOD_MAX_SUGGESTED = 300;
 constexpr uint8_t GAME_BANNABLE_MAX_HISTORY_SIZE = 32;
+
+constexpr size_t MAX_GAME_VERSION_ERROR_USERS_STORED = 500;
 
 constexpr uint8_t GAME_PAUSES_PER_PLAYER = 3u;
 constexpr uint8_t GAME_SAVES_PER_PLAYER = 1u;

@@ -46,11 +46,12 @@ using namespace std;
 // CAsyncObserver
 //
 
-CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRealm* nFromRealm, uint8_t nUID, const string& nName)
+CAsyncObserver::CAsyncObserver(CGame* nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const string& nName)
   : CConnection(*nConnection),
     m_Game(nGame),
     m_GameHistory(nGame->GetGameHistory()),
     m_FromRealm(nFromRealm),
+    m_MapChecked(false),
     m_MapReady(false),
     m_StateSynchronized(true),
     m_TimeSynchronized(false),
@@ -59,6 +60,8 @@ CAsyncObserver::CAsyncObserver(CConnection* nConnection, CGame* nGame, const CRe
     m_UID(nUID),
     m_SID(nGame->GetSIDFromUID(nUID)),
     m_Color(nGame->GetColorFromUID(nUID)),
+    m_GameVersionIsExact(gameVersionIsExact),
+    m_GameVersion(gameVersion),
     m_MissingLog(0),
     m_FrameRate(2),
     m_Latency(nGame->GetGameHistory()->GetDefaultLatency()),
