@@ -1026,7 +1026,6 @@ string CGame::GetEndDescription() const
     } else if (winnerNames.size() == 1) {
       winnersFragment = "Winner: [" + winnerNames[0] + "]";
     }
-    LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(winnerNames, false))
   }
 
   string Description = (
