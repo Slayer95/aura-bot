@@ -44,7 +44,7 @@
 */
 
 #include "w3mmd.h"
-#include "../dbgameplayer.h"
+#include "../game_controller_data.h"
 #include "../config/config_game.h"
 #include "../game.h"
 #include "../protocol/game_protocol.h"
@@ -347,21 +347,22 @@ bool CW3MMD::RecvAction(uint8_t fromUID, const CIncomingAction& action)
 bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
 {
   if (definition->GetType() == MMD_DEFINITION_TYPE_INIT) {
-    if (definition->GetSubType() == MMD_INIT_TYPE_PLAYER) { // pid
-      const CGameSlot* slot = m_Game->InspectSlot(definition->GetSID());
+    if (definition->GetSubType() == MMD_INIT_TYPE_PLAYER) { // "pid"
+      const uint8_t SID = definition->GetSID();
+      const CGameSlot* slot = m_Game->InspectSlot(SID);
       if (!slot) {
-        Print(GetLogPrefix() + "cannot initialize player slot " + ToDecString(definition->GetSID()));
+        Print(GetLogPrefix() + "cannot initialize player slot " + ToDecString(SID));
         return false;
       }
-      const bool found = m_SIDToName.find(definition->GetSID()) != m_SIDToName.end();
+      const bool found = m_SIDToName.find(SID) != m_SIDToName.end();
       if (found) {
         Print(
-          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] overrode previous name [" + m_SIDToName[definition->GetSID()] +
-          "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(definition->GetSID()) + "]"
+          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] overrode previous name [" + m_SIDToName[SID] +
+          "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(SID) + "]"
         );
       } else {
         Print(
-          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] initialized player ID [" + ToDecString(definition->GetSID()) +
+          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] initialized player ID [" + ToDecString(SID) +
           "] as [" + definition->GetName() + "]"
         );
       }
@@ -370,8 +371,8 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
         Print(GetLogPrefix() + "too many players initialized");
         return false;
       }
-      m_SIDToName[definition->GetSID()] = definition->GetName(); // W3MMD will report the player name as seen by the WC3 client
-      m_SIDToColor[definition->GetSID()] = slot->GetColor();
+      m_SIDToName[SID] = definition->GetName(); // W3MMD will report the player name as seen by the WC3 client
+      m_SIDToColor[SID] = slot->GetColor();
     }
     return true;
   } else if (definition->GetType() == MMD_DEFINITION_TYPE_VAR) { // DefVarP
@@ -664,9 +665,9 @@ string CW3MMD::GetStoredPlayerName(uint8_t SID) const
 string CW3MMD::GetTrustedPlayerNameFromColor(uint8_t color) const
 {
   string playerName;
-  CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(color);
-  if (dbPlayer) {
-    playerName = dbPlayer->GetName();
+  CGameController* controllerData = m_Game->GetGameControllerFromColor(color);
+  if (controllerData) {
+    playerName = controllerData->GetName();
   } else {
     Print(GetLogPrefix() + "error retrieving name of player color [" + ToDecString(color) + "] (" + GetColorName(color) + ")");
   }
@@ -692,8 +693,9 @@ optional<GameResults> CW3MMD::GetGameResults(const bool undecidedIsLoser) const
 
   gameResults.emplace();
   for (const auto& entry : m_SIDToName) {
+    CGameController* controllerData = m_Game->GetGameControllerFromSID(entry.first);
     const auto& match = m_GameResults.find(entry.first);
-    vector<CDBGamePlayer*>* resultGroup = nullptr;
+    vector<CGameController*>* resultGroup = nullptr;
     if (match == m_GameResults.end()) {
       if (undecidedIsLoser) {
         resultGroup = &gameResults->losers;
@@ -713,7 +715,7 @@ optional<GameResults> CW3MMD::GetGameResults(const bool undecidedIsLoser) const
           break;
       }
     }
-    resultGroup->push_back(m_Game->GetDBPlayerFromSID(entry.first));
+    resultGroup->push_back(controllerData);
   }
 
   return gameResults;

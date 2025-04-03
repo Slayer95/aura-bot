@@ -44,7 +44,7 @@
  */
 
 #include "auradb.h"
-#include "dbgameplayer.h"
+#include "game_controller_data.h"
 #include "net.h"
 #include "util.h"
 #include "config/config.h"
@@ -894,11 +894,11 @@ vector<string> CAuraDB::ListBans(const string& authserver)
   return bans;
 }
 
-void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CDBGamePlayer* dbPlayer)
+void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGameController* controllerData)
 {
-  const string lowerName = ToLowerCase(dbPlayer->GetName());
-  const string server = dbPlayer->GetServer();
-  const string ip = dbPlayer->GetIP();
+  const string lowerName = ToLowerCase(controllerData->GetName());
+  const string server = controllerData->GetServer();
+  const string ip = controllerData->GetIP();
 
   if (!m_StmtCache[UPDATE_PLAYER_START_IDX]) {
     m_DB->Prepare(
@@ -932,13 +932,13 @@ void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CDB
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 }
 
-void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CDBGamePlayer* dbPlayer, const uint64_t durationSeconds)
+void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint64_t durationSeconds)
 {
-  const string lowerName = ToLowerCase(dbPlayer->GetName());
-  const string server = dbPlayer->GetServer();
-  const string ip = dbPlayer->GetIP();
-  const uint64_t loadingTimeSeconds = dbPlayer->GetLoadingTime();
-  const uint64_t leftTimeSeconds = dbPlayer->GetLeftTime();
+  const string lowerName = ToLowerCase(controllerData->GetName());
+  const string server = controllerData->GetServer();
+  const string ip = controllerData->GetIP();
+  const uint64_t loadingTimeSeconds = controllerData->GetLoadingGameTime();
+  const uint64_t leftTimeSeconds = controllerData->GetLeftGameTime();
 
   if (!m_StmtCache[UPDATE_PLAYER_END_IDX]) {
     m_DB->Prepare(
@@ -1401,9 +1401,9 @@ void CAuraDB::SaveDotAStats(CDotaStats* dotaStats)
       if (dotaPlayer)
       {
         const uint8_t  Color = dotaPlayer->GetNewColor();
-        const CDBGamePlayer* DBPlayer = dotaStats->m_Game->GetDBPlayerFromColor(Color);
-        const string Name = DBPlayer->GetName();
-        const string Server = DBPlayer->GetServer();
+        const CGameController* controller = dotaStats->m_Game->GetGameControllerFromColor(Color);
+        const string Name = controller->GetName();
+        const string Server = controller->GetServer();
 
         if (Name.empty())
           continue;

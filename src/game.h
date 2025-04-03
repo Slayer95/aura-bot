@@ -92,7 +92,7 @@ protected:
   CDotaStats*                                            m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
   CSaveGame*                                             m_RestoredGame;
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
-  std::vector<CDBGamePlayer*>                            m_DBGamePlayers;                 // std::vector of potential gameuser data for the database
+  std::vector<CGameController*>                          m_GameControllers;                 // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players
   CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;            // actions to be sent
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
@@ -542,21 +542,21 @@ public:
   // other functions
 
   uint8_t                   GetSIDFromUID(uint8_t UID) const;
-  GameUser::CGameUser*                GetUserFromUID(uint8_t UID) const;
-  GameUser::CGameUser*                GetUserFromSID(uint8_t SID) const;
+  GameUser::CGameUser*      GetUserFromUID(uint8_t UID) const;
+  GameUser::CGameUser*      GetUserFromSID(uint8_t SID) const;
   std::string               GetUserNameFromUID(uint8_t UID) const;
   std::string               GetUserNameFromSID(uint8_t SID) const;
-  GameUser::CGameUser*                GetUserFromName(std::string name, bool sensitive) const;
+  GameUser::CGameUser*      GetUserFromName(std::string name, bool sensitive) const;
   GameUser::CGameUser*      GetOwner() const;
   bool                      HasOwnerSet() const;
   bool                      HasOwnerInGame() const;
   uint8_t                   GetUserFromNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
   uint8_t                   GetUserFromDisplayNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
   uint8_t                   GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
-  CDBGamePlayer*            GetDBPlayerFromColor(uint8_t colour) const;
-  CDBGamePlayer*            GetDBPlayerFromSID(uint8_t SID) const;
-  CDBGamePlayer*            GetDBPlayerFromUID(uint8_t UID) const;
-  GameUser::CGameUser*                GetPlayerFromColor(uint8_t colour) const;
+  CGameController*          GetGameControllerFromColor(uint8_t colour) const;
+  CGameController*          GetGameControllerFromSID(uint8_t SID) const;
+  CGameController*          GetGameControllerFromUID(uint8_t UID) const;
+  GameUser::CGameUser*      GetUserFromColor(uint8_t colour) const;
   uint8_t                   GetColorFromUID(uint8_t UID) const;
   uint8_t                   GetNewUID() const;
   uint8_t                   GetNewTeam() const;
@@ -772,7 +772,7 @@ public:
   bool SetLayoutCompact();
 
   void VoidDBGameResults();
-  void SyncDBPlayersFromGameResults();
+  void SyncGameControllersFromGameResults();
   bool RunGameResults();
   bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
   bool CheckGameResults(const GameResults& gameResults) const;

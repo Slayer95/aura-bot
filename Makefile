@@ -81,7 +81,6 @@ OBJS = lib/csvparser/csvparser.o \
        src/config/config_irc.o \
        src/config/config_discord.o \
        src/config/config_net.o \
-       src/dbgameplayer.o \
        src/auradb.o \
        src/bncsutil_interface.o \
        src/file_util.o \
@@ -96,11 +95,12 @@ OBJS = lib/csvparser/csvparser.o \
        src/realm.o \
        src/realm_chat.o \
        src/async_observer.o \
+       src/game_controller_data.o \
        src/game_seeker.o \
-       src/game_user.o \
        src/game_setup.o \
        src/game_slot.o \
        src/game_structs.o \
+       src/game_user.o \
        src/game_virtual_user.o \
        src/game.o \
        src/aura.o \

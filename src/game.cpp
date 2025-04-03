@@ -57,7 +57,7 @@
 #include "integration/irc.h"
 #include "socket.h"
 #include "net.h"
-#include "dbgameplayer.h"
+#include "game_controller_data.h"
 #include "auradb.h"
 #include "realm.h"
 #include "map.h"
@@ -346,10 +346,10 @@ void CGame::Reset()
     TrySaveStats();
   }
 
-  for (auto& user : m_DBGamePlayers) {
+  for (auto& user : m_GameControllers) {
     delete user;
   }
-  m_DBGamePlayers.clear();
+  m_GameControllers.clear();
 
   ClearBannableUsers();
 
@@ -410,16 +410,16 @@ void CGame::TrySaveStats() const
 {
   // store the CDBGamePlayers in the database
   // add non-dota stats
-  if (!m_DBGamePlayers.empty()) {
+  if (!m_GameControllers.empty()) {
     int64_t Ticks = GetTicks();
     LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] saving game end player data to database")
     if (m_Aura->m_DB->Begin()) {
-      for (auto& dbPlayer : m_DBGamePlayers) {
+      for (auto& controllerData : m_GameControllers) {
         // exclude observers
-        if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
+        if (controllerData->GetColor() == m_Map->GetVersionMaxSlots()) {
           continue;
         }
-        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, dbPlayer, m_EffectiveTicks / 1000);
+        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, m_EffectiveTicks / 1000);
       }
       if (!m_Aura->m_DB->Commit()) {
         LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit game end player data")
@@ -4147,9 +4147,10 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
   if (m_GameLoading || m_GameLoaded) {
     // When a user leaves from an already loaded game, their slot remains unchanged
     const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
-    CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(slot->GetColor());
-    if (dbPlayer) {
-      dbPlayer->SetLeftTime(m_EffectiveTicks / 1000);
+    CGameController* controllerData = GetGameControllerFromColor(slot->GetColor());
+    if (controllerData) {
+      controllerData->SetServerLeftCode(user->GetLeftCode());
+      controllerData->SetLeftGameTime(m_EffectiveTicks / 1000);
     }
 
     // keep track of the last user to leave for the !banlast command
@@ -5359,9 +5360,9 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
 
   // Update stats
   const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
-  CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(slot->GetColor());
-  if (dbPlayer) {
-    dbPlayer->SetLoadingTime((user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000);
+  CGameController* controllerData = GetGameControllerFromColor(slot->GetColor());
+  if (controllerData) {
+    controllerData->SetLoadingTime((user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000);
   }
 
   if (!m_Config.m_LoadInGame) {
@@ -6251,7 +6252,7 @@ void CGame::EventGameStartedLoading()
     const CGameSlot* slot = InspectSlot(SID);
     const IndexedGameSlot idxSlot = IndexedGameSlot(SID, slot);
     // Do not exclude observers yet, so that they can be searched in commands.
-    m_DBGamePlayers.push_back(new CDBGamePlayer(user, idxSlot));
+    m_GameControllers.push_back(new CGameController(user, idxSlot));
   }
 
   if (m_Map->GetHMCEnabled()) {
@@ -6679,11 +6680,11 @@ void CGame::HandleGameLoadedStats()
     exportColorIDs
   );
 
-  for (auto& dbPlayer : m_DBGamePlayers) {
-    if (dbPlayer->GetColor() == m_Map->GetVersionMaxSlots()) {
+  for (auto& controllerData : m_GameControllers) {
+    if (controllerData->GetColor() == m_Map->GetVersionMaxSlots()) {
       continue;
     }
-    m_Aura->m_DB->UpdateGamePlayerOnStart(m_PersistentId, dbPlayer);
+    m_Aura->m_DB->UpdateGamePlayerOnStart(m_PersistentId, controllerData);
   }
   if (!m_Aura->m_DB->Commit()) {
     LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit transaction for game loaded data")
@@ -6963,13 +6964,13 @@ uint8_t CGame::GetUserFromDisplayNamePartial(const string& name, GameUser::CGame
   return matches;
 }
 
-CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
+CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
 {
   if (colour == m_Map->GetVersionMaxSlots()) {
     // Observers are not stored
     return nullptr;
   }
-  for (const auto& user : m_DBGamePlayers) {
+  for (const auto& user : m_GameControllers) {
     if (user->GetColor() == colour) {
       return user;
     }
@@ -6977,9 +6978,9 @@ CDBGamePlayer* CGame::GetDBPlayerFromColor(uint8_t colour) const
   return nullptr;
 }
 
-CDBGamePlayer* CGame::GetDBPlayerFromSID(uint8_t SID) const
+CGameController* CGame::GetGameControllerFromSID(uint8_t SID) const
 {
-  for (const auto& user : m_DBGamePlayers) {
+  for (const auto& user : m_GameControllers) {
     if (user->GetSID() == SID) {
       return user;
     }
@@ -6987,9 +6988,9 @@ CDBGamePlayer* CGame::GetDBPlayerFromSID(uint8_t SID) const
   return nullptr;
 }
 
-CDBGamePlayer* CGame::GetDBPlayerFromUID(uint8_t UID) const
+CGameController* CGame::GetGameControllerFromUID(uint8_t UID) const
 {
-  for (const auto& user : m_DBGamePlayers) {
+  for (const auto& user : m_GameControllers) {
     if (user->GetUID() == UID) {
       return user;
     }
@@ -7031,7 +7032,7 @@ uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanP
   return matches;
 }
 
-GameUser::CGameUser* CGame::GetPlayerFromColor(uint8_t colour) const
+GameUser::CGameUser* CGame::GetUserFromColor(uint8_t colour) const
 {
   for (uint8_t i = 0; i < m_Slots.size(); ++i)
   {
@@ -10088,12 +10089,12 @@ uint32_t CGame::GetSyncLimitSafe() const
 
 void CGame::VoidDBGameResults()
 {
-  // TODO(VoidDBGameResults): Clear all CDBGamePlayer* game results
+  // TODO(VoidDBGameResults): Clear all CGameController* game results
 }
 
-void CGame::SyncDBPlayersFromGameResults()
+void CGame::SyncGameControllersFromGameResults()
 {
-  // TODO(SyncDBGameResults): Copy from m_GameResults to CDBGamePlayer*
+  // TODO(SyncDBGameResults): Copy from m_GameResults to CGameController*
 }
 
 bool CGame::RunGameResults()
@@ -10104,19 +10105,40 @@ bool CGame::RunGameResults()
 
   FlushStatsQueue();
 
+  const bool undecidedIsLoser = m_Map->GetGameResultUndecidedIsLoser();
   switch (GetGameResultSourceOfTruth()) {
     case GAME_RESULT_SOURCE_MMD: {
       if (m_CustomStats) {
-        gameResults = m_CustomStats->GetGameResults(m_Map->GetGameResultUndecidedIsLoser());
+        gameResults = m_CustomStats->GetGameResults(undecidedIsLoser);
       } else if (m_DotaStats) {
-        gameResults = m_DotaStats->GetGameResults(m_Map->GetGameResultUndecidedIsLoser());
+        gameResults = m_DotaStats->GetGameResults(undecidedIsLoser);
       }
       break;
     }
 
     case GAME_RESULT_SOURCE_LEAVECODE: {
-      // TODO(GAME_RESULT_SOURCE_LEAVECODE): Build gameResults from CDBGamePlayer* game results data
       gameResults.emplace();
+      for (const auto& controllerData : m_GameControllers) {
+        vector<CGameController*>* resultGroup = nullptr;
+        switch (controllerData->GetGameResult()) {
+          case GAME_RESULT_WINNER:
+            resultGroup = &gameResults->winners;
+            break;
+          case GAME_RESULT_LOSER:
+            resultGroup = &gameResults->losers;
+            break;
+          case GAME_RESULT_DRAWER:
+            resultGroup = &gameResults->drawers;
+            break;
+          case GAME_RESULT_UNDECIDED:
+            if (undecidedIsLoser) {
+              resultGroup = &gameResults->undecided;
+            } else {
+              resultGroup = &gameResults->losers;
+            }
+        }
+        resultGroup->push_back(controllerData);
+      }
       break;
     }
 
@@ -10132,7 +10154,7 @@ bool CGame::RunGameResults()
   }
 
   m_GameResults.swap(gameResults);
-  SyncDBPlayersFromGameResults();
+  SyncGameControllersFromGameResults();
   return true;
 }
 
@@ -10169,15 +10191,15 @@ bool CGame::CheckGameResults(const GameResults& gameResults) const
   //bool undecidedIsLoser;
 
   //gameResults;
-  return false;
+  return true;
 }
 
 void CGame::SetSelfReportedGameResultForPlayer(const uint8_t UID, const uint8_t gameResult) const
 {
   GameUser::CGameUser* user = GetUserFromUID(UID);
   if (user) user->SetSelfReportedGameResult(gameResult);
-  CDBGamePlayer* dbPlayer = GetDBPlayerFromColor(GetColorFromUID(UID));
-  if (dbPlayer) dbPlayer->SetGameResult(gameResult);
+  CGameController* controllerData = GetGameControllerFromUID(UID);
+  if (controllerData) controllerData->SetGameResult(gameResult);
 }
 
 void CGame::RunHCLEncoding()

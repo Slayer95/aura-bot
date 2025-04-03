@@ -45,7 +45,7 @@
 
 #include "dota.h"
 #include "../aura.h"
-#include "../dbgameplayer.h"
+#include "../game_controller_data.h"
 #include "../auradb.h"
 #include "../game.h"
 #include "../game_user.h"
@@ -141,8 +141,8 @@ bool CDotaStats::RecvAction(uint8_t UID, const CIncomingAction& action)
                   VictimColor = static_cast<uint8_t>(stoul(VictimName));
                 } catch (...) {
                 }
-                GameUser::CGameUser* Killer = m_Game->GetPlayerFromColor(KillerColor);
-                GameUser::CGameUser* Victim = m_Game->GetPlayerFromColor(VictimColor);
+                GameUser::CGameUser* Killer = m_Game->GetUserFromColor(KillerColor);
+                GameUser::CGameUser* Victim = m_Game->GetUserFromColor(VictimColor);
 
                 if (!m_Players[KillerColor])
                   m_Players[KillerColor] = new CDBDotAPlayer();
@@ -176,7 +176,7 @@ bool CDotaStats::RecvAction(uint8_t UID, const CIncomingAction& action)
               {
                 // check if the assist was on a non-leaver
 
-                if (m_Game->GetPlayerFromColor(static_cast<uint8_t>(ValueInt)))
+                if (m_Game->GetUserFromColor(static_cast<uint8_t>(ValueInt)))
                 {
                   string         AssisterName   = KeyString.substr(6);
                   uint8_t  AssisterColor       = 0;
@@ -335,26 +335,26 @@ void CDotaStats::FlushQueue()
 {
 }
 
-vector<CDBGamePlayer*> CDotaStats::GetSentinelPlayers() const
+vector<CGameController*> CDotaStats::GetSentinelControllers() const
 {
-  vector<CDBGamePlayer*> players;
+  vector<CGameController*> controllers;
   for (uint8_t color = 1, end = 5; color <= end; color++) {
-    CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(color);
-    if (!dbPlayer) continue;
-    players.push_back(dbPlayer);
+    CGameController* controllerData = m_Game->GetGameControllerFromColor(color);
+    if (!controllerData) continue;
+    controllers.push_back(controllerData);
   }
-  return players;
+  return controllers;
 }
 
-vector<CDBGamePlayer*> CDotaStats::GetScourgePlayers() const
+vector<CGameController*> CDotaStats::GetScourgeControllers() const
 {
-  vector<CDBGamePlayer*> players;
+  vector<CGameController*> controllers;
   for (uint8_t color = 7, end = 11; color <= end; color++) {
-    CDBGamePlayer* dbPlayer = m_Game->GetDBPlayerFromColor(color);
-    if (!dbPlayer) continue;
-    players.push_back(dbPlayer);
+    CGameController* controllerData = m_Game->GetGameControllerFromColor(color);
+    if (!controllerData) continue;
+    controllers.push_back(controllerData);
   }
-  return players;
+  return controllers;
 }
 
 optional<GameResults> CDotaStats::GetGameResults(const bool /*undecidedIsLoser*/) const
@@ -364,23 +364,23 @@ optional<GameResults> CDotaStats::GetGameResults(const bool /*undecidedIsLoser*/
     return gameResults;
   }
 
-  vector<CDBGamePlayer*> sentinelPlayers = GetSentinelPlayers();
-  vector<CDBGamePlayer*> scourgePlayers = GetScourgePlayers();
+  vector<CGameController*> sentinel = GetSentinelControllers();
+  vector<CGameController*> scourge = GetScourgeControllers();
 
   gameResults.emplace();
 
   if (m_Winner == DOTA_WINNER_SENTINEL) {
-    gameResults->winners.swap(sentinelPlayers);
-    gameResults->losers.swap(scourgePlayers);
+    gameResults->winners.swap(sentinel);
+    gameResults->losers.swap(scourge);
   } else {
-    gameResults->winners.swap(scourgePlayers);
-    gameResults->losers.swap(sentinelPlayers);
+    gameResults->winners.swap(scourge);
+    gameResults->losers.swap(sentinel);
   }
 
   auto it = gameResults->winners.begin();
   while (it != gameResults->winners.end()) {
     // 5 seconds of grace period for players to quit just before the game ends
-    if ((*it)->GetHasLeftGame() && (*it)->GetLeftTime() + 5u < GetGameOverTime()) {
+    if ((*it)->GetHasLeftGame() && (*it)->GetLeftGameTime() + 5u < GetGameOverTime()) {
       gameResults->losers.push_back(*it);
       it = gameResults->winners.erase(it);
     } else {

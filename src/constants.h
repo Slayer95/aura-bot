@@ -337,6 +337,15 @@ constexpr uint8_t SLOTPROG_RST = 255u;
 constexpr int MAX_SLOTS_MODERN = 24;
 constexpr int MAX_SLOTS_LEGACY = 12;
 
+// game_controller_data.h
+
+enum class GameControllerType : uint8_t
+{
+  kVirtual = 0u,
+  kUser = 1u,
+  kComputer = 2u,
+};
+
 // connection.h
 
 constexpr uint8_t JOIN_RESULT_FAIL = 0u;
@@ -442,6 +451,7 @@ constexpr uint8_t PLAYERLEAVE_LOSTBUILDINGS = 8u;
 constexpr uint8_t PLAYERLEAVE_WON = 9u;
 constexpr uint8_t PLAYERLEAVE_DRAW = 10u;
 constexpr uint8_t PLAYERLEAVE_OBSERVER = 11u;
+constexpr uint8_t PLAYERLEAVE_BADSAVE = 12u;
 constexpr uint8_t PLAYERLEAVE_LOBBY = 13u;
 constexpr uint8_t PLAYERLEAVE_GPROXY = 100u;
 

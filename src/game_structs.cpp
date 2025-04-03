@@ -44,7 +44,7 @@
  */
 
 #include "game_structs.h"
-#include "dbgameplayer.h"
+#include "game_controller_data.h"
 #include "game_user.h"
 
 

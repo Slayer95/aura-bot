@@ -322,17 +322,17 @@ public:
 
   [[nodiscard]] inline bool                   GetIsFirstRun() const { return m_FirstRun; }
   [[nodiscard]] CAuraDB::SchemaStatus         GetSchemaStatus(int64_t& schemaNumber);
-  void                          UpdateSchema(int64_t oldSchemaNumber);
-  void                          Initialize();
-  void                          PreCompileStatements();
+  void                                        UpdateSchema(int64_t oldSchemaNumber);
+  void                                        Initialize();
+  void                                        PreCompileStatements();
   [[nodiscard]] inline bool                   HasError() const { return m_HasError; }
   [[nodiscard]] inline std::string            GetError() const { return m_Error; }
   [[nodiscard]] inline std::filesystem::path  GetFile() const { return m_File; }
   [[nodiscard]] uint64_t                      GetLatestHistoryGameId();
-  void                          UpdateLatestHistoryGameId(uint64_t gameId);
+  void                                        UpdateLatestHistoryGameId(uint64_t gameId);
 
   [[nodiscard]] inline bool                   Begin() const { return m_DB->Exec("BEGIN TRANSACTION") == SQLITE_OK; }
-  inline bool                   Commit() const { return m_DB->Exec("COMMIT TRANSACTION") == SQLITE_OK; }
+  inline bool                                 Commit() const { return m_DB->Exec("COMMIT TRANSACTION") == SQLITE_OK; }
 
   // Geolocalization
   [[nodiscard]] std::string                   FromCheck(uint32_t ip);
@@ -364,8 +364,8 @@ public:
   [[nodiscard]] std::vector<std::string>      ListBans(const std::string& authserver);
 
   // Players
-  void                                        UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CDBGamePlayer* dbPlayer);
-  void                                        UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CDBGamePlayer* dbPlayer, const uint64_t durationSeconds);
+  void                                        UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGameController* controllerData);
+  void                                        UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint64_t durationSeconds);
   [[nodiscard]] CDBGamePlayerSummary*         GamePlayerSummaryCheck(const std::string& name, const std::string& server);
   void                                        UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint8_t result, const CDBDotAPlayer* dotaPlayer);
   [[nodiscard]] CDBDotAPlayerSummary*         DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
@@ -377,10 +377,10 @@ public:
   void                                        SaveDotAStats(CDotaStats* dotaStats);
 
   // Games
-  bool                          GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::array<uint8_t, 4>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
+  bool                                        GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::array<uint8_t, 4>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
   [[nodiscard]] CDBGameSummary*               GameCheck(const uint64_t gameId);
 
-  void                          InitMapData();
+  void                                        InitMapData();
   [[nodiscard]] CSearchableMapData*           GetMapData(uint8_t mapType) const;
   [[nodiscard]] uint8_t                       FindData(const uint8_t mapType, const uint8_t searchDataType, std::string& objectName, const bool exactMatch) const;
   [[nodiscard]] std::vector<std::string>      GetDescription(const uint8_t mapType, const uint8_t searchDataType, const std::string& objectName) const;

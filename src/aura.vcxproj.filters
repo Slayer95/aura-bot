@@ -75,7 +75,7 @@
     <ClCompile Include="net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dbgameplayer.cpp">
+    <ClCompile Include="game_controller_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="auradb.cpp">
@@ -242,7 +242,7 @@
     <ClInclude Include="action.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dbgameplayer.h">
+    <ClInclude Include="game_controller_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="auradb.h">

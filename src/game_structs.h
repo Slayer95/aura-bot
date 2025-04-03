@@ -177,18 +177,18 @@ struct GameHistory
 
 struct GameResults
 {
-  std::vector<CDBGamePlayer*> winners;
-  std::vector<CDBGamePlayer*> losers;
-  std::vector<CDBGamePlayer*> drawers;
-  std::vector<CDBGamePlayer*> undecided;
+  std::vector<CGameController*> winners;
+  std::vector<CGameController*> losers;
+  std::vector<CGameController*> drawers;
+  std::vector<CGameController*> undecided;
 
   GameResults();
   ~GameResults();
 
-  inline const std::vector<CDBGamePlayer*>& GetWinners() const { return winners; }
-  inline const std::vector<CDBGamePlayer*>& GetLosers() const { return losers; }
-  inline const std::vector<CDBGamePlayer*>& GetDrawers() const { return drawers; }
-  inline const std::vector<CDBGamePlayer*>& GetUndecided() const { return drawers; }
+  inline const std::vector<CGameController*>& GetWinners() const { return winners; }
+  inline const std::vector<CGameController*>& GetLosers() const { return losers; }
+  inline const std::vector<CGameController*>& GetDrawers() const { return drawers; }
+  inline const std::vector<CGameController*>& GetUndecided() const { return drawers; }
   std::vector<std::string> GetWinnersNames() const;
 };
 
