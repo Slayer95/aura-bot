@@ -190,6 +190,7 @@ struct GameResults
   inline const std::vector<CGameController*>& GetDrawers() const { return drawers; }
   inline const std::vector<CGameController*>& GetUndecided() const { return drawers; }
   std::vector<std::string> GetWinnersNames() const;
+  void Confirm();
 };
 
 #endif // AURA_GAME_STRUCTS_H_

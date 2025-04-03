@@ -2389,8 +2389,8 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
 
 void CMap::LoadGameResultConfig(CConfig& CFG)
 {
-  const vector<string> truthSourceOptions = {"none", "exit", "mmd"};
-  m_GameResult.truthSource = m_MMD.enabled ? GAME_RESULT_SOURCE_MMD : GAME_RESULT_SOURCE_LEAVECODE;
+  const vector<string> truthSourceOptions = {"none", "only-exit", "only-mmd", "prefer-exit", "prefer-mmd"};
+  m_GameResult.truthSource = m_MMD.enabled ? GAME_RESULT_SOURCE_SELECT_PREFER_MMD : GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE;
   if (CFG.Exists("map.game_result.source")) {
     m_GameResult.truthSource = CFG.GetStringIndex("map.game_result.source", truthSourceOptions, m_GameResult.truthSource);
     CFG.FailIfErrorLast();

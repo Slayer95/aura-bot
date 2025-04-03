@@ -228,3 +228,16 @@ vector<string> GameResults::GetWinnersNames() const
   }
   return names;
 }
+
+void GameResults::Confirm()
+{
+  for (auto& winner : winners) {
+    winner->SetGameResult(GAME_RESULT_WINNER);
+  }
+  for (auto& loser : losers) {
+    loser->SetGameResult(GAME_RESULT_LOSER);
+  }
+  for (auto& drawer : drawers) {
+    drawer->SetGameResult(GAME_RESULT_DRAWER);
+  }
+}

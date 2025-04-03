@@ -202,6 +202,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_BeforePlayingEmptyActions(0),
+    m_GameResultsSource(GAME_RESULT_SOURCE_NONE),
     m_GameHistory(make_shared<GameHistory>()),
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
     m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
@@ -339,6 +340,7 @@ void CGame::Reset()
   ClearActions();
 
   if (m_GameLoaded && RunGameResults()) {
+    m_GameResults->Confirm();
     LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
   }
 
@@ -4615,7 +4617,7 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
     case ON_PLAYER_LEAVE_SHARE_UNITS: {
       // Ensure the disconnected user's game client / GProxy fully exits.
       Send(user, packet);
-      // TODO: Turn into a CGameVirtualUser?
+      // TODO: ON_PLAYER_LEAVE_SHARE_UNITS - Turn into a CGameVirtualUser?
       break;
     }
 
@@ -5319,12 +5321,10 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
   if (user->GetDisconnected()) return;
   if (m_GameLoading || m_GameLoaded || clientReason == PLAYERLEAVE_GPROXY) {
     LOG_APP_IF(LOG_LEVEL_INFO, "user [" + user->GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
-    if (m_GameLoaded && !user->GetIsObserver() && GetGameResultSourceOfTruth() == GAME_RESULT_SOURCE_LEAVECODE) {
-      const optional<uint8_t> gameResult = GameProtocol::LeftCodeToResult(clientReason);
-      if (gameResult.has_value()) {
-        SetSelfReportedGameResultForPlayer(user->GetUID(), gameResult.value());
-      }
-    }
+  }
+
+  if (m_GameLoaded && !user->GetIsObserver() && GetGameResultSourceOfTruth() == GAME_RESULT_SOURCE_LEAVECODE) {
+    
   }
 
   // this function is only called when a client leave packet is received, not when there's a socket error or kick
@@ -10087,75 +10087,120 @@ uint32_t CGame::GetSyncLimitSafe() const
   return m_Config.m_SyncLimitSafe;
 }
 
-void CGame::VoidDBGameResults()
+optional<GameResults> CGame::GetGameResultsMMD()
 {
-  // TODO(VoidDBGameResults): Clear all CGameController* game results
+  const bool undecidedIsLoser = m_Map->GetGameResultUndecidedIsLoser();
+  if (m_CustomStats) {
+    return m_CustomStats->GetGameResults(undecidedIsLoser);
+  }
+  if (m_DotaStats) {
+    return m_DotaStats->GetGameResults(undecidedIsLoser);
+  }
+  return nullopt;
 }
 
-void CGame::SyncGameControllersFromGameResults()
+optional<GameResults> CGame::GetGameResultsLeaveCode()
 {
-  // TODO(SyncDBGameResults): Copy from m_GameResults to CGameController*
-}
-
-bool CGame::RunGameResults()
-{
-  if (m_GameResults.has_value()) return true;
+  const bool undecidedIsLoser = m_Map->GetGameResultUndecidedIsLoser();
 
   optional<GameResults> gameResults;
+  gameResults.emplace();
 
+  for (const auto& controllerData : m_GameControllers) {
+    uint8_t gameResult = GAME_RESULT_UNDECIDED;
+    if (controllerData->GetHasClientLeftCode()) {
+      optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
+      if (maybeResult.has_value()) gameResult = maybeResult.value();
+    }
+    vector<CGameController*>* resultGroup = nullptr;
+    switch (gameResult) {
+      case GAME_RESULT_WINNER:
+        resultGroup = &gameResults->winners;
+        break;
+      case GAME_RESULT_LOSER:
+        resultGroup = &gameResults->losers;
+        break;
+      case GAME_RESULT_DRAWER:
+        resultGroup = &gameResults->drawers;
+        break;
+      case GAME_RESULT_UNDECIDED:
+        if (undecidedIsLoser) {
+          resultGroup = &gameResults->undecided;
+        } else {
+          resultGroup = &gameResults->losers;
+        }
+    }
+    resultGroup->push_back(controllerData);
+  }
+
+  return gameResults;
+}
+
+uint8_t CGame::RunGameResults()
+{
+  if (m_GameResultsSource != GAME_RESULT_SOURCE_NONE) return m_GameResultsSource;
+  
   FlushStatsQueue();
 
-  const bool undecidedIsLoser = m_Map->GetGameResultUndecidedIsLoser();
-  switch (GetGameResultSourceOfTruth()) {
-    case GAME_RESULT_SOURCE_MMD: {
-      if (m_CustomStats) {
-        gameResults = m_CustomStats->GetGameResults(undecidedIsLoser);
-      } else if (m_DotaStats) {
-        gameResults = m_DotaStats->GetGameResults(undecidedIsLoser);
-      }
-      break;
-    }
+  const uint8_t sourceOfTruth = GetGameResultSourceOfTruth();
 
-    case GAME_RESULT_SOURCE_LEAVECODE: {
-      gameResults.emplace();
-      for (const auto& controllerData : m_GameControllers) {
-        vector<CGameController*>* resultGroup = nullptr;
-        switch (controllerData->GetGameResult()) {
-          case GAME_RESULT_WINNER:
-            resultGroup = &gameResults->winners;
-            break;
-          case GAME_RESULT_LOSER:
-            resultGroup = &gameResults->losers;
-            break;
-          case GAME_RESULT_DRAWER:
-            resultGroup = &gameResults->drawers;
-            break;
-          case GAME_RESULT_UNDECIDED:
-            if (undecidedIsLoser) {
-              resultGroup = &gameResults->undecided;
-            } else {
-              resultGroup = &gameResults->losers;
-            }
-        }
-        resultGroup->push_back(controllerData);
-      }
-      break;
+  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_ONLY_MMD) {
+    optional<GameResults> results = GetGameResultsMMD();
+    if (!results.has_value() || !CheckGameResults(results.value())) {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
+      return GAME_RESULT_SOURCE_NONE;
     }
-
-    default:
-      return false;
+    m_GameResults.swap(results);
+    return GAME_RESULT_SOURCE_MMD;
   }
 
-  if (!gameResults.has_value()) return false;
-
-  if (!CheckGameResults(gameResults.value())) {
-    VoidDBGameResults();
-    return false;
+  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE) {
+    optional<GameResults> results = GetGameResultsLeaveCode();
+    if (!results.has_value() || !CheckGameResults(results.value())) {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
+      return GAME_RESULT_SOURCE_NONE;
+    }
+    m_GameResults.swap(results);
+    return GAME_RESULT_SOURCE_LEAVECODE;
   }
 
-  m_GameResults.swap(gameResults);
-  SyncGameControllersFromGameResults();
-  return true;
+  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_PREFER_MMD) {
+    optional<GameResults> results = GetGameResultsMMD();
+    if (results.has_value() && CheckGameResults(results.value())) {
+      m_GameResults.swap(results);
+      return GAME_RESULT_SOURCE_MMD;
+    } else {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
+      results = GetGameResultsLeaveCode();
+      if (results.has_value() && CheckGameResults(results.value())) {
+        m_GameResults.swap(results);
+        return GAME_RESULT_SOURCE_LEAVECODE;
+      } else {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
+        return GAME_RESULT_SOURCE_NONE;
+      }
+    }
+  }
+
+  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_PREFER_LEAVECODE) {
+    optional<GameResults> results = GetGameResultsLeaveCode();
+    if (results.has_value() && CheckGameResults(results.value())) {
+      m_GameResults.swap(results);
+      return GAME_RESULT_SOURCE_LEAVECODE;
+    } else {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
+      results = GetGameResultsMMD();
+      if (results.has_value() && CheckGameResults(results.value())) {
+        m_GameResults.swap(results);
+        return GAME_RESULT_SOURCE_MMD;
+      } else {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
+        return GAME_RESULT_SOURCE_NONE;
+      }
+    }
+  }
+
+  return GAME_RESULT_SOURCE_NONE;
 }
 
 bool CGame::GetIsAPrioriCompatibleWithGameResultsConstraints(string& reason) const
@@ -10192,14 +10237,6 @@ bool CGame::CheckGameResults(const GameResults& gameResults) const
 
   //gameResults;
   return true;
-}
-
-void CGame::SetSelfReportedGameResultForPlayer(const uint8_t UID, const uint8_t gameResult) const
-{
-  GameUser::CGameUser* user = GetUserFromUID(UID);
-  if (user) user->SetSelfReportedGameResult(gameResult);
-  CGameController* controllerData = GetGameControllerFromUID(UID);
-  if (controllerData) controllerData->SetGameResult(gameResult);
 }
 
 void CGame::RunHCLEncoding()

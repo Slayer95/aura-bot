@@ -213,6 +213,7 @@ protected:
   SharedByteArray                                        m_LoadedMapChunk;
   std::shared_ptr<GameHistory>                           m_GameHistory;
   std::optional<GameResults>                             m_GameResults;
+  uint8_t                                                m_GameResultsSource;
 
   std::bitset<128>                                       m_SupportedGameVersions;
   Version                                                m_SupportedGameVersionsMin;
@@ -771,12 +772,11 @@ public:
   bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
   bool SetLayoutCompact();
 
-  void VoidDBGameResults();
-  void SyncGameControllersFromGameResults();
-  bool RunGameResults();
+  std::optional<GameResults> GetGameResultsMMD();
+  std::optional<GameResults> GetGameResultsLeaveCode();
+  uint8_t RunGameResults();
   bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
   bool CheckGameResults(const GameResults& gameResults) const;
-  void SetSelfReportedGameResultForPlayer(const uint8_t UID, const uint8_t gameResult) const;
 
   bool QueueStatsAction(const CIncomingAction& action);
   bool UpdateStatsQueue() const;
