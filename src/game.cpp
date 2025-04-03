@@ -6784,9 +6784,10 @@ void CGame::Remake()
   m_IsSinglePlayer = false;
   m_Rated = false;
   m_HMCEnabled = false;
-  m_GameDiscoveryInfoChanged = true;
   m_BufferingEnabled = BUFFERING_ENABLED_NONE;
   m_BeforePlayingEmptyActions = 0;
+  m_GameResultsSource = GAME_RESULT_SOURCE_NONE;
+  m_GameDiscoveryInfoChanged = true;
 
   m_HostCounter = m_Aura->NextHostCounter();
   InitPRNG();
@@ -10153,7 +10154,8 @@ uint8_t CGame::RunGameResults()
       return GAME_RESULT_SOURCE_NONE;
     }
     m_GameResults.swap(results);
-    return GAME_RESULT_SOURCE_MMD;
+    m_GameResultsSource = GAME_RESULT_SOURCE_MMD;
+    return m_GameResultsSource;
   }
 
   if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE) {
@@ -10163,20 +10165,23 @@ uint8_t CGame::RunGameResults()
       return GAME_RESULT_SOURCE_NONE;
     }
     m_GameResults.swap(results);
-    return GAME_RESULT_SOURCE_LEAVECODE;
+    m_GameResultsSource = GAME_RESULT_SOURCE_LEAVECODE;
+    return m_GameResultsSource;
   }
 
   if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_PREFER_MMD) {
     optional<GameResults> results = GetGameResultsMMD();
     if (results.has_value() && CheckGameResults(results.value())) {
       m_GameResults.swap(results);
-      return GAME_RESULT_SOURCE_MMD;
+      m_GameResultsSource = GAME_RESULT_SOURCE_MMD;
+      return m_GameResultsSource;
     } else {
       LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
       results = GetGameResultsLeaveCode();
       if (results.has_value() && CheckGameResults(results.value())) {
         m_GameResults.swap(results);
-        return GAME_RESULT_SOURCE_LEAVECODE;
+        m_GameResultsSource = GAME_RESULT_SOURCE_LEAVECODE;
+        return m_GameResultsSource;
       } else {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
         return GAME_RESULT_SOURCE_NONE;
@@ -10188,13 +10193,15 @@ uint8_t CGame::RunGameResults()
     optional<GameResults> results = GetGameResultsLeaveCode();
     if (results.has_value() && CheckGameResults(results.value())) {
       m_GameResults.swap(results);
-      return GAME_RESULT_SOURCE_LEAVECODE;
+      m_GameResultsSource = GAME_RESULT_SOURCE_LEAVECODE;
+      return m_GameResultsSource;
     } else {
       LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
       results = GetGameResultsMMD();
       if (results.has_value() && CheckGameResults(results.value())) {
         m_GameResults.swap(results);
-        return GAME_RESULT_SOURCE_MMD;
+        m_GameResultsSource = GAME_RESULT_SOURCE_MMD;
+        return m_GameResultsSource;
       } else {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
         return GAME_RESULT_SOURCE_NONE;
