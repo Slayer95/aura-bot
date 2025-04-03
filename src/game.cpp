@@ -6781,8 +6781,10 @@ void CGame::Remake()
   m_SentPriorityWhois = false;
   m_Remaking = false;
   m_Remade = true;
-  m_GameDiscoveryInfoChanged = true;
+  m_IsSinglePlayer = false;
+  m_Rated = false;
   m_HMCEnabled = false;
+  m_GameDiscoveryInfoChanged = true;
   m_BufferingEnabled = BUFFERING_ENABLED_NONE;
   m_BeforePlayingEmptyActions = 0;
 
