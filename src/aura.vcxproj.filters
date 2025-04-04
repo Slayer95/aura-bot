@@ -108,10 +108,10 @@
     <ClCompile Include="async_observer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game_seeker.cpp">
+    <ClCompile Include="game_result.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game_user.cpp">
+    <ClCompile Include="game_seeker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game_setup.cpp">
@@ -121,6 +121,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game_structs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_user.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game_virtual_user.cpp">
@@ -275,10 +278,10 @@
     <ClInclude Include="async_observer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="game_seeker.h">
+    <ClInclude Include="game_result.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="game_user.h">
+    <ClInclude Include="game_seeker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_setup.h">
@@ -288,6 +291,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_structs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_user.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_virtual_user.h">

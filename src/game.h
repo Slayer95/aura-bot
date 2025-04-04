@@ -92,7 +92,7 @@ protected:
   CDotaStats*                                            m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
   CSaveGame*                                             m_RestoredGame;
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
-  std::vector<CGameController*>                          m_GameControllers;                 // std::vector of potential gameuser data for the database
+  std::vector<CGameController*>                          m_GameControllers;               // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players
   CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;            // actions to be sent
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
@@ -554,9 +554,6 @@ public:
   uint8_t                   GetUserFromNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
   uint8_t                   GetUserFromDisplayNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
   uint8_t                   GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
-  CGameController*          GetGameControllerFromColor(uint8_t colour) const;
-  CGameController*          GetGameControllerFromSID(uint8_t SID) const;
-  CGameController*          GetGameControllerFromUID(uint8_t UID) const;
   GameUser::CGameUser*      GetUserFromColor(uint8_t colour) const;
   uint8_t                   GetColorFromUID(uint8_t UID) const;
   uint8_t                   GetNewUID() const;
@@ -774,10 +771,17 @@ public:
 
   std::optional<GameResults> GetGameResultsMMD();
   std::optional<GameResults> GetGameResultsLeaveCode();
+  uint8_t TryConfirmResults(std::optional<GameResults>, uint8_t resultsSource);
   uint8_t RunGameResults();
   bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
   bool CheckGameResults(const GameResults& gameResults) const;
 
+  void                      StoreGameControllers();
+  CGameController*          GetGameControllerFromColor(uint8_t colour) const;
+  CGameController*          GetGameControllerFromSID(uint8_t SID) const;
+  CGameController*          GetGameControllerFromUID(uint8_t UID) const;
+
+  bool InitStats();
   bool QueueStatsAction(const CIncomingAction& action);
   bool UpdateStatsQueue() const;
   void FlushStatsQueue() const;

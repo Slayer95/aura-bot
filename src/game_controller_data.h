@@ -56,6 +56,7 @@ class CGameController
 {
 private:
   GameControllerType                    m_Type;
+  bool                                  m_Observer;
   uint8_t                               m_UID;
   uint8_t                               m_SID;
   uint8_t                               m_Color;
@@ -79,6 +80,7 @@ public:
   ~CGameController();
 
   [[nodiscard]] inline GameControllerType                                 GetType() const { return m_Type; }
+  [[nodiscard]] inline bool                                               GetIsObserver() const { return m_Observer; }
   [[nodiscard]] inline uint8_t                                            GetUID() const { return m_UID; }
   [[nodiscard]] inline uint8_t                                            GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                                            GetColor() const { return m_Color; }

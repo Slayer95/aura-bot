@@ -50,6 +50,7 @@
 
 #include "includes.h"
 #include "file_util.h"
+#include "game_result.h"
 #include "game_slot.h"
 #include "util.h"
 
@@ -139,34 +140,6 @@ struct MapEssentials
   {
   }
   ~MapEssentials() = default;
-};
-
-//
-// GameResultConfig
-//
-
-struct GameResultConfig
-{
-  bool canDraw;
-  bool canAllWin;
-  bool canAllLose;
-  bool canWinMultiplePlayers;
-  bool canWinMultipleTeams;
-  bool undecidedIsLoser;
-  uint8_t truthSource;
-
-  GameResultConfig()
-   : canDraw(false),
-     canAllWin(false),
-     canAllLose(false),
-     canWinMultiplePlayers(false),
-     canWinMultipleTeams(false),
-     undecidedIsLoser(false),
-     truthSource(GAME_RESULT_SOURCE_NONE)
-  {
-  }
-
-  ~GameResultConfig() = default;
 };
 
 struct HCLConfig
@@ -368,7 +341,7 @@ public:
   std::optional<uint8_t>                m_BroadcastErrorHandler;
   std::optional<bool>                   m_PipeConsideredHarmful;
 
-  GameResultConfig                      m_GameResult;
+  GameResultConstraints                 m_GameResultConstraints;
   HCLConfig                             m_HCL;
   W3MMDConfig                           m_MMD;
   W3HMCConfig                           m_HMC;
@@ -472,8 +445,8 @@ public:
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapDataSet() const { return m_MapDataSet; }
   [[nodiscard]] inline bool                       GetMapRequiresExpansion() const { return m_MapRequiresExpansion; }
-  [[nodiscard]] inline bool                       GetMapScriptIsLua() const { m_MapIsLua; }
-  [[nodiscard]] inline bool                       GetMapIsMelee() const { m_MapIsMelee; }
+  [[nodiscard]] inline bool                       GetMapScriptIsLua() const { return m_MapIsLua; }
+  [[nodiscard]] inline bool                       GetMapIsMelee() const { return m_MapIsMelee; }
   [[nodiscard]] inline const Version&             GetMapMinGameVersion() const { return m_MapMinGameVersion; }
   [[nodiscard]] inline const Version&             GetMapMinSuggestedGameVersion() const { return m_MapMinSuggestedGameVersion; }
   [[nodiscard]] uint8_t                           GetMapLayoutStyle() const;
@@ -549,7 +522,6 @@ public:
   void Load(CConfig* CFG);
   void LoadGameConfigOverrides(CConfig& CFG);
   void LoadMapSpecificConfig(CConfig& CFG);
-  void LoadGameResultConfig(CConfig& CFG);
 
   [[nodiscard]] bool                              TryLoadMapFilePersistent(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32);
   [[nodiscard]] bool                              TryLoadMapFileChunked(std::optional<uint32_t>& fileSize, std::optional<uint32_t>& crc32, std::optional<std::array<uint8_t, 20>>& sha1);
@@ -560,8 +532,8 @@ public:
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 
-  [[nodiscard]] inline uint8_t                           GetGameResultSourceOfTruth() const { return m_GameResult.truthSource; }
-  [[nodiscard]] inline bool                              GetGameResultUndecidedIsLoser() const { return m_GameResult.undecidedIsLoser; }
+  [[nodiscard]] inline uint8_t                           GetGameResultSourceOfTruth() const { return m_GameResultConstraints.truthSource; }
+  [[nodiscard]] inline bool                              GetGameResultUndecidedIsLoser() const { return m_GameResultConstraints.undecidedIsLoser; }
 
   // HCL
   [[nodiscard]] inline bool                              GetHCLSupported() const { return m_HCL.supported; }

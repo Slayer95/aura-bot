@@ -45,6 +45,7 @@
 
 #include "w3mmd.h"
 #include "../game_controller_data.h"
+#include "../game_result.h"
 #include "../config/config_game.h"
 #include "../game.h"
 #include "../protocol/game_protocol.h"

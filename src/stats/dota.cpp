@@ -46,6 +46,7 @@
 #include "dota.h"
 #include "../aura.h"
 #include "../game_controller_data.h"
+#include "../game_result.h"
 #include "../auradb.h"
 #include "../game.h"
 #include "../game_user.h"

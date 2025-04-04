@@ -46,6 +46,7 @@
 #include <crc32/crc32.h>
 
 #include "game.h"
+#include "game_result.h"
 #include "game_structs.h"
 #include "command.h"
 #include "aura.h"
@@ -340,7 +341,6 @@ void CGame::Reset()
   ClearActions();
 
   if (m_GameLoaded && RunGameResults()) {
-    m_GameResults->Confirm();
     LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
   }
 
@@ -348,8 +348,8 @@ void CGame::Reset()
     TrySaveStats();
   }
 
-  for (auto& user : m_GameControllers) {
-    delete user;
+  for (auto& controllerData : m_GameControllers) {
+    delete controllerData;
   }
   m_GameControllers.clear();
 
@@ -375,6 +375,79 @@ void CGame::Reset()
   }
 
   m_Aura->m_Net.OnGameReset(this);
+}
+
+CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
+{
+  if (colour == m_Map->GetVersionMaxSlots()) {
+    // Observers are not stored
+    return nullptr;
+  }
+  for (const auto& controllerData : m_GameControllers) {
+    if (controllerData && controllerData->GetColor() == colour) {
+      return controllerData;
+    }
+  }
+  return nullptr;
+}
+
+void CGame::StoreGameControllers()
+{
+  m_GameControllers.reserve(m_Slots.size());
+  for (uint8_t SID = 0, slotCount = static_cast<uint8_t>(m_Slots.size()); SID < slotCount; ++SID) {
+    // Do not exclude observers yet, so that they can be searched in commands.
+    const CGameSlot* slot = InspectSlot(SID);
+    if (slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+      continue;
+    }
+    const IndexedGameSlot idxSlot = IndexedGameSlot(SID, slot);
+    if (!slot->GetIsPlayerOrFake()) {
+      m_GameControllers.push_back(new CGameController(idxSlot));
+      continue;
+    }
+    const GameUser::CGameUser* user = GetUserFromSID(SID);
+    if (user) {
+      m_GameControllers.push_back(new CGameController(user, idxSlot));
+      continue;
+    }
+    const CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
+    if (virtualUser) {
+      m_GameControllers.push_back(new CGameController(virtualUser, idxSlot));
+      continue;
+    }
+    m_GameControllers.push_back(nullptr);
+  }
+}
+
+CGameController* CGame::GetGameControllerFromSID(uint8_t SID) const
+{
+  if (SID >= static_cast<uint8_t>(m_GameControllers.size())) {
+    return nullptr;
+  }
+  return m_GameControllers[SID];
+}
+
+CGameController* CGame::GetGameControllerFromUID(uint8_t UID) const
+{
+  for (const auto& controllerData : m_GameControllers) {
+    if (controllerData && controllerData->GetUID() == UID) {
+      return controllerData;
+    }
+  }
+  return nullptr;
+}
+
+bool CGame::InitStats()
+{
+  if (!m_Map->GetMMDEnabled()) {
+    return false;
+  }
+  if (m_Map->GetMMDType() == MMD_TYPE_DOTA) {
+    m_DotaStats = new CDotaStats(this);
+  } else {
+    m_CustomStats = new CW3MMD(this);
+  }
+  return true;
 }
 
 bool CGame::QueueStatsAction(const CIncomingAction& action)
@@ -417,8 +490,7 @@ void CGame::TrySaveStats() const
     LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] saving game end player data to database")
     if (m_Aura->m_DB->Begin()) {
       for (auto& controllerData : m_GameControllers) {
-        // exclude observers
-        if (controllerData->GetColor() == m_Map->GetVersionMaxSlots()) {
+        if (!controllerData || controllerData->GetIsObserver()) {
           continue;
         }
         m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, m_EffectiveTicks / 1000);
@@ -6238,21 +6310,8 @@ void CGame::EventGameStartedLoading()
     m_Rated = GetIsAPrioriCompatibleWithGameResultsConstraints(m_UnratedReason);
   }
 
-  if (m_Map->GetMMDEnabled()) {
-    if (m_Map->GetMMDType() == MMD_TYPE_DOTA) {
-      m_DotaStats = new CDotaStats(this);
-    } else {
-      m_CustomStats = new CW3MMD(this);
-    }
-  }
-
-  for (const auto& user : m_Users) {
-    const uint8_t SID = user->GetSID();
-    const CGameSlot* slot = InspectSlot(SID);
-    const IndexedGameSlot idxSlot = IndexedGameSlot(SID, slot);
-    // Do not exclude observers yet, so that they can be searched in commands.
-    m_GameControllers.push_back(new CGameController(user, idxSlot));
-  }
+  StoreGameControllers();
+  InitStats();
 
   if (m_Map->GetHMCEnabled()) {
     const uint8_t SID = m_Map->GetHMCSlot();
@@ -6680,7 +6739,7 @@ void CGame::HandleGameLoadedStats()
   );
 
   for (auto& controllerData : m_GameControllers) {
-    if (controllerData->GetColor() == m_Map->GetVersionMaxSlots()) {
+    if (!controllerData || controllerData->GetIsObserver()) {
       continue;
     }
     m_Aura->m_DB->UpdateGamePlayerOnStart(m_PersistentId, controllerData);
@@ -6964,40 +7023,6 @@ uint8_t CGame::GetUserFromDisplayNamePartial(const string& name, GameUser::CGame
     matchPlayer = nullptr;
   }
   return matches;
-}
-
-CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
-{
-  if (colour == m_Map->GetVersionMaxSlots()) {
-    // Observers are not stored
-    return nullptr;
-  }
-  for (const auto& user : m_GameControllers) {
-    if (user->GetColor() == colour) {
-      return user;
-    }
-  }
-  return nullptr;
-}
-
-CGameController* CGame::GetGameControllerFromSID(uint8_t SID) const
-{
-  for (const auto& user : m_GameControllers) {
-    if (user->GetSID() == SID) {
-      return user;
-    }
-  }
-  return nullptr;
-}
-
-CGameController* CGame::GetGameControllerFromUID(uint8_t UID) const
-{
-  for (const auto& user : m_GameControllers) {
-    if (user->GetUID() == UID) {
-      return user;
-    }
-  }
-  return nullptr;
 }
 
 uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanPlayer) const
@@ -10109,6 +10134,7 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
   gameResults.emplace();
 
   for (const auto& controllerData : m_GameControllers) {
+    if (!controllerData) continue;
     uint8_t gameResult = GAME_RESULT_UNDECIDED;
     if (controllerData->GetHasClientLeftCode()) {
       optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
@@ -10138,6 +10164,21 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
   return gameResults;
 }
 
+uint8_t CGame::TryConfirmResults(optional<GameResults> gameResults, uint8_t resultsSource) {
+  if (!gameResults.has_value() || !CheckGameResults(gameResults.value())) {
+    if (resultsSource == GAME_RESULT_SOURCE_MMD) {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
+    } else {
+      LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
+    }
+    return GAME_RESULT_SOURCE_NONE;
+  }
+  m_GameResultsSource = resultsSource;
+  m_GameResults.swap(gameResults);
+  m_GameResults->Confirm();
+  return m_GameResultsSource;
+}
+
 uint8_t CGame::RunGameResults()
 {
   if (m_GameResultsSource != GAME_RESULT_SOURCE_NONE) return m_GameResultsSource;
@@ -10148,64 +10189,30 @@ uint8_t CGame::RunGameResults()
 
   if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_ONLY_MMD) {
     optional<GameResults> results = GetGameResultsMMD();
-    if (!results.has_value() || !CheckGameResults(results.value())) {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
-      return GAME_RESULT_SOURCE_NONE;
-    }
-    m_GameResults.swap(results);
-    m_GameResultsSource = GAME_RESULT_SOURCE_MMD;
-    return m_GameResultsSource;
+    return TryConfirmResults(results, GAME_RESULT_SOURCE_MMD);
   }
 
   if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE) {
     optional<GameResults> results = GetGameResultsLeaveCode();
-    if (!results.has_value() || !CheckGameResults(results.value())) {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
-      return GAME_RESULT_SOURCE_NONE;
-    }
-    m_GameResults.swap(results);
-    m_GameResultsSource = GAME_RESULT_SOURCE_LEAVECODE;
-    return m_GameResultsSource;
+    return TryConfirmResults(results, GAME_RESULT_SOURCE_LEAVECODE);
   }
 
   if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_PREFER_MMD) {
     optional<GameResults> results = GetGameResultsMMD();
-    if (results.has_value() && CheckGameResults(results.value())) {
-      m_GameResults.swap(results);
-      m_GameResultsSource = GAME_RESULT_SOURCE_MMD;
+    if (TryConfirmResults(results, GAME_RESULT_SOURCE_MMD)) {
       return m_GameResultsSource;
-    } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
-      results = GetGameResultsLeaveCode();
-      if (results.has_value() && CheckGameResults(results.value())) {
-        m_GameResults.swap(results);
-        m_GameResultsSource = GAME_RESULT_SOURCE_LEAVECODE;
-        return m_GameResultsSource;
-      } else {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
-        return GAME_RESULT_SOURCE_NONE;
-      }
     }
+    results = GetGameResultsLeaveCode();
+    return TryConfirmResults(results, GAME_RESULT_SOURCE_LEAVECODE);
   }
 
   if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_PREFER_LEAVECODE) {
     optional<GameResults> results = GetGameResultsLeaveCode();
-    if (results.has_value() && CheckGameResults(results.value())) {
-      m_GameResults.swap(results);
-      m_GameResultsSource = GAME_RESULT_SOURCE_LEAVECODE;
+    if (TryConfirmResults(results, GAME_RESULT_SOURCE_LEAVECODE)) {
       return m_GameResultsSource;
-    } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
-      results = GetGameResultsMMD();
-      if (results.has_value() && CheckGameResults(results.value())) {
-        m_GameResults.swap(results);
-        m_GameResultsSource = GAME_RESULT_SOURCE_MMD;
-        return m_GameResultsSource;
-      } else {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
-        return GAME_RESULT_SOURCE_NONE;
-      }
     }
+    results = GetGameResultsMMD();
+    return TryConfirmResults(results, GAME_RESULT_SOURCE_MMD);
   }
 
   return GAME_RESULT_SOURCE_NONE;

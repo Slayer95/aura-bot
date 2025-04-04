@@ -23,26 +23,6 @@
 
  */
 
-/*
-
-   Copyright [2010] [Josko Nikolic]
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
-
- */
-
 #ifndef AURA_GAME_STRUCTS_H_
 #define AURA_GAME_STRUCTS_H_
 
@@ -173,24 +153,6 @@ struct GameHistory
   inline void SetStartedTicks(const int64_t nStartedTicks) { m_StartedTicks = nStartedTicks; }
   inline bool GetIsStarted() { return m_StartedTicks.has_value();}
   inline int64_t GetStartedTicks() { return m_StartedTicks.value(); }
-};
-
-struct GameResults
-{
-  std::vector<CGameController*> winners;
-  std::vector<CGameController*> losers;
-  std::vector<CGameController*> drawers;
-  std::vector<CGameController*> undecided;
-
-  GameResults();
-  ~GameResults();
-
-  inline const std::vector<CGameController*>& GetWinners() const { return winners; }
-  inline const std::vector<CGameController*>& GetLosers() const { return losers; }
-  inline const std::vector<CGameController*>& GetDrawers() const { return drawers; }
-  inline const std::vector<CGameController*>& GetUndecided() const { return drawers; }
-  std::vector<std::string> GetWinnersNames() const;
-  void Confirm();
 };
 
 #endif // AURA_GAME_STRUCTS_H_

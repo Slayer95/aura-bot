@@ -23,26 +23,6 @@
 
  */
 
-/*
-
-   Copyright [2010] [Josko Nikolic]
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   CODE PORTED FROM THE ORIGINAL GHOST PROJECT
-
- */
-
 #include "game_structs.h"
 #include "game_controller_data.h"
 #include "game_user.h"
@@ -206,38 +186,4 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
     }
   }
   return false;
-}
-
-//
-// GameResults
-//
-
-GameResults::GameResults()
-{
-}
-
-GameResults::~GameResults()
-{
-}
-
-vector<string> GameResults::GetWinnersNames() const
-{
-  vector<string> names;
-  for (const auto& winner : GetWinners()) {
-    names.push_back(winner->GetName());
-  }
-  return names;
-}
-
-void GameResults::Confirm()
-{
-  for (auto& winner : winners) {
-    winner->SetGameResult(GAME_RESULT_WINNER);
-  }
-  for (auto& loser : losers) {
-    loser->SetGameResult(GAME_RESULT_LOSER);
-  }
-  for (auto& drawer : drawers) {
-    drawer->SetGameResult(GAME_RESULT_DRAWER);
-  }
 }

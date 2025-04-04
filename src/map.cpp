@@ -1627,7 +1627,7 @@ void CMap::Load(CConfig* CFG)
 
   LoadGameConfigOverrides(*CFG);
   LoadMapSpecificConfig(*CFG);
-  LoadGameResultConfig(*CFG);
+  m_GameResultConstraints = GameResultConstraints(this, *CFG);
 
   // Out of the box support for auto-starting maps using the Host Force + Others Force pattern (e.g. Warlock)
   if (m_MapNumTeams == 2 && m_MapNumControllers > 2 && !m_AutoStartRequiresBalance.has_value()) {
@@ -2385,60 +2385,6 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   }
 
   CFG.SetStrictMode(wasStrict);
-}
-
-void CMap::LoadGameResultConfig(CConfig& CFG)
-{
-  const vector<string> truthSourceOptions = {"none", "only-exit", "only-mmd", "prefer-exit", "prefer-mmd"};
-  m_GameResult.truthSource = m_MMD.enabled ? GAME_RESULT_SOURCE_SELECT_PREFER_MMD : GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE;
-  if (CFG.Exists("map.game_result.source")) {
-    m_GameResult.truthSource = CFG.GetStringIndex("map.game_result.source", truthSourceOptions, m_GameResult.truthSource);
-    CFG.FailIfErrorLast();
-  } else {
-    CFG.SetString("map.game_result.source", truthSourceOptions[m_GameResult.truthSource]);
-  }
-
-  m_GameResult.canDraw = !m_MapIsMelee;
-  if (CFG.Exists("map.game_result.draw.allowed")) {
-    m_GameResult.canDraw = CFG.GetBool("map.game_result.draw.allowed", m_GameResult.canDraw);
-  } else {
-    CFG.SetBool("map.game_result.draw.allowed", m_GameResult.canDraw);
-  }
-
-  m_GameResult.canWinMultiplePlayers = true;
-  if (CFG.Exists("map.game_result.shared_winners.players.allowed")) {
-    m_GameResult.canWinMultiplePlayers = CFG.GetBool("map.game_result.shared_winners.players.allowed", m_GameResult.canWinMultiplePlayers);
-  } else {
-    CFG.SetBool("map.game_result.shared_winners.players.allowed", m_GameResult.canWinMultiplePlayers);
-  }
-
-  m_GameResult.canWinMultipleTeams = !m_MapIsMelee || !(m_GameFlags & MAPFLAG_FIXEDTEAMS);
-  if (CFG.Exists("map.game_result.shared_winners.teams.allowed")) {
-    m_GameResult.canWinMultipleTeams = CFG.GetBool("map.game_result.shared_winners.teams.allowed", m_GameResult.canWinMultipleTeams);
-  } else {
-    CFG.SetBool("map.game_result.shared_winners.teams.allowed", m_GameResult.canWinMultipleTeams);
-  }
-
-  m_GameResult.canAllWin = false; // not allowed in a rated game
-  if (CFG.Exists("map.game_result.shared_winners.all.allowed")) {
-    m_GameResult.canAllWin = CFG.GetBool("map.game_result.shared_winners.all.allowed", m_GameResult.canAllWin);
-  } else {
-    CFG.SetBool("map.game_result.shared_winners.all.allowed", m_GameResult.canAllWin);
-  }
-
-  m_GameResult.canAllLose = false; // not allowed in a rated game
-  if (CFG.Exists("map.game_result.shared_losers.all.allowed")) {
-    m_GameResult.canAllLose = CFG.GetBool("map.game_result.shared_losers.all.allowed", m_GameResult.canAllLose);
-  } else {
-    CFG.SetBool("map.game_result.shared_losers.all.allowed", m_GameResult.canAllLose);
-  }
-
-  m_GameResult.undecidedIsLoser = true;
-  if (CFG.Exists("map.game_result.undecided.is_loser")) {
-    m_GameResult.undecidedIsLoser = CFG.GetBool("map.game_result.undecided.is_loser", m_GameResult.undecidedIsLoser);
-  } else {
-    CFG.SetBool("map.game_result.undecided.is_loser", m_GameResult.undecidedIsLoser);
-  }
 }
 
 uint8_t CMap::GetLobbyRace(const CGameSlot* slot) const

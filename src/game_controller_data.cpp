@@ -56,6 +56,7 @@ using namespace std;
 
 CGameController::CGameController(const IndexedGameSlot& idxSlot)
   : m_Type(GameControllerType::kComputer),
+    m_Observer(false),
     m_UID(idxSlot.second->GetUID()),
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
@@ -67,6 +68,7 @@ CGameController::CGameController(const IndexedGameSlot& idxSlot)
 
 CGameController::CGameController(const GameUser::CGameUser* user, const IndexedGameSlot& idxSlot)
   : m_Type(GameControllerType::kUser),
+    m_Observer(user->GetIsObserver()),
     m_UID(idxSlot.second->GetUID()),
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
@@ -80,6 +82,7 @@ CGameController::CGameController(const GameUser::CGameUser* user, const IndexedG
 
 CGameController::CGameController(const CGameVirtualUser* virtualUser, const IndexedGameSlot& idxSlot)
   : m_Type(GameControllerType::kVirtual),
+    m_Observer(virtualUser->GetIsObserver()),
     m_UID(idxSlot.second->GetUID()),
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),

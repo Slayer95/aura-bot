@@ -96,6 +96,7 @@ OBJS = lib/csvparser/csvparser.o \
        src/realm_chat.o \
        src/async_observer.o \
        src/game_controller_data.o \
+       src/game_result.o \
        src/game_seeker.o \
        src/game_setup.o \
        src/game_slot.o \
