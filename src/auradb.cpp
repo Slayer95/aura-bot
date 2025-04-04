@@ -896,6 +896,9 @@ vector<string> CAuraDB::ListBans(const string& authserver)
 
 void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGameController* controllerData)
 {
+  if (!controllerData || controllerData->GetType() != GameControllerType::kUser || controllerData->GetIsObserver()) {
+    return;
+  }
   const string lowerName = ToLowerCase(controllerData->GetName());
   const string server = controllerData->GetServer();
   const string ip = controllerData->GetIP();
@@ -934,6 +937,9 @@ void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGa
 
 void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint64_t durationSeconds)
 {
+  if (!controllerData || controllerData->GetType() != GameControllerType::kUser || controllerData->GetIsObserver()) {
+    return;
+  }
   const string lowerName = ToLowerCase(controllerData->GetName());
   const string server = controllerData->GetServer();
   const string ip = controllerData->GetIP();

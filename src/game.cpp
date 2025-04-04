@@ -490,9 +490,6 @@ void CGame::TrySaveStats() const
     LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] saving game end player data to database")
     if (m_Aura->m_DB->Begin()) {
       for (auto& controllerData : m_GameControllers) {
-        if (!controllerData || controllerData->GetIsObserver()) {
-          continue;
-        }
         m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, m_EffectiveTicks / 1000);
       }
       if (!m_Aura->m_DB->Commit()) {
@@ -6739,9 +6736,6 @@ void CGame::HandleGameLoadedStats()
   );
 
   for (auto& controllerData : m_GameControllers) {
-    if (!controllerData || controllerData->GetIsObserver()) {
-      continue;
-    }
     m_Aura->m_DB->UpdateGamePlayerOnStart(m_PersistentId, controllerData);
   }
   if (!m_Aura->m_DB->Commit()) {
