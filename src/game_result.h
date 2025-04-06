@@ -48,43 +48,77 @@ struct GameResults
   void Confirm();
 };
 
+struct GameResultTeamAnalysis
+{
+  std::bitset<MAX_SLOTS_MODERN> winnerTeams; // teams with at least one winner
+  std::bitset<MAX_SLOTS_MODERN> loserTeams; // teams with at least one loser
+  std::bitset<MAX_SLOTS_MODERN> drawerTeams; // teams with at least one drawer
+  std::bitset<MAX_SLOTS_MODERN> leaverTeams; // teams with at least one leaver
+  std::bitset<MAX_SLOTS_MODERN> undecidedVirtualTeams; // teams with at least one undecided virtual user
+  std::bitset<MAX_SLOTS_MODERN> undecidedUserTeams; // teams with at least one undecided user
+  std::bitset<MAX_SLOTS_MODERN> undecidedComputerTeams; // teams with at least one undecided computer
+
+  GameResultTeamAnalysis() = default;
+  ~GameResultTeamAnalysis() = default;
+};
+
 //
 // GameResultConstraints
 //
 
 struct GameResultConstraints
 {
-  bool selfConsistent;
+  bool m_IsValid;
 
-  bool canDraw;
-  bool canDrawAndWin;
-  bool canAllWin;
-  bool canAllLose;
-  bool canLeaverDraw;
-  bool canLeaverWin;
-  bool canTeamWithLeaverWin;
-  bool requireTeamWinExceptLeaver;
-  bool undecidedIsLoser;
+  bool m_CanDraw;
+  bool m_CanDrawAndWin;
+  bool m_CanAllWin;
+  bool m_CanAllLose;
+  bool m_CanLeaverDraw;
+  bool m_CanLeaverWin;
+  bool m_CanTeamWithLeaverWin;
+  bool m_RequireTeamWinExceptLeaver;
 
-  uint8_t truthSource;
+  uint8_t m_UndecidedVirtualHandler;
+  uint8_t m_UndecidedUserHandler;
+  uint8_t m_UndecidedComputerHandler;
+  uint8_t m_ConflictHandler;
+  uint8_t m_SourceOfTruth;
 
-  std::optional<uint8_t> minPlayers;
-  std::optional<uint8_t> maxPlayers;
-  std::optional<uint8_t> minWinnerPlayers;
-  std::optional<uint8_t> maxWinnerPlayers;
-  std::optional<uint8_t> minLoserPlayers;
-  std::optional<uint8_t> maxLoserPlayers;
+  uint8_t m_MinPlayers;
+  uint8_t m_MaxPlayers;
+  uint8_t m_MinWinnerPlayers;
+  uint8_t m_MaxWinnerPlayers;
+  uint8_t m_MinLoserPlayers;
+  uint8_t m_MaxLoserPlayers;
 
-  std::optional<uint8_t> minTeams;
-  std::optional<uint8_t> maxTeams;
-  std::optional<uint8_t> minTeamsWithWinners;
-  std::optional<uint8_t> maxTeamsWithWinners;
-  std::optional<uint8_t> minTeamsWithNoWinners;
-  std::optional<uint8_t> maxTeamsWithNoWinners;
+  uint8_t m_MinTeams;
+  uint8_t m_MaxTeams;
+  uint8_t m_MinTeamsWithWinners;
+  uint8_t m_MaxTeamsWithWinners;
+  uint8_t m_MinTeamsWithNoWinners;
+  uint8_t m_MaxTeamsWithNoWinners;
 
   GameResultConstraints();
   GameResultConstraints(const CMap* map, CConfig& CFG);
   ~GameResultConstraints();
+
+  [[nodiscard]] inline bool GetIsValid() const { return m_IsValid; }
+
+  [[nodiscard]] inline bool GetCanDraw() const { return m_CanDraw; }
+  [[nodiscard]] inline bool GetCanDrawAndWin() const { return m_CanDrawAndWin; }
+  [[nodiscard]] inline bool GetCanAllWin() const { return m_CanAllWin; }
+  [[nodiscard]] inline bool GetCanAllLose() const { return m_CanAllLose; }
+  [[nodiscard]] inline bool GetCanLeaverDraw() const { return m_CanLeaverDraw; }
+  [[nodiscard]] inline bool GetCanLeaverWin() const { return m_CanLeaverWin; }
+  [[nodiscard]] inline bool GetCanTeamWithLeaverWin() const { return m_CanTeamWithLeaverWin; }
+  [[nodiscard]] inline bool GetRequireTeamWinExceptLeaver() const { return m_RequireTeamWinExceptLeaver; }
+
+  [[nodiscard]] inline uint8_t GetUndecidedVirtualHandler() const { return m_UndecidedVirtualHandler; }
+  [[nodiscard]] inline uint8_t GetUndecidedUserHandler() const { return m_UndecidedUserHandler; }
+  [[nodiscard]] inline uint8_t GetUndecidedComputerHandler() const { return m_UndecidedComputerHandler; }
+  [[nodiscard]] inline uint8_t GetConflictHandler() const { return m_ConflictHandler; }
+  [[nodiscard]] inline uint8_t GetSourceOfTruth() const { return m_SourceOfTruth; }
 };
 
 #endif // AURA_GAME_RESULTS_H

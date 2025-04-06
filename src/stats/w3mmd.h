@@ -165,7 +165,8 @@ public:
   [[nodiscard]] std::string GetTrustedPlayerNameFromColor(uint8_t color) const;
   [[nodiscard]] std::string GetSenderName(CW3MMDAction* action) const;
   [[nodiscard]] std::string GetSenderName(CW3MMDDefinition* definition) const;
-  [[nodiscard]] std::optional<GameResults> GetGameResults(const bool undecidedIsLoser) const;
+  [[nodiscard]] GameResultTeamAnalysis GetGameResultTeamAnalysis() const;
+  [[nodiscard]] std::optional<GameResults> GetGameResults(const GameResultConstraints& constraints);
   [[nodiscard]] std::string GetLogPrefix() const;
   void LogMetaData(int64_t recvTicks, const std::string& text) const;
 };

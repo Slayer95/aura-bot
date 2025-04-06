@@ -1040,6 +1040,17 @@ uint8_t CGame::GetNumComputers() const
   return count;
 }
 
+uint8_t CGame::GetNumTeams() const
+{
+  bitset<MAX_SLOTS_MODERN> teams;
+  for (const auto& slot : m_Slots) {
+    if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
+    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) continue;
+    teams.set(slot.GetTeam());
+  }
+  return static_cast<uint8_t>(teams.count());
+}
+
 uint8_t CGame::GetNumTeamControllersOrOpen(const uint8_t team) const
 {
   uint8_t count = 0;
@@ -10108,34 +10119,135 @@ uint32_t CGame::GetSyncLimitSafe() const
   return m_Config.m_SyncLimitSafe;
 }
 
+uint8_t CGame::ResolveUndecidedComputerOrVirtualAuto(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis)
+{
+  if (teamAnalysis.undecidedUserTeams.test(controllerData->GetTeam())) {
+    if (constraints.GetUndecidedUserHandler() == GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES) {
+      return GAME_RESULT_LOSER;
+    }
+  } else if (teamAnalysis.winnerTeams.none() && GetNumTeams() == 2) {
+    return GAME_RESULT_WINNER;
+  }
+  return GAME_RESULT_LOSER;
+}
+
+uint8_t CGame::ResolveUndecidedController(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis)
+{
+  switch (controllerData->GetType()) {
+    case GameControllerType::kVirtual: {
+      switch (constraints.GetUndecidedVirtualHandler()) {
+        case GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_NONE:
+          return GAME_RESULT_UNDECIDED;
+        case GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_LOSER_SELF:
+          return GAME_RESULT_LOSER;
+        case GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO:
+          return ResolveUndecidedComputerOrVirtualAuto(controllerData, constraints, teamAnalysis);
+      }
+    }
+    case GameControllerType::kUser: {
+      switch (constraints.GetUndecidedUserHandler()) {
+        case GAME_RESULT_USER_UNDECIDED_HANDLER_NONE:
+          return GAME_RESULT_UNDECIDED;
+        case GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF:
+        case GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES:
+          return GAME_RESULT_LOSER;
+      }
+    }
+    case GameControllerType::kComputer: {
+      switch (constraints.GetUndecidedComputerHandler()) {
+        case GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_NONE:
+          return GAME_RESULT_UNDECIDED;
+        case GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_LOSER_SELF:
+          return GAME_RESULT_LOSER;
+        case GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO:
+          return ResolveUndecidedComputerOrVirtualAuto(controllerData, constraints, teamAnalysis);
+      }
+      break;
+    }
+  }
+}
+
+GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
+{
+  GameResultTeamAnalysis analysis;
+
+  for (const auto& controllerData : m_GameControllers) {
+    uint8_t result = GAME_RESULT_UNDECIDED;
+    if (controllerData->GetHasClientLeftCode()) {
+      optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
+      if (maybeResult.has_value()) result = maybeResult.value();
+    }
+
+    bitset<MAX_SLOTS_MODERN>* targetBitSet = nullptr;
+    switch (result) {
+      case GAME_RESULT_WINNER:
+        targetBitSet = &analysis.winnerTeams;
+        break;
+      case GAME_RESULT_LOSER:
+        targetBitSet = &analysis.loserTeams;
+        break;
+      case GAME_RESULT_DRAWER:
+        targetBitSet = &analysis.drawerTeams;
+        break;
+      default: {
+        switch (controllerData->GetType()) {
+          case GameControllerType::kVirtual:
+            targetBitSet = &analysis.undecidedVirtualTeams;
+            break;
+          case GameControllerType::kUser:
+            targetBitSet = &analysis.undecidedUserTeams;
+            break;
+          case GameControllerType::kComputer:
+            targetBitSet = &analysis.undecidedComputerTeams;
+            break;
+        }
+      }
+    }
+
+    targetBitSet->set(controllerData->GetTeam());
+
+    if (controllerData->GetHasLeftGame()) {
+      int64_t gameEndTime = m_EffectiveTicks / 1000;
+      // TODO: Grace period for considering a player as leaver: hardcoded as 3 minutes
+      if (gameEndTime > 180 && controllerData->GetLeftGameTime() < static_cast<uint64_t>(gameEndTime - 180)) {
+        analysis.leaverTeams.set(controllerData->GetTeam());
+      }
+    }
+  }
+
+  return analysis;
+}
+
 optional<GameResults> CGame::GetGameResultsMMD()
 {
-  const bool undecidedIsLoser = m_Map->GetGameResultUndecidedIsLoser();
   if (m_CustomStats) {
-    return m_CustomStats->GetGameResults(undecidedIsLoser);
+    return m_CustomStats->GetGameResults(GetMap()->GetGameResultConstraints());
   }
   if (m_DotaStats) {
-    return m_DotaStats->GetGameResults(undecidedIsLoser);
+    return m_DotaStats->GetGameResults(GetMap()->GetGameResultConstraints());
   }
   return nullopt;
 }
 
 optional<GameResults> CGame::GetGameResultsLeaveCode()
 {
-  const bool undecidedIsLoser = m_Map->GetGameResultUndecidedIsLoser();
-
   optional<GameResults> gameResults;
   gameResults.emplace();
 
+  GameResultTeamAnalysis teamAnalysis = GetGameResultTeamAnalysis();
+
   for (const auto& controllerData : m_GameControllers) {
     if (!controllerData) continue;
-    uint8_t gameResult = GAME_RESULT_UNDECIDED;
+    uint8_t result = GAME_RESULT_UNDECIDED;
     if (controllerData->GetHasClientLeftCode()) {
       optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
-      if (maybeResult.has_value()) gameResult = maybeResult.value();
+      if (maybeResult.has_value()) result = maybeResult.value();
+    }
+    if (result == GAME_RESULT_UNDECIDED) {
+      result = ResolveUndecidedController(controllerData, m_Map->GetGameResultConstraints(), teamAnalysis);
     }
     vector<CGameController*>* resultGroup = nullptr;
-    switch (gameResult) {
+    switch (result) {
       case GAME_RESULT_WINNER:
         resultGroup = &gameResults->winners;
         break;
@@ -10146,11 +10258,8 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
         resultGroup = &gameResults->drawers;
         break;
       case GAME_RESULT_UNDECIDED:
-        if (undecidedIsLoser) {
-          resultGroup = &gameResults->undecided;
-        } else {
-          resultGroup = &gameResults->losers;
-        }
+        resultGroup = &gameResults->undecided;
+        break;
     }
     resultGroup->push_back(controllerData);
   }

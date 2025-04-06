@@ -296,6 +296,29 @@ constexpr uint8_t GAME_RESULT_CONSTRAINTS_NODRAW = 1u;
 constexpr uint8_t GAME_RESULT_CONSTRAINTS_SAME_TEAM_WINNERS = 2u;
 constexpr uint8_t GAME_RESULT_CONSTRAINTS_ALL = GAME_RESULT_CONSTRAINTS_NODRAW | GAME_RESULT_CONSTRAINTS_SAME_TEAM_WINNERS;
 
+constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_VOID = 0u; // vulnerable to griefing
+constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_PESSIMISTIC = 1u; // protects against self-boosting, but vulnerable to griefing
+constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_OPTIMISTIC = 2u; // protects against griefing; together with max winner teams = 1, self-boosting results in void
+
+// majority handlers assume that democracy is good
+// but cheaters may complot, and ties may happen
+// ties are resolved with the _OR_SOMETHING part
+constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_VOID = 3u;
+constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_PESSIMISTIC = 4u;
+constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_OPTIMISTIC = 5u;
+
+constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_NONE = 0u;
+constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_LOSER_SELF = 1u;
+constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO = 2u;
+
+constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_NONE = 0u;
+constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF = 1u;
+constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES = 2u; // causes allied computers/virtual users to lose
+
+constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_NONE = 0u;
+constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_LOSER_SELF = 1u;
+constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO = 2u; // can win!
+
 constexpr uint8_t GAME_RESULT_LOSER = 0u;
 constexpr uint8_t GAME_RESULT_DRAWER = 1u;
 constexpr uint8_t GAME_RESULT_WINNER = 2u;

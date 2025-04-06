@@ -56,7 +56,7 @@ public:
   [[nodiscard]] inline bool GetAreSameTeamColors(const uint8_t a, const uint8_t b) { return (a <= 5 && b <= 5) || (a >= 7 && b >= 7); }
   [[nodiscard]] std::vector<CGameController*> GetSentinelControllers() const;
   [[nodiscard]] std::vector<CGameController*> GetScourgeControllers() const;
-  [[nodiscard]] std::optional<GameResults> GetGameResults(const bool undecidedIsLoser) const;
+  [[nodiscard]] std::optional<GameResults> GetGameResults(const GameResultConstraints& constraints) const;
   [[nodiscard]] inline bool GetIsGameOver() const { return m_GameOverTime.has_value(); }
   [[nodiscard]] inline uint64_t GetGameOverTime() const { return m_GameOverTime.value(); }
   [[nodiscard]] std::string GetLogPrefix() const;

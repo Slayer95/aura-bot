@@ -350,9 +350,13 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
   if (definition->GetType() == MMD_DEFINITION_TYPE_INIT) {
     if (definition->GetSubType() == MMD_INIT_TYPE_PLAYER) { // "pid"
       const uint8_t SID = definition->GetSID();
-      const CGameSlot* slot = m_Game->InspectSlot(SID);
-      if (!slot) {
+      const CGameController* controllerData = m_Game->GetGameControllerFromSID(SID);
+      if (!controllerData) {
         Print(GetLogPrefix() + "cannot initialize player slot " + ToDecString(SID));
+        return false;
+      }
+      if (controllerData->GetIsObserver()) {
+        Print(GetLogPrefix() + "cannot initialize observer slot " + ToDecString(SID));
         return false;
       }
       const bool found = m_SIDToName.find(SID) != m_SIDToName.end();
@@ -373,7 +377,7 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
         return false;
       }
       m_SIDToName[SID] = definition->GetName(); // W3MMD will report the player name as seen by the WC3 client
-      m_SIDToColor[SID] = slot->GetColor();
+      m_SIDToColor[SID] = controllerData->GetColor();
     }
     return true;
   } else if (definition->GetType() == MMD_DEFINITION_TYPE_VAR) { // DefVarP
@@ -685,36 +689,81 @@ string CW3MMD::GetSenderName(CW3MMDAction* action) const
   return GetTrustedPlayerNameFromColor(action->GetFromColor());
 }
 
-optional<GameResults> CW3MMD::GetGameResults(const bool undecidedIsLoser) const
+GameResultTeamAnalysis CW3MMD::GetGameResultTeamAnalysis() const
+{
+  GameResultTeamAnalysis analysis;
+
+  for (const auto& entry : m_SIDToName) {
+    CGameController* controllerData = m_Game->GetGameControllerFromSID(entry.first);
+    const auto& match = m_GameResults.find(entry.first);
+    bitset<MAX_SLOTS_MODERN>* targetBitSet = nullptr;
+    if (match == m_GameResults.end()) {
+      switch (controllerData->GetType()) {
+        case GameControllerType::kVirtual:
+          targetBitSet = &analysis.undecidedVirtualTeams;
+          break;
+        case GameControllerType::kUser:
+          targetBitSet = &analysis.undecidedUserTeams;
+          break;
+        case GameControllerType::kComputer:
+          targetBitSet = &analysis.undecidedComputerTeams;
+          break;
+      }
+    } else {
+      uint8_t result = match->second;
+      switch (result) {
+        case GAME_RESULT_WINNER:
+          targetBitSet = &analysis.winnerTeams;
+          break;
+        case GAME_RESULT_LOSER:
+          targetBitSet = &analysis.loserTeams;
+          break;
+        case GAME_RESULT_DRAWER:
+          targetBitSet = &analysis.drawerTeams;
+          break;
+      }
+    }
+    targetBitSet->set(controllerData->GetTeam());
+
+    if (m_FlagsLeaver.find(entry.first) != m_FlagsLeaver.end()) {
+      analysis.leaverTeams.set(controllerData->GetTeam());
+    }
+  }
+
+  return analysis;
+}
+
+optional<GameResults> CW3MMD::GetGameResults(const GameResultConstraints& constraints)
 {
   optional<GameResults> gameResults;
   if (m_GameResults.empty()) {
     return gameResults;
   }
 
-  gameResults.emplace();
+  GameResultTeamAnalysis teamAnalysis = GetGameResultTeamAnalysis();
+
   for (const auto& entry : m_SIDToName) {
     CGameController* controllerData = m_Game->GetGameControllerFromSID(entry.first);
     const auto& match = m_GameResults.find(entry.first);
     vector<CGameController*>* resultGroup = nullptr;
+    uint8_t result = GAME_RESULT_UNDECIDED;
     if (match == m_GameResults.end()) {
-      if (undecidedIsLoser) {
-        resultGroup = &gameResults->losers;
-      } else {
-        resultGroup = &gameResults->undecided;
-      }
+      result = m_Game->ResolveUndecidedController(controllerData, constraints, teamAnalysis);
     } else {
-      switch (match->second) {
-        case GAME_RESULT_WINNER:
-          resultGroup = &gameResults->winners;
-          break;
-        case GAME_RESULT_LOSER:
-          resultGroup = &gameResults->losers;
-          break;
-        default:
-          resultGroup = &gameResults->drawers;
-          break;
-      }
+      result = match->second;
+    }
+    switch (result) {
+      case GAME_RESULT_WINNER:
+        resultGroup = &gameResults->winners;
+        break;
+      case GAME_RESULT_LOSER:
+        resultGroup = &gameResults->losers;
+        break;
+      case GAME_RESULT_DRAWER:
+        resultGroup = &gameResults->drawers;
+        break;
+      default:
+        resultGroup = &gameResults->undecided;
     }
     resultGroup->push_back(controllerData);
   }

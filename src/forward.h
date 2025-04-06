@@ -106,6 +106,8 @@ struct FileChunkCached;
 struct FileChunkTransient;
 struct GameHistory;
 struct GameResults;
+struct GameResultTeamAnalysis;
+struct GameResultConstraints;
 struct LazyCommandContext;
 struct MapTransfer;
 struct UDPPkt;

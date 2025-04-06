@@ -60,6 +60,7 @@ CGameController::CGameController(const IndexedGameSlot& idxSlot)
     m_UID(idxSlot.second->GetUID()),
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
+    m_Team(idxSlot.second->GetTeam()),
     m_GameResult(GAME_RESULT_UNDECIDED),
     m_Name(CGameController::GetAIName(idxSlot.second->GetComputerType())),
     m_LoadingTime(0)
@@ -72,6 +73,7 @@ CGameController::CGameController(const GameUser::CGameUser* user, const IndexedG
     m_UID(idxSlot.second->GetUID()),
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
+    m_Team(idxSlot.second->GetTeam()),
     m_GameResult(GAME_RESULT_UNDECIDED),
     m_Name(user->GetName()),
     m_Server(user->GetRealmHostName()),
@@ -86,6 +88,7 @@ CGameController::CGameController(const CGameVirtualUser* virtualUser, const Inde
     m_UID(idxSlot.second->GetUID()),
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
+    m_Team(idxSlot.second->GetTeam()),
     m_GameResult(GAME_RESULT_UNDECIDED),
     m_Name(virtualUser->GetName()),
     m_LoadingTime(0)

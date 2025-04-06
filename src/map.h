@@ -532,8 +532,8 @@ public:
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 
-  [[nodiscard]] inline uint8_t                           GetGameResultSourceOfTruth() const { return m_GameResultConstraints.truthSource; }
-  [[nodiscard]] inline bool                              GetGameResultUndecidedIsLoser() const { return m_GameResultConstraints.undecidedIsLoser; }
+  [[nodiscard]] inline const GameResultConstraints &     GetGameResultConstraints() const { return m_GameResultConstraints; }
+  [[nodiscard]] inline uint8_t                           GetGameResultSourceOfTruth() const { return m_GameResultConstraints.GetSourceOfTruth(); }
 
   // HCL
   [[nodiscard]] inline bool                              GetHCLSupported() const { return m_HCL.supported; }

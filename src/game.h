@@ -50,6 +50,7 @@
 #include "list.h"
 #include "async_observer.h"
 #include "map.h"
+#include "game_result.h"
 #include "game_seeker.h"
 #include "game_slot.h"
 #include "game_setup.h"
@@ -331,6 +332,7 @@ public:
   uint8_t                                                GetNumPotentialControllers() const;
   uint8_t                                                GetNumControllers() const;
   uint8_t                                                GetNumComputers() const;
+  uint8_t                                                GetNumTeams() const;
   uint8_t                                                GetNumTeamControllersOrOpen(const uint8_t team) const;
   std::string                                            GetClientFileName() const;
   std::string                                            GetMapSiteURL() const { return m_MapSiteURL; }
@@ -769,12 +771,15 @@ public:
   bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
   bool SetLayoutCompact();
 
-  std::optional<GameResults> GetGameResultsMMD();
-  std::optional<GameResults> GetGameResultsLeaveCode();
-  uint8_t TryConfirmResults(std::optional<GameResults>, uint8_t resultsSource);
-  uint8_t RunGameResults();
-  bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
-  bool CheckGameResults(const GameResults& gameResults) const;
+  [[nodiscard]] uint8_t ResolveUndecidedComputerOrVirtualAuto(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis);
+  [[nodiscard]] uint8_t ResolveUndecidedController(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis);
+  [[nodiscard]] GameResultTeamAnalysis GetGameResultTeamAnalysis() const;
+  [[nodiscard]] std::optional<GameResults> GetGameResultsMMD();
+  [[nodiscard]] std::optional<GameResults> GetGameResultsLeaveCode();
+  [[nodiscard]] uint8_t TryConfirmResults(std::optional<GameResults>, uint8_t resultsSource);
+  [[nodiscard]] uint8_t RunGameResults();
+  [[nodiscard]] bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
+  [[nodiscard]] bool CheckGameResults(const GameResults& gameResults) const;
 
   void                      StoreGameControllers();
   CGameController*          GetGameControllerFromColor(uint8_t colour) const;

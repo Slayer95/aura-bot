@@ -358,7 +358,7 @@ vector<CGameController*> CDotaStats::GetScourgeControllers() const
   return controllers;
 }
 
-optional<GameResults> CDotaStats::GetGameResults(const bool /*undecidedIsLoser*/) const
+optional<GameResults> CDotaStats::GetGameResults(const GameResultConstraints& /*constraints*/) const
 {
   optional<GameResults> gameResults;
   if (m_Winner == DOTA_WINNER_UNDECIDED) {

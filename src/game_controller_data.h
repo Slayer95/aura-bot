@@ -60,6 +60,7 @@ private:
   uint8_t                               m_UID;
   uint8_t                               m_SID;
   uint8_t                               m_Color;
+  uint8_t                               m_Team;
   uint8_t                               m_GameResult;
   std::string                           m_Name;
 
@@ -84,6 +85,7 @@ public:
   [[nodiscard]] inline uint8_t                                            GetUID() const { return m_UID; }
   [[nodiscard]] inline uint8_t                                            GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                                            GetColor() const { return m_Color; }
+  [[nodiscard]] inline uint8_t                                            GetTeam() const { return m_Team; }
   [[nodiscard]] inline uint8_t                                            GetGameResult() const { return m_GameResult; }
   [[nodiscard]] inline std::string                                        GetName() const { return m_Name; }
 
