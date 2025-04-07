@@ -75,7 +75,7 @@ CGameController::CGameController(const uint8_t type, const IndexedGameSlot& idxS
     m_Color(idxSlot.second->GetColor()),
     m_Team(idxSlot.second->GetTeam()),
     m_GameResult(GAME_RESULT_UNDECIDED),
-    m_Name(type == AI_TYPE_AMAI ? CGameController::GetAIName(idxSlot.second->GetComputerType()) : CGameController::GetAMAIName(idxSlot.second->GetComputerType())),
+    m_Name(type == AI_TYPE_AMAI ? CGameController::GetAMAIName(idxSlot.second->GetComputerType()) : CGameController::GetAIName(idxSlot.second->GetComputerType())),
     m_LoadingTime(0)
 {
 }
