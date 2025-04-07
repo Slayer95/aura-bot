@@ -5551,7 +5551,17 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   }
 
   if (user->GetShouldHoldAction()) {
+    if (!user->GetOnHoldActionsAny()) {
+      SendChat(user, "Your actions are being restricted.");
+    }
     user->GetOnHoldActions().push(std::move(action));
+    size_t holdActionsCount = user->GetOnHoldActionsCount();
+    if (holdActionsCount > GAME_ACTION_HOLD_QUEUE_MAX_SIZE) {
+      return false;
+    }
+    if (holdActionsCount >= GAME_ACTION_HOLD_QUEUE_MIN_WARNING_SIZE && holdActionsCount % GAME_ACTION_HOLD_QUEUE_MOD_WARNING_SIZE == 0) {
+      SendChat(user, "You WILL be kicked if you input further orders and/or actions.");
+    }
   } else {
     actionFrame.AddAction(std::move(action));
     if (user->GetHasAPMQuota()) {
