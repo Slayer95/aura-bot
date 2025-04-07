@@ -676,6 +676,13 @@ constexpr uint8_t LOG_CHAT_TYPE_COMMANDS = 4u;
 
 constexpr uint8_t MAX_GAME_VERSION_OVERRIDES = 24;
 
+constexpr uint16_t APM_RATE_LIMITER_MIN = 30;
+constexpr uint16_t APM_RATE_LIMITER_MAX = 800;
+
+constexpr int64_t APM_RATE_LIMITER_TICK_INTERVAL = 5000;
+constexpr double APM_RATE_LIMITER_TICK_SCALING_FACTOR = APM_RATE_LIMITER_TICK_INTERVAL / 60000.;
+constexpr double APM_RATE_LIMITER_BURST_ACTIONS = 100.;
+
 // config_discord.h
 
 constexpr uint8_t FILTER_ALLOW_ALL = 0;

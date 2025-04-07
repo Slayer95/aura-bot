@@ -49,6 +49,7 @@
 #include "includes.h"
 #include "connection.h"
 #include "game_structs.h"
+#include "rate_limiter.h"
 #include "map.h"
 
 //
@@ -88,7 +89,7 @@ namespace GameUser
     bool                             m_IsLeaver;
     uint8_t                          m_PingEqualizerOffset;          // how many frames are actions sent by this player offset by ping equalizer
     QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
-    CQueuedActionsFrame              m_OnHoldActionsFrame;           // if anti-share is enabled, holds actions sent by this player until all shared units settings are reverted
+    std::queue<CIncomingAction>      m_OnHoldActionsQueue;                // if anti-share is enabled, holds actions sent by this player until all shared units settings are reverted
     std::bitset<MAX_SLOTS_MODERN>    m_ControllingUnitsFromSID;
     std::bitset<MAX_SLOTS_MODERN>    m_SharingUnitsWithSID;
     uint32_t                         m_PongCounter;
@@ -156,11 +157,13 @@ namespace GameUser
     std::string                      m_PinnedMessage;
 
     // Actions
-    uint8_t                          m_AntiAbuseCounter;
-    uint8_t                          m_RemainingSaves;
-    uint8_t                          m_RemainingPauses;
-    std::optional<uint8_t>           m_SelfGameResult;
-    std::optional<uint8_t>           m_FinalGameResult;
+    uint32_t                                    m_ActionCounter;
+    uint8_t                                     m_AntiAbuseCounter;
+    uint8_t                                     m_RemainingSaves;
+    uint8_t                                     m_RemainingPauses;
+    std::optional<uint8_t>                      m_SelfGameResult;
+    std::optional<uint8_t>                      m_FinalGameResult;
+    std::optional<TokenBucketRateLimiter>       m_APMQuota;
 
     CGameUser(CGame* game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
@@ -203,7 +206,9 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetPingEqualizerOffset() const { return m_PingEqualizerOffset; }
     [[nodiscard]] uint32_t                        GetPingEqualizerDelay() const;
     [[nodiscard]] inline QueuedActionsFrameNode*  GetPingEqualizerFrameNode() const { return m_PingEqualizerFrameNode; }
-    [[nodiscard]] inline CQueuedActionsFrame&     GetOnHoldActionsFrame() { return m_OnHoldActionsFrame; }
+    [[nodiscard]] inline std::queue<CIncomingAction>& GetOnHoldActions() { return m_OnHoldActionsQueue; }
+    [[nodiscard]] inline bool                     GetOnHoldActionsAny() const { return !m_OnHoldActionsQueue.empty(); }
+    [[nodiscard]] inline size_t                   GetOnHoldActionsCount() const { return m_OnHoldActionsQueue.size(); }
     [[nodiscard]] CQueuedActionsFrame&            GetPingEqualizerFrame();
     [[nodiscard]] CRealm*                         GetRealm(bool mustVerify) const;
     [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
@@ -303,8 +308,14 @@ namespace GameUser
     bool AddDelayPingEqualizerFrame();
     bool SubDelayPingEqualizerFrame();
     inline void SetPingEqualizerFrameNode(QueuedActionsFrameNode* nFrame) { m_PingEqualizerFrameNode = nFrame; }
+    void ReleaseOnHoldActionsCount(size_t count);
     void ReleaseOnHoldActions();
+    void UpdateAPMQuota();
+    bool GetShouldHoldActionInner();
+    bool GetShouldHoldAction();
+    void CheckReleaseOnHoldActions();
 
+    inline void AddActionCounter() { ++m_ActionCounter; }
     inline void AddAbuseCounter() { ++m_AntiAbuseCounter; }
     inline int64_t GetAntiAbuseTimeout() const { return 5000 / (1 << m_AntiAbuseCounter); }
 
@@ -396,6 +407,12 @@ namespace GameUser
     void RefreshUID();
     inline void SetSelfReportedGameResult(const uint8_t result) { m_SelfGameResult = result; }
     inline void SetFinalGameResult(const uint8_t result) { m_FinalGameResult = result; }
+
+    double GetAPM() const;
+    inline bool GetHasAPMQuota() const { return m_APMQuota.has_value(); }
+    inline const TokenBucketRateLimiter& InspectAPMQuota() { return m_APMQuota.value(); }
+    inline TokenBucketRateLimiter& GetAPMQuota() { return m_APMQuota.value(); }
+    void RestrictAPM(double apm, double burstActions);
 
     // processing functions
 

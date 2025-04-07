@@ -45,8 +45,6 @@
 
 #include "realm.h"
 
-#include <cmath>
-
 #include "auradb.h"
 #include "bncsutil_interface.h"
 #include "protocol/bnet_protocol.h"

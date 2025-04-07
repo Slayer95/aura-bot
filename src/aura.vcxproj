@@ -464,6 +464,7 @@
     <ClCompile Include="aura.cpp" />
     <ClCompile Include="cli.cpp" />
     <ClCompile Include="command.cpp" />
+    <ClCompile Include="rate_limiter.cpp" />
     <ClCompile Include="integration\discord.cpp" />
     <ClCompile Include="integration\irc.cpp" />
     <ClCompile Include="stats\dota.cpp" />
@@ -522,6 +523,7 @@
     <ClInclude Include="aura.h" />
     <ClInclude Include="cli.h" />
     <ClInclude Include="command.h" />
+    <ClInclude Include="rate_limiter.h" />
     <ClInclude Include="integration\discord.h" />
     <ClInclude Include="integration\irc.h" />
     <ClInclude Include="stats\dota.h" />

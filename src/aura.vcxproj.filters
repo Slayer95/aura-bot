@@ -141,6 +141,9 @@
     <ClCompile Include="command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rate_limiter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="integration\discord.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -311,6 +314,9 @@
     <ClInclude Include="command.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClCompile Include="rate_limiter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClInclude Include="integration\discord.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -48,6 +48,7 @@
 
 // STL
 
+#include <cmath>
 #include <cstring>
 #include <cstdint>
 #include <ctime>

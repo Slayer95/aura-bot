@@ -107,6 +107,7 @@ OBJS = lib/csvparser/csvparser.o \
        src/aura.o \
        src/cli.o \
        src/command.o \
+       src/rate_limiter.o \
        src/integration/discord.o \
        src/integration/irc.o \
        src/stats/dota.o \

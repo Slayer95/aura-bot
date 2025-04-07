@@ -25,8 +25,6 @@
 
 #include "realm_chat.h"
 
-#include <cmath>
-
 #include "protocol/bnet_protocol.h"
 #include "command.h"
 #include "config/config.h"

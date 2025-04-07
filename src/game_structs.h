@@ -71,6 +71,8 @@ struct CQueuedActionsFrame
   ~CQueuedActionsFrame();
 
   void AddAction(CIncomingAction&& action);
+  void AddQueuedActionsAll(std::queue<CIncomingAction> actions);
+  size_t AddQueuedActionsCount(std::queue<CIncomingAction> actions, size_t count);
   std::vector<uint8_t> GetBytes(const uint16_t sendInterval) const;
   void MergeFrame(CQueuedActionsFrame& frame);
   bool GetHasActionsBy(const uint8_t fromUID) const;

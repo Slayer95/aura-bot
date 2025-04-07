@@ -133,6 +133,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_TotalDisconnectTicks(0),
 
     m_TeamCaptain(0),
+    m_ActionCounter(0),
     m_AntiAbuseCounter(0),
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
@@ -270,9 +271,55 @@ bool CGameUser::SubDelayPingEqualizerFrame()
   return true;
 }
 
+void CGameUser::ReleaseOnHoldActionsCount(size_t count)
+{
+  GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
+  //assert(count == addQueudActionsCount())
+  if (GetHasAPMQuota()) {
+    GetAPMQuota().ConsumeWithDebt(static_cast<double>(count));
+  }
+}
+
 void CGameUser::ReleaseOnHoldActions()
 {
-  GetPingEqualizerFrame().MergeFrame(GetOnHoldActionsFrame());
+  ReleaseOnHoldActionsCount(GetOnHoldActionsCount());
+}
+
+void CGameUser::UpdateAPMQuota()
+{
+  if (GetHasAPMQuota()) {
+    // Note: Idempotent within the same game tick
+    GetAPMQuota().Refill(m_Game->GetEffectiveTicks());
+  }
+}
+
+bool CGameUser::GetShouldHoldActionInner()
+{
+  if (m_Game->GetEffectiveTicks() < GetHandicapTicks()) return true;
+  if (m_Game->m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT && GetHasControlOverAnyAlliedUnits()) return true;
+  if (GetHasAPMQuota()) {
+    UpdateAPMQuota();
+    if (GetAPMQuota().GetCurrentCapacity() < 1.) return true;
+  }
+  return false;
+}
+
+bool CGameUser::GetShouldHoldAction()
+{
+  if (GetOnHoldActionsAny()) return true;
+  return GetShouldHoldActionInner();
+}
+
+void CGameUser::CheckReleaseOnHoldActions()
+{
+  if (!GetOnHoldActionsAny()) return;
+  if (GetShouldHoldActionInner()) return;
+  size_t releasedCount = GetOnHoldActionsCount();
+  if (GetHasAPMQuota()) {
+    UpdateAPMQuota();
+    releasedCount = min(releasedCount, static_cast<size_t>(floor(GetAPMQuota().GetCurrentCapacity())));
+  }
+  ReleaseOnHoldActionsCount(releasedCount);
 }
 
 CRealm* CGameUser::GetRealm(bool mustVerify) const
@@ -742,6 +789,16 @@ void CGameUser::ConfirmGProxyExtended(const vector<uint8_t>& data)
   } else {
     Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
   }
+}
+
+double CGameUser::GetAPM() const
+{
+  return static_cast<double>(m_ActionCounter) * 60000. / m_Game->GetEffectiveTicks();
+}
+
+void CGameUser::RestrictAPM(double apm, double burstActions)
+{
+  m_APMQuota.emplace(APM_RATE_LIMITER_TICK_INTERVAL, apm * APM_RATE_LIMITER_TICK_SCALING_FACTOR, burstActions, burstActions);
 }
 
 void CGameUser::UpdateGProxyEmptyActions() const

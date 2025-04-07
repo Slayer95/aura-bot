@@ -98,6 +98,27 @@ void CQueuedActionsFrame::AddAction(CIncomingAction&& action)
   activeQueue->push_back(std::move(action));
 }
 
+void CQueuedActionsFrame::AddQueuedActionsAll(queue<CIncomingAction> actions)
+{
+  while (!actions.empty()) {
+    CIncomingAction& frontAction = actions.front();
+    AddAction(std::move(frontAction));
+    actions.pop();
+  }
+}
+
+size_t CQueuedActionsFrame::AddQueuedActionsCount(queue<CIncomingAction> actions, size_t maxCount)
+{
+  size_t count = maxCount;
+  while (!actions.empty() && count > 0) {
+    CIncomingAction& frontAction = actions.front();
+    AddAction(std::move(frontAction));
+    actions.pop();
+    --count;
+  }
+  return maxCount - count;
+}
+
 vector<uint8_t> CQueuedActionsFrame::GetBytes(const uint16_t sendInterval) const
 {
   vector<uint8_t> packet;
@@ -128,6 +149,7 @@ void CQueuedActionsFrame::Reset()
   callback = ON_SEND_ACTIONS_NONE;
   bufferSize = 0;
   activeQueue = &actions.emplace_back();
+  // 10 players x 150 APM x (1 min / 60000 ms) x (100 ms latency) = 2.5 (rounded to 3)
   activeQueue->reserve(DEFAULT_ACTIONS_PER_FRAME);
   leavers.clear();
 }

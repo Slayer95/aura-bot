@@ -75,7 +75,6 @@
 
 #include <bitset>
 #include <ctime>
-#include <cmath>
 
 using namespace std;
 
@@ -1608,6 +1607,10 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       // Avoid ping-spamming GProxy-reconnected players
       if (!user->GetDisconnected()) {
         user->Send(pingPacket);
+      }
+
+      if (m_GameLoaded) {
+        user->CheckReleaseOnHoldActions();
       }
     }
 
@@ -3553,11 +3556,8 @@ void CGame::SendAllActionsCallback()
                 SendChat(user, "[ANTISHARE] You will be kicked out of the game unless you remove Shared Unit Control within " + ToDurationString(timeout / 1000) + ".");
                 SendChat(targetUser, "[ANTISHARE] You may not perform further actions until [" + user->GetDisplayName() + "] removes Shared Unit Control.");
               }
-              if (
-                !wantsShare && !targetUser->GetHasControlOverAnyAlliedUnits() &&
-                targetUser->GetHandicapTicks() <= m_EffectiveTicks
-              ) {
-                targetUser->ReleaseOnHoldActions();
+              if (!wantsShare) {
+                targetUser->CheckReleaseOnHoldActions();
               }
             }
           }
@@ -4718,9 +4718,7 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
         continue;
       }
       otherUser->SetHasControlOverUnitsFromSlot(user->GetSID(), false);
-      if (!otherUser->GetHasControlOverAnyAlliedUnits() && m_EffectiveTicks <= otherUser->GetHandicapTicks()) {
-        otherUser->ReleaseOnHoldActions();
-      }
+      otherUser->CheckReleaseOnHoldActions();
     }
   }
 }
@@ -5505,6 +5503,9 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   const uint8_t actionType = action.GetSniffedType();
   CQueuedActionsFrame& actionFrame = user->GetPingEqualizerFrame();
 
+  user->CheckReleaseOnHoldActions();
+  user->AddActionCounter();
+
   if (!action.GetImmutableAction().empty()) {
     DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
   }
@@ -5549,16 +5550,13 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     }
   }
 
-  bool shouldHoldAction = m_EffectiveTicks < user->GetHandicapTicks();
-  if (!shouldHoldAction && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
-    shouldHoldAction = user->GetHasControlOverAnyAlliedUnits();
-  }
-
-  if (shouldHoldAction) {
-    user->GetOnHoldActionsFrame().AddAction(std::move(action));
+  if (user->GetShouldHoldAction()) {
+    user->GetOnHoldActions().push(std::move(action));
   } else {
-    actionFrame.MergeFrame(user->GetOnHoldActionsFrame());
     actionFrame.AddAction(std::move(action));
+    if (user->GetHasAPMQuota()) {
+      user->GetAPMQuota().ConsumeWithDebt();
+    }
   }
 
   switch (actionType) {
@@ -6250,6 +6248,9 @@ void CGame::EventGameStartedLoading()
     user->SetStatus(USERSTATUS_LOADING_SCREEN);
     user->SetWhoisShouldBeSent(false);
     user->UnMute();
+    if (user->GetHasAPMQuota()) {
+      user->GetAPMQuota().PauseRefillUntil(user->GetHandicapTicks());
+    }
   }
 
   for (auto& user : m_Users) {

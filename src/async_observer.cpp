@@ -23,7 +23,6 @@
 
  */
 
-#include <cmath>
 #include <utility>
 
 #include "async_observer.h"

@@ -1301,6 +1301,35 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !APM
+    // !APM <PLAYER>
+    //
+
+    case HashCode("apm"): {
+      if (!m_TargetGame || m_TargetGame->GetIsMirror()) {
+        break;
+      }
+      GameUser::CGameUser* targetPlayer = RunTargetPlayerOrSelf(Payload);
+      if (!targetPlayer) {
+        break;
+      }
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
+        ErrorReply("This command is disabled in incognito mode games.");
+        break;
+      }
+      if (targetPlayer != m_GameUser && !CheckPermissions(m_Config->m_ImportPermissions, COMMAND_PERMISSIONS_SUDO)) {
+        ErrorReply("Not allowed to view other players' APM.");
+        break;
+      }
+      if (targetPlayer->GetIsObserver()) {
+        ErrorReply("[" + targetPlayer->GetName() + "] is an observer.");
+        break;
+      }
+      SendReply("[" + targetPlayer->GetName() + "] APM: " + to_string(floor(targetPlayer->GetAPM())));
+      break;
+    }
+
+    //
     // !CHECKME
     // !CHECK <PLAYER>
     //
@@ -4800,6 +4829,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Cannot edit this game's slots.");
         break;
       }
+      
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
+        ErrorReply("This command is disabled in incognito mode games.");
+        break;
+      }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -5130,6 +5164,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     // !TIMEHANDICAP (prevent players actions the first N seconds)
     //
 
+    case HashCode("th"):
     case HashCode("timehandicap"): {
       UseImplicitHostedGame();
 
@@ -5138,6 +5173,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       if (m_TargetGame->GetCountDownStarted() && !GetIsSudo()) {
         ErrorReply("Cannot set a time handicap now.");
+        break;
+      }
+
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
+        ErrorReply("This command is disabled in incognito mode games.");
         break;
       }
 
@@ -5182,6 +5222,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!handicapTicks.has_value()) {
         ErrorReply("Usage: " + cmdToken + "timehandicap <SECONDS>");
         ErrorReply("Usage: " + cmdToken + "timehandicap <PLAYER>, <SECONDS>");
+        break;
       }
 
       if (targetPlayer->GetHandicapTicks() == handicapTicks.value()) {
@@ -5190,7 +5231,87 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       targetPlayer->SetHandicapTicks(m_TargetGame->GetEffectiveTicks() + handicapTicks.value());
+      if (targetPlayer->GetHasAPMQuota()) {
+        targetPlayer->GetAPMQuota().PauseRefillUntil(targetPlayer->GetHandicapTicks());
+      }
       SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(handicapTicks.value() / 1000));
+      break;
+    }
+
+    //
+    // !APMHANDICAP (limits a player below the specified APM)
+    //
+
+    case HashCode("ah"):
+    case HashCode("apmhandicap"): {
+      UseImplicitHostedGame();
+
+      if (!m_TargetGame || m_TargetGame->GetIsMirror())
+        break;
+
+      if (m_TargetGame->GetCountDownStarted() && !GetIsSudo()) {
+        ErrorReply("Cannot set an APM handicap now.");
+        break;
+      }
+
+      if (m_TargetGame->GetIsHiddenPlayerNames()) {
+        ErrorReply("This command is disabled in incognito mode games.");
+        break;
+      }
+
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <APM>");
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <PLAYER>, <APM>");
+        break;
+      }
+
+      vector<string> Args = SplitArgs(Payload, 1u, 2u);
+      if (Args.empty()) {
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <APM>");
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <PLAYER>, <APM>");
+        break;
+      }
+
+      GameUser::CGameUser* targetPlayer = RunTargetPlayerOrSelf(Args.size() >= 2 ? Args[0] : string());
+      if (!targetPlayer) {
+        break;
+      }
+      if (targetPlayer->GetIsObserver()) {
+        ErrorReply("User [" + targetPlayer->GetDisplayName() + "] is an observer.");
+        break;
+      }
+
+      if (targetPlayer != m_GameUser && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("You are not the game owner, and therefore cannot set an APM handicap.");
+        break;
+      }
+
+      optional<size_t> maxAPM;
+      try {
+        int64_t parsedActions = stol(Args.back());
+        if (0 <= parsedActions && parsedActions <= 0xFFFF) {
+          maxAPM = static_cast<size_t>(parsedActions);
+        }
+      } catch (...) {
+      }
+
+      if (!maxAPM.has_value()) {
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <APM>");
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <PLAYER>, <APM>");
+        break;
+      }
+
+      if (maxAPM.value() < APM_RATE_LIMITER_MIN && !GetIsSudo()) {
+        maxAPM = APM_RATE_LIMITER_MIN;
+      } else if (APM_RATE_LIMITER_MAX < maxAPM.value() && !GetIsSudo()) {
+        maxAPM = APM_RATE_LIMITER_MAX;
+      }
+
+      targetPlayer->RestrictAPM(maxAPM.value(), APM_RATE_LIMITER_BURST_ACTIONS);
+      targetPlayer->GetAPMQuota().PauseRefillUntil(targetPlayer->GetHandicapTicks());
+
+      string limitText = to_string(maxAPM.value()) + " actions per minute (APM)";
+      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will be restricted to " + limitText);
       break;
     }
 
