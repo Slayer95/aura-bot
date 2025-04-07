@@ -1325,7 +1325,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("[" + targetPlayer->GetName() + "] is an observer.");
         break;
       }
-      SendReply("[" + targetPlayer->GetName() + "] APM: " + to_string(static_cast<uint64_t>(floor(targetPlayer->GetAPM()))));
+      string currentAPMFragment = "APM: " + to_string(static_cast<uint64_t>(floor(targetPlayer->GetAPM())));
+      string maxAPMFragment, holdActionsFragment;
+      if (targetPlayer->GetHasAPMQuota()) {
+        maxAPMFragment = " / " + to_string(targetPlayer->GetAPMQuota().GetTokensPerMinute());
+      }
+      if (targetPlayer->GetOnHoldActionsAny()) {
+        holdActionsFragment = " - Restricted: " + to_string(targetPlayer->GetOnHoldActionsCount()) + " actions";
+      }
+      SendReply("[" + targetPlayer->GetName() + "] " + currentAPMFragment + maxAPMFragment + holdActionsFragment);
       break;
     }
 

@@ -71,6 +71,8 @@ struct TokenBucketRateLimiter
   }
 
   inline void FullRefill() { m_CurrentCapacity = m_MaxCapacity; }
+
+  inline size_t GetTokensPerMinute() { return static_cast<size_t>(floor(m_RefillRate * (60000. / (double)m_TickInterval))); }
 };
 
 #endif // AURA_RATE_LIMITER_H

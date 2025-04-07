@@ -273,8 +273,15 @@ bool CGameUser::SubDelayPingEqualizerFrame()
 
 void CGameUser::ReleaseOnHoldActionsCount(size_t count)
 {
+#ifdef DEBUG
+  size_t doneCount = GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
+  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)", LOG_C | LOG_P);
+  }
+  assert(count == doneCount && "CGameUser::ReleaseOnHoldActionsCount() should be called with a valid count")
+#else
   GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
-  //assert(count == addQueudActionsCount())
+#endif
   if (GetHasAPMQuota()) {
     GetAPMQuota().ConsumeWithDebt(static_cast<double>(count));
   }
