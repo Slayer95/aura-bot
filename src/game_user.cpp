@@ -793,6 +793,7 @@ void CGameUser::ConfirmGProxyExtended(const vector<uint8_t>& data)
 
 double CGameUser::GetAPM() const
 {
+  if (m_Game->GetEffectiveTicks() == 0) return 0.;
   return static_cast<double>(m_ActionCounter) * 60000. / m_Game->GetEffectiveTicks();
 }
 

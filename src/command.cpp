@@ -1306,7 +1306,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("apm"): {
-      if (!m_TargetGame || m_TargetGame->GetIsMirror()) {
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || !m_TargetGame->GetGameLoaded()) {
         break;
       }
       GameUser::CGameUser* targetPlayer = RunTargetPlayerOrSelf(Payload);
@@ -1325,7 +1325,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("[" + targetPlayer->GetName() + "] is an observer.");
         break;
       }
-      SendReply("[" + targetPlayer->GetName() + "] APM: " + to_string(floor(targetPlayer->GetAPM())));
+      SendReply("[" + targetPlayer->GetName() + "] APM: " + to_string(static_cast<uint64_t>(floor(targetPlayer->GetAPM()))));
       break;
     }
 
