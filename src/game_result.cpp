@@ -225,7 +225,7 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
     CFG.SetBool("map.game_result.constraints.allied_victory_except_leaver.required", m_RequireTeamWinExceptLeaver);
   }
 
-  bool wasStrictMode = CFG.GetStrictMode();
+  bool wasStrict = CFG.GetStrictMode();
   if (CFG.Exists("map.game_result.constraints.controllers.min")) {
     m_MinPlayers = CFG.GetSlot("map.game_result.constraints.controllers.min", maxSlots, m_MinPlayers) + 1;
   } else {
@@ -288,7 +288,7 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
     CFG.SetUint8("map.game_result.constraints.teams.losers.max", m_MaxTeamsWithNoWinners);
   }
 
-  CFG.SetStrictMode(wasStrictMode);
+  CFG.SetStrictMode(wasStrict);
 
   if (
     m_UndecidedUserHandler == GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES && (
