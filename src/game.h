@@ -777,7 +777,7 @@ public:
   [[nodiscard]] std::optional<GameResults> GetGameResultsMMD();
   [[nodiscard]] std::optional<GameResults> GetGameResultsLeaveCode();
   [[nodiscard]] uint8_t TryConfirmResults(std::optional<GameResults>, uint8_t resultsSource);
-  void RunGameResults();
+  uint8_t RunGameResults();
   [[nodiscard]] bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
   [[nodiscard]] bool CheckGameResults(const GameResults& gameResults) const;
 

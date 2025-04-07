@@ -10292,7 +10292,7 @@ uint8_t CGame::TryConfirmResults(optional<GameResults> gameResults, uint8_t resu
   return m_GameResultsSource;
 }
 
-void CGame::RunGameResults()
+uint8_t CGame::RunGameResults()
 {
   if (m_GameResultsSource != GAME_RESULT_SOURCE_NONE) return m_GameResultsSource;
   
