@@ -379,7 +379,7 @@ void CGame::Reset()
 CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
 {
   if (colour == m_Map->GetVersionMaxSlots()) {
-    // Observers are not stored
+    // observer color is ambiguous
     return nullptr;
   }
   for (const auto& controllerData : m_GameControllers) {
@@ -3174,7 +3174,7 @@ void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version, co
   // Otherwise, they immediately leave the lobby.
   const uint32_t clampedMapSize = m_Map->GetMapSizeClamped(version);
   if (clampedMapSize < m_Map->GetMapSize()) {
-    DLOG_APP_IF(LOG_LEVEL_TRACE,  "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedSize / (float)(1024. * 1024.)) + " MB")
+    DLOG_APP_IF(LOG_LEVEL_TRACE,  "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedMapSize / (float)(1024. * 1024.)) + " MB")
   }
   if (version >= GAMEVER(1u, 23u)) {
     user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
@@ -4230,7 +4230,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
     const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
     CGameController* controllerData = GetGameControllerFromColor(slot->GetColor());
     if (controllerData) {
-      controllerData->SetServerLeftCode(user->GetLeftCode());
+      controllerData->SetServerLeftCode(static_cast<uint8_t>(user->GetLeftCode()));
       controllerData->SetLeftGameTime(m_EffectiveTicks / 1000);
     }
 
@@ -10166,6 +10166,9 @@ uint8_t CGame::ResolveUndecidedController(CGameController* controllerData, const
       break;
     }
   }
+
+  LOG_APP_IF(LOG_LEVEL_DEBUG, "ResolveUndecidedController unhandled path");
+  return GAME_RESULT_UNDECIDED;
 }
 
 GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
@@ -10173,6 +10176,7 @@ GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
   GameResultTeamAnalysis analysis;
 
   for (const auto& controllerData : m_GameControllers) {
+    if (!controllerData || controllerData->GetIsObserver()) continue;
     uint8_t result = GAME_RESULT_UNDECIDED;
     if (controllerData->GetHasClientLeftCode()) {
       optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
@@ -10238,7 +10242,7 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
   GameResultTeamAnalysis teamAnalysis = GetGameResultTeamAnalysis();
 
   for (const auto& controllerData : m_GameControllers) {
-    if (!controllerData) continue;
+    if (!controllerData || controllerData->GetIsObserver()) continue;
     uint8_t result = GAME_RESULT_UNDECIDED;
     if (controllerData->GetHasClientLeftCode()) {
       optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
@@ -10276,11 +10280,6 @@ uint8_t CGame::TryConfirmResults(optional<GameResults> gameResults, uint8_t resu
       LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
     }
     return GAME_RESULT_SOURCE_NONE;
-  }
-  if (resultsSource == GAME_RESULT_SOURCE_MMD) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners (MMD): " + JoinVector(gameResults->GetWinnersNames(), false))
-  } else {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners: " + JoinVector(gameResults->GetWinnersNames(), false))
   }
   m_GameResultsSource = resultsSource;
   m_GameResults.swap(gameResults);

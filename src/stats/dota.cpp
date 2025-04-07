@@ -290,15 +290,15 @@ bool CDotaStats::RecvAction(uint8_t UID, const CIncomingAction& action)
                     break;
 
                   case 'i':
-                    if (KeyString[1] == 'd')
+                    if (KeyString[1] == 'd' && 1 <= ValueInt && ValueInt <= 10)
                     {
                       // DotA sends id values from 1-10 with 1-5 being sentinel players and 6-10 being scourge players
                       // unfortunately the actual player colours are from 1-5 and from 7-11 so we need to deal with this case here
 
                       if (ValueInt >= 6)
-                        m_Players[ID]->SetNewColor(ValueInt + 1);
+                        m_Players[ID]->SetNewColor(static_cast<uint8_t>(ValueInt + 1));
                       else
-                        m_Players[ID]->SetNewColor(ValueInt);
+                        m_Players[ID]->SetNewColor(static_cast<uint8_t>(ValueInt));
                     }
 
                     break;

@@ -53,6 +53,7 @@ public:
   [[nodiscard]] inline bool GetIsSentinelPlayerColor(const uint8_t color) { return 1 <= color && color <= 5; }
   [[nodiscard]] inline bool GetIsScourgePlayerColor(const uint8_t color) { return 7 <= color && color <= 11; }
   [[nodiscard]] inline bool GetIsPlayerColor(const uint8_t color) { return GetIsSentinelPlayerColor(color) || GetIsScourgePlayerColor(color); }
+  [[nodiscard]] inline bool GetIsPlayerColor(const uint32_t color) { return color <= 0xFF && GetIsPlayerColor((uint8_t)color);}
   [[nodiscard]] inline bool GetAreSameTeamColors(const uint8_t a, const uint8_t b) { return (a <= 5 && b <= 5) || (a >= 7 && b >= 7); }
   [[nodiscard]] std::vector<CGameController*> GetSentinelControllers() const;
   [[nodiscard]] std::vector<CGameController*> GetScourgeControllers() const;

@@ -740,10 +740,16 @@ optional<GameResults> CW3MMD::GetGameResults(const GameResultConstraints& constr
     return gameResults;
   }
 
+  gameResults.emplace();
   GameResultTeamAnalysis teamAnalysis = GetGameResultTeamAnalysis();
 
   for (const auto& entry : m_SIDToName) {
     CGameController* controllerData = m_Game->GetGameControllerFromSID(entry.first);
+    /*
+    if (!controllerData || controllerData->GetIsObserver()) {
+      continue;
+    }
+    */
     const auto& match = m_GameResults.find(entry.first);
     vector<CGameController*>* resultGroup = nullptr;
     uint8_t result = GAME_RESULT_UNDECIDED;

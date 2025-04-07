@@ -98,22 +98,22 @@ void CQueuedActionsFrame::AddAction(CIncomingAction&& action)
   activeQueue->push_back(std::move(action));
 }
 
-void CQueuedActionsFrame::AddQueuedActionsAll(queue<CIncomingAction> actions)
+void CQueuedActionsFrame::AddQueuedActionsAll(queue<CIncomingAction> externalQueue)
 {
-  while (!actions.empty()) {
-    CIncomingAction& frontAction = actions.front();
+  while (!externalQueue.empty()) {
+    CIncomingAction& frontAction = externalQueue.front();
     AddAction(std::move(frontAction));
-    actions.pop();
+    externalQueue.pop();
   }
 }
 
-size_t CQueuedActionsFrame::AddQueuedActionsCount(queue<CIncomingAction> actions, size_t maxCount)
+size_t CQueuedActionsFrame::AddQueuedActionsCount(queue<CIncomingAction> externalQueue, size_t maxCount)
 {
   size_t count = maxCount;
-  while (!actions.empty() && count > 0) {
-    CIncomingAction& frontAction = actions.front();
+  while (!externalQueue.empty() && count > 0) {
+    CIncomingAction& frontAction = externalQueue.front();
     AddAction(std::move(frontAction));
-    actions.pop();
+    externalQueue.pop();
     --count;
   }
   return maxCount - count;
