@@ -282,10 +282,10 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
   } else {
     CFG.SetUint8("map.game_result.constraints.teams.losers.min", m_MinTeamsWithNoWinners);
   }
-  if (CFG.Exists("map.game_result.constraints.losers.max")) {
-    m_MaxTeamsWithNoWinners = CFG.GetSlot("map.game_result.constraints.losers.max", maxSlots, m_MaxTeamsWithNoWinners) + 1;
+  if (CFG.Exists("map.game_result.constraints.teams.losers.max")) {
+    m_MaxTeamsWithNoWinners = CFG.GetSlot("map.game_result.constraints.teams.losers.max", maxSlots, m_MaxTeamsWithNoWinners) + 1;
   } else {
-    CFG.SetUint8("map.game_result.constraints.losers.max", m_MaxTeamsWithNoWinners);
+    CFG.SetUint8("map.game_result.constraints.teams.losers.max", m_MaxTeamsWithNoWinners);
   }
 
   CFG.SetStrictMode(wasStrictMode);

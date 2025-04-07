@@ -67,6 +67,19 @@ CGameController::CGameController(const IndexedGameSlot& idxSlot)
 {
 }
 
+CGameController::CGameController(const uint8_t type, const IndexedGameSlot& idxSlot)
+  : m_Type(GameControllerType::kComputer),
+    m_Observer(false),
+    m_UID(idxSlot.second->GetUID()),
+    m_SID(idxSlot.first),
+    m_Color(idxSlot.second->GetColor()),
+    m_Team(idxSlot.second->GetTeam()),
+    m_GameResult(GAME_RESULT_UNDECIDED),
+    m_Name(type == AI_TYPE_AMAI ? CGameController::GetAIName(idxSlot.second->GetComputerType()) : CGameController::GetAMAIName(idxSlot.second->GetComputerType())),
+    m_LoadingTime(0)
+{
+}
+
 CGameController::CGameController(const GameUser::CGameUser* user, const IndexedGameSlot& idxSlot)
   : m_Type(GameControllerType::kUser),
     m_Observer(user->GetIsObserver()),
@@ -106,5 +119,15 @@ string CGameController::GetAIName(uint8_t nDifficulty)
     case SLOTCOMP_NORMAL: return "Computer (Normal)";
     case SLOTCOMP_HARD: return "Computer (Insane)";
     default: return "Computer";
+  }
+}
+
+string CGameController::GetAMAIName(uint8_t nDifficulty)
+{
+  switch (nDifficulty) {
+    case SLOTCOMP_EASY: return "AMAI Easy";
+    case SLOTCOMP_NORMAL: return "AMAI Normal";
+    case SLOTCOMP_HARD: return "AMAI Insane";
+    default: return "AMAI";
   }
 }

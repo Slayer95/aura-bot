@@ -76,6 +76,7 @@ private:
 
 public:
   CGameController(const IndexedGameSlot& idxSlot);
+  CGameController(const uint8_t type, const IndexedGameSlot& idxSlot);
   CGameController(const GameUser::CGameUser* user, const IndexedGameSlot& idxSlot);
   CGameController(const CGameVirtualUser* virtualUser, const IndexedGameSlot& idxSlot);
   ~CGameController();
@@ -110,6 +111,7 @@ public:
   inline void SetLeftGameTime(uint64_t nGameTime) { m_LeftGameTime = nGameTime; }
 
   [[nodiscard]] std::string static GetAIName(uint8_t nDifficulty);
+  [[nodiscard]] std::string static GetAMAIName(uint8_t nDifficulty);
 };
 
 struct TestCD

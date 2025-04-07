@@ -359,6 +359,7 @@ private:
   std::string                     m_CFGName;
   std::string                     m_ClientMapPath;       // config value: map path
   std::string                     m_MapType;       // config value: map type (for stats class)
+  uint8_t                         m_MapAIType;     // config value
   std::filesystem::path           m_MapServerPath;  // config value: map local path
   SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
   bool                            m_MapFileIsValid;
@@ -453,6 +454,7 @@ public:
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapWidth() const { return m_MapWidth; }
   [[nodiscard]] inline std::array<uint8_t, 2>     GetMapHeight() const { return m_MapHeight; }
   [[nodiscard]] inline std::string                GetMapType() const { return m_MapType; }
+  [[nodiscard]] inline uint8_t                    GetMapAIType() const { return m_MapAIType; }
   [[nodiscard]] inline const std::filesystem::path&     GetServerPath() const { return m_MapServerPath; }
   [[nodiscard]] std::filesystem::path             GetResolvedServerPath() const;
   [[nodiscard]] inline bool                       HasServerPath() const { return !m_MapServerPath.empty(); }

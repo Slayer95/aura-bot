@@ -340,8 +340,8 @@ void CGame::Reset()
 
   ClearActions();
 
-  if (m_GameLoaded && RunGameResults()) {
-    LOG_APP_IF(LOG_LEVEL_INFO, "[STATS] Detected winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
+  if (m_GameLoaded) {
+    RunGameResults();
   }
 
   if (m_GameLoaded && m_Config.m_SaveStats) {
@@ -402,7 +402,7 @@ void CGame::StoreGameControllers()
     }
     const IndexedGameSlot idxSlot = IndexedGameSlot(SID, slot);
     if (!slot->GetIsPlayerOrFake()) {
-      m_GameControllers.push_back(new CGameController(idxSlot));
+      m_GameControllers.push_back(new CGameController(m_Map->GetMapAIType(), idxSlot));
       continue;
     }
     const GameUser::CGameUser* user = GetUserFromSID(SID);
@@ -10276,13 +10276,23 @@ uint8_t CGame::TryConfirmResults(optional<GameResults> gameResults, uint8_t resu
     }
     return GAME_RESULT_SOURCE_NONE;
   }
+  if (resultsSource == GAME_RESULT_SOURCE_MMD) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners (MMD): " + JoinVector(gameResults->GetWinnersNames(), false))
+  } else {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners: " + JoinVector(gameResults->GetWinnersNames(), false))
+  }
   m_GameResultsSource = resultsSource;
   m_GameResults.swap(gameResults);
   m_GameResults->Confirm();
+  if (resultsSource == GAME_RESULT_SOURCE_MMD) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners (MMD): " + JoinVector(m_GameResults->GetWinnersNames(), false))
+  } else {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
+  }
   return m_GameResultsSource;
 }
 
-uint8_t CGame::RunGameResults()
+void CGame::RunGameResults()
 {
   if (m_GameResultsSource != GAME_RESULT_SOURCE_NONE) return m_GameResultsSource;
   

@@ -1626,7 +1626,7 @@ void CMap::Load(CConfig* CFG)
   }
 
   LoadGameConfigOverrides(*CFG);
-  LoadMapSpecificConfig(*CFG);
+  LoadMapSpecificConfig(*CFG); // as in not overrides
   m_GameResultConstraints = GameResultConstraints(this, *CFG);
 
   // Out of the box support for auto-starting maps using the Host Force + Others Force pattern (e.g. Warlock)
@@ -2227,6 +2227,14 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_MapURL = CFG.GetString("map.meta.url");
 
   m_MapType = CFG.GetString("map.type");
+
+  vector<string> aiTypes = {"none", "melee", "amai", "custom"};
+  m_MapAIType = m_MapType == "evergreen" || m_MapType == "amai" ? AI_TYPE_AMAI : AI_TYPE_MELEE;
+  if (CFG.Exists("map.ai.type")) {
+    m_MapAIType = CFG.GetStringIndex("map.ai.type", aiTypes, m_MapAIType);
+  } else {
+    CFG.SetString("map.ai.type", aiTypes[m_MapAIType]);
+  }
 
   if (m_MapOptions & MAPOPT_CUSTOMFORCES) {
     // Custom observer-team (one-based)

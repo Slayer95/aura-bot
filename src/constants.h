@@ -195,6 +195,11 @@ constexpr const char* HCL_CHARSET_SMALL = "0123456789abcdef-\" \\"; // 20 charac
 constexpr uint8_t MMD_TYPE_STANDARD = 0u;
 constexpr uint8_t MMD_TYPE_DOTA = 1u;
 
+constexpr uint8_t AI_TYPE_NONE = 0u;
+constexpr uint8_t AI_TYPE_MELEE = 1u;
+constexpr uint8_t AI_TYPE_AMAI = 2u;
+constexpr uint8_t AI_TYPE_CUSTOM = 3u;
+
 constexpr const char* AHCL_DEFAULT_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ -=,.!?*_+=|:;"; // 142 characters 
 
 constexpr uint8_t MAP_TRANSFER_NONE = 0u;
