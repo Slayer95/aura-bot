@@ -1600,7 +1600,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // changed this to ping during game loading as well to hopefully fix some problems with people disconnecting during loading
   // changed this to ping during the game as well
 
-  if (!m_LobbyLoading && (Ticks - m_LastPingTicks >= 5000)) {
+  if (!m_LobbyLoading && (Ticks >= m_LastPingTicks + 5000)) {
     // we must send pings to users who are downloading the map because
     // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
@@ -1625,7 +1625,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     m_LastPingTicks = Ticks;
   }
 
-  if (m_GameLoaded && (m_EffectiveTicks - m_LastCheckActionsTicks >= 5000)) {
+  if (m_GameLoaded && (m_EffectiveTicks >= m_LastCheckActionsTicks + 5000)) {
     ++m_APMTrainerTicks;
 
     for (auto& user : m_Users) {
