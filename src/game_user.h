@@ -90,6 +90,7 @@ namespace GameUser
     uint8_t                          m_PingEqualizerOffset;          // how many frames are actions sent by this player offset by ping equalizer
     QueuedActionsFrameNode*          m_PingEqualizerFrameNode;
     std::queue<CIncomingAction>      m_OnHoldActionsQueue;                // if anti-share is enabled, holds actions sent by this player until all shared units settings are reverted
+    size_t                           m_OnHoldActionsCount;
     std::bitset<MAX_SLOTS_MODERN>    m_ControllingUnitsFromSID;
     std::bitset<MAX_SLOTS_MODERN>    m_SharingUnitsWithSID;
     uint32_t                         m_PongCounter;
@@ -119,6 +120,7 @@ namespace GameUser
     bool                             m_WhoisSent;                    // if we've sent a battle.net /whois for this player yet (for spoof checking)
     bool                             m_MapChecked;                   // if we received any W3GS_MAPSIZE packet from the client
     bool                             m_MapReady;                     // if we received a valid W3GS_MAPSIZE packet from the client matching the map size
+    bool                             m_InGameReady;
     std::optional<bool>              m_UserReady;
     bool                             m_Ready;
     std::optional<int64_t>           m_ReadyReminderLastTicks;
@@ -208,10 +210,14 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetPingEqualizerOffset() const { return m_PingEqualizerOffset; }
     [[nodiscard]] uint32_t                        GetPingEqualizerDelay() const;
     [[nodiscard]] inline QueuedActionsFrameNode*  GetPingEqualizerFrameNode() const { return m_PingEqualizerFrameNode; }
+    [[nodiscard]] CQueuedActionsFrame&            GetPingEqualizerFrame();
+
     [[nodiscard]] inline std::queue<CIncomingAction>& GetOnHoldActions() { return m_OnHoldActionsQueue; }
     [[nodiscard]] inline bool                     GetOnHoldActionsAny() const { return !m_OnHoldActionsQueue.empty(); }
-    [[nodiscard]] inline size_t                   GetOnHoldActionsCount() const { return m_OnHoldActionsQueue.size(); }
-    [[nodiscard]] CQueuedActionsFrame&            GetPingEqualizerFrame();
+    inline void                                   AddOnHoldActionsCount(size_t count) { m_OnHoldActionsCount += count; }
+    inline void                                   SubtractOnHoldActionsCount(size_t count) { m_OnHoldActionsCount -= count; }
+    [[nodiscard]] size_t                          GetOnHoldActionsCount() const { return m_OnHoldActionsCount; }
+
     [[nodiscard]] CRealm*                         GetRealm(bool mustVerify) const;
     [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
     [[nodiscard]] inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
@@ -264,6 +270,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetFinishedLoading() const { return m_FinishedLoading; }
     [[nodiscard]] inline bool                  GetMapChecked() const { return m_MapChecked; }
     [[nodiscard]] inline bool                  GetMapReady() const { return m_MapReady; }
+    [[nodiscard]] inline bool                  GetInGameReady() const { return m_InGameReady; }
     [[nodiscard]] inline bool                  GetMapKicked() const { return (m_KickReason & GameUser::KickReason::MAP_MISSING) != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetPingKicked() const { return (m_KickReason & GameUser::KickReason::HIGH_PING) != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetSpoofKicked() const { return (m_KickReason & GameUser::KickReason::SPOOFER) != GameUser::KickReason::NONE; }
@@ -314,7 +321,7 @@ namespace GameUser
     void ReleaseOnHoldActions();
     void UpdateAPMQuota();
     bool GetShouldHoldActionInner();
-    bool GetShouldHoldAction();
+    bool GetShouldHoldAction(uint16_t count);
     void CheckReleaseOnHoldActions();
 
     void AddActionCounters();
@@ -351,6 +358,9 @@ namespace GameUser
     inline void SetDownloadAllowed(bool nDownloadAllowed) { m_DownloadAllowed = nDownloadAllowed; }
     inline void SetMapChecked(bool nChecked) { m_MapChecked = nChecked; }
     inline void SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
+    inline void SetMapReady() { m_MapReady = true; }
+    inline void SetInGameReady(bool nInGameReady) { m_InGameReady = nInGameReady; }
+    inline void SetInGameReady() { m_InGameReady = true; }
     inline void SetHasHighPing(bool nHasHighPing) { m_HasHighPing = nHasHighPing; }
     inline void SetLagging(bool nLagging) { m_Lagging = nLagging; }
     inline void SetDropVote(bool nDropVote) { m_DropVote = nDropVote; }
@@ -413,6 +423,7 @@ namespace GameUser
 
     double GetAPM() const;
     double GetRecentAPM() const;
+    double GetMostRecentAPM() const;
     inline bool GetHasAPMQuota() const { return m_APMQuota.has_value(); }
     inline const TokenBucketRateLimiter& InspectAPMQuota() { return m_APMQuota.value(); }
     inline TokenBucketRateLimiter& GetAPMQuota() { return m_APMQuota.value(); }

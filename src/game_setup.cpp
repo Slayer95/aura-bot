@@ -669,6 +669,8 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
     MapCFG.Set("map.type", "evergreen");
   } else if (baseFileName.find("DotA") != string::npos) {
     MapCFG.Set("map.type", "dota");
+  } else if (ToLowerCase(baseFileName).find("microtrain") != string::npos) {
+    MapCFG.Set("map.type", "microtraining");
   }
 
   shared_ptr<CMap> baseMap = nullptr;

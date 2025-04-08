@@ -966,32 +966,42 @@ string CIncomingJoinRequest::CensorName(const std::string& originalName, const b
 //
 
 CIncomingAction::CIncomingAction()
-  : m_Action(vector<uint8_t>{0}),
-    m_UID(0xFF)
+  : m_Error(false),
+    m_UID(0xFF),
+    m_Count(1),
+    m_Action(vector<uint8_t>{0})
 {
 }
 
 CIncomingAction::CIncomingAction(uint8_t nUID, vector<uint8_t>& nAction)
-  : m_Action(std::move(nAction)),
-    m_UID(nUID)
+  : m_Error(false),
+    m_UID(nUID),
+    m_Count(1),
+    m_Action(move(nAction))
 {
 }
 
 CIncomingAction::CIncomingAction(uint8_t nUID, uint8_t nActionType)
-  : m_Action(vector<uint8_t>{nActionType}),
-    m_UID(nUID)
+  : m_Error(false),
+    m_UID(nUID),
+    m_Count(1),
+    m_Action(vector<uint8_t>{nActionType})
 {
 }
 
 CIncomingAction::CIncomingAction(const CIncomingAction& other)
-  : m_Action(other.m_Action),
-    m_UID(other.m_UID)
+  : m_Error(other.m_Error),
+    m_UID(other.m_UID),
+    m_Count(other.m_Count),
+    m_Action(other.m_Action)
 {
 }
 
 CIncomingAction::CIncomingAction(CIncomingAction&& other) noexcept
-  : m_Action(move(other.m_Action)),
-    m_UID(other.m_UID)
+  : m_Error(other.m_Error),
+    m_UID(other.m_UID),
+    m_Count(other.m_Count),
+    m_Action(move(other.m_Action))
 {
 }
 

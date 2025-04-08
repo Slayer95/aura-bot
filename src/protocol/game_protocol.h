@@ -244,8 +244,11 @@ public:
 class CIncomingAction
 {
 private:
-  std::vector<uint8_t>   m_Action;
+  bool                   m_Error;
   uint8_t                m_UID;
+  uint16_t               m_Count;
+  std::vector<uint8_t>   m_Action;
+  
 
 public:
   CIncomingAction();
@@ -257,7 +260,9 @@ public:
   CIncomingAction& operator=(CIncomingAction&&) noexcept;
   ~CIncomingAction();
 
+  [[nodiscard]] inline bool                          GetError() const { return m_Error; }
   [[nodiscard]] inline uint8_t                       GetUID() const { return m_UID; }
+  [[nodiscard]] inline uint16_t                      GetCount() const { return m_Count; }
   [[nodiscard]] inline const std::vector<uint8_t>&   GetImmutableAction() const { return m_Action; }
   [[nodiscard]] inline std::vector<uint8_t>&         GetAction() { return m_Action; }
   [[nodiscard]] inline uint8_t                       GetSniffedType() const { return m_Action.empty() ? GameProtocol::Magic::ZERO : m_Action[0]; }

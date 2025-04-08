@@ -125,7 +125,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_CreationTime(GetTime()),
-    m_LastPingTicks(GetTicks()),
+    m_LastPingTicks(APP_MIN_TICKS),
+    m_LastCheckActionsTicks(APP_MIN_TICKS),
     m_LastRefreshTime(GetTime()),
     m_LastDownloadCounterResetTicks(GetTicks()),
     m_LastCountDownTicks(0),
@@ -202,6 +203,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_HMCEnabled(false),
     m_BufferingEnabled(BUFFERING_ENABLED_NONE),
     m_BeforePlayingEmptyActions(0),
+    m_APMTrainerPaused(false),
+    m_APMTrainerTicks(0),
     m_GameResultsSource(GAME_RESULT_SOURCE_NONE),
     m_GameHistory(make_shared<GameHistory>()),
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
@@ -1608,23 +1611,9 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       if (!user->GetDisconnected()) {
         user->Send(pingPacket);
       }
-
-      if (m_GameLoaded) {
-        user->CheckReleaseOnHoldActions();
-        user->ShiftRecentActionCounters();
-
-        if (user->GetHasAPMTrainer() && m_EffectiveTicks > 12500) {
-          double recentAPM = user->GetRecentAPM();
-          if (recentAPM < user->GetAPMTrainerTarget()) {
-            SendChat(user, "[APM] Recent: " + to_string(static_cast<size_t>(round(recentAPM))) + " - Average: " + to_string(static_cast<size_t>(round(user->GetAPM()))));
-          }
-        }
-      }
     }
 
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
-    // however we only want to broadcast if the countdown hasn't started
-
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
       if (m_Aura->m_Net.m_UDPMainServerEnabled && m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
         SendGameDiscoveryRefresh();
@@ -1634,6 +1623,24 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     }
 
     m_LastPingTicks = Ticks;
+  }
+
+  if (m_GameLoaded && (m_EffectiveTicks - m_LastCheckActionsTicks >= 5000)) {
+    ++m_APMTrainerTicks;
+
+    for (auto& user : m_Users) {
+      user->CheckReleaseOnHoldActions();
+      user->ShiftRecentActionCounters();
+
+      if (!m_APMTrainerPaused && user->GetHasAPMTrainer()) {
+        double recentAPM = m_APMTrainerTicks < 3 ? user->GetMostRecentAPM() : user->GetRecentAPM();
+        if (recentAPM < user->GetAPMTrainerTarget()) {
+          SendChat(user, "[APM] Recent: " + to_string(static_cast<size_t>(round(recentAPM))) + " - Average: " + to_string(static_cast<size_t>(round(user->GetAPM()))));
+        }
+      }
+    }
+
+    m_LastCheckActionsTicks = m_EffectiveTicks;
   }
 
   // update users
@@ -3498,38 +3505,15 @@ void CGame::SendAllActionsCallback()
     for (const CIncomingAction& action : actionQueue) {
       const uint8_t actionType = action.GetSniffedType();
 
-      if (actionType == ACTION_CHAT_TRIGGER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG))) {
+      if (actionType == ACTION_CHAT_TRIGGER) {
         const vector<uint8_t>& actionBytes = action.GetImmutableAction();
-        if (actionBytes.size() >= 10 && m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
+        if (actionBytes.size() >= 10) {
           const uint8_t* chatMessageStart = actionBytes.data() + 9;
           const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
           if (chatMessageStart < chatMessageEnd) {
-            const GameUser::CGameUser* user = GetUserFromUID(action.GetUID());
+            GameUser::CGameUser* user = GetUserFromUID(action.GetUID());
             const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
-            if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
-              m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
-            }
-
-            // Enable --log-level debug to figure out HMC map-specific constants
-            // According to TriggerHappy's original HMC code,
-            // only the first (lower) two bytes are relevant,
-            // and the upper two bytes are zero or can be zeroed in SendHMC().
-            //
-            // TH also expects both uint32_t values at CGame::SendChatTrigger() to be equal.
-            // But maybe the second one doesn't matter, just like the upper bytes above.
-            //
-            // So if those assumptions, hold,
-            // let N be the first integer output here.
-            //
-            // Then, W3HMC trigger constants are:
-            // <map.w3hmc.trigger = N & 0xFFFF>
-            // <map.w3hmc.trigger = (map_w3hmctid1) | (map_w3hmctid2 << 8)> (in terms of TH's implementation)
-            //
-            // Or, in simpler maths terms:
-            // <map.w3hmc.trigger = N mod 65536>
-            // <map.w3hmc.trigger = (map_w3hmctid1) + (map_w3hmctid2 * 256)> (in terms of TH's implementation)
-
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 1)) + " | 0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
+            EventChatTrigger(user, chatMessage, actionBytes);
           }
         }
       }
@@ -3589,6 +3573,39 @@ void CGame::SendAllActionsCallback()
   }
 
   frame.Reset();
+}
+
+void CGame::ResetAPMTrainerTicks()
+{
+  m_APMTrainerTicks = 0;
+}
+
+void CGame::PauseAPMTrainer()
+{
+  m_APMTrainerPaused = true;
+}
+
+void CGame::ResumeAPMTrainer()
+{
+  m_APMTrainerPaused = false;
+}
+
+uint8_t CGame::GetNumInGameReadyUsers() const
+{
+  uint8_t count = 0;
+  for (auto& user : m_Users) {
+    if (user->GetInGameReady()) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+void CGame::ResetInGameReadyUsers() const
+{
+  for (auto& user : m_Users) {
+    user->SetInGameReady(false);
+  }
 }
 
 void CGame::SendGProxyEmptyActions()
@@ -5558,10 +5575,11 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     }
   }
 
-  if (user->GetShouldHoldAction()) {
+  if (user->GetShouldHoldAction(action.GetCount())) {
     if (!user->GetOnHoldActionsAny()) {
       SendChat(user, "Your actions are being restricted.");
     }
+    user->AddOnHoldActionsCount(action.GetCount());
     user->GetOnHoldActions().push(std::move(action));
     size_t holdActionsCount = user->GetOnHoldActionsCount();
     if (holdActionsCount > GAME_ACTION_HOLD_QUEUE_MAX_SIZE) {
@@ -5573,7 +5591,9 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   } else {
     actionFrame.AddAction(std::move(action));
     if (user->GetHasAPMQuota()) {
-      user->GetAPMQuota().ConsumeWithDebt();
+      if (!user->GetAPMQuota().TryConsume(action.GetCount())) {
+        LOG_APP_IF(LOG_LEVEL_WARNING, "[APMLimiter] Malfunction detected")
+      }
     }
   }
 
@@ -5714,6 +5734,52 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     }
   } else if ((m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) && !m_GameHistory->GetDesynchronized()) {
     m_GameHistory->AddCheckSum(MyCheckSum);
+  }
+}
+
+void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessage, const vector<uint8_t>& actionBytes)
+{
+  bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG));
+  if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
+    m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
+  }
+
+  // Enable --log-level debug to figure out HMC map-specific constants
+  // According to TriggerHappy's original HMC code,
+  // only the first (lower) two bytes are relevant,
+  // and the upper two bytes are zero or can be zeroed in SendHMC().
+  //
+  // TH also expects both uint32_t values at CGame::SendChatTrigger() to be equal.
+  // But maybe the second one doesn't matter, just like the upper bytes above.
+  //
+  // So if those assumptions, hold,
+  // let N be the first integer output here.
+  //
+  // Then, W3HMC trigger constants are:
+  // <map.w3hmc.trigger = N & 0xFFFF>
+  // <map.w3hmc.trigger = (map_w3hmctid1) | (map_w3hmctid2 << 8)> (in terms of TH's implementation)
+  //
+  // Or, in simpler maths terms:
+  // <map.w3hmc.trigger = N mod 65536>
+  // <map.w3hmc.trigger = (map_w3hmctid1) + (map_w3hmctid2 * 256)> (in terms of TH's implementation)
+
+  if (canLogChatTriggers) {
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 1)) + " | 0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
+  }
+
+  if (m_Map->GetMapType() == "microtraining") {
+    if (chatMessage == "g") {
+      if (!user->GetInGameReady()) {
+        user->SetInGameReady();
+        if (GetNumInGameReadyUsers() >= 2) {
+          ResetAPMTrainerTicks();
+          ResumeAPMTrainer();
+        }
+      }
+    } else if (chatMessage == "gg") {
+      PauseAPMTrainer();
+      ResetInGameReadyUsers();
+    }
   }
 }
 
@@ -6284,6 +6350,7 @@ void CGame::EventGameStartedLoading()
     m_SyncPlayers[user] = otherPlayers;
   }
 
+  m_APMTrainerPaused = m_Map->GetMapType() == "microtraining";
   m_GameLoading = true;
 
   // since we use a fake countdown to deal with leavers during countdown the COUNTDOWN_START and COUNTDOWN_END packets are sent in quick succession
@@ -6804,7 +6871,7 @@ void CGame::Remake()
   m_FromAutoReHost = false;
   m_EffectiveTicks = 0;
   m_CreationTime = Time;
-  m_LastPingTicks = Time;
+  m_LastPingTicks = Ticks;
   m_LastRefreshTime = Time;
   m_LastDownloadCounterResetTicks = Ticks;
   m_LastCountDownTicks = 0;
@@ -6871,6 +6938,8 @@ void CGame::Remake()
   m_HMCEnabled = false;
   m_BufferingEnabled = BUFFERING_ENABLED_NONE;
   m_BeforePlayingEmptyActions = 0;
+  m_APMTrainerPaused = false;
+  m_APMTrainerTicks = 0;
   m_GameResultsSource = GAME_RESULT_SOURCE_NONE;
   m_GameDiscoveryInfoChanged = true;
 
@@ -10063,6 +10132,7 @@ bool CGame::GetIsStageAcceptingJoins() const
 {
   // This method does not care whether this is actually a mirror game. This is intended.
   if (m_LobbyLoading || m_Exiting || GetIsGameOver()) return false;
+  // we only want to broadcast if the countdown hasn't started (or if the game has loaded and join-in-progress is enabled)
   if (!m_CountDownStarted) return true;
   if (!m_GameLoaded) return false;
   if (m_GameHistory->GetSoftDesynchronized()) return false;

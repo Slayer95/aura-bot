@@ -110,11 +110,12 @@ void CQueuedActionsFrame::AddQueuedActionsAll(queue<CIncomingAction>& externalQu
 size_t CQueuedActionsFrame::AddQueuedActionsCount(queue<CIncomingAction>& externalQueue, size_t maxCount)
 {
   size_t count = maxCount;
-  while (!externalQueue.empty() && count > 0) {
+  while (!externalQueue.empty()) {
     CIncomingAction& frontAction = externalQueue.front();
+    if (count < frontAction.GetCount()) break;
     AddAction(std::move(frontAction));
     externalQueue.pop();
-    --count;
+    count -= frontAction.GetCount();
   }
   return maxCount - count;
 }

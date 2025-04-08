@@ -6534,6 +6534,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           mapType = "evergreen";
         } else if (nameString.find("DotA") != string::npos) {
           mapType = "dota";
+        } else if (ToLowerCase(nameString).find("microtrain") != string::npos) {
+          mapType = "microtraining";
         }
         if (!mapType.empty()) {
           MapCFG.Set("map.type", mapType);

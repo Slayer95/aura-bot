@@ -79,6 +79,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_IsLeaver(false),
     m_PingEqualizerOffset(0),
     m_PingEqualizerFrameNode(nullptr),
+    m_OnHoldActionsCount(0),
     m_PongCounter(0),
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
@@ -103,6 +104,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_WhoisSent(false),
     m_MapChecked(false),
     m_MapReady(false),
+    m_InGameReady(false),
     m_Ready(false),
     m_KickReason(KickReason::NONE),
     m_HasHighPing(false),
@@ -274,17 +276,11 @@ bool CGameUser::SubDelayPingEqualizerFrame()
 
 void CGameUser::ReleaseOnHoldActionsCount(size_t count)
 {
-#ifdef DEBUG
   size_t doneCount = GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
-  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)", LOG_C | LOG_P);
-  }
-  assert(count == doneCount && "CGameUser::ReleaseOnHoldActionsCount() should be called with a valid count")
-#else
-  GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
-#endif
-  if (GetHasAPMQuota()) {
-    GetAPMQuota().ConsumeWithDebt(static_cast<double>(count));
+  if (doneCount > 0 && GetHasAPMQuota()) {
+    if (!GetAPMQuota().TryConsume(static_cast<double>(doneCount))) {
+      m_Game->LogApp(m_Game->GetLogPrefix() + "[APMLimit] Malfunction detected - " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)", LOG_C | LOG_P);
+    }
   }
 }
 
@@ -312,7 +308,7 @@ bool CGameUser::GetShouldHoldActionInner()
   return false;
 }
 
-bool CGameUser::GetShouldHoldAction()
+bool CGameUser::GetShouldHoldAction(uint16_t count)
 {
   if (GetOnHoldActionsAny()) return true;
   return GetShouldHoldActionInner();
@@ -821,6 +817,12 @@ double CGameUser::GetRecentAPM() const
   if (m_Game->GetEffectiveTicks() == 0) return 0.;
   uint32_t weightedSum = m_RecentActionCounter[0] * 24 + m_RecentActionCounter[1] * 36 + m_RecentActionCounter[1] * 60;
   return static_cast<double>(weightedSum) / 10.;
+}
+
+double CGameUser::GetMostRecentAPM() const
+{
+  if (m_Game->GetEffectiveTicks() == 0) return 0.;
+  return static_cast<double>(m_RecentActionCounter[2]) * 12.;
 }
 
 void CGameUser::RestrictAPM(double apm, double burstActions)

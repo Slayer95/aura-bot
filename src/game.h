@@ -123,6 +123,7 @@ protected:
   std::string                                            m_MapSiteURL;
   int64_t                                                m_CreationTime;                  // GetTime when the game was created
   int64_t                                                m_LastPingTicks;                 // GetTicks when the last ping was sent
+  int64_t                                                m_LastCheckActionsTicks;
   int64_t                                                m_LastRefreshTime;               // GetTime when the last game refresh was sent
   int64_t                                                m_LastDownloadCounterResetTicks; // GetTicks when the download counter was last reset
   int64_t                                                m_LastCountDownTicks;            // GetTicks when the last countdown message was sent
@@ -210,6 +211,9 @@ protected:
   bool                                                   m_HMCEnabled;
   uint8_t                                                m_BufferingEnabled;
   uint32_t                                               m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
+
+  bool                                                   m_APMTrainerPaused;
+  uint32_t                                               m_APMTrainerTicks;
 
   SharedByteArray                                        m_LoadedMapChunk;
   std::shared_ptr<GameHistory>                           m_GameHistory;
@@ -451,6 +455,14 @@ public:
   void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
   void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
   void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatPlayer) const;
+
+  void                                                   ResetAPMTrainerTicks();
+  void                                                   PauseAPMTrainer();
+  void                                                   ResumeAPMTrainer();
+
+  uint8_t                                                GetNumInGameReadyUsers() const;
+  void                                                   ResetInGameReadyUsers() const;
+
   void                                                   SendGProxyEmptyActions();
   void                                                   SendAllActionsCallback();
   void                                                   SendAllActions();
@@ -508,6 +520,7 @@ public:
   void                      EventUserLoaded(GameUser::CGameUser* user);
   bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
+  void                      EventChatTrigger(GameUser::CGameUser* user, const std::string& message, const std::vector<uint8_t>& actionBytes);
   void                      EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage* chatPlayer);
   void                      EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team);
   void                      EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour);
