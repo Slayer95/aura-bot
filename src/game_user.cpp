@@ -311,6 +311,8 @@ bool CGameUser::GetShouldHoldActionInner()
 bool CGameUser::GetShouldHoldAction(uint16_t count)
 {
   if (GetOnHoldActionsAny()) return true;
+  // allow MMD actions through
+  if (count == 0) return false;
   return GetShouldHoldActionInner();
 }
 

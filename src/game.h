@@ -456,9 +456,10 @@ public:
   void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
   void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatPlayer) const;
 
-  void                                                   ResetAPMTrainerTicks();
+  void                                                   CheckActions();
   void                                                   PauseAPMTrainer();
   void                                                   ResumeAPMTrainer();
+  void                                                   RestartAPMTrainer();
 
   uint8_t                                                GetNumInGameReadyUsers() const;
   void                                                   ResetInGameReadyUsers() const;

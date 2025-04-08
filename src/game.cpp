@@ -1626,21 +1626,20 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   }
 
   if (m_GameLoaded && (m_EffectiveTicks >= m_LastCheckActionsTicks + 5000)) {
-    ++m_APMTrainerTicks;
+    CheckActions();
 
-    for (auto& user : m_Users) {
-      user->CheckReleaseOnHoldActions();
-      user->ShiftRecentActionCounters();
-
-      if (!m_APMTrainerPaused && user->GetHasAPMTrainer()) {
+    if (!m_APMTrainerPaused) {
+      ++m_APMTrainerTicks;
+      for (auto& user : m_Users) {
+        if (!user->GetHasAPMTrainer()) {
+          continue;
+        }
         double recentAPM = m_APMTrainerTicks < 3 ? user->GetMostRecentAPM() : user->GetRecentAPM();
         if (recentAPM < user->GetAPMTrainerTarget()) {
           SendChat(user, "[APM] Recent: " + to_string(static_cast<size_t>(round(recentAPM))) + " - Average: " + to_string(static_cast<size_t>(round(user->GetAPM()))));
         }
       }
     }
-
-    m_LastCheckActionsTicks = m_EffectiveTicks;
   }
 
   // update users
@@ -3575,9 +3574,13 @@ void CGame::SendAllActionsCallback()
   frame.Reset();
 }
 
-void CGame::ResetAPMTrainerTicks()
+void CGame::CheckActions()
 {
-  m_APMTrainerTicks = 0;
+  for (auto& user : m_Users) {
+    user->CheckReleaseOnHoldActions();
+    user->ShiftRecentActionCounters();
+  }
+  m_LastCheckActionsTicks = m_EffectiveTicks;
 }
 
 void CGame::PauseAPMTrainer()
@@ -3588,6 +3591,13 @@ void CGame::PauseAPMTrainer()
 void CGame::ResumeAPMTrainer()
 {
   m_APMTrainerPaused = false;
+}
+
+void CGame::RestartAPMTrainer()
+{
+  m_APMTrainerTicks = 0;
+  ResumeAPMTrainer();
+  CheckActions();
 }
 
 uint8_t CGame::GetNumInGameReadyUsers() const
@@ -5772,8 +5782,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
       if (!user->GetInGameReady()) {
         user->SetInGameReady();
         if (GetNumInGameReadyUsers() >= 2) {
-          ResetAPMTrainerTicks();
-          ResumeAPMTrainer();
+          RestartAPMTrainer();
         }
       }
     } else if (chatMessage == "gg") {
