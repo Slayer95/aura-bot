@@ -1325,7 +1325,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("[" + targetPlayer->GetName() + "] is an observer.");
         break;
       }
-      string currentAPMFragment = "APM: " + to_string(static_cast<uint64_t>(floor(targetPlayer->GetAPM())));
+      string currentAPMFragment = "APM: " + to_string(static_cast<uint64_t>(round(targetPlayer->GetAPM())));
       string maxAPMFragment, holdActionsFragment;
       if (targetPlayer->GetHasAPMQuota()) {
         maxAPMFragment = " / " + to_string(targetPlayer->GetAPMQuota().GetTokensPerMinute());

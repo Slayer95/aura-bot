@@ -1616,7 +1616,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
         if (user->GetHasAPMTrainer() && m_EffectiveTicks > 12500) {
           double recentAPM = user->GetRecentAPM();
           if (recentAPM < user->GetAPMTrainerTarget()) {
-            SendChat(user, "[APM] Recent: " + to_string(recentAPM) + " - Average: " + to_string(user->GetAPM()));
+            SendChat(user, "[APM] Recent: " + to_string(static_cast<size_t>(round(recentAPM))) + " - Average: " + to_string(static_cast<size_t>(round(user->GetAPM()))));
           }
         }
       }
