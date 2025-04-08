@@ -202,6 +202,8 @@ public:
   std::optional<uint32_t>                         m_WarnHighPing;
   std::optional<uint32_t>                         m_SafeHighPing;
   std::optional<bool>                             m_SyncNormalize;
+  std::optional<uint16_t>                         m_MaxAPM;
+  std::optional<uint16_t>                         m_MaxBurstAPM;
 
   std::string                                     m_CreatedBy;
   void*                                           m_CreatedFrom;
@@ -355,6 +357,8 @@ public:
   void SetWarnKickPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
   void SetSafeKickPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
   void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
+  void SetMaxAPM(const uint16_t nMaxAPM) { m_MaxAPM = nMaxAPM; }
+  void SetMaxBurstAPM(const uint16_t nMaxBurstAPM) { m_MaxBurstAPM = nMaxBurstAPM; }
   void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
   void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
   void SetGameIsExpansion(const bool nGameIsExpansion) { m_GameIsExpansion = nGameIsExpansion; }

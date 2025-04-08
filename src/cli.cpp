@@ -192,6 +192,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--latency-equalizer,--no-latency-equalizer{false}", m_GameLatencyEqualizerEnabled, "Enables a minimum delay for all actions sent by game players.");
   app.add_option("--latency-equalizer-frames", m_GameLatencyEqualizerFrames, "Sets the amount of frames to be used by the latency equalizer.");
   app.add_flag(  "--latency-normalize,--no-latency-normalize{false}", m_GameSyncNormalize, "Whether Aura tries to automatically fix some game-start lag issues.");
+  app.add_option("--max-apm", m_GameMaxAPM, "Limits the actions each player may perform per minute (APM).");
+  app.add_option("--max-burst-apm", m_GameMaxBurstAPM, "Limits the actions each player may perform per minute (APM).");
   app.add_option("--reconnection", m_GameReconnectionMode, "Customizes GProxy support for the hosted game. Values: disabled, basic, extended.")->check(CLI::IsMember({"disabled", "basic", "extended"}));
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");

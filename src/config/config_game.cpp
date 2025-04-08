@@ -174,6 +174,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_NotifyJoins                            = CFG.GetBool("ui.notify_joins.enabled", false);
   m_IgnoredNotifyJoinPlayers               = CFG.GetSetSensitive("ui.notify_joins.exceptions", ',', false, {}); /* do not trim, because LAN names may have trailing whitespace */
+  m_MaxAPM                                 = CFG.GetMaybeUint16("hosting.apm_limiter.max.average");
+  m_MaxBurstAPM                            = CFG.GetMaybeUint16("hosting.apm_limiter.max.burst");
   m_HideLobbyNames                         = CFG.GetBool("hosting.nicknames.hide_lobby", false);
   m_HideInGameNames                        = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoadInGame                             = CFG.GetBool("hosting.load_in_game.enabled", false);
@@ -299,6 +301,10 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
 
   INHERIT_CUSTOM(m_NotifyJoins, m_NotifyJoins)
   INHERIT(m_IgnoredNotifyJoinPlayers)
+
+  INHERIT_MAP_OR_CUSTOM(m_MaxAPM, m_MaxAPM, m_MaxAPM)
+  INHERIT_MAP_OR_CUSTOM(m_MaxBurstAPM, m_MaxBurstAPM, m_MaxBurstAPM)
+
   INHERIT_MAP_OR_CUSTOM(m_HideLobbyNames, m_HideLobbyNames, m_HideLobbyNames)
   INHERIT_MAP_OR_CUSTOM(m_HideInGameNames, m_HideInGameNames, m_HideInGameNames)
   INHERIT_MAP_OR_CUSTOM(m_LoadInGame, m_LoadInGame, m_LoadInGame)

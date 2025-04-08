@@ -150,6 +150,8 @@ public:
   std::optional<uint32_t>               m_GameWarnHighPing;
   std::optional<uint32_t>               m_GameSafeHighPing;
   std::optional<bool>                   m_GameSyncNormalize;
+  std::optional<uint16_t>               m_GameMaxAPM;
+  std::optional<uint16_t>               m_GameMaxBurstAPM;
   std::vector<std::string>              m_GameReservations;
   std::optional<bool>                   m_CheckMapVersion;
   std::optional<std::filesystem::path>  m_GameSavedPath;

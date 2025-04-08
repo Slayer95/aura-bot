@@ -158,12 +158,14 @@ namespace GameUser
 
     // Actions
     uint32_t                                    m_ActionCounter;
+    std::array<uint32_t, 3>                     m_RecentActionCounter;
     uint8_t                                     m_AntiAbuseCounter;
     uint8_t                                     m_RemainingSaves;
     uint8_t                                     m_RemainingPauses;
     std::optional<uint8_t>                      m_SelfGameResult;
     std::optional<uint8_t>                      m_FinalGameResult;
     std::optional<TokenBucketRateLimiter>       m_APMQuota;
+    std::optional<double>                       m_APMTrainer;
 
     CGameUser(CGame* game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
@@ -315,7 +317,8 @@ namespace GameUser
     bool GetShouldHoldAction();
     void CheckReleaseOnHoldActions();
 
-    inline void AddActionCounter() { ++m_ActionCounter; }
+    void AddActionCounters();
+    void ShiftRecentActionCounters();
     inline void AddAbuseCounter() { ++m_AntiAbuseCounter; }
     inline int64_t GetAntiAbuseTimeout() const { return 5000 / (1 << m_AntiAbuseCounter); }
 
@@ -409,9 +412,14 @@ namespace GameUser
     inline void SetFinalGameResult(const uint8_t result) { m_FinalGameResult = result; }
 
     double GetAPM() const;
+    double GetRecentAPM() const;
     inline bool GetHasAPMQuota() const { return m_APMQuota.has_value(); }
     inline const TokenBucketRateLimiter& InspectAPMQuota() { return m_APMQuota.value(); }
     inline TokenBucketRateLimiter& GetAPMQuota() { return m_APMQuota.value(); }
+    inline bool GetHasAPMTrainer() const { return m_APMTrainer.has_value(); }
+    inline double GetAPMTrainerTarget() const { return m_APMTrainer.value(); }
+    inline void SetAPMTrainer(double apm) { m_APMTrainer = apm; }
+    inline void DisableAPMTrainer() { m_APMTrainer.reset(); }
     void RestrictAPM(double apm, double burstActions);
 
     // processing functions

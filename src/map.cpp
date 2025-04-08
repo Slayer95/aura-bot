@@ -2177,6 +2177,12 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.auto_start.players")) {
     m_AutoStartPlayers = CFG.GetUint8("map.auto_start.players", 2);
   }
+  if (CFG.Exists("map.hosting.apm_limiter.max.average")) {
+    m_MaxAPM = CFG.GetUint16("map.hosting.apm_limiter.max.average", 800);
+  }
+  if (CFG.Exists("map.hosting.apm_limiter.max.burst")) {
+    m_MaxBurstAPM = CFG.GetUint16("map.hosting.apm_limiter.max.burst", (uint16_t)APM_RATE_LIMITER_BURST_ACTIONS);
+  }
   if (CFG.Exists("map.hosting.nicknames.hide_lobby")) {
     m_HideLobbyNames = CFG.GetBool("map.hosting.nicknames.hide_lobby", false);
   }

@@ -76,7 +76,7 @@ public:
   bool                                                          m_SentGameLoadedReport;
   bool                                                          m_PlaybackEnded;
   int64_t                                                       m_LastFrameTicks;
-  int64_t                                                       m_LastPingTime;
+  int64_t                                                       m_LastPingTicks;
 
   int64_t                                                       m_LastProgressReportTime;
   uint8_t                                                       m_LastProgressReportLog;

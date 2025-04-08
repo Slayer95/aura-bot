@@ -1338,6 +1338,49 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
 
     //
+    // !APMTRAINER <VALUE>
+    //
+
+    case HashCode("apmtrainer"): {
+      if (!m_TargetGame || m_TargetGame->GetIsMirror() || !m_GameUser) {
+        break;
+      }
+      if (Payload.empty()) {
+        ErrorReply("Usage: " + cmdToken + "apmtrainer <APM>");
+        break;
+      }
+      if (m_GameUser->GetIsObserver()) {
+        ErrorReply("Only players may enable APM trainer.");
+        break;
+      }
+      optional<int64_t> targetAPM;
+      try {
+        int64_t parsedValue = stol(Payload);
+        if (0 <= parsedValue && parsedValue <= 1000) {
+          targetAPM = parsedValue;
+        }
+      } catch (...) {
+      }
+      if (!targetAPM.has_value()) {
+        ErrorReply("Usage: " + cmdToken + "apmtrainer <APM>");
+        break;
+      }
+      if (targetAPM.value() >= 1) {
+        m_GameUser->SetAPMTrainer((double)targetAPM.value());
+        SendReply("APM Trainer set to " + to_string(targetAPM.value()));
+        break;
+      }
+      if (!m_GameUser->GetHasAPMTrainer()) {
+        ErrorReply("APM Trainer is already disabled");
+        break;
+      }
+      m_GameUser->DisableAPMTrainer();
+      SendReply("APM Trainer disabled.");
+      break;
+    }
+    
+
+    //
     // !CHECKME
     // !CHECK <PLAYER>
     //
@@ -5315,7 +5358,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         maxAPM = APM_RATE_LIMITER_MAX;
       }
 
-      targetPlayer->RestrictAPM(maxAPM.value(), APM_RATE_LIMITER_BURST_ACTIONS);
+      targetPlayer->RestrictAPM(maxAPM.value(), m_TargetGame->m_Config.m_MaxBurstAPM.value_or(APM_RATE_LIMITER_BURST_ACTIONS));
       targetPlayer->GetAPMQuota().PauseRefillUntil(targetPlayer->GetHandicapTicks());
 
       string limitText = to_string(maxAPM.value()) + " actions per minute (APM)";

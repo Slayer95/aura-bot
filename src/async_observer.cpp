@@ -73,7 +73,7 @@ CAsyncObserver::CAsyncObserver(CGame* nGame, CConnection* nConnection, uint8_t n
     m_GameTicks(0),
     m_SentGameLoadedReport(false),
     m_PlaybackEnded(false),
-    m_LastPingTime(APP_MIN_TICKS),
+    m_LastPingTicks(APP_MIN_TICKS),
     m_LastProgressReportTime(APP_MIN_TICKS),
     m_LastProgressReportLog(0),
     m_Name(nName)
@@ -310,9 +310,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     CheckGameOver();
   }
 
-  if (m_LastPingTime + 5 <= Time) {
+  if (m_LastPingTicks + 5000 <= Ticks) {
     Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
-    m_LastPingTime = Time;
+    m_LastPingTicks = Ticks;
   }
 
   m_Socket->DoSend(send_fd);

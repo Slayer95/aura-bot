@@ -122,7 +122,7 @@ protected:
   std::string                                            m_MapPath;                       // store the map path to save in the database on game end
   std::string                                            m_MapSiteURL;
   int64_t                                                m_CreationTime;                  // GetTime when the game was created
-  int64_t                                                m_LastPingTime;                  // GetTime when the last ping was sent
+  int64_t                                                m_LastPingTicks;                 // GetTicks when the last ping was sent
   int64_t                                                m_LastRefreshTime;               // GetTime when the last game refresh was sent
   int64_t                                                m_LastDownloadCounterResetTicks; // GetTicks when the download counter was last reset
   int64_t                                                m_LastCountDownTicks;            // GetTicks when the last countdown message was sent

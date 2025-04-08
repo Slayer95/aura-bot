@@ -138,6 +138,7 @@ CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const 
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
 {
+  m_RecentActionCounter.fill(0);
   m_RTTValues.reserve(MAXIMUM_PINGS_COUNT);
   m_Socket->SetLogErrors(true);
   m_Type = INCON_TYPE_PLAYER;
@@ -327,6 +328,17 @@ void CGameUser::CheckReleaseOnHoldActions()
     releasedCount = min(releasedCount, static_cast<size_t>(floor(GetAPMQuota().GetCurrentCapacity())));
   }
   ReleaseOnHoldActionsCount(releasedCount);
+}
+
+void CGameUser::AddActionCounters() {
+  ++m_ActionCounter;
+  ++m_RecentActionCounter[2];
+}
+
+void CGameUser::ShiftRecentActionCounters() {
+  m_RecentActionCounter[0] = m_RecentActionCounter[1];
+  m_RecentActionCounter[1] = m_RecentActionCounter[2];
+  m_RecentActionCounter[2] = 0;
 }
 
 CRealm* CGameUser::GetRealm(bool mustVerify) const
@@ -802,6 +814,13 @@ double CGameUser::GetAPM() const
 {
   if (m_Game->GetEffectiveTicks() == 0) return 0.;
   return static_cast<double>(m_ActionCounter) * 60000. / m_Game->GetEffectiveTicks();
+}
+
+double CGameUser::GetRecentAPM() const
+{
+  if (m_Game->GetEffectiveTicks() == 0) return 0.;
+  uint32_t weightedSum = m_RecentActionCounter[0] * 24 + m_RecentActionCounter[1] * 36 + m_RecentActionCounter[1] * 60;
+  return static_cast<double>(weightedSum) / 10.;
 }
 
 void CGameUser::RestrictAPM(double apm, double burstActions)

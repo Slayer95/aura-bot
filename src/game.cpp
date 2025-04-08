@@ -125,7 +125,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_CreationTime(GetTime()),
-    m_LastPingTime(GetTime()),
+    m_LastPingTicks(GetTicks()),
     m_LastRefreshTime(GetTime()),
     m_LastDownloadCounterResetTicks(GetTicks()),
     m_LastCountDownTicks(0),
@@ -1593,11 +1593,11 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 {
   const int64_t Time = GetTime(), Ticks = GetTicks();
 
-  // ping every 8 seconds
+  // ping every 5 seconds
   // changed this to ping during game loading as well to hopefully fix some problems with people disconnecting during loading
   // changed this to ping during the game as well
 
-  if (!m_LobbyLoading && (Time - m_LastPingTime >= 5)) {
+  if (!m_LobbyLoading && (Ticks - m_LastPingTicks >= 5000)) {
     // we must send pings to users who are downloading the map because
     // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
@@ -1611,6 +1611,14 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 
       if (m_GameLoaded) {
         user->CheckReleaseOnHoldActions();
+        user->ShiftRecentActionCounters();
+
+        if (user->GetHasAPMTrainer() && m_EffectiveTicks > 12500) {
+          double recentAPM = user->GetRecentAPM();
+          if (recentAPM < user->GetAPMTrainerTarget()) {
+            SendChat(user, "[APM] Recent: " + to_string(recentAPM) + " - Average: " + to_string(user->GetAPM()));
+          }
+        }
       }
     }
 
@@ -1625,7 +1633,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       }
     }
 
-    m_LastPingTime = Time;
+    m_LastPingTicks = Ticks;
   }
 
   // update users
@@ -5504,7 +5512,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
   CQueuedActionsFrame& actionFrame = user->GetPingEqualizerFrame();
 
   user->CheckReleaseOnHoldActions();
-  user->AddActionCounter();
+  user->AddActionCounters();
 
   if (!action.GetImmutableAction().empty()) {
     DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
@@ -6258,6 +6266,9 @@ void CGame::EventGameStartedLoading()
     user->SetStatus(USERSTATUS_LOADING_SCREEN);
     user->SetWhoisShouldBeSent(false);
     user->UnMute();
+    if (!user->GetHasAPMQuota() && m_Config.m_MaxAPM.has_value()) {
+      user->RestrictAPM(m_Config.m_MaxAPM.value(), m_Config.m_MaxBurstAPM.value_or(APM_RATE_LIMITER_BURST_ACTIONS));
+    }
     if (user->GetHasAPMQuota()) {
       user->GetAPMQuota().PauseRefillUntil(user->GetHandicapTicks());
     }
@@ -6793,7 +6804,7 @@ void CGame::Remake()
   m_FromAutoReHost = false;
   m_EffectiveTicks = 0;
   m_CreationTime = Time;
-  m_LastPingTime = Time;
+  m_LastPingTicks = Time;
   m_LastRefreshTime = Time;
   m_LastDownloadCounterResetTicks = Ticks;
   m_LastCountDownTicks = 0;

@@ -106,6 +106,8 @@ struct CGameConfig
   std::string              m_LobbyVirtualHostName;       // lobby virtual host name
   bool                     m_NotifyJoins;                // whether the bot should beep when a user joins a hosted game
   std::set<std::string>    m_IgnoredNotifyJoinPlayers;
+  std::optional<uint16_t>  m_MaxAPM;
+  std::optional<uint16_t>  m_MaxBurstAPM;
   bool                     m_HideLobbyNames;
   uint8_t                  m_HideInGameNames;
   bool                     m_LoadInGame;
