@@ -288,7 +288,7 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
       Print(GetLogPrefix() + "detected game mode: [" + key.substr(4) + "]");
       // Game mode
       string::size_type KeyStringSize = key.size();
-      if (KeyStringSize % 0 != 0) KeyStringSize--;
+      if (KeyStringSize % 2 != 0) KeyStringSize--;
       for (string::size_type i = 4; i < KeyStringSize; i += 2) {
         if (key[i] == 's' && key[i + 1] == 'o') {
           m_SwitchEnabled = true;
