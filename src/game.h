@@ -233,7 +233,7 @@ protected:
   std::queue<CGameLogRecord*>                            m_PendingLogs;
   
   std::optional<CGameVirtualUserReference>               m_HMCVirtualUser; // sends ACTION_CHAT_TRIGGER actions for HMC system
-  std::optional<CGameVirtualUserReference>               m_AHCLVirtualUser; // sends ACTION_SYNC_INT actions for AHCL system
+  std::optional<CGameVirtualUserReference>               m_AHCLVirtualUser; // sends ACTION_GAME_CACHE actions for AHCL system
   std::optional<CGameVirtualUserReference>               m_InertVirtualUser; // all interactions with this virtual user are forbidden, except maybe chat
   std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser; // must never send actions, otherwise CAsyncObserver desyncs
 
@@ -434,6 +434,7 @@ public:
   void                                                   SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
   void                                                   SendAll(const std::vector<uint8_t>& data) const;
   bool                                                   SendAllAsChat(const std::vector<uint8_t>& data) const;
+  bool                                                   SendObserversAsChat(const std::vector<uint8_t>& data) const;
  
 
   // functions to send packets to players
@@ -444,6 +445,8 @@ public:
   void                                                   SendChat(uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   bool                                                   SendAllChat(uint8_t fromUID, const std::string& message) const;
   bool                                                   SendAllChat(const std::string& message) const;
+  bool                                                   SendObserverChat(uint8_t fromUID, const std::string& message) const;
+  bool                                                   SendObserverChat(const std::string& message) const;
   void                                                   SendAllSlotInfo();
   void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;
   void                                                   SendFakeUsersInfo(CConnection* user) const;
@@ -465,6 +468,7 @@ public:
   void                                                   ResetInGameReadyUsers() const;
 
   void                                                   SendGProxyEmptyActions();
+  void                                                   EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd);
   void                                                   SendAllActionsCallback();
   void                                                   SendAllActions();
   void                                                   SendAllAutoStart() const;
@@ -519,9 +523,9 @@ public:
   void                      EventBeforeJoin(CConnection* connection);
   void                      EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason);
   void                      EventUserLoaded(GameUser::CGameUser* user);
-  bool                      EventUserAction(GameUser::CGameUser* user, CIncomingAction& action);
+  bool                      EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
-  void                      EventChatTrigger(GameUser::CGameUser* user, const std::string& message, const std::vector<uint8_t>& actionBytes);
+  void                      EventChatTrigger(GameUser::CGameUser* user, const std::string& message, const uint32_t first, const uint32_t second);
   void                      EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage* chatPlayer);
   void                      EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team);
   void                      EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour);
@@ -801,7 +805,7 @@ public:
   CGameController*          GetGameControllerFromUID(uint8_t UID) const;
 
   bool InitStats();
-  bool QueueStatsAction(const CIncomingAction& action);
+  bool EventGameCache(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd);
   bool UpdateStatsQueue() const;
   void FlushStatsQueue() const;
   void TrySaveStats() const;

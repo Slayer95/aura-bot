@@ -1440,12 +1440,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string realmFragment = "Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName());
       string versionFragment;
       if (m_TargetGame->m_SupportedGameVersionsMin != m_TargetGame->m_SupportedGameVersionsMax) {
-        versionFragment = " (v" + ToVersionString(targetPlayer->GetGameVersion());
-        if (targetPlayer->GetGameVersionIsExact()) {
-          versionFragment.append(")");
-        } else {
-          versionFragment.append("?)");
-        }
+        versionFragment = " (" + targetPlayer->GetGameVersionString() + ")";
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + targetPlayer->GetReconnectionText() + FromFragment + (m_TargetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
       SendReply("[" + targetPlayer->GetName() + "]. " + realmFragment + versionFragment + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));

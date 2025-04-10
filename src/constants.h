@@ -473,6 +473,7 @@ constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
 // game_protocol.h
 
 constexpr int W3GS_UDP_MIN_PACKET_SIZE = 4;
+constexpr size_t W3GS_ACTION_MAX_PACKET_SIZE = 1024;
 
 constexpr uint8_t GAME_NONE = 0; // this case isn't part of the protocol, it's for internal use only
 constexpr uint8_t GAME_FULL = 2;
@@ -493,15 +494,41 @@ constexpr uint8_t REJECTJOIN_FULL = 9;
 constexpr uint8_t REJECTJOIN_STARTED = 10;
 constexpr uint8_t REJECTJOIN_WRONGPASSWORD = 27;
 
-constexpr uint8_t ACTION_PAUSE = 1u;
-constexpr uint8_t ACTION_RESUME = 2u;
-constexpr uint8_t ACTION_SAVE = 6u;
-constexpr uint8_t ACTION_SAVE_ENDED = 7u;
-constexpr uint8_t ACTION_ALLIANCE_SETTINGS = 80u;
-constexpr uint8_t ACTION_TRANSFER_RESOURCES = 81u;
-constexpr uint8_t ACTION_CHAT_TRIGGER = 96u;
-constexpr uint8_t ACTION_MODAL_BTN = 106u;
-constexpr uint8_t ACTION_SYNC_INT = 107u;
+constexpr uint8_t ACTION_PAUSE = 0x01;
+constexpr uint8_t ACTION_RESUME = 0x02;
+constexpr uint8_t ACTION_SAVE = 0x06;
+constexpr uint8_t ACTION_SAVE_ENDED = 0x07;
+constexpr uint8_t ACTION_ABILITY_TARGET_NONE = 0x10;
+constexpr uint8_t ACTION_ABILITY_TARGET_POINT = 0x11;
+constexpr uint8_t ACTION_ABILITY_TARGET_OBJECT = 0x12;
+constexpr uint8_t ACTION_GIVE_OR_DROP_ITEM = 0x13;
+constexpr uint8_t ACTION_ABILITY_TARGET_DOUBLE = 0x14;
+constexpr uint8_t ACTION_SELECTION = 0x16;
+constexpr uint8_t ACTION_GROUP_HOTKEY_ASSIGN = 0x17;
+constexpr uint8_t ACTION_GROUP_HOTKEY_SELECT = 0x18;
+constexpr uint8_t ACTION_SELECTION_SUBGROUP = 0x19;
+constexpr uint8_t ACTION_SELECTION_BEFORE_SUBGROUP = 0x1A;
+constexpr uint8_t ACTION_UNKNOWN_0x1B = 0x1B;
+constexpr uint8_t ACTION_SELECTION_GROUND_ITEM = 0x1C;
+constexpr uint8_t ACTION_CANCEL_REVIVAL = 0x1D;
+constexpr uint8_t ACTION_CANCEL_TRAINING = 0x1E;
+constexpr uint8_t ACTION_UNKNOWN_0x21 = 0x21;
+constexpr uint8_t ACTION_ALLIANCE_SETTINGS = 0x50;
+constexpr uint8_t ACTION_TRANSFER_RESOURCES = 0x51;
+constexpr uint8_t ACTION_CHAT_TRIGGER = 0x60;
+constexpr uint8_t ACTION_ESCAPE = 0x61;
+constexpr uint8_t ACTION_SCENARIO_TRIGGER = 0x62;
+constexpr uint8_t ACTION_SKILLTREE = 0x66;
+constexpr uint8_t ACTION_BUILDMENU = 0x67;
+constexpr uint8_t ACTION_MINIMAPSIGNAL = 0x68;
+constexpr uint8_t ACTION_ONEMORETURN_BLOCK_A = 0x69;
+constexpr uint8_t ACTION_ONEMORETURN_BLOCK_B = 0x6A;
+constexpr uint8_t ACTION_UNKNOWN_0x75 = 0x75;
+constexpr uint8_t ACTION_MODAL_BTN = 0x6A;
+constexpr uint8_t ACTION_GAME_CACHE = 0x6B;
+
+constexpr uint8_t ACTION_SELECTION_MODE_ADD = 1;
+constexpr uint8_t ACTION_SELECTION_MODE_REMOVE = 2;
 
 constexpr uint32_t ALLIANCE_SETTINGS_ALLY = 0x1Fu;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_VISION = 0x20u;

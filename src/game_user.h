@@ -183,6 +183,7 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
     [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
     [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
+    [[nodiscard]] std::string                     GetGameVersionString() const;
     [[nodiscard]] inline std::string              GetName() const { return m_Name; }
     [[nodiscard]] std::string                     GetLowerName() const;
     [[nodiscard]] std::string                     GetDisplayName() const;

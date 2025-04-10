@@ -114,10 +114,16 @@ namespace GameProtocol
   };
 
   extern std::vector<uint8_t> EmptyAction;
+  extern std::array<uint8_t, 256> ActionSizes;
+  extern std::bitset<256> ActionCountables;
 
   // utility functions
 
   [[nodiscard]] const std::vector<uint8_t>& GetEmptyAction();
+  [[nodiscard]] std::bitset<256> InitActionCountables();
+  [[nodiscard]] bool GetActionIsCountable(uint8_t actionType);
+  [[nodiscard]] const std::array<uint8_t, 256>& GetActionSizes();
+  [[nodiscard]] size_t GetNextActionPos(const std::vector<uint8_t>& action, size_t pos);
 
   // receive functions
 
@@ -277,6 +283,8 @@ public:
   [[nodiscard]] uint16_t                             GetUint16BE(const size_t offset) const;
   [[nodiscard]] uint32_t                             GetUint32LE(const size_t offset) const;
   [[nodiscard]] uint32_t                             GetUint32BE(const size_t offset) const;
+  [[nodiscard]] std::vector<const uint8_t*>          SplitAtomic() const;
+  [[nodiscard]] static std::pair<bool, uint16_t>     CountAPMAtomic(const std::vector<uint8_t>& action);
 
   [[nodiscard]] inline size_t                        GetStringEndIndex(const size_t offset) {
     if (m_Action.size() <= offset) return offset;

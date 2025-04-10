@@ -220,6 +220,15 @@ string CGameUser::GetConnectionErrorString() const
   return errorString;
 }
 
+string CGameUser::GetGameVersionString() const
+{
+  if (m_GameVersionIsExact) {
+    return "v" + ToVersionString(GetGameVersion());
+  } else {
+    return "v" + ToVersionString(GetGameVersion()) + "?";
+  }
+}
+
 string CGameUser::GetLowerName() const
 {
   return ToLowerCase(m_Name);
@@ -279,7 +288,7 @@ void CGameUser::ReleaseOnHoldActionsCount(size_t count)
   size_t doneCount = GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
   if (doneCount > 0 && GetHasAPMQuota()) {
     if (!GetAPMQuota().TryConsume(static_cast<double>(doneCount))) {
-      m_Game->LogApp(m_Game->GetLogPrefix() + "[APMLimit] Malfunction detected - " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)", LOG_C | LOG_P);
+      Print(m_Game->GetLogPrefix() + "[APMLimit] Malfunction detected - " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)");
     }
   }
 }
@@ -477,7 +486,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           case GameProtocol::Magic::OUTGOING_ACTION: {
             if (ValidateLength(Data) && Data.size() >= 8) {
               CIncomingAction action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
-              if (!m_Game->EventUserAction(this, action)) {
+              if (!m_Game->EventUserIncomingAction(this, action)) {
                 m_Game->EventUserDisconnectGameProtocolError(this, false);
                 Abort = true;
               } else if (m_Disconnected) {
@@ -617,7 +626,12 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
           case GameProtocol::Magic::PROTO_BUF: {
             // Serialized protocol buffers
-            m_Game->SendAll(Data);
+            // TODO: Not sure how to handle PROTO_BUF in the most compatible way yet.
+            if (m_Game->GetIsSupportedGameVersion(GAMEVER(1u, 31u))) {
+              m_Game->SendAll(Data);
+            } else {
+              Send(Data);
+            }
             break;
           }
 

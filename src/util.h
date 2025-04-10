@@ -396,6 +396,22 @@ inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray
     return static_cast<uint32_t>(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
 }
 
+[[nodiscard]] inline uint16_t ByteArrayToUInt16(const uint8_t* b, bool bigEndian)
+{
+  if (!bigEndian)
+    return static_cast<uint16_t>(b[1] << 8 | b[0]);
+  else
+    return static_cast<uint16_t>(b[2] << 8 | b[3]);
+}
+
+[[nodiscard]] inline uint32_t ByteArrayToUInt32(const uint8_t* b, bool bigEndian)
+{
+  if (!bigEndian)
+    return static_cast<uint32_t>(b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
+  else
+    return static_cast<uint32_t>(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
+}
+
 [[nodiscard]] inline std::string ByteArrayToDecString(const std::vector<uint8_t>& b)
 {
   if (b.empty())
@@ -585,6 +601,18 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
     if (b[i] == 0) {
       return i;
     }
+  }
+  return start;
+}
+
+[[nodiscard]] inline const uint8_t* FindNullDelimiterOrStart(const uint8_t* start, const uint8_t* end)
+{
+  const uint8_t* needle = start;
+  while (needle < end) {
+    if (*needle == 0) {
+      return needle;
+    }
+    ++needle;
   }
   return start;
 }

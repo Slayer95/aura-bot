@@ -46,7 +46,7 @@ public:
   ~CDotaStats();
   CDotaStats(CDotaStats&) = delete;
 
-  bool RecvAction(uint8_t UID, const CIncomingAction& action);
+  bool EventGameCache(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
   bool UpdateQueue();
   void FlushQueue();
   void Save(CAura* nAura, CAuraDB* nDB);

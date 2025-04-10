@@ -155,7 +155,7 @@ public:
   [[nodiscard]] inline bool GetIsGameOver() { return m_GameOver; }
 
   bool HandleTokens(uint8_t fromUID, uint32_t valueID, std::vector<std::string> tokens);
-  bool RecvAction(uint8_t fromUID, const CIncomingAction& action);
+  bool EventGameCache(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
   bool ProcessDefinition(CW3MMDDefinition* nDef);
   bool ProcessAction(CW3MMDAction* nAction);
   bool UpdateQueue();

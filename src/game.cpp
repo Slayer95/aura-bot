@@ -452,14 +452,39 @@ bool CGame::InitStats()
   return true;
 }
 
-bool CGame::QueueStatsAction(const CIncomingAction& action)
+bool CGame::EventGameCache(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
 {
+  if (!m_CustomStats && !m_DotaStats) return false;
+
+  const uint8_t* stringStart;
+  const uint8_t* stringEnd;
+  string cacheFileName, missionKey, key;
+  uint32_t value;
+
+  stringStart = actionStart + 1u;
+  stringEnd = FindNullDelimiterOrStart(stringStart, actionEnd);
+  if (stringEnd == stringStart) return false;
+  cacheFileName = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
+
+  stringStart = stringEnd + 1u;
+  stringEnd = FindNullDelimiterOrStart(stringStart, actionEnd);
+  if (stringEnd == stringStart) return false;
+  missionKey = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
+
+  stringStart = stringEnd + 1u;
+  stringEnd = FindNullDelimiterOrStart(stringStart, actionEnd);
+  if (stringEnd == stringStart) return false;
+  key = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
+
+  if (actionEnd != stringEnd + 5u) return false;
+  value = ByteArrayToUInt32(stringEnd + 1, false);
+
   if (m_CustomStats) {
-    if (!m_CustomStats->RecvAction(action.GetUID(), action)) {
+    if (!m_CustomStats->EventGameCache(UID, cacheFileName, missionKey, key, value)) {
       DestroyStats();
     }
   } else if (m_DotaStats) {
-    if (!m_DotaStats->RecvAction(action.GetUID(), action)) {
+    if (!m_DotaStats->EventGameCache(UID, cacheFileName, missionKey, key, value)) {
       DestroyStats();
     }
   }
@@ -1684,7 +1709,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 
   // send actions every m_Latency milliseconds
   // actions are at the heart of every Warcraft 3 game but luckily we don't need to know their contents to relay them
-  // we queue user actions in EventUserAction then just resend them in batches to all users here
+  // we queue user actions in EventUserIncomingAction then just resend them in batches to all users here
 
   if (m_GameLoaded && !m_Lagging && Ticks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy)
     SendAllActions();
@@ -2035,6 +2060,27 @@ bool CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
   return success;
 }
 
+bool CGame::SendObserversAsChat(const std::vector<uint8_t>& data) const
+{
+  if (!m_GameLoaded) return false;
+  bool success = false;
+  for (auto& user : m_Users) {
+    if (!user->GetIsObserver()) {
+      continue;
+    }
+    user->Send(data);
+    success = true;
+  }
+  if (!success) return success;
+
+  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+    GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
+    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + data.size());
+  }
+
+  return success;
+}
+
 void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& message, const uint8_t logLevel) const
 {
   // send a private message to one user - it'll be marked [Private] in Warcraft 3
@@ -2131,7 +2177,7 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
     if (!m_GameLoading && !m_GameLoaded) {
         success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
     } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), message));
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_ALL), false), message));
     }
   } else {
     string leftMessage = message;
@@ -2139,7 +2185,7 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
       if (!m_GameLoading && !m_GameLoaded) {
         success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize))) || success;
       } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage.substr(0, maxSize))) || success;
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_ALL), false), leftMessage.substr(0, maxSize))) || success;
       }
       leftMessage = leftMessage.substr(maxSize);
     }
@@ -2148,7 +2194,7 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
       if (!m_GameLoading && !m_GameLoaded) {
         success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage)) || success;
       } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(0), false), leftMessage)) || success;
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_ALL), false), leftMessage)) || success;
       }
     }
   }
@@ -2158,6 +2204,57 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
 bool CGame::SendAllChat(const string& message) const
 {
   return SendAllChat(GetHostUID(), message);
+}
+
+bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
+{
+  if (!m_GameLoaded)
+    return false;
+
+  if (message.empty())
+    return false;
+
+  vector<uint8_t> toUIDs = GetChatObserverUIDs(0xFF);
+  if (toUIDs.empty()) {
+    return false;
+  }
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+    const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
+    if (fromUser) {
+      LogApp("sent as [" + fromUser->GetName() + "] <<" + message + ">>", LOG_C);
+    } else if (fromUID == m_VirtualHostUID) {
+      LogApp("sent as Virtual Host <<" + message + ">>", LOG_C);
+    } else {
+      LogApp("sent as [UID:" + ToDecString(fromUID) + "] <<" + message + ">>", LOG_C);
+    }
+  } else {
+    LOG_APP_IF(LOG_LEVEL_INFO, "sent <<" + message + ">>")
+  }
+
+  // send a public message to all users - it'll be marked [All] in Warcraft 3
+
+  uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
+  bool success = false;
+  if (message.size() < maxSize) {
+    success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_OBS), false), message));
+  } else {
+    string leftMessage = message;
+    while (leftMessage.size() > maxSize) {
+      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_OBS), false), leftMessage.substr(0, maxSize))) || success;
+      leftMessage = leftMessage.substr(maxSize);
+    }
+
+    if (!leftMessage.empty()) {
+      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_OBS), false), leftMessage)) || success;
+    }
+  }
+  return success;
+}
+
+bool CGame::SendObserverChat(const string& message) const
+{
+  return SendObserverChat(GetHostUID(), message);
 }
 
 void CGame::UpdateReadyCounters()
@@ -3483,6 +3580,77 @@ void CGame::SendCommandsHelp(const string& cmdToken, GameUser::CGameUser* user, 
   user->SetSentAutoCommandsHelp(true);
 }
 
+void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
+{
+  const uint8_t actionType = actionStart[0];
+
+  if (actionType == ACTION_CHAT_TRIGGER) {
+    if (actionEnd >= actionStart + 10u) {
+      const uint8_t* chatMessageStart = actionStart + 9u;
+      const uint8_t* chatMessageEnd = FindNullDelimiterOrStart(chatMessageStart, actionEnd);
+      if (chatMessageStart < chatMessageEnd) {
+        GameUser::CGameUser* user = GetUserFromUID(UID);
+        const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
+        EventChatTrigger(user, chatMessage, ByteArrayToUInt32(actionStart + 1u, false), ByteArrayToUInt32(actionStart + 5u, false));
+      }
+    }
+  }
+
+  if (actionType == ACTION_ALLIANCE_SETTINGS && (actionEnd >= actionStart + 6u) && actionStart[1] < MAX_SLOTS_MODERN) {
+    GameUser::CGameUser* user = GetUserFromUID(UID);
+    const bool wantsShare = (ByteArrayToUInt32(actionStart + 2u, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) > 0;
+    const uint8_t targetSID = actionStart[1];
+    if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
+      if (wantsShare) {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+      } else {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+      }
+      user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
+      GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
+      if (targetUser) {
+        if (
+          (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam()) &&
+          (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS)
+        ) {
+          targetUser->SetHasControlOverUnitsFromSlot(user->GetSID(), wantsShare);
+          if (wantsShare && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
+            int64_t timeout = user->GetAntiAbuseTimeout();
+            if (!user->GetAntiShareKicked()) {
+              user->AddKickReason(GameUser::KickReason::ANTISHARE);
+              user->KickAtLatest(GetTicks() + timeout);
+              user->AddAbuseCounter();
+            }
+            user->SetLeftCode(PLAYERLEAVE_LOST);
+            user->SetLeftReason("autokicked - antishare");
+            SendChat(user, "[ANTISHARE] You will be kicked out of the game unless you remove Shared Unit Control within " + ToDurationString(timeout / 1000) + ".");
+            SendChat(targetUser, "[ANTISHARE] You may not perform further actions until [" + user->GetDisplayName() + "] removes Shared Unit Control.");
+          }
+          if (!wantsShare) {
+            targetUser->CheckReleaseOnHoldActions();
+          }
+        }
+      }
+      if (!wantsShare && user->GetAntiShareKicked() && !user->GetIsSharingUnitsWithAnyAllies()) {
+        user->ResetLeftReason();
+        user->RemoveKickReason(GameUser::KickReason::ANTISHARE);
+        user->CheckStillKicked();
+      }
+    }
+  }
+
+  if (actionType == ACTION_MINIMAPSIGNAL) {
+    GameUser::CGameUser* user = GetUserFromUID(UID);
+    if (user->GetIsObserver()) {
+      SendObserverChat("[" + user->GetName() + "] sent a minimap signal.");
+    }
+  }
+
+  if (actionType == ACTION_GAME_CACHE && actionEnd >= actionStart + 6u) {
+    EventGameCache(UID, actionStart, actionEnd);
+  }
+}
+
 void CGame::SendAllActionsCallback()
 {
   CQueuedActionsFrame& frame = GetFirstActionFrame();
@@ -3502,66 +3670,9 @@ void CGame::SendAllActionsCallback()
 
   for (const ActionQueue& actionQueue : frame.actions) {
     for (const CIncomingAction& action : actionQueue) {
-      const uint8_t actionType = action.GetSniffedType();
-
-      if (actionType == ACTION_CHAT_TRIGGER) {
-        const vector<uint8_t>& actionBytes = action.GetImmutableAction();
-        if (actionBytes.size() >= 10) {
-          const uint8_t* chatMessageStart = actionBytes.data() + 9;
-          const uint8_t* chatMessageEnd = actionBytes.data() + FindNullDelimiterOrStart(actionBytes, 9);
-          if (chatMessageStart < chatMessageEnd) {
-            GameUser::CGameUser* user = GetUserFromUID(action.GetUID());
-            const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
-            EventChatTrigger(user, chatMessage, actionBytes);
-          }
-        }
-      }
-
-      if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 6 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
-        GameUser::CGameUser* user = GetUserFromUID(action.GetUID());
-        const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) > 0;
-        const uint8_t targetSID = action.GetUint8(1);
-        if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
-          if (wantsShare) {
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
-          } else {
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
-          }
-          user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
-          GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
-          if (targetUser) {
-            if (
-              (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam()) &&
-              (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS)
-            ) {
-              targetUser->SetHasControlOverUnitsFromSlot(user->GetSID(), wantsShare);
-              if (wantsShare && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
-                int64_t timeout = user->GetAntiAbuseTimeout();
-                if (!user->GetAntiShareKicked()) {
-                  user->AddKickReason(GameUser::KickReason::ANTISHARE);
-                  user->KickAtLatest(GetTicks() + timeout);
-                  user->AddAbuseCounter();
-                }
-                user->SetLeftCode(PLAYERLEAVE_LOST);
-                user->SetLeftReason("autokicked - antishare");
-                SendChat(user, "[ANTISHARE] You will be kicked out of the game unless you remove Shared Unit Control within " + ToDurationString(timeout / 1000) + ".");
-                SendChat(targetUser, "[ANTISHARE] You may not perform further actions until [" + user->GetDisplayName() + "] removes Shared Unit Control.");
-              }
-              if (!wantsShare) {
-                targetUser->CheckReleaseOnHoldActions();
-              }
-            }
-          }
-          if (!wantsShare && user->GetAntiShareKicked() && !user->GetIsSharingUnitsWithAnyAllies()) {
-            user->ResetLeftReason();
-            user->RemoveKickReason(GameUser::KickReason::ANTISHARE);
-            user->CheckStillKicked();
-          }
-        }
-      }
-
-      if (action.GetLength() >= 6) {
-        QueueStatsAction(action);
+      vector<const uint8_t*> delimiters = action.SplitAtomic();
+      for (size_t i = 0, j = 1; j < delimiters.size(); i++, j++) {
+        EventOutgoingAtomicAction(action.GetUID(), delimiters[i], delimiters[j]);
       }
     }
   }
@@ -5525,13 +5636,13 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   }
 }
 
-bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
+bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& action)
 {
   if (!m_GameLoading && !m_GameLoaded) {
     return false;
   }
 
-  if (action.GetLength() > 1024) {
+  if (action.GetLength() > W3GS_ACTION_MAX_PACKET_SIZE) {
     return false;
   }
 
@@ -5540,10 +5651,6 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
 
   user->CheckReleaseOnHoldActions();
   user->AddActionCounters();
-
-  if (!action.GetImmutableAction().empty()) {
-    DLOG_APP_IF(LOG_LEVEL_TRACE2, "[" + user->GetName() + "] offset +" + ToDecString(user->GetPingEqualizerOffset()) + " | action 0x" + ToHexString(static_cast<uint32_t>((action.GetImmutableAction())[0])) + ": [" + ByteArrayToHexString((action.GetImmutableAction())) + "]")
-  }
 
   if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 6 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
     const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) > 0;
@@ -5585,6 +5692,10 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     }
   }
 
+  if (action.GetError()) {
+    LogApp("Action parser error for [" + user->GetName()+ "] (" + user->GetGameVersionString() + ") <" + ByteArrayToHexString(action.GetImmutableAction()) + ">", LOG_C | LOG_P);
+  }
+
   if (user->GetShouldHoldAction(action.GetCount())) {
     if (!user->GetOnHoldActionsAny()) {
       SendChat(user, "Your actions are being restricted.");
@@ -5602,7 +5713,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
     actionFrame.AddAction(std::move(action));
     if (user->GetHasAPMQuota()) {
       if (!user->GetAPMQuota().TryConsume(action.GetCount())) {
-        LOG_APP_IF(LOG_LEVEL_WARNING, "[APMLimiter] Malfunction detected")
+        Print("[APMLimiter] Malfunction detected");
       }
     }
   }
@@ -5648,7 +5759,7 @@ bool CGame::EventUserAction(GameUser::CGameUser* user, CIncomingAction& action)
       // Handled in CGame::SendAllActionsCallback
       break;
     }
-    case ACTION_SYNC_INT: {
+    case ACTION_GAME_CACHE: {
       // This is the W3MMD action type.
       // Handled in CGame::SendAllActionsCallback
       break;
@@ -5747,7 +5858,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
   }
 }
 
-void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessage, const vector<uint8_t>& actionBytes)
+void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessage, const uint32_t first, const uint32_t second)
 {
   bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG));
   if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
@@ -5760,6 +5871,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
   // and the upper two bytes are zero or can be zeroed in SendHMC().
   //
   // TH also expects both uint32_t values at CGame::SendChatTrigger() to be equal.
+  // Unfortunately, I have seen many cases in which these values are different.
   // But maybe the second one doesn't matter, just like the upper bytes above.
   //
   // So if those assumptions, hold,
@@ -5774,7 +5886,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
   // <map.w3hmc.trigger = (map_w3hmctid1) + (map_w3hmctid2 * 256)> (in terms of TH's implementation)
 
   if (canLogChatTriggers) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 1)) + " | 0x" + ToHexString(ByteArrayToUInt32(actionBytes, false, 5)) + "]")
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(first) + " | 0x" + ToHexString(second) + "]")
   }
 
   if (m_Map->GetMapType() == "microtraining") {

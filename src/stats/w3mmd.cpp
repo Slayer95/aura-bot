@@ -270,76 +270,41 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   return true;
 }
 
-bool CW3MMD::RecvAction(uint8_t fromUID, const CIncomingAction& action)
+bool CW3MMD::EventGameCache(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t /*value*/)
 {
   if (m_Error) {
     return false;
   }
 
-  unsigned int i = 0;
-  const vector<uint8_t>& ActionData = action.GetImmutableAction();
-  vector<uint8_t> MissionKey;
-  vector<uint8_t> Key;
-  vector<uint8_t> Value;
+  if (fileName != "MMD.Dat") {
+    return !m_Error;
+  }
 
-  while (ActionData.size() >= i + 9) {
-    if (ActionData[i] == ACTION_SYNC_INT &&
-      ActionData[i + 1] == 'M' &&
-      ActionData[i + 2] == 'M' &&
-      ActionData[i + 3] == 'D' &&
-      ActionData[i + 4] == '.' &&
-      ActionData[i + 5] == 'D' &&
-      ActionData[i + 6] == 'a' &&
-      ActionData[i + 7] == 't' &&
-      ActionData[i + 8] == 0x00)
-    {
-      if (ActionData.size() >= i + 10) {
-        MissionKey = ExtractCString(ActionData, i + 9);
+  if (missionKey.size() < 4) {
+    Print(GetLogPrefix() + "unknown mission key [" + missionKey + "] found, ignoring");
+    return !m_Error;
+  }
 
-        if (ActionData.size() >= i + 11 + MissionKey.size()) {
-          Key = ExtractCString(ActionData, i + 10 + MissionKey.size());
+  // Print("[W3MMD] DEBUG: mkey [" + missionKey + "], key [" + KeyString + "], value [" + to_string(value) + "]");
 
-          if (ActionData.size() >= i + 15 + MissionKey.size() + Key.size()) {
-            Value = vector<uint8_t>(ActionData.begin() + i + 11 + MissionKey.size() + Key.size(), ActionData.begin() + i + 15 + MissionKey.size() + Key.size());
-            string MissionKeyString = string(MissionKey.begin(), MissionKey.end());
-            string KeyString = string(Key.begin(), Key.end());
-            //uint32_t ValueInt = ByteArrayToUInt32(Value, false);
-
-            // Print("[W3MMD] DEBUG: mkey [" + MissionKeyString + "], key [" + KeyString + "], value [" + to_string(ValueInt) + "]");
-
-            if (MissionKeyString.size() > 4 && MissionKeyString.substr(0, 4) == "val:") {
-              string ValueIDString = MissionKeyString.substr(4);
-              optional<uint32_t> ValueID = ToUint32(ValueIDString);
-              vector<string> Tokens = TokenizeKey(KeyString);
-              if (!ValueID.has_value() || !HandleTokens(fromUID, ValueID.value(), Tokens)) {
-                Print(GetLogPrefix() + "error parsing [" + KeyString + "]");
-              }
-            } else if (MissionKeyString.size() > 4 && MissionKeyString.substr(0, 4) == "chk:") {
-              /*
-              string CheckIDString = MissionKeyString.substr(4);
-              optional<uint32_t> CheckID = ToUint32(CheckIDString);
-
-              // todotodo: cheat detection
-
-               ++m_NextCheckID;
-               */
-            } else {
-              Print(GetLogPrefix() + "unknown mission key [" + MissionKeyString + "] found, ignoring");
-            }
-            i += 15 + MissionKey.size() + Key.size();
-          } else {
-            ++i;
-          }
-        } else {
-          ++i;
-        }
-      } else {
-        ++i;
-      }
+  if (missionKey.substr(0, 4) == "val:") {
+    string ValueIDString = missionKey.substr(4);
+    optional<uint32_t> ValueID = ToUint32(ValueIDString);
+    vector<string> Tokens = TokenizeKey(key);
+    if (!ValueID.has_value() || !HandleTokens(fromUID, ValueID.value(), Tokens)) {
+      Print(GetLogPrefix() + "error parsing [" + key + "]");
     }
-    else {
-      ++i;
-    }
+  } else if (missionKey.substr(0, 4) == "chk:") {
+    /*
+    string CheckIDString = missionKey.substr(4);
+    optional<uint32_t> CheckID = ToUint32(CheckIDString);
+
+    // todotodo: cheat detection
+
+     ++m_NextCheckID;
+     */
+  } else {
+    Print(GetLogPrefix() + "unknown mission key [" + missionKey + "] found, ignoring");
   }
 
   return !m_Error;
