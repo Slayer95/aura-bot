@@ -77,4 +77,7 @@ patch.diff
 gamedata-update.js
 *.json
 *.diff
+*.cmd
+*.bat
+*.bkp
 
