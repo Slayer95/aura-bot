@@ -498,30 +498,36 @@ private:
   uint8_t  m_NewColor;
   uint32_t m_Kills;
   uint32_t m_Deaths;
+  uint32_t m_Assists;
+  uint32_t m_Gold;
   uint32_t m_CreepKills;
   uint32_t m_CreepDenies;
-  uint32_t m_Assists;
   uint32_t m_NeutralKills;
   uint32_t m_TowerKills;
   uint32_t m_RaxKills;
   uint32_t m_CourierKills;
+  std::string m_Items[6];
+  std::string m_Hero;
 
 public:
   CDBDotAPlayer();
-  CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills);
+  CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nAssists, uint32_t nGold, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills);
   ~CDBDotAPlayer();
 
   [[nodiscard]] inline uint8_t GetColor() const { return m_Color; }
   [[nodiscard]] inline uint8_t GetNewColor() const { return m_NewColor; }
   [[nodiscard]] inline uint32_t GetKills() const { return m_Kills; }
   [[nodiscard]] inline uint32_t GetDeaths() const { return m_Deaths; }
+  [[nodiscard]] inline uint32_t GetAssists() const { return m_Assists; }
+  [[nodiscard]] inline uint32_t GetGold() const { return m_Gold; }
   [[nodiscard]] inline uint32_t GetCreepKills() const { return m_CreepKills; }
   [[nodiscard]] inline uint32_t GetCreepDenies() const { return m_CreepDenies; }
-  [[nodiscard]] inline uint32_t GetAssists() const { return m_Assists; }
   [[nodiscard]] inline uint32_t GetNeutralKills() const { return m_NeutralKills; }
   [[nodiscard]] inline uint32_t GetTowerKills() const { return m_TowerKills; }
   [[nodiscard]] inline uint32_t GetRaxKills() const { return m_RaxKills; }
   [[nodiscard]] inline uint32_t GetCourierKills() const { return m_CourierKills; }
+  [[nodiscard]] inline std::string GetHero() { return m_Hero; }
+  [[nodiscard]] inline std::string GetItem(uint8_t i) { return m_Items[i]; }
 
   inline void IncKills() { ++m_Kills; }
   inline void IncDeaths() { ++m_Deaths; }
@@ -532,9 +538,15 @@ public:
 
   inline void SetColor(uint8_t nColor) { m_Color = nColor; }
   inline void SetNewColor(uint8_t nNewColor) { m_NewColor = nNewColor; }
+  inline void SetKills(uint32_t nKills) { m_Kills = nKills; }
+  inline void SetDeaths(uint32_t nDeaths) { m_Deaths = nDeaths; }
+  inline void SetAssists(uint32_t nAssists) { m_Assists = nAssists; }
+  inline void SetGold(uint32_t nGold) { m_Gold = nGold; }
   inline void SetCreepKills(uint32_t nCreepKills) { m_CreepKills = nCreepKills; }
   inline void SetCreepDenies(uint32_t nCreepDenies) { m_CreepDenies = nCreepDenies; }
   inline void SetNeutralKills(uint32_t nNeutralKills) { m_NeutralKills = nNeutralKills; }
+  inline void SetHero(const std::string& nHero) { m_Hero = nHero; }
+  inline void SetItem(const uint8_t i, const std::string& item) { m_Items[i] = item; }
 };
 
 //

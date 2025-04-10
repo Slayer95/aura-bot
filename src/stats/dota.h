@@ -40,6 +40,8 @@ public:
   CGame*                                        m_Game;
   CDBDotAPlayer*                                m_Players[12];
   uint8_t                                       m_Winner;
+  bool                                          m_SwitchEnabled;
+  std::pair<uint32_t, uint32_t>                 m_Time;
   std::optional<uint64_t>                       m_GameOverTime;
 
   explicit CDotaStats(CGame* nGame);
@@ -50,7 +52,11 @@ public:
   bool UpdateQueue();
   void FlushQueue();
   void Save(CAura* nAura, CAuraDB* nDB);
+  [[nodiscard]] inline bool GetIsSentinelCreepsColor(const uint8_t color) { return color == 0; }
+  [[nodiscard]] inline bool GetIsSentinelCreepsColor(const uint32_t color) { return color == 0; }
   [[nodiscard]] inline bool GetIsSentinelPlayerColor(const uint8_t color) { return 1 <= color && color <= 5; }
+  [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint8_t color) { return color == 6; }
+  [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint32_t color) { return color == 6; }
   [[nodiscard]] inline bool GetIsScourgePlayerColor(const uint8_t color) { return 7 <= color && color <= 11; }
   [[nodiscard]] inline bool GetIsPlayerColor(const uint8_t color) { return GetIsSentinelPlayerColor(color) || GetIsScourgePlayerColor(color); }
   [[nodiscard]] inline bool GetIsPlayerColor(const uint32_t color) { return color <= 0xFF && GetIsPlayerColor((uint8_t)color);}

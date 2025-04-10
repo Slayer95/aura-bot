@@ -1034,9 +1034,10 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
 {
   uint32_t kills = dotaPlayer->GetKills();
   uint32_t deaths = dotaPlayer->GetDeaths();
+  uint32_t assists = dotaPlayer->GetAssists();
+  //uint32_t gold = dotaPlayer->GetGold();
   uint32_t creepkills = dotaPlayer->GetCreepKills();
   uint32_t creepdenies = dotaPlayer->GetCreepDenies();
-  uint32_t assists = dotaPlayer->GetAssists();
   uint32_t neutralkills = dotaPlayer->GetNeutralKills();
   uint32_t towerkills = dotaPlayer->GetTowerKills();
   uint32_t raxkills = dotaPlayer->GetRaxKills();
@@ -1714,9 +1715,10 @@ CDBDotAPlayer::CDBDotAPlayer()
     m_NewColor(0),
     m_Kills(0),
     m_Deaths(0),
+    m_Assists(0),
+    m_Gold(0),
     m_CreepKills(0),
     m_CreepDenies(0),
-    m_Assists(0),
     m_NeutralKills(0),
     m_TowerKills(0),
     m_RaxKills(0),
@@ -1724,14 +1726,15 @@ CDBDotAPlayer::CDBDotAPlayer()
 {
 }
 
-CDBDotAPlayer::CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills)
+CDBDotAPlayer::CDBDotAPlayer(uint32_t nKills, uint32_t nDeaths, uint32_t nAssists, uint32_t nGold, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nNeutralKills, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills)
   : m_Color(0),
     m_NewColor(0),
     m_Kills(nKills),
     m_Deaths(nDeaths),
+    m_Assists(nAssists),
+    m_Gold(nGold),
     m_CreepKills(nCreepKills),
     m_CreepDenies(nCreepDenies),
-    m_Assists(nAssists),
     m_NeutralKills(nNeutralKills),
     m_TowerKills(nTowerKills),
     m_RaxKills(nRaxKills),

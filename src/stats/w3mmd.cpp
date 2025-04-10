@@ -270,7 +270,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   return true;
 }
 
-bool CW3MMD::EventGameCache(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t /*value*/)
+bool CW3MMD::EventGameCache(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t /*cacheValue*/)
 {
   if (m_Error) {
     return false;
@@ -287,14 +287,14 @@ bool CW3MMD::EventGameCache(const uint8_t fromUID, const std::string& fileName, 
 
   // Print("[W3MMD] DEBUG: mkey [" + missionKey + "], key [" + KeyString + "], value [" + to_string(value) + "]");
 
-  if (missionKey.substr(0, 4) == "val:") {
+  if (missionKey.compare(0, 4, "val:") == 0) {
     string ValueIDString = missionKey.substr(4);
     optional<uint32_t> ValueID = ToUint32(ValueIDString);
     vector<string> Tokens = TokenizeKey(key);
     if (!ValueID.has_value() || !HandleTokens(fromUID, ValueID.value(), Tokens)) {
       Print(GetLogPrefix() + "error parsing [" + key + "]");
     }
-  } else if (missionKey.substr(0, 4) == "chk:") {
+  } else if (missionKey.compare(0, 4, "chk:") == 0) {
     /*
     string CheckIDString = missionKey.substr(4);
     optional<uint32_t> CheckID = ToUint32(CheckIDString);
