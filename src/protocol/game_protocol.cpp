@@ -96,22 +96,24 @@ namespace GameProtocol
   {
     switch (action[pos]) {
       case ACTION_SAVE: {
+        // <0x06 cstring>
         size_t messageStart = pos + 1;
         size_t messageEnd = FindNullDelimiterOrStart(action, messageStart);
         if (messageEnd == messageStart) return pos;
         return messageEnd + 1;
       }
-      case ACTION_SELECTION:
-      case ACTION_GROUP_HOTKEY_ASSIGN:
+      case ACTION_SELECTION: // 0x16
+      case ACTION_GROUP_HOTKEY_ASSIGN: // 0x17
         //if (action.size() <= pos + 2) return pos;
         return pos + 4 + 8 * action[pos + 2];
       case ACTION_CHAT_TRIGGER: {
-        size_t messageStart = pos + 8;
+        // <0x60 dword dword cstring>
+        size_t messageStart = pos + 9;
         size_t messageEnd = FindNullDelimiterOrStart(action, messageStart);
         if (messageEnd == messageStart) return pos;
         return messageEnd + 1;
       }
-      case ACTION_GAME_CACHE: {
+      case ACTION_GAME_CACHE: { // 0x6B
         size_t stringStart, stringEnd;
         stringStart = pos + 1;
         stringEnd = FindNullDelimiterOrStart(action, stringStart); // end cache file name
