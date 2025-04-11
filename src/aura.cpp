@@ -474,6 +474,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_MetaDataNeedsUpdate(false),
 
     m_LogLevel(LOG_LEVEL_DEBUG),
+    m_LastPerformanceWarningTicks(APP_MIN_TICKS),
     m_SupportsModernSlots(false),
 
     m_LastServerID(0xFu),
@@ -1933,6 +1934,36 @@ void CAura::LogRemoteFile(const string& logText)
   writeStream.close();
 }
 
+void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t expectedInterval, const int64_t actualInterval, const int64_t averageInterval)
+{
+  // something is going terribly wrong - Aura is probably starved of resources
+  // print a message because even though this will take more resources it should provide some information to the administrator for future reference
+  // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
+  if (!MatchLogLevel(LOG_LEVEL_WARNING)) {
+    return;
+  }
+  int64_t Ticks = GetTicks();
+  if (Ticks < m_LastPerformanceWarningTicks + 5000) {
+    return;
+  }
+  char buffer[128];
+#ifdef _MSC_VER
+  int length = _snprintf_s(
+    buffer, 128, 127,
+#else
+  int length = snprintf(
+    buffer, 128,
+#endif
+    "%s warning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
+    ExpectedSendInterval, ActualSendInterval, m_LatencyTicks
+  );
+  if (taskType == TASK_TYPE_GAME_FRAME) {
+    Print(static_cast<const CGame*>(taskPtr)->GetLogPrefix() + string(buffer, length));
+  } else {
+    Print(string(buffer, length));
+  }
+  m_LastPerformanceWarningTicks = Ticks;
+}
 
 void CAura::GracefulExit()
 {

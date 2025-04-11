@@ -81,14 +81,14 @@ using namespace std;
 #define LOG_APP_IF(T, U) \
     static_assert(T < LOG_LEVEL_TRACE, "Use DLOG_APP_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        LogApp(U, LOG_C | LOG_P); \
+        LogApp(U, LOG_C); \
     }
 
 #ifdef DEBUG
 #define DLOG_APP_IF(T, U) \
     static_assert(T >= LOG_LEVEL_TRACE, "Use LOG_APP_IF for regular log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        LogApp(U, LOG_C | LOG_P); \
+        LogApp(U, LOG_C); \
     }
 #else
 #define DLOG_APP_IF(T, U)
@@ -1868,21 +1868,7 @@ void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t max
     int64_t ThisActionLateBy = ActualSendInterval - ExpectedSendInterval;
 
     if (ThisActionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
-      // something is going terribly wrong - Aura is probably starved of resources
-      // print a message because even though this will take more resources it should provide some information to the administrator for future reference
-      // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
-      char buffer[128];
-#ifdef _MSC_VER
-      int length = _snprintf_s(
-        buffer, 128, 127,
-#else
-      int length = snprintf(
-        buffer, 128,
-#endif
-        "warning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
-        ExpectedSendInterval, ActualSendInterval, m_LatencyTicks
-      );
-      LOG_APP_IF(LOG_LEVEL_WARNING, string(buffer, length))
+      m_Aura->LogPerformanceWarning(TASK_TYPE_GAME_FRAME, this, ExpectedSendInterval, ActualSendInterval, m_LatencyTicks);
     }
 
     if (ThisActionLateBy > newLatency) {

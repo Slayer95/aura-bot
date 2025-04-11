@@ -87,6 +87,7 @@ public:
   bool                                               m_MetaDataNeedsUpdate;
 
   uint8_t                                            m_LogLevel;
+  int64_t                                            m_LastPerformanceWarningTicks;
   std::optional<Version>                             m_GameDataVersion;
   bool                                               m_SupportsModernSlots;
 
@@ -240,6 +241,7 @@ public:
   inline bool MatchLogLevel(const uint8_t logLevel) { return logLevel <= m_LogLevel; } // 1: emergency ... 9: trace
   void LogPersistent(const std::string& logText);
   void LogRemoteFile(const std::string& logText);
+  void LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t expectedInterval, const int64_t actualInterval, const int64_t averageInterval);
   void GracefulExit();
   bool CheckGracefulExit();
 };

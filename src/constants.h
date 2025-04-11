@@ -74,6 +74,11 @@ constexpr uint8_t SERVICE_TYPE_IRC = 3;
 constexpr uint8_t SERVICE_TYPE_DISCORD = 4;
 constexpr uint8_t SERVICE_TYPE_INVALID = 255;
 
+constexpr uint8_t TASK_TYPE_GAME_FRAME = 0;
+constexpr uint8_t TASK_TYPE_CHECK_JOINABLE = 1;
+constexpr uint8_t TASK_TYPE_MAP_DOWNLOAD = 2;
+constexpr uint8_t TASK_TYPE_HMC_HTTP = 3;
+
 constexpr uint8_t LOG_C = 1u;
 constexpr uint8_t LOG_P = 2u;
 constexpr uint8_t LOG_R = 4u;
