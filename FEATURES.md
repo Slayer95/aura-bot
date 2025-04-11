@@ -31,7 +31,8 @@
 - Maps and configs have their names fuzzy-matched
 
 # Hosting:
-- Automatically identifies maps larger than the vanilla map size limit
+- Automatically checks compatibility between maps and active game versions
+- Supports hosting maps larger than the vanilla map size limit
 - Large maps do not cause RAM starvation
 - Automatically verifies identity ("spoofcheck") in private games in PvPGNs
 - Supports custom lobby layouts: FFA, One-VS-All, Humans-VS-AI
@@ -47,6 +48,7 @@ from chatting with players.
 - Beeps when a player joins your game
 - Games are reconnectable
 - Can remake games
+- Can spectate games
 - Can define a timer and/or an amount of players for starting the game
 - Game ownership is revoked after leaving games for too long
 - Game owners that joined over LAN are revoked as soon as they leave
@@ -59,7 +61,9 @@ from chatting with players.
 - Supports flipping coins, and randomly picking items from a list
 - Users can send whispers cross-realm
 - Can send cross-realm game invitations to other players
+- Users can measure their APM and enable warnings if their APM drops
 - Optionally equalizes players' latencies for competitive settings
+- Optionally implements an APM limiter as a handicap mechanism
 
 # Permissions:
 - Staff from some PvPGN realms no longer have access to 
@@ -81,6 +85,7 @@ in Aura's console.
 
 # Other:
 - Uses DotA stats automatically according to maps' file names
+- APM tracking is integrated with stages of MicroTraining map
 - Identifies Evergreen maps automatically according to maps' file names
 - Many commands were implemented. See the full list at [3]
 
