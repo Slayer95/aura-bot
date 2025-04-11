@@ -186,8 +186,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameLoading(false),
     m_GameLoaded(false),
     m_LobbyLoading(false),
-    m_Lagging(false),
-    m_Paused(false),
+    m_IsLagging(false),
+    m_IsPaused(false),
     m_IsDraftMode(false),
     m_IsHiddenPlayerNames(false),
     m_HadLeaver(false),
@@ -823,17 +823,17 @@ void CGame::UpdateSelectBlockTime(int64_t& usecBlockTime) const
   // note: there's no reason this function couldn't take into account the game's other timers too but they're far less critical
   // warning: this function must take into account when actions are not being sent (e.g. during loading or lagging)
 
-  if (!m_GameLoaded || m_Lagging || usecBlockTime == 0)
+  if (!m_GameLoaded || m_IsLagging || usecBlockTime == 0)
     return;
 
-  const int64_t TicksSinceLastUpdate = GetTicks() - m_LastActionSentTicks;
+  const int64_t ticksSinceLastUpdate = GetTicks() - m_LastActionSentTicks;
 
-  if (TicksSinceLastUpdate > m_LatencyTicks - m_LastActionLateBy) {
+  if (ticksSinceLastUpdate > m_LatencyTicks - m_LastActionLateBy) {
     usecBlockTime = 0;
     return;
   }
 
-  int64_t maybeBlockTime = (m_LatencyTicks - m_LastActionLateBy - TicksSinceLastUpdate) * 1000;
+  int64_t maybeBlockTime = (m_LatencyTicks - m_LastActionLateBy - ticksSinceLastUpdate) * 1000;
   if (maybeBlockTime < usecBlockTime) {
     usecBlockTime = maybeBlockTime;
   }
@@ -1414,7 +1414,7 @@ void CGame::UpdateLoaded()
   // check if anyone has started lagging
   // we consider a user to have started lagging if they're more than m_SyncLimit keepalives behind
 
-  if (!m_Lagging) {
+  if (!m_IsLagging) {
     if (m_Config.m_EnableLagScreen) {
       string LaggingString;
       bool startedLagging = false;
@@ -1462,7 +1462,7 @@ void CGame::UpdateLoaded()
           SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
           ResetDropVotes();
 
-          m_Lagging = true;
+          m_IsLagging = true;
           m_StartedLaggingTime = Time;
           m_LastLagScreenResetTime = Time;
 
@@ -1475,11 +1475,11 @@ void CGame::UpdateLoaded()
         }
       }
     }
-  } else if (!m_Users.empty()) { // m_Lagging == true (context: CGame::UpdateLoaded())
+  } else if (!m_Users.empty()) { // m_IsLagging == true (context: CGame::UpdateLoaded())
     pair<int64_t, int64_t> waitTicks = GetReconnectWaitTicks();
     UserList droppedUsers;
     for (auto& user : m_Users) {
-      if (!user->GetLagging()) {
+      if (!user->GetIsLagging()) {
         continue;
       }
       bool timeExceeded = false;
@@ -1518,7 +1518,7 @@ void CGame::UpdateLoaded()
 
     uint8_t playersLaggingCounter = 0;
     for (auto& user : m_Users) {
-      if (!user->GetLagging()) {
+      if (!user->GetIsLagging()) {
         continue;
       }
 
@@ -1546,7 +1546,7 @@ void CGame::UpdateLoaded()
     }
 
     if (playersLaggingCounter == 0) {
-      m_Lagging = false;
+      m_IsLagging = false;
       m_LastActionSentTicks = Ticks - m_LatencyTicks;
       m_LastActionLateBy = 0;
       m_PingReportedSinceLagTimes = 0;
@@ -1554,7 +1554,7 @@ void CGame::UpdateLoaded()
     }
   }
 
-  if (m_Lagging) {
+  if (m_IsLagging) {
     // reset m_LastActionSentTicks because we want the game to stop running while the lag screen is up
     m_LastActionSentTicks = Ticks;
 
@@ -1711,7 +1711,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // actions are at the heart of every Warcraft 3 game but luckily we don't need to know their contents to relay them
   // we queue user actions in EventUserIncomingAction then just resend them in batches to all users here
 
-  if (m_GameLoaded && !m_Lagging && Ticks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy)
+  if (m_GameLoaded && !m_IsLagging && Ticks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy)
     SendAllActions();
 
   UpdateLogs();
@@ -1863,20 +1863,15 @@ void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t max
 {
   const int64_t Ticks = GetTicks();
   if (m_LastActionSentTicks != 0) {
-    const int64_t ActualSendInterval = Ticks - m_LastActionSentTicks;
-    const int64_t ExpectedSendInterval = oldLatency - m_LastActionLateBy;
-    int64_t ThisActionLateBy = ActualSendInterval - ExpectedSendInterval;
+    const int64_t actualSendInterval = Ticks - m_LastActionSentTicks;
+    const int64_t expectedSendInterval = oldLatency - m_LastActionLateBy;
+    int64_t thisActionLateBy = actualSendInterval - expectedSendInterval;
 
-    if (ThisActionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
-      m_Aura->LogPerformanceWarning(TASK_TYPE_GAME_FRAME, this, ExpectedSendInterval, ActualSendInterval, m_LatencyTicks);
+    if (thisActionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
+      m_Aura->LogPerformanceWarning(TASK_TYPE_GAME_FRAME, this, expectedSendInterval, actualSendInterval, m_LatencyTicks);
     }
 
-    if (ThisActionLateBy > newLatency) {
-      // FIXME? I'm actually not sure whether we really want this clamped (IceSandslash)
-      ThisActionLateBy = newLatency;
-    }
-
-    m_LastActionLateBy = ThisActionLateBy;
+    m_LastActionLateBy = thisActionLateBy;
   }
   m_LastActionSentTicks = Ticks;
 
@@ -3642,12 +3637,12 @@ void CGame::SendAllActionsCallback()
   CQueuedActionsFrame& frame = GetFirstActionFrame();
   switch (frame.callback) {
     case ON_SEND_ACTIONS_PAUSE:
-      m_Paused = true;
+      m_IsPaused = true;
       m_PauseUser = GetUserFromUID(frame.pauseUID);
       m_LastPausedTicks = GetTicks();
       break;
     case ON_SEND_ACTIONS_RESUME:
-      m_Paused = false;
+      m_IsPaused = false;
       m_PauseUser = nullptr;
       break;
     default:
@@ -3745,7 +3740,7 @@ void CGame::SendGProxyEmptyActions()
 void CGame::SendAllActions()
 {
   const int64_t activeLatency = GetActiveLatency();
-  if (!m_Paused) {
+  if (!m_IsPaused) {
     m_EffectiveTicks += activeLatency;
   } else {
     m_PausedTicksDeltaSum = activeLatency;
@@ -3758,7 +3753,7 @@ void CGame::SendAllActions()
   SendAll(actions);
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_GameHistory->m_PlayingBuffer.emplace_back(m_Paused ? GAME_FRAME_TYPE_PAUSED : GAME_FRAME_TYPE_ACTIONS, actions);
+    m_GameHistory->m_PlayingBuffer.emplace_back(m_IsPaused ? GAME_FRAME_TYPE_PAUSED : GAME_FRAME_TYPE_ACTIONS, actions);
     m_GameHistory->AddActionFrameCounter();
   }
 
@@ -4315,7 +4310,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
   // send the left message if we haven't sent it already
   // it may only be prematurely sent if this is a lobby
   if (!user->GetLeftMessageSent()) {
-    if (user->GetLagging()) {
+    if (user->GetIsLagging()) {
       DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
@@ -4411,7 +4406,7 @@ void CGame::ReportAllPings() const
   UserList SortedPlayers = m_Users;
   if (SortedPlayers.empty()) return;
 
-  if (m_Lagging) {
+  if (m_IsLagging) {
     sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByKeepAlivesAscending);
   } else {
     sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByLatencyDescending);
@@ -4424,7 +4419,7 @@ void CGame::ReportAllPings() const
   
   SendAllChat(JoinVector(pingsText, false));
 
-  if (m_Lagging) {
+  if (m_IsLagging) {
     GameUser::CGameUser* worstLagger = SortedPlayers[0];
     if (worstLagger->GetDisconnected() && worstLagger->GetGProxyAny()) {
       ImmutableUserList waitingReconnectPlayers = GetWaitingReconnectPlayers();
@@ -4466,11 +4461,11 @@ void CGame::ResetOwnerSeen()
 void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
 {
   int64_t Time = GetTime(), Ticks = GetTicks();
-  if (!user->GetLagging()) {
+  if (!user->GetIsLagging()) {
     ResetDropVotes();
 
-    if (!GetLagging()) {
-      m_Lagging = true;
+    if (!GetIsLagging()) {
+      m_IsLagging = true;
       m_StartedLaggingTime = Time;
       m_LastLagScreenResetTime = Time;
       m_LastLagScreenTime = Time;
@@ -4496,14 +4491,14 @@ void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
 
 void CGame::SetEveryoneLagging()
 {
-  if (GetLagging()) {
+  if (GetIsLagging()) {
     return;
   }
   int64_t Time = GetTime(), Ticks = GetTicks();
 
   ResetDropVotes();
 
-  m_Lagging = true;
+  m_IsLagging = true;
   m_StartedLaggingTime = Time;
   m_LastLagScreenResetTime = Time;
   m_LastLagScreenTime = Time;
@@ -4549,7 +4544,7 @@ void CGame::OnRecoverableDisconnect(GameUser::CGameUser* user)
 {
   user->SudoModeEnd();
 
-  if (!user->GetLagging()) {
+  if (!user->GetIsLagging()) {
     SetLaggingPlayerAndUpdate(user);
   }
 
@@ -4629,7 +4624,7 @@ void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
     user->SetLeftReason("has lost the connection (connection error - " + user->GetSocket()->GetErrorString() + ")");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  if (user->GetLagging()) {
+  if (user->GetIsLagging()) {
     StopLagger(user, user->GetLeftReason());
   } else {
     user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
@@ -4655,7 +4650,7 @@ void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
     user->SetLeftReason("has terminated the connection");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  if (user->GetLagging()) {
+  if (user->GetIsLagging()) {
     StopLagger(user, user->GetLeftReason());
   } else {
     user->CloseConnection(); // automatically sets ended (reconnect already not enabled)
@@ -4685,7 +4680,7 @@ void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool
     }
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   }
-  if (user->GetLagging()) {
+  if (user->GetIsLagging()) {
     StopLagger(user, user->GetLeftReason());
   } else {
     user->DisableReconnect();
@@ -5552,7 +5547,7 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
     }
     user->SetIsLeaver(true);
   }
-  if (user->GetLagging()) {
+  if (user->GetIsLagging()) {
     StopLagger(user, user->GetLeftReason());
   } else {
     user->DisableReconnect();
@@ -5606,9 +5601,9 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     user->SetStatus(USERSTATUS_PLAYING);
     UserList laggingPlayers = GetLaggingUsers();
     if (laggingPlayers.empty()) {
-      m_Lagging = false;
+      m_IsLagging = false;
     }
-    if (m_Lagging) {
+    if (m_IsLagging) {
       DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
       Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
       LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...", LOG_C);
@@ -6202,7 +6197,7 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
     return;
   }
 
-  if (m_Lagging) {
+  if (m_IsLagging) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] voted to drop laggers")
     SendAllChat("Player [" + user->GetDisplayName() + "] voted to drop laggers");
 
@@ -6545,7 +6540,7 @@ void CGame::EventGameStartedLoading()
       AppendByteArray(m_GameHistory->m_LoadingRealBuffer, packet);
     }
 
-    // Only when load-in-game is enabled, initialize everyone's m_Lagging flag to true
+    // Only when load-in-game is enabled, initialize everyone's m_IsLagging flag to true
     // this ensures CGame::UpdateLoaded() will send W3GS_STOP_LAG messages only when appropriate.
     SetEveryoneLagging();
   }
@@ -7032,7 +7027,7 @@ void CGame::Remake()
   m_CountDownUserInitiated = false;
   m_GameLoading = false;
   m_GameLoaded = false;
-  m_Lagging = false;
+  m_IsLagging = false;
   m_IsDraftMode = false;
   m_IsHiddenPlayerNames = false;
   m_HadLeaver = false;
@@ -8998,9 +8993,9 @@ vector<uint32_t> CGame::GetPlayersFramesBehind() const
 UserList CGame::GetLaggingUsers() const
 {
   UserList laggingPlayers;
-  if (!m_Lagging) return laggingPlayers;
+  if (!m_IsLagging) return laggingPlayers;
   for (const auto& user : m_Users) {
-    if (!user->GetLagging()) {
+    if (!user->GetIsLagging()) {
       continue;
     }
     laggingPlayers.push_back(user);
@@ -9011,9 +9006,9 @@ UserList CGame::GetLaggingUsers() const
 uint8_t CGame::CountLaggingPlayers() const
 {
   uint8_t count = 0;
-  if (!m_Lagging) return count;
+  if (!m_IsLagging) return count;
   for (const auto& user : m_Users) {
-    if (!user->GetLagging()) {
+    if (!user->GetIsLagging()) {
       continue;
     }
     ++count;
@@ -9024,12 +9019,12 @@ uint8_t CGame::CountLaggingPlayers() const
 UserList CGame::CalculateNewLaggingPlayers() const
 {
   UserList laggingPlayers;
-  if (!m_Lagging) return laggingPlayers;
+  if (!m_IsLagging) return laggingPlayers;
   for (const auto& user : m_Users) {
     if (user->GetIsObserver()) {
       continue;
     }
-    if (user->GetLagging() || user->GetGProxyDisconnectNoticeSent() || user->GetDisconnectedUnrecoverably()) {
+    if (user->GetIsLagging() || user->GetGProxyDisconnectNoticeSent() || user->GetDisconnectedUnrecoverably()) {
       continue;
     }
     if (!user->GetFinishedLoading()) {
@@ -9068,7 +9063,7 @@ void CGame::ResetLagScreen()
   for (auto& user : m_Users) {
     if (user->GetFinishedLoading()) {
       for (auto& otherUser : m_Users) {
-        if (!otherUser->GetLagging()) continue;
+        if (!otherUser->GetIsLagging()) continue;
         DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (-" + otherUser->GetName() + ")")
         Send(user, GameProtocol::SEND_W3GS_STOP_LAG(otherUser));
       }

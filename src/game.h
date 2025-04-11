@@ -143,6 +143,7 @@ protected:
   int64_t                                                m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
   int64_t                                                m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                                                m_LastStatsUpdateTime;
+  int64_t                                                m_StartedFastPollingTicks;          // GetTicks when the game frames scheduler started blocking the main thread
   uint8_t                                                m_GameOver;
   std::optional<int64_t>                                 m_GameOverTime;                  // GetTime when the game was over
   std::optional<int64_t>                                 m_GameOverTolerance;
@@ -193,8 +194,8 @@ protected:
   bool                                                   m_GameLoading;                   // if the game is currently loading or not
   bool                                                   m_GameLoaded;                    // if the game has loaded or not
   bool                                                   m_LobbyLoading;                  // if the lobby is being setup asynchronously
-  bool                                                   m_Lagging;                       // if the lag screen is active or not
-  bool                                                   m_Paused;                        // if the game is paused or not
+  bool                                                   m_IsLagging;                       // if the lag screen is active or not
+  bool                                                   m_IsPaused;                        // if the game is paused or not
   bool                                                   m_IsDraftMode;                   // if players are forbidden to choose their own teams (if so, let team captains use !team, !ffa, !vsall, !vsai, !teams)
   bool                                                   m_IsHiddenPlayerNames;           // if players names are to be obfuscated in most circumstances
   bool                                                   m_HadLeaver;                     // if the game had a leaver after it started
@@ -306,8 +307,8 @@ public:
   int64_t                                                GetNextLatency() const;
   uint32_t                                               GetSyncLimit() const;
   uint32_t                                               GetSyncLimitSafe() const;
-  inline bool                                            GetLagging() const { return m_Lagging; }
-  inline bool                                            GetPaused() const { return m_Paused; }
+  inline bool                                            GetIsLagging() const { return m_IsLagging; }
+  inline bool                                            GetIsPaused() const { return m_IsPaused; }
   inline bool                                            GetIsGameOver() const { return m_GameOver != GAME_ONGOING; }
   inline bool                                            GetIsGameOverTrusted() const { return m_GameOver == GAME_OVER_TRUSTED; }
   uint8_t                                                GetLayout() const;

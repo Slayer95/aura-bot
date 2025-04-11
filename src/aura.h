@@ -83,11 +83,13 @@ public:
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                                               m_ExitingSoon;                // set to true to let aura gracefully stop all services and network traffic, and shutdown once done
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
+  bool                                               m_IsFastPolling;
   bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
   bool                                               m_MetaDataNeedsUpdate;
 
   uint8_t                                            m_LogLevel;
   int64_t                                            m_LastPerformanceWarningTicks;
+  int64_t                                            m_StartedFastPollingTicks;
   std::optional<Version>                             m_GameDataVersion;
   bool                                               m_SupportsModernSlots;
 

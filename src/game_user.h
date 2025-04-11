@@ -280,7 +280,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetAnyKicked() const { return m_KickReason != GameUser::KickReason::NONE; }
     [[nodiscard]] inline bool                  GetHasHighPing() const { return m_HasHighPing; }
     [[nodiscard]] inline bool                  GetKickQueued() const { return m_KickByTicks.has_value(); }
-    [[nodiscard]] inline bool                  GetLagging() const { return m_Lagging; }
+    [[nodiscard]] inline bool                  GetIsLagging() const { return m_Lagging; }
     [[nodiscard]] inline std::optional<bool>   GetDropVote() const { return m_DropVote; }
     [[nodiscard]] inline std::optional<bool>   GetKickVote() const { return m_KickVote; }
     [[nodiscard]] inline bool                  GetIsMuted() const { return m_Muted; }

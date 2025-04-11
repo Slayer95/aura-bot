@@ -531,7 +531,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
 bool CW3MMD::UpdateQueue()
 {
   const int64_t gameTicks = m_Game->GetEffectiveTicks();
-  if (m_Game->GetPaused()) return true;
+  if (m_Game->GetIsPaused()) return true;
   if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
   while (!m_DefQueue.empty()) {
     CW3MMDDefinition* def = m_DefQueue.front();

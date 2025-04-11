@@ -527,7 +527,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::DROPREQ:
-            if (m_Game->GetLagging() && !m_DropVote) {
+            if (m_Game->GetIsLagging() && !m_DropVote) {
               m_DropVote = true;
               m_Game->EventUserDropRequest(this);
             }

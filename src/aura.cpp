@@ -470,11 +470,13 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Exiting(false),
     m_ExitingSoon(false),
     m_Ready(true),
+    m_IsFastPolling(false),
     m_AutoReHosted(false),
     m_MetaDataNeedsUpdate(false),
 
     m_LogLevel(LOG_LEVEL_DEBUG),
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
+    m_StartedFastPollingTicks(APP_MIN_TICKS),
     m_SupportsModernSlots(false),
 
     m_LastServerID(0xFu),
@@ -1077,6 +1079,11 @@ int64_t CAura::GetSelectBlockTime() const
   }
   m_Net.UpdateSelectBlockTime(usecBlock);
 
+  if (usecBlock < 10000 && m_IsFastPolling && m_StartedFastPollingTicks + 1000 < GetTicks()) {
+    // Block for at least 10 ms to avoid CPU starvation
+    usecBlock = 10000;
+  }
+
   return usecBlock;
 }
 
@@ -1177,6 +1184,15 @@ bool CAura::Update()
   struct timeval send_tv;
   send_tv.tv_sec  = 0;
   send_tv.tv_usec = 0;
+
+  if (tv.tv_usec == 0) {
+    if (!m_IsFastPolling) {
+      m_StartedFastPollingTicks = GetTicks();
+    }
+    m_IsFastPolling = true;
+  } else {
+    m_IsFastPolling = false;
+  }
 
 #ifdef _WIN32
   select(1, &fd, nullptr, nullptr, &tv);
@@ -1946,22 +1962,22 @@ void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, c
   if (Ticks < m_LastPerformanceWarningTicks + 5000) {
     return;
   }
-  char buffer[128];
+
+  string prefix;
+  if (taskType == TASK_TYPE_GAME_FRAME) {
+    prefix = static_cast<const CGame*>(taskPtr)->GetLogPrefix();
+  }
+  char buffer[256];
 #ifdef _MSC_VER
   int length = _snprintf_s(
-    buffer, 128, 127,
+    buffer, 256, 255,
 #else
   int length = snprintf(
-    buffer, 128,
+    buffer, 256,
 #endif
-    "%s warning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
-    ExpectedSendInterval, ActualSendInterval, m_LatencyTicks
+    "%swarning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
+   prefix.c_str(), expectedInterval, actualInterval, averageInterval
   );
-  if (taskType == TASK_TYPE_GAME_FRAME) {
-    Print(static_cast<const CGame*>(taskPtr)->GetLogPrefix() + string(buffer, length));
-  } else {
-    Print(string(buffer, length));
-  }
   m_LastPerformanceWarningTicks = Ticks;
 }
 

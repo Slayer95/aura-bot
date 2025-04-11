@@ -3451,7 +3451,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (!m_TargetGame || !m_TargetGame->GetGameLoaded())
         break;
 
-      if (!m_TargetGame->GetLagging()) {
+      if (!m_TargetGame->GetIsLagging()) {
         ErrorReply("Nobody is currently lagging.");
         break;
       }
@@ -3459,7 +3459,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool hasPermissions = CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER);
       if (!hasPermissions) {
         GameUser::CGameUser* gameOwner = m_TargetGame->GetOwner();
-        if (gameOwner && !gameOwner->GetLagging()) {
+        if (gameOwner && !gameOwner->GetIsLagging()) {
           ErrorReply("You are not the game owner, and therefore cannot drop laggers.");
           break;
         }
@@ -5836,7 +5836,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetPaused()) {
+      if (m_TargetGame->GetIsPaused()) {
         ErrorReply("Game already paused.");
         break;
       }
@@ -5846,7 +5846,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (m_TargetGame->GetLagging()) {
+      if (m_TargetGame->GetIsLagging()) {
         ErrorReply("This command cannot be used while the game is lagging.");
         break;
       }
@@ -5883,7 +5883,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Payload.empty()) {
-        if (m_TargetGame->GetLagging()) {
+        if (m_TargetGame->GetIsLagging()) {
           ErrorReply("This command cannot be used while the game is lagging.");
           break;
         }
@@ -5928,12 +5928,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_TargetGame->GetPaused()) {
+      if (!m_TargetGame->GetIsPaused()) {
         ErrorReply("Game is not paused.");
         break;
       }
 
-      if (m_TargetGame->GetLagging()) {
+      if (m_TargetGame->GetIsLagging()) {
         ErrorReply("This command cannot be used while the game is lagging.");
         break;
       }
