@@ -163,10 +163,11 @@ public:
   [[nodiscard]] std::set<std::string> GetSetBase(const std::string& key, char separator, bool trimElements, bool caseSensitive, bool allowEmptyElements, const std::set<std::string> x);
   [[nodiscard]] std::set<std::string> GetSetSensitive(const std::string& key, char separator, bool trimElements, bool allowEmptyElements, const std::set<std::string> x);
   [[nodiscard]] std::set<std::string> GetSet(const std::string& key, char separator, bool trimElements, bool allowEmptyElements,  const std::set<std::string> x);
-  [[nodiscard]] std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
 
   [[nodiscard]] std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count);
   [[nodiscard]] std::set<uint8_t> GetUint8Set(const std::string& key, char separator);
+  [[nodiscard]] std::set<uint64_t> GetUint64Set(const std::string& key, char separator);
+
   [[nodiscard]] std::vector<uint8_t> GetIPv4(const std::string& key, const std::array<uint8_t, 4>& x);
   [[nodiscard]] std::set<std::string> GetIPStringSet(const std::string& key, char separator);
   [[nodiscard]] std::vector<sockaddr_storage> GetHostListWithImplicitPort(const std::string& key, const uint16_t defaultPort, char separator);

@@ -105,7 +105,7 @@ using namespace std;
 #define TRY_JSON_STRING(K, T, U, V) \
     do {\
       if (CConfig::GetIsJSONValue(T)) {\
-        optional<string> maybeResult = JSONAPI::ParseString(T);\
+        optional<string> maybeResult = JSONAPI::ParseString(T.substr(5));\
         if (!maybeResult.has_value()) {\
           CONFIG_ERROR(K, U);\
         }\
@@ -402,7 +402,7 @@ vector<string> CConfig::GetList(const string& key, char separator, bool allowEmp
 
   vector<string> entries;
   if (CConfig::GetIsJSONValue(value)) {
-    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value);
+    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value.substr(5));
     if (!maybeResult.has_value()) {
       CONFIG_ERROR(key, defaultValue);
     }
@@ -427,7 +427,7 @@ set<string> CConfig::GetSetBase(const string& key, char separator, bool trimElem
 
   vector<string> entries;
   if (CConfig::GetIsJSONValue(value)) {
-    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value);
+    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value.substr(5));
     if (!maybeResult.has_value()) {
       CONFIG_ERROR(key, defaultValue);
     }
@@ -467,29 +467,6 @@ set<string> CConfig::GetSet(const string& key, char separator, bool trimElements
   return GetSetBase(key, separator, trimElements, false, allowEmptyElements, defaultValue);
 }
 
-set<uint64_t> CConfig::GetUint64Set(const string& key, char separator, const set<uint64_t> defaultValue)
-{
-  GET_KEY(key, value, defaultValue)
-  bool errored = false;
-  set<uint64_t> Output;
-  stringstream ss(value);
-  while (ss.good()) {
-    string element;
-    getline(ss, element, separator);
-    if (element.empty())
-      continue;
-
-    optional<uint64_t> maybeInt = ParseUint64(element);
-    if (!maybeInt.has_value()) {
-      CONFIG_ERROR(key, Output)
-    }
-    if (!Output.insert(maybeInt.value()).second)
-      errored = true;
-  }
-
-  END(key, Output)
-}
-
 vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count)
 {
   GET_KEY(key, value, vector<uint8_t>())
@@ -504,31 +481,54 @@ vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count)
 
 set<uint8_t> CConfig::GetUint8Set(const string& key, char separator)
 {
-  GET_KEY(key, value, set<uint8_t>())
-
+  set<uint64_t> userValues = GetUint64Set(key, separator);
+  set<uint8_t> uniqueEntries;
   bool errored = false;
-  set<uint8_t> Output;
-  stringstream ss(value);
-  while (ss.good()) {
-    string element;
-    getline(ss, element, separator);
-    if (element.empty())
-      continue;
+  for (const auto& value : userValues) {
+    if (value > 0xFF) {
+      errored = true;
+    } else {
+      uniqueEntries.insert(static_cast<uint8_t>(value));
+    }
+  }
+  END(key, uniqueEntries)
+}
 
-    try {
-      long Value = stol(element);
-      if (Value < 0 || Value > 0xFF) {
-        CONFIG_ERROR(key, set<uint8_t>())
+set<uint64_t> CConfig::GetUint64Set(const string& key, char separator)
+{
+  set<uint64_t> uniqueEntries;
+  GET_KEY(key, value, uniqueEntries)
+
+  vector<uint64_t> entries;
+  if (CConfig::GetIsJSONValue(value)) {
+    optional<vector<uint64_t>> maybeResult = JSONAPI::ParseUnsignedIntArray(value.substr(5));
+    if (!maybeResult.has_value()) {
+      CONFIG_ERROR(key, uniqueEntries);
+    }
+    entries.swap(*maybeResult);
+  } else {
+    stringstream ss(value);
+    while (ss.good()) {
+      string element;
+      getline(ss, element, separator);
+      if (element.empty())
+        continue;
+      optional<uint64_t> maybeUint64 = ParseUint64(element);
+      if (!maybeUint64.has_value()) {
+        CONFIG_ERROR(key, uniqueEntries)
       }
-      if (!Output.insert(static_cast<uint8_t>(Value)).second) {
-        errored = true;
-      }
-    } catch (...) {
-      CONFIG_ERROR(key, set<uint8_t>())
+      entries.push_back(*maybeUint64);
     }
   }
 
-  END(key, Output)
+  bool errored = false;
+  for (auto& element : entries) {
+    if (!uniqueEntries.insert(element).second) {
+      errored = true;
+    }
+  }
+
+  END(key, uniqueEntries)
 }
 
 vector<uint8_t> CConfig::GetIPv4(const string& key, const array<uint8_t, 4> &defaultValue)
@@ -549,7 +549,7 @@ set<string> CConfig::GetIPStringSet(const string& key, char separator)
 
   vector<string> entries;
   if (CConfig::GetIsJSONValue(value)) {
-    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value);
+    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value.substr(5));
     if (!maybeResult.has_value()) {
       CONFIG_ERROR(key, uniqueEntries);
     }
@@ -1052,8 +1052,7 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
 
 bool CConfig::GetIsJSONValue(const string& value)
 {
-  //return value.size() >= 5 && value.substr(0, 5) == "json:";
-  return false;
+  return value.size() >= 5 && value.substr(0, 5) == "json:";
 }
 
 #undef SUCCESS
