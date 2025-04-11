@@ -165,8 +165,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_ExeAuthInfo            = CFG.GetString(m_CFGKeyPrefix + "exe_auth.info");
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
-  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
-  m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
+  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, false, m_SudoUsers);
+  m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
   m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", m_LobbyPrefix);
   m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", m_LobbySuffix);
   m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", m_WatchablePrefix);
@@ -475,8 +475,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
 
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
-  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, m_SudoUsers);
-  m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, m_Admins);
+  m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, false, m_SudoUsers);
+  m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
   m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", 0, 16, m_LobbyPrefix);
   m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", 0, 16, m_LobbySuffix);
   m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", 0, 16, m_WatchablePrefix);

@@ -2232,7 +2232,7 @@ bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
     LOG_APP_IF(LOG_LEVEL_INFO, "sent <<" + message + ">>")
   }
 
-  // send a public message to all users - it'll be marked [All] in Warcraft 3
+  // send a public message to all observers - it'll be marked [Observers] or [Referees] in Warcraft 3
 
   uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
   bool success = false;

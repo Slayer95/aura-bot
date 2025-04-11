@@ -45,6 +45,7 @@
 
 #include "auradb.h"
 #include "game_controller_data.h"
+#include "json.h"
 #include "net.h"
 #include "util.h"
 #include "config/config.h"
@@ -52,11 +53,6 @@
 #include "game_user.h"
 #include "game.h"
 #include "stats/dota.h"
-#ifdef DISABLE_DPP
-#include <nlohmann/json.hpp>
-#else
-#include <dpp/nlohmann/json.hpp>
-#endif
 
 #include <fstream>
 #include <utility>

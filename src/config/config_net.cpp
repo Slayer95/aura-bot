@@ -85,7 +85,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
     m_MaxHostPort                 = CFG.GetUint16("net.host_port.max", m_MinHostPort);
   }
 
-  m_UDPBlockedIPs                = CFG.GetIPStringSet("net.udp_server.block_list", ',', {});
+  m_UDPBlockedIPs                = CFG.GetIPStringSet("net.udp_server.block_list", ',');
   m_UDPEnableCustomPortTCP4      = CFG.GetBool("net.game_discovery.udp.tcp4_custom_port.enabled", false);
   m_UDPCustomPortTCP4            = CFG.GetUint16("net.game_discovery.udp.tcp4_custom_port.value", 6112);
   m_UDPEnableCustomPortTCP6      = CFG.GetBool("net.game_discovery.udp.tcp6_custom_port.enabled", false);
@@ -210,7 +210,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
   }
 #endif
   m_DownloadTimeout              = CFG.GetUint32("hosting.map_downloads.timeout", 15000);
-  m_MapRepositories              = CFG.GetSet("hosting.map_downloads.repositories", ',', true, {"epicwar", "wc3maps"});
+  m_MapRepositories              = CFG.GetSet("hosting.map_downloads.repositories", ',', true, false, {"epicwar", "wc3maps"});
   m_AllowTransfers               = CFG.GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG.GetUint32("hosting.map_transfers.max_players", 3);
   m_MaxUploadSize                = CFG.GetUint32("hosting.map_transfers.max_size", 8192);

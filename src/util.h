@@ -47,6 +47,8 @@
 #define AURA_UTIL_H_
 
 #include "includes.h"
+#include "hash.h"
+#include "parser.h"
 
 #include <fstream>
 #include <regex>
@@ -54,7 +56,6 @@
 #include <functional>
 
 #include <utf8/utf8.h>
-#include "hash.h"
 
 #pragma once
 
@@ -124,30 +125,22 @@
   }
 }
 
+inline void EllideEmptyElementsInPlace(std::vector<std::string>& list) {
+  auto it = list.rbegin();
+  while (it != list.rend()) {
+    if (it->empty()) {
+      it = std::vector<std::string>::reverse_iterator(list.erase((++it).base()));
+    } else {
+      it++;
+    }
+  }
+}
+
 template <typename T>
 [[nodiscard]] inline T SubtractClampZero(const T& minuend, const T& subtrahend) noexcept
 {
   if (minuend < subtrahend) return 0;
   return minuend - subtrahend;
-}
-
-[[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString)
-{
-  if (hexString.empty() || hexString.size() > 8) {
-    return std::nullopt;
-  }
-
-  // Initialize a uint32_t value
-  uint32_t result;
-
-  std::istringstream stream(hexString);
-  stream >> std::hex >> result;
-
-  if (stream.fail() || !stream.eof()) {
-    return std::nullopt;
-  }
-
-  return result;
 }
 
 [[nodiscard]] inline std::string ToFormattedString(const double d, const uint8_t precision = 2)
@@ -425,6 +418,19 @@ inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray
   return result;
 }
 
+[[nodiscard]] inline std::string ByteArrayToDecString(const uint8_t* start, const size_t size)
+{
+  if (size == 0)
+    return std::string();
+
+  std::string result = std::to_string(start[0]);
+  for (size_t i = 1; i < size; ++i) {
+    result += " " + std::to_string(start[i]);
+  }
+
+  return result;
+}
+
 template <size_t SIZE>
 [[nodiscard]] inline std::string ByteArrayToDecString(const std::array<uint8_t, SIZE>& b)
 {
@@ -479,6 +485,20 @@ template <size_t SIZE>
 
   for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
     result += " " + std::to_string(*i);
+
+  return result;
+}
+
+[[nodiscard]] inline std::string ReverseByteArrayToDecString(const uint8_t* start, const size_t size)
+{
+  if (size == 0)
+    return std::string();
+
+  std::string result = std::to_string(start[size - 1]);
+
+  for (size_t i = size - 2; i >= 0; --i) {
+    result += " " + std::to_string(start[i]);
+  }
 
   return result;
 }
@@ -753,6 +773,13 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEn
     Output.clear();
 
   return Output;
+}
+
+[[nodiscard]] inline std::string ToUpperCase(const std::string& input)
+{
+  std::string output = input;
+  std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::toupper(c)); });
+  return output;
 }
 
 [[nodiscard]] inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount)
@@ -1089,49 +1116,8 @@ inline void AssignLength(std::vector<uint8_t>& content)
   return s;
 }
 
-[[nodiscard]] inline bool IsBase10NaturalOrZero(const std::string& s) {
-  if (s.empty()) return false;
-  if (s[0] == '0') return s.length() == 1;
-
-  for (char ch : s) {
-    if (!isdigit(ch)) return false;
-  }
-  return true;
-}
-
 [[nodiscard]] inline std::string MaybeBase10(const std::string s) {
   return IsBase10NaturalOrZero(s) ? s : std::string();
-}
-
-[[nodiscard]] inline std::optional<Version> ParseGameVersion(std::string versionString) {
-  std::optional<Version> result;
-  std::string::size_type periodIndex = versionString.find('.');
-  std::string::size_type periodIndex2;
-  if (periodIndex == std::string::npos) {
-    return ParseGameVersion("1." + versionString);
-  }
-
-  periodIndex = versionString.find('.');
-  periodIndex2 = versionString.find('.', periodIndex + 1);
-  if (periodIndex2 == std::string::npos) {
-    periodIndex2 = versionString.size();
-  }
-
-  std::string majorVersionString = versionString.substr(0, periodIndex);
-  std::string minorVersionString = versionString.substr(periodIndex + 1, periodIndex2 - (periodIndex + 1));
-
-  if (!IsBase10NaturalOrZero(majorVersionString)) {
-    return result;
-  }
-
-  if (!IsBase10NaturalOrZero(minorVersionString)) {
-    return result;
-  }
-
-  uint32_t majorVersion = stol(majorVersionString);
-  uint32_t minorVersion = stol(minorVersionString);
-  result = Version((uint8_t)majorVersion, (uint8_t)minorVersion);
-  return result;
 }
 
 [[nodiscard]] inline std::string JoinVector(const std::vector<std::string>& list, const std::string connector, const bool trailingConnector) {
@@ -1283,22 +1269,6 @@ constexpr std::array<std::string, N> StringArray(const char* const (&strings)[N]
   }
 
   return decoded.str();
-}
-
-[[nodiscard]] inline std::string ParseFileName(const std::string& inputPath) {
-  std::filesystem::path filePath = inputPath;
-  return filePath.filename().string();
-}
-
-[[nodiscard]] inline std::string ParseFileExtension(const std::string& inputPath) {
-  std::string fileName = ParseFileName(inputPath);
-  size_t extIndex = fileName.find_last_of(".");
-  if (extIndex == std::string::npos) return std::string();
-  std::string extension = fileName.substr(extIndex);
-  std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
-  return extension;
 }
 
 [[nodiscard]] inline bool CaseInsensitiveEquals(const std::string& nameOne, const std::string& nameTwo) {
@@ -1457,20 +1427,6 @@ inline void NormalizeDirectory(std::filesystem::path& filePath)
     --element;
   } while (counters[element] != 0 && element > 0);
   return counters[element] == 0;
-}
-
-[[nodiscard]] inline std::string ToLowerCase(const std::string& input)
-{
-  std::string output = input;
-  std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::tolower(c)); });
-  return output;
-}
-
-[[nodiscard]] inline std::string ToUpperCase(const std::string& input)
-{
-  std::string output = input;
-  std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::toupper(c)); });
-  return output;
 }
 
 [[nodiscard]] inline std::optional<uint32_t> ToUint32(const std::string& input)

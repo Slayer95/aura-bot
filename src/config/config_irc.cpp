@@ -67,9 +67,10 @@ CIRCConfig::CIRCConfig(CConfig& CFG)
   if (m_NickName.empty())
     m_NickName = m_UserName;
 
-  m_Channels = CFG.GetList("irc.channels", ',', m_Channels);
-  m_Admins = CFG.GetSetSensitive("irc.admins", ',', true, m_Admins);
-  m_SudoUsers = CFG.GetSetSensitive("irc.sudo_users", ',', true, m_SudoUsers);
+  m_Channels = CFG.GetList("irc.channels", ',', false, m_Channels);
+
+  m_Admins = CFG.GetSetSensitive("irc.admins", ',', true, false, m_Admins);
+  m_SudoUsers = CFG.GetSetSensitive("irc.sudo_users", ',', true, false, m_SudoUsers);
 
   for (uint8_t i = 0; i < m_Channels.size(); ++i) {
     if (m_Channels[i].length() > 0 && m_Channels[i][0] != '#') {

@@ -2780,19 +2780,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> targetValue;
-      if (Payload.empty() || Payload == "on" || Payload == "ON") {
-        targetValue = true;
-      } else if (Payload == "off" || Payload == "OFF") {
-        targetValue = false;
-      }
-      if (!targetValue.has_value()) {
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (!targetToggle.has_value()) {
         ErrorReply("Unrecognized setting [" + Payload + "].");
         break;
       }
 
-      if (m_TargetGame->m_Config.m_LatencyEqualizerEnabled == targetValue.value()) {
-        if (targetValue.value()) {
+      if (m_TargetGame->m_Config.m_LatencyEqualizerEnabled == targetToggle.value()) {
+        if (targetToggle.value()) {
           ErrorReply("Latency equalizer is already enabled.");
         } else {
           ErrorReply("Latency equalizer is already disabled.");
@@ -2800,9 +2795,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_TargetGame->m_Config.m_LatencyEqualizerEnabled = targetValue.value();
+      m_TargetGame->m_Config.m_LatencyEqualizerEnabled = targetToggle.value();
 
-      if (!targetValue.value()) {
+      if (!targetToggle.value()) {
         if (m_TargetGame->GetGameLoaded()) {
           auto nodes = m_TargetGame->GetAllFrameNodes();
           m_TargetGame->MergeFrameNodes(nodes);
@@ -3132,17 +3127,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> TargetValue;
-      if (Payload.empty() || Payload == "on" || Payload == "ON") {
-        TargetValue = true;
-      } else if (Payload == "off" || Payload == "OFF") {
-        TargetValue = false;
-      }
-      if (!TargetValue.has_value()) {
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (!targetToggle.has_value()) {
         ErrorReply("Unrecognized setting [" + Payload + "].");
         break;
       }
-      m_TargetGame->m_PublicStart = TargetValue.value();
+      if (!targetToggle.has_value()) {
+        ErrorReply("Unrecognized setting [" + Payload + "].");
+        break;
+      }
+      m_TargetGame->m_PublicStart = targetToggle.value();
       if (m_TargetGame->m_PublicStart) {
         SendAll("Anybody may now use the " + cmdToken + "start command.");
       } else {
@@ -4247,17 +4241,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> targetValue;
-      if (Payload.empty() || Payload == "on" || Payload == "ON") {
-        targetValue = true;
-      } else if (Payload == "off" || Payload == "OFF") {
-        targetValue = false;
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (!targetToggle.has_value()) {
+        ErrorReply("Unrecognized setting [" + Payload + "].");
+        break;
       }
 
-      if (targetValue.has_value()) {
+      if (targetToggle.has_value()) {
         // Turn ON/OFF
-        m_TargetGame->SetUDPEnabled(targetValue.value());
-        if (targetValue) {
+        m_TargetGame->SetUDPEnabled(targetToggle.value());
+        if (targetToggle.value()) {
           m_TargetGame->SendGameDiscoveryCreate();
           m_TargetGame->SendGameDiscoveryRefresh();
           if (!m_Aura->m_Net.m_UDPMainServerEnabled)
@@ -5432,13 +5425,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (Args.size() == 1) {
-        optional<bool> targetValue;
-        if (!ParseBoolean(Payload, targetValue)) {
+        optional<bool> targetToggle = ParseBoolean(Payload);
+        if (!targetToggle.has_value()) {
           ErrorReply("Usage: " + cmdToken + "draft <ON|OFF>");
           ErrorReply("Usage: " + cmdToken + "draft <CAPTAIN1> , <CAPTAIN2>");
           break;
         }
-        if (targetValue.value_or(true)) {
+        if (targetToggle.value()) {
           if (m_TargetGame->GetIsDraftMode()) {
             ErrorReply("Draft mode is already enabled.");
             break;
@@ -5512,12 +5505,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> targetValue;
-      if (!ParseBoolean(Payload, targetValue)) {
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (!targetToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "ffa <ON|OFF>");
         break;
       }
-      if (!targetValue.value_or(true)) {
+      if (!targetToggle.value()) {
         m_TargetGame->ResetLayout(true);
         SendReply("FFA mode disabled.");
         break;
@@ -5557,8 +5550,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> targetValue;
-      if (ParseBoolean(Payload, targetValue) && targetValue.value_or(true) == false) {
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (targetToggle.has_value() && targetToggle.value() == false) {
         // Branching here means that you can't actually set a player named "Disable" against everyone else.
         m_TargetGame->ResetLayout(true);
         SendReply("One-VS-All mode disabled.");
@@ -5608,8 +5601,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      optional<bool> targetValue;
-      if (!ParseBoolean(Payload, targetValue)) {
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (!targetToggle.has_value()) {
         vector<uint32_t> Args = SplitNumericArgs(Payload, 1u, 1u);
         // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
         if (Args.empty() || Args[0] <= 0 || (Args[0] >= m_TargetGame->GetMap()->GetMapNumControllers() && Args[0] != m_TargetGame->GetMap()->GetVersionMaxSlots())) {
@@ -5626,7 +5619,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
       }
-      if (!targetValue.value_or(true)) {
+      if (!targetToggle.value_or(true)) {
         m_TargetGame->ResetLayout(true);
         SendReply("Humans-VS-AI mode disabled.");
         break;
@@ -5670,12 +5663,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
-      optional<bool> targetValue;
-      if (!ParseBoolean(Payload, targetValue)) {
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (!targetToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "teams <ON|OFF>");
         break;
       }
-      if (!targetValue.value_or(true)) {
+      if (!targetToggle.value_or(true)) {
         m_TargetGame->ResetLayout(true);
         // This doesn't have any effect, since
         // both CUSTOM_LAYOUT_COMPACT nor CUSTOM_LAYOUT_ISOPLAYERS are
@@ -5732,27 +5725,27 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      const bool isToggle = inputLower == "disable" || inputLower == "enable";
+      const optional<bool> targetToggle = ParseBoolean(inputLower);
 
-      if (!isToggle && !Payload.empty()) {
+      if (!targetToggle.has_value() && !Payload.empty()) {
         ErrorReply("Usage: " + cmdToken + "fp");
         ErrorReply("Usage: " + cmdToken + "fp <ON|OFF>");
         break;
       }
 
-      if (!isToggle && m_TargetGame->GetIsRestored()) {
+      if (!targetToggle.has_value() && m_TargetGame->GetIsRestored()) {
         ErrorReply("Usage: " + cmdToken + "fp <ON|OFF>");
         break;
       }
-      if (isToggle && !m_TargetGame->GetIsRestored()) {
+      if (targetToggle.has_value() && !m_TargetGame->GetIsRestored()) {
         ErrorReply("Usage: " + cmdToken + "fp");
         break;
       }
 
-      m_TargetGame->SetAutoVirtualPlayers(inputLower == "enable");
-      if (!isToggle && !m_TargetGame->CreateFakeUser(nullopt)) {
+      m_TargetGame->SetAutoVirtualPlayers(targetToggle.value_or(false));
+      if (!targetToggle.has_value() && !m_TargetGame->CreateFakeUser(nullopt)) {
         ErrorReply("Cannot add another virtual user");
-      } else if (isToggle) {
+      } else if (targetToggle.has_value()) {
         if (m_TargetGame->GetIsAutoVirtualPlayers()) {
           SendReply("Automatic virtual players enabled.");
         } else {
@@ -5903,18 +5896,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      string lower = Payload;
-      transform(begin(Command), end(Command), begin(Command), [](char c) { return static_cast<char>(std::tolower(c)); });
-
-      if (lower == "enable") {
-        m_TargetGame->SetSaveOnLeave(SAVE_ON_LEAVE_ALWAYS);
-        SendReply("Autosave on disconnections enabled.");
-      } else if (lower == "disable") {
-        m_TargetGame->SetSaveOnLeave(SAVE_ON_LEAVE_NEVER);
-        SendReply("Autosave on disconnections disabled.");
-      } else {
+      optional<bool> targetToggle = ParseBoolean(Payload);
+      if (!targetToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "save");
         ErrorReply("Usage: " + cmdToken + "save <ON|OFF>");
+        break;
+      }
+
+      if (targetToggle.value()) {
+        m_TargetGame->SetSaveOnLeave(SAVE_ON_LEAVE_ALWAYS);
+        SendReply("Autosave on disconnections enabled.");
+      } else {
+        m_TargetGame->SetSaveOnLeave(SAVE_ON_LEAVE_NEVER);
+        SendReply("Autosave on disconnections disabled.");
       }
       break;
     }
@@ -7080,15 +7074,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("sumode"): {
       string inputLower = ToLowerCase(Payload);
 
-      bool targetValue = false;
-      if (inputLower.empty() || inputLower == "on" || inputLower == "start") {
-        targetValue = true;
-      } else if (inputLower == "off" || inputLower == "end") {
-        targetValue = false;
-      } else {
+      const optional<bool> parsedToggle = ParseBoolean(Payload);
+      if (!parsedToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "sumode <ON|OFF>");
         break;
       }
+      const bool targetValue = parsedToggle.value();
 
       if (!GetIsSudo()) {
         if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {

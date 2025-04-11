@@ -159,15 +159,16 @@ public:
     CONFIG_ERROR(key, x)
   }
 
-  [[nodiscard]] std::vector<std::string> GetList(const std::string& key, char separator, const std::vector<std::string> x);
-  [[nodiscard]] std::set<std::string> GetSetSensitive(const std::string& key, char separator, bool trimElements, const std::set<std::string> x);
-  [[nodiscard]] std::set<std::string> GetSet(const std::string& key, char separator, bool trimElements, const std::set<std::string> x);
+  [[nodiscard]] std::vector<std::string> GetList(const std::string& key, char separator, bool allowEmptyElements, const std::vector<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSetBase(const std::string& key, char separator, bool trimElements, bool caseSensitive, bool allowEmptyElements, const std::set<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSetSensitive(const std::string& key, char separator, bool trimElements, bool allowEmptyElements, const std::set<std::string> x);
+  [[nodiscard]] std::set<std::string> GetSet(const std::string& key, char separator, bool trimElements, bool allowEmptyElements,  const std::set<std::string> x);
   [[nodiscard]] std::set<uint64_t> GetUint64Set(const std::string& key, char separator, const std::set<uint64_t> x);
 
   [[nodiscard]] std::vector<uint8_t> GetUint8Vector(const std::string& key, const uint32_t count);
   [[nodiscard]] std::set<uint8_t> GetUint8Set(const std::string& key, char separator);
   [[nodiscard]] std::vector<uint8_t> GetIPv4(const std::string& key, const std::array<uint8_t, 4>& x);
-  [[nodiscard]] std::set<std::string> GetIPStringSet(const std::string& key, char separator, const std::set<std::string> x);
+  [[nodiscard]] std::set<std::string> GetIPStringSet(const std::string& key, char separator);
   [[nodiscard]] std::vector<sockaddr_storage> GetHostListWithImplicitPort(const std::string& key, const uint16_t defaultPort, char separator);
 
   [[nodiscard]] std::filesystem::path GetPath(const std::string &key, const std::filesystem::path &x);
@@ -196,7 +197,8 @@ public:
 
   void Set(const std::string& key, const std::string& x);
   void SetString(const std::string& key, const std::string& x);
-  void SetString(const std::string& key, const std::vector<uint8_t>& x);
+  void SetString(const std::string& key, const char* start, const std::string::size_type& size);
+  void SetString(const std::string& key, const unsigned char* start, const std::string::size_type& size);
   void SetBool(const std::string& key, const bool& x);
   void SetInt32(const std::string& key, const int32_t& x);
   void SetInt64(const std::string& key, const int64_t& x);
@@ -211,6 +213,7 @@ public:
   [[nodiscard]] std::vector<uint8_t> Export() const;
 
   [[nodiscard]] static std::string ReadString(const std::filesystem::path& file, const std::string& key);
+  [[nodiscard]] bool GetIsJSONValue(const std::string& value);
 };
 
 #undef SUCCESS

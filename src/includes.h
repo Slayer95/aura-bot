@@ -190,4 +190,21 @@ inline void Print(const char* message)
   LogStream(std::cout, message);
 }
 
+[[nodiscard]] inline std::string ToLowerCase(const std::string& input)
+{
+  std::string output = input;
+  std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::tolower(c)); });
+  return output;
+}
+
+[[nodiscard]] inline bool IsBase10NaturalOrZero(const std::string& s) {
+  if (s.empty()) return false;
+  if (s[0] == '0') return s.length() == 1;
+
+  for (char ch : s) {
+    if (!isdigit(ch)) return false;
+  }
+  return true;
+}
+
 #endif // AURA_INCLUDES_H_

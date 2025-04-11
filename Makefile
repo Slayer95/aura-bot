@@ -84,6 +84,7 @@ OBJS = lib/csvparser/csvparser.o \
        src/auradb.o \
        src/bncsutil_interface.o \
        src/file_util.o \
+       src/json.o \
        src/os_util.o \
        src/pjass.o \
        src/map.o \

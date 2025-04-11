@@ -45,9 +45,12 @@
 
 #include "config.h"
 #include "../includes.h"
+#include "../parser.h"
 #include "../util.h"
 #include "../net.h"
+#include "../json.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 
@@ -62,33 +65,53 @@ using namespace std;
     } while(0);
 
 
-#define CONFIG_ERROR(key, T) \
+#define CONFIG_ERROR(K, T) \
     do { \
         m_ErrorLast = true; \
         if (m_StrictMode) m_CriticalError = true; \
-        Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        Print(string("[CONFIG] Error - Invalid value provided for <") + K + string(">.")); \
         return T; \
     } while(0);
 
 
-#define CONFIG_ERROR_ALLOWED_VALUES(key, T, U) \
+#define CONFIG_ERROR_ALLOWED_VALUES(K, T, U) \
     do { \
         m_ErrorLast = true; \
         if (m_StrictMode) m_CriticalError = true; \
-        Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">. Allowed values: ") + JoinVector(U, false) + "."); \
+        Print(string("[CONFIG] Error - Invalid value provided for <") + K + string(">. Allowed values: ") + JoinVector(U, false) + "."); \
         return T; \
     } while(0);
 
 
 
-#define END(T) \
+#define END(K, T) \
     do { \
-        if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + key + string(">.")); \
+        if (errored) Print(string("[CONFIG] Error - Invalid value provided for <") + K + string(">.")); \
         m_ErrorLast = errored; \
         if (errored && m_StrictMode) m_CriticalError = true; \
         return T; \
     } while(0);
 
+
+#define GET_KEY(K, T, U) \
+    m_ValidKeys.insert(K);\
+    auto _it = m_CFG.find(K);\
+    if (_it == end(m_CFG)) {\
+      SUCCESS(U)\
+    }\
+    string T = _it->second;\
+
+
+#define TRY_JSON_STRING(K, T, U, V) \
+    do {\
+      if (CConfig::GetIsJSONValue(T)) {\
+        optional<string> maybeResult = JSONAPI::ParseString(T);\
+        if (!maybeResult.has_value()) {\
+          CONFIG_ERROR(K, U);\
+        }\
+        V.swap(*maybeResult);\
+      }\
+    } while (0);
 
 //
 // CConfig
@@ -233,387 +256,245 @@ vector<string> CConfig::GetInvalidKeys(const bitset<120> definedRealms) const
 
 string CConfig::GetString(const string& key)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(string())
-  }
-
-  SUCCESS(it->second)
+  return GetString(key, string());
 }
 
-string CConfig::GetString(const string& key, const string& x)
+string CConfig::GetString(const string& key, const string& defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  SUCCESS(it->second)
+  GET_KEY(key, value, defaultValue)
+  TRY_JSON_STRING(key, value, defaultValue, value)
+  SUCCESS(value)
 }
 
-string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& x)
+string CConfig::GetString(const string& key, const uint32_t minLength, const uint32_t maxLength, const string& defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
+  GET_KEY(key, value, defaultValue)
+  TRY_JSON_STRING(key, value, defaultValue, value)
+
+  if (value.length() < minLength) {
+    CONFIG_ERROR(key, defaultValue)
   }
 
-  if (it->second.length() < minLength) {
-    CONFIG_ERROR(key, x)
+  if (value.length() > maxLength) {
+    CONFIG_ERROR(key, defaultValue)
   }
 
-  if (it->second.length() > maxLength) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(it->second)
+  SUCCESS(value)
 }
 
-uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromList, const uint8_t x)
+uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromList, const uint8_t defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
+  GET_KEY(key, value, defaultValue)
+  value = ToLowerCase(value);
+  auto match = find(fromList.begin(), fromList.end(), value);
+  if (match != fromList.end()) {
+    SUCCESS(distance(fromList.begin(), match))
   }
+  CONFIG_ERROR_ALLOWED_VALUES(key, defaultValue, fromList)
+}
 
-  string lowerCaseValue = ToLowerCase(it->second);
-  uint8_t maxIndex = static_cast<uint8_t>(fromList.size());
-  for (uint8_t i = 0; i < maxIndex; ++i) {
-    if (lowerCaseValue == fromList[i]) {
-      SUCCESS(i)
+uint8_t CConfig::GetStringIndexSensitive(const string& key, const vector<string>& fromList, const uint8_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  auto match = find(fromList.begin(), fromList.end(), value);
+  if (match != fromList.end()) {
+    SUCCESS(distance(fromList.begin(), match))
+  }
+  CONFIG_ERROR_ALLOWED_VALUES(key, defaultValue, fromList)
+}
+
+bool CConfig::GetBool(const string& key, bool defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<bool> parsedToggle = ParseBoolean(value);
+  if (parsedToggle.has_value()) {
+    SUCCESS(parsedToggle.value());
+  }
+  CONFIG_ERROR(key, defaultValue)
+}
+
+uint8_t CConfig::GetUint8(const string& key, uint8_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<uint8_t> maybeResult = ParseUInt8(value);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
+uint16_t CConfig::GetUint16(const string& key, uint16_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<uint16_t> maybeResult = ParseUInt16(value);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
+int32_t CConfig::GetInt32(const string& key, int32_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<int32_t> maybeResult = ParseInt32(value);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
+uint32_t CConfig::GetUint32(const string& key, uint32_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<uint32_t> maybeResult = ParseUInt32(value);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
+int64_t CConfig::GetInt64(const string& key, int64_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<int64_t> maybeResult = ParseInt64(value);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
+uint8_t CConfig::GetSlot(const string& key, uint8_t defaultValue)
+{
+  return GetSlot(key, MAX_SLOTS_MODERN, defaultValue);
+}
+
+uint8_t CConfig::GetSlot(const string& key, uint8_t maxSlots, uint8_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<uint8_t> maybeResult = ParseUInt8(value);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  if (maybeResult.value() <= 0 || maxSlots < maybeResult.value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value() - 1)
+}
+
+float CConfig::GetFloat(const string& key, float defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<float> maybeResult = ParseFloat(value); // TODO: Do we need value.c_str() ?
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
+int32_t CConfig::GetInt(const string& key, int32_t defaultValue)
+{
+  return GetInt32(key, defaultValue);
+}
+
+vector<string> CConfig::GetList(const string& key, char separator, bool allowEmptyElements, const vector<string> defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+
+  vector<string> entries;
+  if (CConfig::GetIsJSONValue(value)) {
+    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value);
+    if (!maybeResult.has_value()) {
+      CONFIG_ERROR(key, defaultValue);
+    }
+    entries.swap(*maybeResult);
+  } else {
+    stringstream ss(value);
+    while (ss.good()) {
+      string element;
+      getline(ss, element, separator);
+      entries.push_back(element);
     }
   }
 
-  CONFIG_ERROR_ALLOWED_VALUES(key, x, fromList)
+  if (!allowEmptyElements) EllideEmptyElementsInPlace(entries);
+
+  SUCCESS(entries)
 }
 
-uint8_t CConfig::GetStringIndexSensitive(const string& key, const vector<string>& fromList, const uint8_t x)
+set<string> CConfig::GetSetBase(const string& key, char separator, bool trimElements, bool caseSensitive, bool allowEmptyElements, const set<string> defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
+  GET_KEY(key, value, defaultValue)
 
-  uint8_t maxIndex = static_cast<uint8_t>(fromList.size());
-  for (uint8_t i = 0; i < maxIndex; ++i) {
-    if (it->second == fromList[i]) {
-      SUCCESS(i)
+  vector<string> entries;
+  if (CConfig::GetIsJSONValue(value)) {
+    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value);
+    if (!maybeResult.has_value()) {
+      CONFIG_ERROR(key, defaultValue);
     }
-  }
-
-  CONFIG_ERROR_ALLOWED_VALUES(key, x, fromList)
-}
-
-bool CConfig::GetBool(const string& key, bool x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off" || it->second == "never" || it->second == "none") {
-    SUCCESS(false);
-  }
-  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on" || it->second == "always") {
-    SUCCESS(true);
-  }
-
-  CONFIG_ERROR(key, x)
-}
-
-int32_t CConfig::GetInt32(const string& key, int32_t x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  int32_t Result = x;
-  try {
-    long Value = stol(it->second);
-    if (Value > 0xFFFFFF) {
-      CONFIG_ERROR(key, x)
+    entries.swap(*maybeResult);
+  } else {
+    stringstream ss(value);
+    while (ss.good()) {
+      string element;
+      getline(ss, element, separator);
+      entries.push_back(element);
     }
-    Result = static_cast<int32_t>(Value);
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(Result)
-}
-
-int64_t CConfig::GetInt64(const string& key, int64_t x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  int64_t Value = x;
-  try {
-    Value = stol(it->second);
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(Value)
-}
-
-uint32_t CConfig::GetUint32(const string& key, uint32_t x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  int64_t Value = x;
-  try {
-    Value = stol(it->second);
-    if (Value < 0 || 0xFFFFFFFF < Value) {
-      CONFIG_ERROR(key, x)
-    }
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(static_cast<uint32_t>(Value))
-}
-
-uint16_t CConfig::GetUint16(const string& key, uint16_t x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  uint16_t Result = x;
-  try {
-    long Value = stol(it->second);
-    if (Value < 0 || 0xFFFF < Value) {
-      CONFIG_ERROR(key, x)
-    }
-    Result = static_cast<uint16_t>(Value);
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(Result)
-}
-
-uint8_t CConfig::GetUint8(const string& key, uint8_t x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  uint8_t Result = x;
-  try {
-    long Value = stol(it->second);
-    if (Value < 0 || 0xFF < Value) {
-      CONFIG_ERROR(key, x)
-    }
-    Result = static_cast<uint8_t>(Value);
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(Result)
-}
-
-uint8_t CConfig::GetSlot(const string& key, uint8_t x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  uint8_t Result = x;
-  try {
-    long Value = stol(it->second);
-    if (Value <= 0 || MAX_SLOTS_MODERN < Value) {
-      CONFIG_ERROR(key, x)
-    }
-    Result = static_cast<uint8_t>(Value) - 1;
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(Result)
-}
-
-uint8_t CConfig::GetSlot(const string& key, uint8_t maxSlots, uint8_t x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  uint8_t Result = x;
-  try {
-    long Value = stol(it->second);
-    if (Value <= 0 || maxSlots < Value) {
-      CONFIG_ERROR(key, x)
-    }
-    Result = static_cast<uint8_t>(Value) - 1;
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(Result)
-}
-
-float CConfig::GetFloat(const string& key, float x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  float Value = x;
-  try {
-    Value = stof(it->second.c_str());
-  } catch (...) {
-    CONFIG_ERROR(key, x)
-  }
-
-  SUCCESS(Value)
-}
-
-int32_t CConfig::GetInt(const string& key, int32_t x)
-{
-  return GetInt32(key, x);
-}
-
-vector<string> CConfig::GetList(const string& key, char separator, const vector<string> x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  vector<string> Output;
-  stringstream ss(it->second);
-  while (ss.good()) {
-    string element;
-    getline(ss, element, separator);
-    if (element.length() > 0) {
-      Output.push_back(element);
-    }
-  }
-  SUCCESS(Output)
-}
-
-set<string> CConfig::GetSetSensitive(const string& key, char separator, bool trimElements, const set<string> x)
-{
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
   }
 
   bool errored = false;
-  set<string> Output;
-  stringstream ss(it->second);
-  while (ss.good()) {
-    string element;
-    getline(ss, element, separator);
-    if (trimElements) {
-      element = TrimString(element);
-    }
-    if (element.empty())
+  set<string> uniqueEntries;
+  for (auto& element : entries) {
+    if (trimElements) element = TrimString(element);
+    if (!caseSensitive) element = ToLowerCase(element);
+    if (!allowEmptyElements && element.empty()) {
       continue;
-    if (!Output.insert(element).second)
+    }
+    if (!uniqueEntries.insert(element).second) {
       errored = true;
+    }
   }
 
-  END(Output)
+  END(key, uniqueEntries)
 }
 
-set<string> CConfig::GetSet(const string& key, char separator, bool trimElements, const set<string> x)
+set<string> CConfig::GetSetSensitive(const string& key, char separator, bool trimElements, bool allowEmptyElements, const set<string> defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
-
-  bool errored = false;
-  set<string> Output;
-  stringstream ss(it->second);
-  while (ss.good()) {
-    string element;
-    getline(ss, element, separator);
-    if (trimElements) {
-      element = TrimString(element);
-    }
-    if (element.empty())
-      continue;
-    transform(begin(element), end(element), begin(element), [](char c) { return static_cast<char>(std::tolower(c)); });
-    if (!Output.insert(element).second)
-      errored = true;
-  }
-
-  END(Output)
+  return GetSetBase(key, separator, trimElements, true, allowEmptyElements, defaultValue);
 }
 
-set<uint64_t> CConfig::GetUint64Set(const string& key, char separator, const set<uint64_t> x)
+set<string> CConfig::GetSet(const string& key, char separator, bool trimElements, bool allowEmptyElements, const set<string> defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
+  return GetSetBase(key, separator, trimElements, false, allowEmptyElements, defaultValue);
+}
 
+set<uint64_t> CConfig::GetUint64Set(const string& key, char separator, const set<uint64_t> defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
   bool errored = false;
   set<uint64_t> Output;
-  stringstream ss(it->second);
+  stringstream ss(value);
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
     if (element.empty())
       continue;
 
-    uint64_t result = 0;
-    try {
-      long long value = stoll(element);
-      result = static_cast<uint64_t>(value);
-    } catch (const exception& e) {
-      Print("Invalid value: " + element);
-      Print("Error parsing uint64 - " + string(e.what()));
+    optional<uint64_t> maybeInt = ParseUint64(element);
+    if (!maybeInt.has_value()) {
       CONFIG_ERROR(key, Output)
     }
-    if (!Output.insert(result).second)
+    if (!Output.insert(maybeInt.value()).second)
       errored = true;
   }
 
-  END(Output)
+  END(key, Output)
 }
 
 vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(vector<uint8_t>())
-  }
+  GET_KEY(key, value, vector<uint8_t>())
 
-  vector<uint8_t> Output = ExtractNumbers(it->second, count);
+  vector<uint8_t> Output = ExtractNumbers(value, count);
   if (Output.size() != count) {
     CONFIG_ERROR(key, vector<uint8_t>())
   }
@@ -623,15 +504,11 @@ vector<uint8_t> CConfig::GetUint8Vector(const string& key, const uint32_t count)
 
 set<uint8_t> CConfig::GetUint8Set(const string& key, char separator)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(set<uint8_t>())
-  }
+  GET_KEY(key, value, set<uint8_t>())
 
   bool errored = false;
   set<uint8_t> Output;
-  stringstream ss(it->second);
+  stringstream ss(value);
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
@@ -651,67 +528,67 @@ set<uint8_t> CConfig::GetUint8Set(const string& key, char separator)
     }
   }
 
-  END(Output)
+  END(key, Output)
 }
 
-vector<uint8_t> CConfig::GetIPv4(const string& key, const array<uint8_t, 4> &x)
+vector<uint8_t> CConfig::GetIPv4(const string& key, const array<uint8_t, 4> &defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(vector<uint8_t>(x.begin(), x.end()))
-  }
-
-  vector<uint8_t> Output = ExtractIPv4(it->second);
+  GET_KEY(key, value, vector<uint8_t>(defaultValue.begin(), defaultValue.end()))
+  vector<uint8_t> Output = ExtractIPv4(value);
   if (Output.empty()) {
-    CONFIG_ERROR(key, vector<uint8_t>(x.begin(), x.end()))
+    CONFIG_ERROR(key, vector<uint8_t>(defaultValue.begin(), defaultValue.end()))
   }
 
   SUCCESS(Output)
 }
 
-set<string> CConfig::GetIPStringSet(const string& key, char separator, const set<string> x)
+set<string> CConfig::GetIPStringSet(const string& key, char separator)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
+  set<string> uniqueEntries;
+  GET_KEY(key, value, uniqueEntries)
+
+  vector<string> entries;
+  if (CConfig::GetIsJSONValue(value)) {
+    optional<vector<string>> maybeResult = JSONAPI::ParseStringArray(value);
+    if (!maybeResult.has_value()) {
+      CONFIG_ERROR(key, uniqueEntries);
+    }
+    entries.swap(*maybeResult);
+  } else {
+    stringstream ss(value);
+    while (ss.good()) {
+      string element;
+      getline(ss, element, separator);
+      entries.push_back(element);
+    }
   }
 
   bool errored = false;
-  set<string> Output;
-  stringstream ss(it->second);
-  while (ss.good()) {
-    string element;
-    getline(ss, element, separator);
+  for (auto& element : entries) {
     element = TrimString(element);
-    if (element.empty())
+    if (element.empty()) {
       continue;
-
+    }
     optional<sockaddr_storage> result = CNet::ParseAddress(element, ACCEPT_ANY);
     if (!result.has_value()) {
       errored = true;
       continue;
     }
     string normalIp = AddressToString(result.value());
-    if (!Output.insert(normalIp).second) {
+    if (!uniqueEntries.insert(normalIp).second) {
       errored = true;
     }
   }
-  END(Output)
+
+  END(key, uniqueEntries)
 }
 
 vector<sockaddr_storage> CConfig::GetHostListWithImplicitPort(const string& key, const uint16_t defaultPort, char separator)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS({})
-  }
-
+  GET_KEY(key, value, {})
   bool errored = false;
   vector<sockaddr_storage> Output;
-  stringstream ss(it->second);
+  stringstream ss(value);
   while (ss.good()) {
     string element;
     getline(ss, element, separator);
@@ -733,78 +610,76 @@ vector<sockaddr_storage> CConfig::GetHostListWithImplicitPort(const string& key,
     Output.push_back(std::move(result.value()));
     result.reset();
   }
-  END(Output)
+  END(key, Output)
 }
 
 
-filesystem::path CConfig::GetPath(const string &key, const filesystem::path &x)
+filesystem::path CConfig::GetPath(const string &key, const filesystem::path &defaultValue)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(x)
-  }
+  GET_KEY(key, value, defaultValue)
 
 #ifdef _WIN32
-  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
-    CONFIG_ERROR(key, x)
+  if (!utf8::is_valid(value.begin(), value.end())) {
+    CONFIG_ERROR(key, defaultValue)
   }
 
   wstring widePath;
-  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+  utf8::utf8to16(value.begin(), value.end(), back_inserter(widePath));
 
-  filesystem::path value = widePath;
+  filesystem::path result = widePath;
 #else
-  filesystem::path value = it->second;
+  filesystem::path result = value;
 #endif
-  if (value.is_absolute()) {
-    SUCCESS(value)
+  if (result.is_absolute()) {
+    SUCCESS(result)
   }
 
-  SUCCESS(filesystem::path(GetHomeDir() / value).lexically_normal())
+  SUCCESS(filesystem::path(GetHomeDir() / result).lexically_normal())
 }
 
-filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &x)
+filesystem::path CConfig::GetDirectory(const string &key, const filesystem::path &defaultValue)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   if (it == end(m_CFG)) {
-    filesystem::path defaultDirectory = x;
+    filesystem::path defaultDirectory = defaultValue;
     NormalizeDirectory(defaultDirectory);
     SUCCESS(defaultDirectory)
   }
 
+  string value = it->second;
+
 #ifdef _WIN32
-  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
-    filesystem::path defaultDirectory = x;
+  if (!utf8::is_valid(value.begin(), value.end())) {
+    filesystem::path defaultDirectory = defaultValue;
     NormalizeDirectory(defaultDirectory);
     CONFIG_ERROR(key, defaultDirectory)
   }
 
   wstring widePath;
-  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+  utf8::utf8to16(value.begin(), value.end(), back_inserter(widePath));
 
-  filesystem::path value = widePath;
+  filesystem::path result = widePath;
 #else
-  filesystem::path value = it->second;
+  filesystem::path result = value;
 #endif
-  if (value.is_absolute()) {
-    NormalizeDirectory(value);
-    SUCCESS(value)
+  if (result.is_absolute()) {
+    NormalizeDirectory(result);
+    SUCCESS(result)
   }
 
-  value = GetHomeDir() / value;
-  NormalizeDirectory(value);
-  SUCCESS(value)
+  result = GetHomeDir() / result;
+  NormalizeDirectory(result);
+  SUCCESS(result)
 }
 
-sockaddr_storage CConfig::GetAddressOfType(const string& key, const uint8_t acceptMode, const string& x)
+sockaddr_storage CConfig::GetAddressOfType(const string& key, const uint8_t acceptMode, const string& defaultValue)
 {
   m_ValidKeys.insert(key);
   auto it = m_CFG.find(key);
   vector<string> tryAddresses;
   if (it != end(m_CFG)) tryAddresses.push_back(it->second);
-  tryAddresses.push_back(x);
+  tryAddresses.push_back(defaultValue);
 
   for (uint8_t i = 0; i < 2; ++i) {
     optional<sockaddr_storage> result = CNet::ParseAddress(tryAddresses[i], acceptMode);
@@ -812,6 +687,7 @@ sockaddr_storage CConfig::GetAddressOfType(const string& key, const uint8_t acce
       if (i == 0) {
         SUCCESS(result.value())
       } else {
+        // usable but display a warning
         CONFIG_ERROR(key, result.value());
       }
     }
@@ -822,244 +698,155 @@ sockaddr_storage CConfig::GetAddressOfType(const string& key, const uint8_t acce
   CONFIG_ERROR(key, fallback)
 }
 
-sockaddr_storage CConfig::GetAddressIPv4(const string& key, const string& x)
+sockaddr_storage CConfig::GetAddressIPv4(const string& key, const string& defaultValue)
 {
-  return GetAddressOfType(key, ACCEPT_IPV4, x);
+  return GetAddressOfType(key, ACCEPT_IPV4, defaultValue);
 }
 
-sockaddr_storage CConfig::GetAddressIPv6(const string& key, const string& x)
+sockaddr_storage CConfig::GetAddressIPv6(const string& key, const string& defaultValue)
 {
-  return GetAddressOfType(key, ACCEPT_IPV6, x);
+  return GetAddressOfType(key, ACCEPT_IPV6, defaultValue);
 }
 
-sockaddr_storage CConfig::GetAddress(const string& key, const string& x)
+sockaddr_storage CConfig::GetAddress(const string& key, const string& defaultValue)
 {
-  return GetAddressOfType(key, ACCEPT_ANY, x);
+  return GetAddressOfType(key, ACCEPT_ANY, defaultValue);
 }
 
 optional<bool> CConfig::GetMaybeBool(const string& key)
 {
-  m_ValidKeys.insert(key);
   optional<bool> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
+  GET_KEY(key, value, result)
+  result = ParseBoolean(value);
+  if (result.has_value()) {
+    SUCCESS(result);
   }
-
-  if (it->second == "0" || it->second == "no" || it->second == "false" || it->second == "off" || it->second == "never" || it->second == "none") {
-    result = false;
-    SUCCESS(result)
-  }
-  if (it->second == "1" || it->second == "yes" || it->second == "true" || it->second == "on" || it->second == "always") {
-    result = true;
-    SUCCESS(result)
-  }
-
   CONFIG_ERROR(key, result)
 }
 
 optional<uint8_t> CConfig::GetMaybeUint8(const string& key)
 {
-  m_ValidKeys.insert(key);
   optional<uint8_t> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  try {
-    int64_t Value = stol(it->second);
-    if (Value < 0 || 0xFF < Value) {
-      CONFIG_ERROR(key, result)
-    }
-    result = static_cast<uint8_t>(Value);
-  } catch (...) {
+  GET_KEY(key, value, result)
+  result = ParseUint8(value);
+  if (!result.has_value()) {
     CONFIG_ERROR(key, result)
   }
-
   SUCCESS(result)
 }
 
 optional<uint16_t> CConfig::GetMaybeUint16(const string& key)
 {
-  m_ValidKeys.insert(key);
   optional<uint16_t> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  try {
-    int64_t Value = stol(it->second);
-    if (Value < 0 || 0xFFFF < Value) {
-      CONFIG_ERROR(key, result)
-    }
-    result = static_cast<uint16_t>(Value);
-  } catch (...) {
+  GET_KEY(key, value, result);
+  result = ParseUint16(value);
+  if (!result.has_value()) {
     CONFIG_ERROR(key, result)
   }
-
   SUCCESS(result)
 }
 
 optional<uint32_t> CConfig::GetMaybeUint32(const string& key)
 {
-  m_ValidKeys.insert(key);
   optional<uint32_t> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  try {
-    int64_t Value = stol(it->second);
-    if (Value < 0 || 0xFFFFFFFF < Value) {
-      CONFIG_ERROR(key, result)
-    }
-    result = static_cast<uint32_t>(Value);
-  } catch (...) {
+  GET_KEY(key, value, result);
+  result = ParseUint32(value);
+  if (!result.has_value()) {
     CONFIG_ERROR(key, result)
   }
-
   SUCCESS(result)
 }
 
 optional<int64_t> CConfig::GetMaybeInt64(const string& key)
 {
-  m_ValidKeys.insert(key);
   optional<int64_t> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  try {
-    long long value = stoll(it->second);
-    result = static_cast<int64_t>(value);
-  } catch (const exception& e) {
-    Print("Invalid value: " + it->second);
-    Print("Error parsing int64 - " + string(e.what()));
+  GET_KEY(key, value, result);
+  result = ParseInt64(value);
+  if (!result.has_value()) {
     CONFIG_ERROR(key, result)
   }
-
   SUCCESS(result)
 }
 
 optional<uint64_t> CConfig::GetMaybeUint64(const string& key)
 {
-  m_ValidKeys.insert(key);
   optional<uint64_t> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  try {
-    long long value = stoll(it->second);
-    result = static_cast<uint64_t>(value);
-  } catch (const exception& e) {
-    Print("Invalid value: " + it->second);
-    Print("Error parsing int64 - " + string(e.what()));
+  GET_KEY(key, value, result);
+  result = ParseUInt64(value);
+  if (!result.has_value()) {
     CONFIG_ERROR(key, result)
   }
-
   SUCCESS(result)
 }
 
 optional<Version> CConfig::GetMaybeVersion(const string& key)
 {
-  optional<pair<uint8_t, uint8_t>> result;
-  m_ValidKeys.insert(key);
+  optional<Version> result;
+  GET_KEY(key, value, result);
 
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  optional<Version> maybeResult = ParseGameVersion(it->second);
-  if (!maybeResult.has_value()) {
+  optional<Version> userValue = ParseGameVersion(value);
+  if (!userValue.has_value()) {
     CONFIG_ERROR(key, result);
   }
 
-  if (maybeResult->first == 0 || maybeResult->first > 2) {
+  if (userValue->first == 0 || userValue->first > 2) {
     Print("[CONFIG] Bad version. It must be 1.x or 2.x");
     CONFIG_ERROR(key, result);
   }
 
-  if (maybeResult->second >= 100) {
+  if (userValue->second >= 100) {
     Print("[CONFIG] Bad version. It must be 1.x or 2.x");
     CONFIG_ERROR(key, result);
   }
 
-  result.swap(maybeResult);
+  result.swap(userValue);
   SUCCESS(result)
 }
 
 optional<vector<uint8_t>> CConfig::GetMaybeUint8Vector(const string &key, const uint32_t count)
 {
-  m_ValidKeys.insert(key);
   optional<vector<uint8_t>> result;
+  GET_KEY(key, value, result);
 
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  vector<uint8_t> Output = ExtractNumbers(it->second, count);
-  if (Output.size() != count) {
+  vector<uint8_t> bytes = ExtractNumbers(value, count);
+  if (bytes.size() != count) {
     CONFIG_ERROR(key, result)
   }
 
-  result = Output;
+  result = bytes;
   SUCCESS(result)
 }
 
 optional<vector<uint8_t>> CConfig::GetMaybeIPv4(const string &key)
 {
-  m_ValidKeys.insert(key);
   optional<vector<uint8_t>> result;
+  GET_KEY(key, value, result);
 
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
-
-  vector<uint8_t> Output = ExtractIPv4(it->second);
-  if (Output.empty()) {
+  vector<uint8_t> networkOrderBytes = ExtractIPv4(value);
+  if (networkOrderBytes.empty()) {
     CONFIG_ERROR(key, result)
   }
 
-  result = Output;
+  result = networkOrderBytes;
   SUCCESS(result)
 }
 
 optional<filesystem::path> CConfig::GetMaybePath(const string &key)
 {
-  m_ValidKeys.insert(key);
   optional<filesystem::path> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
+  GET_KEY(key, value, result);
 
 #ifdef _WIN32
-  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
+  if (!utf8::is_valid(value.begin(), value.end())) {
     CONFIG_ERROR(key, result)
   }
 
   wstring widePath;
-  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+  utf8::utf8to16(value.begin(), value.end(), back_inserter(widePath));
 
   result = filesystem::path(widePath);
 #else
-  result = filesystem::path(it->second);
+  result = filesystem::path(value);
 #endif
   if (result.value().is_absolute()) {
     SUCCESS(result)
@@ -1070,25 +857,20 @@ optional<filesystem::path> CConfig::GetMaybePath(const string &key)
 
 optional<filesystem::path> CConfig::GetMaybeDirectory(const string &key)
 {
-  m_ValidKeys.insert(key);
   optional<filesystem::path> result;
-
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    SUCCESS(result)
-  }
+  GET_KEY(key, value, result);
 
 #ifdef _WIN32
-  if (!utf8::is_valid(it->second.begin(), it->second.end())) {
+  if (!utf8::is_valid(value.begin(), value.end())) {
     CONFIG_ERROR(key, result)
   }
 
   wstring widePath;
-  utf8::utf8to16(it->second.begin(), it->second.end(), back_inserter(widePath));
+  utf8::utf8to16(value.begin(), value.end(), back_inserter(widePath));
 
   result = filesystem::path(widePath);
 #else
-  result = filesystem::path(it->second);
+  result = filesystem::path(value);
 #endif
 
   if (result.value().is_absolute()) {
@@ -1102,18 +884,13 @@ optional<filesystem::path> CConfig::GetMaybeDirectory(const string &key)
 
 optional<sockaddr_storage> CConfig::GetMaybeAddressOfType(const string& key, const uint8_t acceptMode)
 {
-  m_ValidKeys.insert(key);
-  auto it = m_CFG.find(key);
-  if (it == end(m_CFG)) {
-    optional<sockaddr_storage> empty;
-    SUCCESS(empty);
-  }
+  optional<sockaddr_storage> result;
+  GET_KEY(key, value, result);
 
-  optional<sockaddr_storage> result = CNet::ParseAddress(it->second, acceptMode);
+  result = CNet::ParseAddress(value, acceptMode);
   if (result.has_value()) {
     SUCCESS(result);
   }
-
   CONFIG_ERROR(key, result)
 }
 
@@ -1132,74 +909,78 @@ optional<sockaddr_storage> CConfig::GetMaybeAddress(const string& key)
   return GetMaybeAddressOfType(key, ACCEPT_ANY);
 }
 
-void CConfig::Set(const string& key, const string& x)
+void CConfig::Set(const string& key, const string& value)
 {
-  m_CFG[key] = x;
+  m_CFG[key] = value;
 }
 
-void CConfig::SetString(const string& key, const string& x)
+void CConfig::SetString(const string& key, const string& value)
 {
-  m_CFG[key] = x;
+  m_CFG[key] = value;
 }
 
-void CConfig::SetString(const string& key, const vector<uint8_t>& x)
+void CConfig::SetString(const std::string& key, const char* start, const std::string::size_type& size)
 {
-  string xWrapped = string(begin(x), end(x));
-  m_CFG[key] = xWrapped;
+  m_CFG[key] = string(start, size);
 }
 
-void CConfig::SetBool(const string& key, const bool& x)
+void CConfig::SetString(const std::string& key, const unsigned char* start, const std::string::size_type& size)
 {
-  m_CFG[key] = x ? "yes" : "no";
+  m_CFG[key] = string(reinterpret_cast<const char*>(start), size);
 }
 
-void CConfig::SetInt32(const string& key, const int32_t& x)
+void CConfig::SetBool(const string& key, const bool& value)
 {
-  m_CFG[key] = to_string(x);
+  m_CFG[key] = value ? "yes" : "no";
 }
 
-void CConfig::SetInt64(const string& key, const int64_t& x)
+void CConfig::SetInt32(const string& key, const int32_t& value)
 {
-  m_CFG[key] = to_string(x);
+  m_CFG[key] = to_string(value);
 }
 
-void CConfig::SetUint32(const string& key, const uint32_t& x)
+void CConfig::SetInt64(const string& key, const int64_t& value)
 {
-  m_CFG[key] = to_string(x);
+  m_CFG[key] = to_string(value);
 }
 
-void CConfig::SetUint16(const string& key, const uint16_t& x)
+void CConfig::SetUint32(const string& key, const uint32_t& value)
 {
-  m_CFG[key] = to_string(x);
-}
-void CConfig::SetUint8(const string& key, const uint8_t& x)
-{
-  m_CFG[key] = to_string(x);
+  m_CFG[key] = to_string(value);
 }
 
-void CConfig::SetFloat(const string& key, const float& x)
+void CConfig::SetUint16(const string& key, const uint16_t& value)
 {
-  m_CFG[key] = to_string(x);
+  m_CFG[key] = to_string(value);
+}
+void CConfig::SetUint8(const string& key, const uint8_t& value)
+{
+  m_CFG[key] = to_string(value);
 }
 
-void CConfig::SetUint8Vector(const string& key, const vector<uint8_t> &x)
+void CConfig::SetFloat(const string& key, const float& value)
 {
-  m_CFG[key] = ByteArrayToDecString(x);
+  m_CFG[key] = to_string(value);
+}
+
+void CConfig::SetUint8Vector(const string& key, const vector<uint8_t> &value)
+{
+  m_CFG[key] = ByteArrayToDecString(value);
 }
 
 void CConfig::SetUint8Array(const string& key, const uint8_t* start, const size_t size)
 {
-  m_CFG[key] = ByteArrayToDecString(vector<uint8_t>(start, start + size));
+  m_CFG[key] = ByteArrayToDecString(start, size);
 }
 
-void CConfig::SetUint8VectorReverse(const string& key, const vector<uint8_t> &x)
+void CConfig::SetUint8VectorReverse(const string& key, const vector<uint8_t> &value)
 {
-  m_CFG[key] = ReverseByteArrayToDecString(x);
+  m_CFG[key] = ReverseByteArrayToDecString(value);
 }
 
 void CConfig::SetUint8ArrayReverse(const string& key, const uint8_t* start, const size_t size)
 {
-  m_CFG[key] = ReverseByteArrayToDecString(vector<uint8_t>(start, start + size));
+  m_CFG[key] = ReverseByteArrayToDecString(start, size);
 }
 
 std::vector<uint8_t> CConfig::Export() const
@@ -1267,6 +1048,12 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
 
   in.close();
   return Output;
+}
+
+bool CConfig::GetIsJSONValue(const string& value)
+{
+  //return value.size() >= 5 && value.substr(0, 5) == "json:";
+  return false;
 }
 
 #undef SUCCESS

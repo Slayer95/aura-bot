@@ -472,7 +472,7 @@ namespace BNETProtocol
     cursor++;
 
     vector<uint8_t> mapClientPath = ExtractCString(packet, cursor);
-    gameConfig->SetString("map.path", mapClientPath);
+    gameConfig->SetString("map.path", reinterpret_cast<const unsigned char*>(mapClientPath.data()), mapClientPath.size());
 
     cursor += static_cast<uint16_t>(mapClientPath.size()) + 1u;
     if (cursor >= packet.size()) {
@@ -485,7 +485,7 @@ namespace BNETProtocol
 
     if (cursor < packet.size()) {
       vector<uint8_t> gameName = ExtractCString(packet, cursor);
-      gameConfig->SetString("rehost.game.name", gameName);
+      gameConfig->SetString("rehost.game.name", reinterpret_cast<const unsigned char*>(gameName.data()), gameName.size());
     }
 
     // TODO: RECEIVE_HOSTED_GAME_CONFIG game flags
