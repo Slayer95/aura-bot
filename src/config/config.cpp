@@ -381,6 +381,24 @@ uint8_t CConfig::GetSlot(const string& key, uint8_t maxSlots, uint8_t defaultVal
   SUCCESS(maybeResult.value() - 1)
 }
 
+uint8_t CConfig::GetPlayerCount(const string& key, uint8_t defaultValue)
+{
+  return GetPlayerCount(key, MAX_SLOTS_MODERN, defaultValue);
+}
+
+uint8_t CConfig::GetPlayerCount(const string& key, uint8_t maxSlots, uint8_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<uint8_t> maybeResult = ParseUInt8(value);
+  if (!maybeResult.has_value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  if (maybeResult.value() < 0 || maxSlots < maybeResult.value()) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
 float CConfig::GetFloat(const string& key, float defaultValue)
 {
   GET_KEY(key, value, defaultValue)

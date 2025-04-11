@@ -135,6 +135,7 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
     m_MaxTeamsWithNoWinners(map->GetVersionMaxSlots())
 {
   const uint8_t maxSlots = map->GetVersionMaxSlots();
+  const uint8_t maxTeams = map->GetMapNumTeams();
   const vector<string> truthSourceOptions = {"none", "only-exit", "only-mmd", "prefer-exit", "prefer-mmd"};
   if (CFG.Exists("map.game_result.source")) {
     m_SourceOfTruth = CFG.GetStringIndex("map.game_result.source", truthSourceOptions, m_SourceOfTruth);
@@ -227,63 +228,63 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
 
   bool wasStrict = CFG.GetStrictMode();
   if (CFG.Exists("map.game_result.constraints.controllers.min")) {
-    m_MinPlayers = CFG.GetSlot("map.game_result.constraints.controllers.min", maxSlots, m_MinPlayers) + 1;
+    m_MinPlayers = CFG.GetPlayerCount("map.game_result.constraints.controllers.min", maxSlots, m_MinPlayers);
   } else {
     CFG.SetUint8("map.game_result.constraints.controllers.min", m_MinPlayers);
   }
   if (CFG.Exists("map.game_result.constraints.controllers.max")) {
-    m_MaxPlayers = CFG.GetSlot("map.game_result.constraints.controllers.max", maxSlots, m_MaxPlayers) + 1;
+    m_MaxPlayers = CFG.GetPlayerCount("map.game_result.constraints.controllers.max", maxSlots, m_MaxPlayers);
   } else {
     CFG.SetUint8("map.game_result.constraints.controllers.max", m_MaxPlayers);
   }
   if (CFG.Exists("map.game_result.constraints.controllers.winners.min")) {
-    m_MinWinnerPlayers = CFG.GetSlot("map.game_result.constraints.controllers.winners.min", maxSlots, m_MinWinnerPlayers) + 1;
+    m_MinWinnerPlayers = CFG.GetPlayerCount("map.game_result.constraints.controllers.winners.min", maxSlots, m_MinWinnerPlayers);
   } else {
     CFG.SetUint8("map.game_result.constraints.controllers.winners.min", m_MinWinnerPlayers);
   }
   if (CFG.Exists("map.game_result.constraints.controllers.winners.max")) {
-    m_MaxWinnerPlayers = CFG.GetSlot("map.game_result.constraints.controllers.winners.max", maxSlots, m_MaxWinnerPlayers) + 1;
+    m_MaxWinnerPlayers = CFG.GetPlayerCount("map.game_result.constraints.controllers.winners.max", maxSlots, m_MaxWinnerPlayers);
   } else {
     CFG.SetUint8("map.game_result.constraints.controllers.winners.max", m_MaxWinnerPlayers);
   }
   if (CFG.Exists("map.game_result.constraints.controllers.losers.min")) {
-    m_MinLoserPlayers = CFG.GetSlot("map.game_result.constraints.controllers.losers.min", maxSlots, m_MinLoserPlayers) + 1;
+    m_MinLoserPlayers = CFG.GetPlayerCount("map.game_result.constraints.controllers.losers.min", maxSlots, m_MinLoserPlayers);
   } else {
     CFG.SetUint8("map.game_result.constraints.controllers.losers.min", m_MinLoserPlayers);
   }
   if (CFG.Exists("map.game_result.constraints.controllers.losers.max")) {
-    m_MaxLoserPlayers = CFG.GetSlot("map.game_result.constraints.controllers.losers.max", maxSlots, m_MaxLoserPlayers) + 1;
+    m_MaxLoserPlayers = CFG.GetPlayerCount("map.game_result.constraints.controllers.losers.max", maxSlots, m_MaxLoserPlayers);
   } else {
     CFG.SetUint8("map.game_result.constraints.controllers.losers.max", m_MaxLoserPlayers);
   }
 
   if (CFG.Exists("map.game_result.constraints.teams.min")) {
-    m_MinTeams = CFG.GetSlot("map.game_result.constraints.teams.min", maxSlots, m_MinTeams) + 1;
+    m_MinTeams = CFG.GetPlayerCount("map.game_result.constraints.teams.min", maxTeams, m_MinTeams);
   } else {
     CFG.SetUint8("map.game_result.constraints.teams.min", m_MinTeams);
   }
   if (CFG.Exists("map.game_result.constraints.teams.max")) {
-    m_MaxTeams = CFG.GetSlot("map.game_result.constraints.teams.max", maxSlots, m_MaxTeams) + 1;
+    m_MaxTeams = CFG.GetPlayerCount("map.game_result.constraints.teams.max", maxTeams, m_MaxTeams);
   } else {
     CFG.SetUint8("map.game_result.constraints.teams.max", m_MaxTeams);
   }
   if (CFG.Exists("map.game_result.constraints.teams.winners.min")) {
-    m_MinTeamsWithWinners = CFG.GetSlot("map.game_result.constraints.teams.winners.min", maxSlots, m_MinTeamsWithWinners) + 1;
+    m_MinTeamsWithWinners = CFG.GetPlayerCount("map.game_result.constraints.teams.winners.min", maxTeams, m_MinTeamsWithWinners);
   } else {
     CFG.SetUint8("map.game_result.constraints.teams.winners.min", m_MinTeamsWithWinners);
   }
   if (CFG.Exists("map.game_result.constraints.teams.winners.max")) {
-    m_MaxTeamsWithWinners = CFG.GetSlot("map.game_result.constraints.teams.winners.max", maxSlots, m_MaxTeamsWithWinners) + 1;
+    m_MaxTeamsWithWinners = CFG.GetPlayerCount("map.game_result.constraints.teams.winners.max", maxTeams, m_MaxTeamsWithWinners);
   } else {
     CFG.SetUint8("map.game_result.constraints.teams.winners.max", m_MaxTeamsWithWinners);
   }
   if (CFG.Exists("map.game_result.constraints.teams.losers.min")) {
-    m_MinTeamsWithNoWinners = CFG.GetSlot("map.game_result.constraints.teams.losers.min", maxSlots, m_MinTeamsWithNoWinners) + 1;
+    m_MinTeamsWithNoWinners = CFG.GetPlayerCount("map.game_result.constraints.teams.losers.min", maxTeams, m_MinTeamsWithNoWinners);
   } else {
     CFG.SetUint8("map.game_result.constraints.teams.losers.min", m_MinTeamsWithNoWinners);
   }
   if (CFG.Exists("map.game_result.constraints.teams.losers.max")) {
-    m_MaxTeamsWithNoWinners = CFG.GetSlot("map.game_result.constraints.teams.losers.max", maxSlots, m_MaxTeamsWithNoWinners) + 1;
+    m_MaxTeamsWithNoWinners = CFG.GetPlayerCount("map.game_result.constraints.teams.losers.max", maxTeams, m_MaxTeamsWithNoWinners);
   } else {
     CFG.SetUint8("map.game_result.constraints.teams.losers.max", m_MaxTeamsWithNoWinners);
   }

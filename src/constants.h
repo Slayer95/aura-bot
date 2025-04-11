@@ -78,6 +78,8 @@ constexpr uint8_t TASK_TYPE_GAME_FRAME = 0;
 constexpr uint8_t TASK_TYPE_CHECK_JOINABLE = 1;
 constexpr uint8_t TASK_TYPE_MAP_DOWNLOAD = 2;
 constexpr uint8_t TASK_TYPE_HMC_HTTP = 3;
+constexpr uint8_t TASK_TYPE_DB_READ = 4;
+constexpr uint8_t TASK_TYPE_DB_WRITE = 5;
 
 constexpr uint8_t LOG_C = 1u;
 constexpr uint8_t LOG_P = 2u;
