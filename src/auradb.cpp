@@ -1404,7 +1404,7 @@ void CAuraDB::SaveDotAStats(CDotaStats* dotaStats)
       if (dotaPlayer)
       {
         const uint8_t  Color = dotaPlayer->GetNewColor();
-        const CGameController* controller = dotaStats->m_Game->GetGameControllerFromColor(Color);
+        const CGameController* controller = dotaStats->m_Game.get().GetGameControllerFromColor(Color);
         const string Name = controller->GetName();
         const string Server = controller->GetServer();
 

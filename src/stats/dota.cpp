@@ -59,8 +59,8 @@ using namespace std;
 // CDotaStats
 //
 
-CDotaStats::CDotaStats(CGame* nGame)
-  : m_Game(nGame),
+CDotaStats::CDotaStats(shared_ptr<CGame> nGame)
+  : m_Game(ref(*nGame)),
     m_Winner(DOTA_WINNER_UNDECIDED),
     m_Time(make_pair<uint32_t, uint32_t>(0u, 0u)),
     m_SwitchEnabled(false)
@@ -114,12 +114,12 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
 
       GameUser::CGameUser* killerUser = nullptr;
       if (GetIsPlayerColor(*killerColor)) {
-        killerUser = m_Game->GetUserFromColor(*killerColor);
+        killerUser = m_Game.get().GetUserFromColor(*killerColor);
         if (!m_Players[*killerColor]) {
           m_Players[*killerColor] = new CDBDotAPlayer();
         }
       }
-      GameUser::CGameUser* victimUser = m_Game->GetUserFromColor(*victimColor);
+      GameUser::CGameUser* victimUser = m_Game.get().GetUserFromColor(*victimColor);
       if (!m_Players[*victimColor]) {
         m_Players[*victimColor] = new CDBDotAPlayer();
       }
@@ -149,7 +149,7 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
     {
       // check if the assist was on a non-leaver
 
-      if (m_Game->GetUserFromColor(static_cast<uint8_t>(cacheValue)))
+      if (m_Game.get().GetUserFromColor(static_cast<uint8_t>(cacheValue)))
       {
         optional<uint32_t> assisterColor = ToUint32(key.substr(6));
         if (assisterColor.has_value() && GetIsPlayerColor(*assisterColor)) {
@@ -248,7 +248,7 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
     {
       // Zero time in the game, creeps spawn.
       if (cacheValue == 1) {
-        //m_Game->SetCreepSpawnTime(GetTime());
+        //m_Game.get().SetCreepSpawnTime(GetTime());
         Print(GetLogPrefix() + "creeps spawned");
       }
     }
@@ -266,8 +266,8 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
       optional<uint32_t> toColor = ToUint32(toString);
       if (!fromColor.has_value() || !toColor.has_value()) return true;
       if (!GetIsPlayerColor(*fromColor) || !GetIsPlayerColor(*toColor)) return true;
-      GameUser::CGameUser* fromPlayer = m_Game->GetUserFromColor(*fromColor);
-      GameUser::CGameUser* toPlayer = m_Game->GetUserFromColor(*toColor);
+      GameUser::CGameUser* fromPlayer = m_Game.get().GetUserFromColor(*fromColor);
+      GameUser::CGameUser* toPlayer = m_Game.get().GetUserFromColor(*toColor);
       
       if (!m_SwitchEnabled && GetIsSentinelPlayerColor(*fromColor) != GetIsSentinelPlayerColor(*toColor)) {
         m_Players[*toColor]->SetNewColor(*fromColor);
@@ -317,7 +317,7 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
       if (winner == DOTA_WINNER_SENTINEL || winner == DOTA_WINNER_SCOURGE) {
         m_Winner = winner;
       }
-      m_GameOverTime = m_Game->GetEffectiveTicks() / 1000;
+      m_GameOverTime = m_Game.get().GetEffectiveTicks() / 1000;
 
       if (m_Winner == DOTA_WINNER_SENTINEL)
         Print(GetLogPrefix() + "detected winner: Sentinel");
@@ -422,7 +422,7 @@ vector<CGameController*> CDotaStats::GetSentinelControllers() const
 {
   vector<CGameController*> controllers;
   for (uint8_t color = 1, end = 5; color <= end; color++) {
-    CGameController* controllerData = m_Game->GetGameControllerFromColor(color);
+    CGameController* controllerData = m_Game.get().GetGameControllerFromColor(color);
     if (!controllerData) continue;
     controllers.push_back(controllerData);
   }
@@ -433,7 +433,7 @@ vector<CGameController*> CDotaStats::GetScourgeControllers() const
 {
   vector<CGameController*> controllers;
   for (uint8_t color = 7, end = 11; color <= end; color++) {
-    CGameController* controllerData = m_Game->GetGameControllerFromColor(color);
+    CGameController* controllerData = m_Game.get().GetGameControllerFromColor(color);
     if (!controllerData) continue;
     controllers.push_back(controllerData);
   }
@@ -476,10 +476,10 @@ optional<GameResults> CDotaStats::GetGameResults(const GameResultConstraints& /*
 
 string CDotaStats::GetLogPrefix() const
 {
-  return "[DOTA: " + m_Game->GetGameName() + "] ";
+  return "[DOTA: " + m_Game.get().GetGameName() + "] ";
 }
 
 void CDotaStats::LogMetaData(int64_t gameTicks, const string& text) const
 {
-  m_Game->Log(text, gameTicks);
+  m_Game.get().Log(text, gameTicks);
 }

@@ -134,7 +134,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
               Abort = true;
               break;
             }
-            CGame* targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
+            shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
             if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || (targetLobby->GetIsLobbyStrict() && targetLobby->GetExiting())) {
               delete joinRequest;
               break;

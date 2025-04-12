@@ -132,10 +132,10 @@ public:
 
   std::queue<GenericAppAction>                       m_PendingActions;
   std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
-  std::vector<CGame*>                                m_StartedGames;               // all games after they have started
-  std::vector<CGame*>                                m_Lobbies;                    // all games before they are started
-  std::vector<CGame*>                                m_LobbiesPending;             // vector for just-created lobbies before they get into m_Lobbies
-  std::vector<CGame*>                                m_JoinInProgressGames;        // started games that can be joined in-progress (either as observer or player)
+  std::vector<std::shared_ptr<CGame>>                m_StartedGames;               // all games after they have started
+  std::vector<std::shared_ptr<CGame>>                m_Lobbies;                    // all games before they are started
+  std::vector<std::shared_ptr<CGame>>                m_LobbiesPending;             // vector for just-created lobbies before they get into m_Lobbies
+  std::vector<std::weak_ptr<CGame>>                  m_JoinInProgressGames;        // started games that can be joined in-progress (either as observer or player)
 
   std::map<std::filesystem::path, std::string>       m_CFGCacheNamesByMapNames;
   std::map<std::filesystem::path, TimedUint16>       m_MapFilesTimedBusyLocks;
@@ -151,26 +151,26 @@ public:
   CAura(CAura&) = delete;
 
   [[nodiscard]] std::vector<Version> GetSupportedVersionsCrossPlayRangeHeads() const;
-  [[nodiscard]] CGame* GetMostRecentLobby(bool allowPending = false) const;
-  [[nodiscard]] CGame* GetMostRecentLobbyFromCreator(const std::string& fromName) const;
-  [[nodiscard]] CGame* GetLobbyByHostCounter(uint32_t hostCounter) const;
-  [[nodiscard]] CGame* GetLobbyByHostCounterExact(uint32_t hostCounter) const;
-  [[nodiscard]] CGame* GetLobbyOrObservableByHostCounter(uint32_t hostCounter) const;
-  [[nodiscard]] CGame* GetLobbyOrObservableByHostCounterExact(uint32_t hostCounter) const;
-  [[nodiscard]] CGame* GetGameByIdentifier(const uint64_t gameIdentifier) const;
-  [[nodiscard]] CGame* GetGameByString(const std::string& targetGame) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetMostRecentLobby(bool allowPending = false) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetMostRecentLobbyFromCreator(const std::string& fromName) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetLobbyByHostCounter(uint32_t hostCounter) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetLobbyByHostCounterExact(uint32_t hostCounter) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetLobbyOrObservableByHostCounter(uint32_t hostCounter) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetLobbyOrObservableByHostCounterExact(uint32_t hostCounter) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetGameByIdentifier(const uint64_t gameIdentifier) const;
+  [[nodiscard]] std::shared_ptr<CGame> GetGameByString(const std::string& targetGame) const;
 
   [[nodiscard]] CRealm* GetRealmByInputId(const std::string& inputId) const;
   [[nodiscard]] CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
   [[nodiscard]] CRealm* GetRealmByHostName(const std::string& hostName) const;
   [[nodiscard]] uint8_t FindServiceFromHostName(const std::string& hostName, void*& location) const;
 
-  [[nodiscard]] std::vector<CGame*> GetAllGames() const;
-  [[nodiscard]] std::vector<CGame*> GetJoinableGames() const;
+  [[nodiscard]] std::vector<std::shared_ptr<CGame>> GetAllGames() const;
+  [[nodiscard]] std::vector<std::shared_ptr<CGame>> GetJoinableGames() const;
 
   [[nodiscard]] bool MergePendingLobbies();
-  void TrackGameJoinInProgress(CGame* game);
-  void UntrackGameJoinInProgress(CGame* game);
+  void TrackGameJoinInProgress(std::shared_ptr<CGame> game);
+  void UntrackGameJoinInProgress(std::shared_ptr<CGame> game);
 
   bool QueueConfigReload(std::shared_ptr<CCommandContext> nCtx);
 
@@ -207,9 +207,9 @@ public:
 
   void EventBNETGameRefreshSuccess(CRealm* realm);
   void EventBNETGameRefreshError(CRealm* realm);
-  void EventGameDeleted(CGame* game);
-  void EventGameRemake(CGame* game);
-  void EventGameStarted(CGame* game);
+  void EventGameDeleted(std::shared_ptr<CGame> game);
+  void EventGameRemake(std::shared_ptr<CGame> game);
+  void EventGameStarted(std::shared_ptr<CGame> game);
 
   // other functions
 

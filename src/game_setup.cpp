@@ -1215,8 +1215,8 @@ void CGameSetup::OnLoadMapSuccess()
       return;
 	}*/
     SetBaseName(m_MapReadyCallbackData);
-    CGame* sourceGame = m_Ctx->GetSourceGame();
-    CGame* targetGame = m_Ctx->GetTargetGame();
+    shared_ptr<CGame> sourceGame = m_Ctx->GetSourceGame();
+    shared_ptr<CGame> targetGame = m_Ctx->GetTargetGame();
     if (targetGame && !targetGame->GetCountDownStarted() && targetGame->GetIsReplaceable() && !targetGame->GetIsBeingReplaced()) {
       targetGame->SendAllChat("Another lobby is being created. This lobby will be closed soon.");
       targetGame->StartGameOverTimer();
@@ -1227,6 +1227,8 @@ void CGameSetup::OnLoadMapSuccess()
     if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
       SetOwner(m_Ctx->GetSender(), sourceRealm);
     }
+    /*
+    // TODO: SetCreator
     if (sourceGame) {
       SetCreator(m_Ctx->GetSender(), sourceGame);
     } else if (sourceRealm) {
@@ -1240,6 +1242,7 @@ void CGameSetup::OnLoadMapSuccess()
     } else {
       SetCreator(m_Ctx->GetSender());
     }
+    */
     RunHost();
   }
 }
@@ -1446,6 +1449,8 @@ void CGameSetup::SetOwner(const string& nOwner, const CRealm* nRealm)
   }
 }
 
+/*
+TODO: SetCreator
 void CGameSetup::SetCreator(const string& nCreator)
 {
   m_CreatedBy = nCreator;
@@ -1481,6 +1486,7 @@ void CGameSetup::SetCreator(const string& nCreator, CDiscord* nDiscord)
   m_CreatedFrom = reinterpret_cast<void*>(nDiscord);
   m_CreatedFromType = SERVICE_TYPE_DISCORD;
 }
+*/
 
 void CGameSetup::RemoveCreator()
 {
@@ -1633,7 +1639,8 @@ void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
     }
   }
   if (mpName.has_value()) {
-    SetCreator(mpName.value());
+    //TODO: SetCreator
+    //SetCreator(mpName.value());
   }
   if (nCLI->m_GameOwner.has_value()) {
     pair<string, string> owner = SplitAddress(nCLI->m_GameOwner.value());

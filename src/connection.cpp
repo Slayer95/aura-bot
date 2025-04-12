@@ -131,7 +131,7 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               break;
             }
             DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
-            CGame* targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
+            shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
             if (!targetLobby) {
               delete joinRequest;
               break;

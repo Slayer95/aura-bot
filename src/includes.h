@@ -62,6 +62,7 @@
 
 #include <array>
 #include <bitset>
+#include <functional>
 #include <string>
 #include <map>
 #include <queue>

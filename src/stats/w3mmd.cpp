@@ -58,7 +58,7 @@ using namespace std;
 // CW3MMDAction
 //
 
-CW3MMDAction::CW3MMDAction(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
+CW3MMDAction::CW3MMDAction(shared_ptr<CGame> nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
   : m_Ticks(nGame->GetEffectiveTicks()),
     m_UpdateID(nID),
     m_Type(nType),
@@ -77,7 +77,7 @@ CW3MMDAction::~CW3MMDAction()
 // CW3MMDDefinition
 //
 
-CW3MMDDefinition::CW3MMDDefinition(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
+CW3MMDDefinition::CW3MMDDefinition(shared_ptr<CGame> nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType, uint8_t nSID)
   : m_Ticks(nGame->GetEffectiveTicks()),
     m_UpdateID(nID),
     m_Type(nType),
@@ -96,8 +96,8 @@ CW3MMDDefinition::~CW3MMDDefinition()
 // CW3MMD
 //
 
-CW3MMD::CW3MMD(CGame *nGame)
-  : m_Game(nGame),
+CW3MMD::CW3MMD(shared_ptr<CGame> nGame)
+  : m_Game(ref(*nGame)),
     m_GameOver(false),
     m_Error(false),
     m_Version(0),
@@ -111,6 +111,11 @@ CW3MMD::CW3MMD(CGame *nGame)
 
 CW3MMD::~CW3MMD()
 {
+}
+
+shared_ptr<CGame> CW3MMD::GetGame()
+{
+  return m_Game.get().shared_from_this();
 }
 
 bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Tokens)
@@ -141,9 +146,9 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       optional<uint32_t> SID = ToUint32(Tokens[2]);
       if (!SID.has_value()) return false;
 
-      CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, (uint8_t)*SID);
-      if (m_Game->m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_CENSOR_MAY_DESYNC) {
-        def->SetName(CIncomingJoinRequest::CensorName(Tokens[3], m_Game->m_Config.m_PipeConsideredHarmful));
+      CW3MMDDefinition* def = new CW3MMDDefinition(GetGame(), fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, (uint8_t)*SID);
+      if (m_Game.get().m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_CENSOR_MAY_DESYNC) {
+        def->SetName(CIncomingJoinRequest::CensorName(Tokens[3], m_Game.get().m_Config.m_PipeConsideredHarmful));
       } else {
         def->SetName(Tokens[3]);
       }
@@ -166,7 +171,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "invalid DefVarP type [" + Tokens[2] + "] found, ignoring");
       return false;
     }
-    CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_VAR, subType);
+    CW3MMDDefinition* def = new CW3MMDDefinition(GetGame(), fromUID, valueID, MMD_DEFINITION_TYPE_VAR, subType);
     def->SetName(Tokens[1]);
     m_DefQueue.push(def);
   } else if (actionType == "VarP" && Tokens.size() == 5) {
@@ -191,7 +196,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "unknown VarP operation [" + Tokens[3] + "] found, ignoring");
       return false;
     }
-    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, (uint8_t)*SID);
+    CW3MMDAction* action = new CW3MMDAction(GetGame(), fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, (uint8_t)*SID);
     action->SetName(Tokens[2]);
     action->AddValue(Tokens[4]);
     m_ActionQueue.push(action);
@@ -226,7 +231,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       return false;
     }
 
-    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_FLAG, subType, (uint8_t)*SID);
+    CW3MMDAction* action = new CW3MMDAction(GetGame(), fromUID, valueID, MMD_ACTION_TYPE_FLAG, subType, (uint8_t)*SID);
     m_ActionQueue.push(action);
   } else if (actionType == "DefEvent" && Tokens.size() >= 4) {
     // Tokens[1] = name
@@ -243,7 +248,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       Print(GetLogPrefix() + "DefEvent [" + Tokens[2] + "] tokens missing, ignoring");
       return false;
     }
-    CW3MMDDefinition* def = new CW3MMDDefinition(m_Game, fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, (uint8_t)*arity);
+    CW3MMDDefinition* def = new CW3MMDDefinition(GetGame(), fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, (uint8_t)*arity);
     def->SetName(Tokens[1]);
     uint8_t i = 2;
     while (++i < Tokens.size()) {
@@ -253,7 +258,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   } else if (actionType == "Event" && Tokens.size() >= 2) {
     // Tokens[1] = name
     // Tokens[2..n+2] = arguments (where n is the # of arguments in the corresponding DefEvent)
-    CW3MMDAction* action = new CW3MMDAction(m_Game, fromUID, valueID, MMD_ACTION_TYPE_EVENT, 0);
+    CW3MMDAction* action = new CW3MMDAction(GetGame(), fromUID, valueID, MMD_ACTION_TYPE_EVENT, 0);
     uint8_t i = 1;
     action->SetName(Tokens[i]);    
     while (++i < Tokens.size()) {
@@ -263,9 +268,9 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   } else if (actionType == "Blank") {
     // ignore
   } else if (actionType == "Custom") {
-    LogMetaData(m_Game->GetEffectiveTicks(), "custom: " + JoinVector(Tokens, false));
+    LogMetaData(m_Game.get().GetEffectiveTicks(), "custom: " + JoinVector(Tokens, false));
   } else {
-    LogMetaData(m_Game->GetEffectiveTicks(), "unknown action type [" + actionType + "] found, ignoring");
+    LogMetaData(m_Game.get().GetEffectiveTicks(), "unknown action type [" + actionType + "] found, ignoring");
   }
   return true;
 }
@@ -315,7 +320,7 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
   if (definition->GetType() == MMD_DEFINITION_TYPE_INIT) {
     if (definition->GetSubType() == MMD_INIT_TYPE_PLAYER) { // "pid"
       const uint8_t SID = definition->GetSID();
-      const CGameController* controllerData = m_Game->GetGameControllerFromSID(SID);
+      const CGameController* controllerData = m_Game.get().GetGameControllerFromSID(SID);
       if (!controllerData) {
         Print(GetLogPrefix() + "cannot initialize player slot " + ToDecString(SID));
         return false;
@@ -337,7 +342,7 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
         );
       }
       
-      if (!found && m_SIDToName.size() >= m_Game->GetNumControllers()) {
+      if (!found && m_SIDToName.size() >= m_Game.get().GetNumControllers()) {
         Print(GetLogPrefix() + "too many players initialized");
         return false;
       }
@@ -530,8 +535,8 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
 
 bool CW3MMD::UpdateQueue()
 {
-  const int64_t gameTicks = m_Game->GetEffectiveTicks();
-  if (m_Game->GetIsPaused()) return true;
+  const int64_t gameTicks = m_Game.get().GetEffectiveTicks();
+  if (m_Game.get().GetIsPaused()) return true;
   if (gameTicks < MMD_PROCESSING_INITIAL_DELAY) return true;
   while (!m_DefQueue.empty()) {
     CW3MMDDefinition* def = m_DefQueue.front();
@@ -635,7 +640,7 @@ string CW3MMD::GetStoredPlayerName(uint8_t SID) const
 string CW3MMD::GetTrustedPlayerNameFromColor(uint8_t color) const
 {
   string playerName;
-  CGameController* controllerData = m_Game->GetGameControllerFromColor(color);
+  CGameController* controllerData = m_Game.get().GetGameControllerFromColor(color);
   if (controllerData) {
     playerName = controllerData->GetName();
   } else {
@@ -659,7 +664,7 @@ GameResultTeamAnalysis CW3MMD::GetGameResultTeamAnalysis() const
   GameResultTeamAnalysis analysis;
 
   for (const auto& entry : m_SIDToName) {
-    CGameController* controllerData = m_Game->GetGameControllerFromSID(entry.first);
+    CGameController* controllerData = m_Game.get().GetGameControllerFromSID(entry.first);
     const auto& match = m_GameResults.find(entry.first);
     bitset<MAX_SLOTS_MODERN>* targetBitSet = nullptr;
     if (match == m_GameResults.end()) {
@@ -709,7 +714,7 @@ optional<GameResults> CW3MMD::GetGameResults(const GameResultConstraints& constr
   GameResultTeamAnalysis teamAnalysis = GetGameResultTeamAnalysis();
 
   for (const auto& entry : m_SIDToName) {
-    CGameController* controllerData = m_Game->GetGameControllerFromSID(entry.first);
+    CGameController* controllerData = m_Game.get().GetGameControllerFromSID(entry.first);
     /*
     if (!controllerData || controllerData->GetIsObserver()) {
       continue;
@@ -719,7 +724,7 @@ optional<GameResults> CW3MMD::GetGameResults(const GameResultConstraints& constr
     vector<CGameController*>* resultGroup = nullptr;
     uint8_t result = GAME_RESULT_UNDECIDED;
     if (match == m_GameResults.end()) {
-      result = m_Game->ResolveUndecidedController(controllerData, constraints, teamAnalysis);
+      result = m_Game.get().ResolveUndecidedController(controllerData, constraints, teamAnalysis);
     } else {
       result = match->second;
     }
@@ -744,10 +749,10 @@ optional<GameResults> CW3MMD::GetGameResults(const GameResultConstraints& constr
 
 string CW3MMD::GetLogPrefix() const
 {
-  return "[W3MMD: " + m_Game->GetGameName() + "] ";
+  return "[W3MMD: " + m_Game.get().GetGameName() + "] ";
 }
 
 void CW3MMD::LogMetaData(int64_t gameTicks, const string& text) const
 {
-  m_Game->Log(text, gameTicks);
+  m_Game.get().Log(text, gameTicks);
 }

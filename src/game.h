@@ -74,7 +74,7 @@
  Controller: Any of user, fake user, or AI, that does not occupy an observer slot.
  */
 
-class CGame
+class CGame : public std::enable_shared_from_this<CGame>
 {
 public:
   CAura* m_Aura;

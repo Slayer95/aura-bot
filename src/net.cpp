@@ -102,7 +102,7 @@ bool CGameTestConnection::GetIsRealmListed() const
 
 uint32_t CGameTestConnection::GetHostCounter() const
 {
-  const CGame* lobby = m_Aura->GetLobbyByHostCounterExact(m_BaseHostCounter);
+  const shared_ptr<CGame> lobby = m_Aura->GetLobbyByHostCounterExact(m_BaseHostCounter);
   if (lobby && lobby->GetIsMirror()) {
     return m_BaseHostCounter;
   }
@@ -135,7 +135,7 @@ bool CGameTestConnection::QueryGameInfo()
     return false;
   }
 
-  const CGame* lobby = m_Aura->GetLobbyByHostCounterExact(m_BaseHostCounter);
+  const shared_ptr<CGame> lobby = m_Aura->GetLobbyByHostCounterExact(m_BaseHostCounter);
   if (!lobby || (!lobby->GetIsLobbyStrict() && !lobby->GetIsMirror())) {
     return false;
   }
@@ -703,7 +703,7 @@ void CNet::UpdateMapTransfers()
   m_TransferredMapBytesThisUpdate = 0;
 
   uint32_t downloadersCount = 0;
-  multiset<const CGame*> downloadersCountByGame;
+  multiset<shared_ptr<const CGame>> downloadersCountByGame;
   UserList downloaderPlayers;
   ObserverList downloaderObservers;
 
@@ -1272,7 +1272,7 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
 }
 #endif
 
-bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t checkMode, CRealm* targetRealm, const CGame* game)
+bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t checkMode, CRealm* targetRealm, shared_ptr<const CGame> game)
 {
   if (m_Aura->m_ExitingSoon || m_HealthCheckInProgress) {
     return false;
@@ -1927,7 +1927,7 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
   seeker->Init();
 }
 
-void CNet::OnGameReset(const CGame* game)
+void CNet::OnGameReset(shared_ptr<const CGame> game)
 {
   for (auto& serverConnections : m_GameObservers) {
     for (auto& connection : serverConnections.second) {

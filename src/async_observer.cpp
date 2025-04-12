@@ -45,7 +45,7 @@ using namespace std;
 // CAsyncObserver
 //
 
-CAsyncObserver::CAsyncObserver(CGame* nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const string& nName)
+CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const string& nName)
   : CConnection(*nConnection),
     m_Game(nGame),
     m_GameHistory(nGame->GetGameHistory()),
@@ -212,7 +212,12 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
 
             case GameProtocol::Magic::MAPSIZE: {
-              if (m_MapReady || !m_Game || m_Game->GetIsGameOver()) {
+              if (m_MapReady) {
+                // Protection against rogue clients
+                break;
+              }
+              shared_ptr<CGame> game = m_Game.lock();
+              if (!game || game->GetIsGameOver()) {
                 // Protection against rogue clients
                 break;
               }
@@ -220,7 +225,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               CIncomingMapFileSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
 
               if (MapSize) {
-                m_Game->EventObserverMapSize(this, MapSize);
+                game->EventObserverMapSize(this, MapSize);
               }
 
               delete MapSize;
@@ -243,7 +248,8 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
         case GPSProtocol::Magic::GPS_HEADER: {
           // GProxy unsupported for observers
-          if (/*m_Game && m_Game->GetIsProxyReconnectable() && */Bytes[1] == GPSProtocol::Magic::INIT) {
+          //shared_ptr<CGame> game = m_Game.lock();
+          if (/*game && game->GetIsProxyReconnectable() && */Bytes[1] == GPSProtocol::Magic::INIT) {
             Print(GetLogPrefix() + "client started GProxy handshake ");
           }
           break;
@@ -321,7 +327,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
 void CAsyncObserver::CheckGameOver()
 {
-  if (m_Game && !m_Game->GetIsGameOver()) return;
+  if (!m_Game.expired() && !m_Game.lock()->GetIsGameOver()) return;
   FlushGameFrames();
   if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
     m_PlaybackEnded = true;
@@ -394,10 +400,10 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
   return success;
 }
 
-void CAsyncObserver::OnGameReset(const CGame* nGame)
+void CAsyncObserver::OnGameReset(shared_ptr<const CGame> nGame)
 {
-  if (m_Game == nGame) {
-    m_Game = nullptr;
+  if (m_Game.lock() == nGame) {
+    m_Game.reset();
   }
 }
 
@@ -412,7 +418,7 @@ void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
 {
   if (!m_StateSynchronized) return;
 
-  if (m_Game && m_Game->GetSyncCounter() <= m_SyncCounter) {
+  if (!m_Game.expired() && m_Game.lock()->GetSyncCounter() <= m_SyncCounter) {
     string text = GetLogPrefix() + "incorrectly ahead of sync";
     Print(text);
     m_Aura->LogPersistent(text);
@@ -446,8 +452,8 @@ void CAsyncObserver::CheckClientGameState()
 
 void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression)
 {
-  if (!m_Game) return;
-  vector<uint8_t> slotInfo = m_Game->GetSlotInfo();
+  if (m_Game.expired()) return;
+  vector<uint8_t> slotInfo = m_Game.lock()->GetSlotInfo();
   constexpr static uint16_t fixedOffset = (
     2 /* W3GS type headers */ +
     2 /* W3GS packet byte size */ +
@@ -462,7 +468,8 @@ void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression
 
 uint8_t CAsyncObserver::NextSendMap()
 {
-  return m_Game->NextSendMap(this, GetUID(), GetMapTransfer()); 
+  if (m_Game.expired()) return MAP_TRANSFER_NONE;
+  return m_Game.lock()->NextSendMap(this, GetUID(), GetMapTransfer()); 
 }
 
 void CAsyncObserver::EventDesync()
@@ -476,10 +483,11 @@ void CAsyncObserver::EventDesync()
 
   if (!m_GameHistory->GetSoftDesynchronized()) {
     m_GameHistory->SetSoftDesynchronized();
-    if (m_Game) {
-      m_Aura->UntrackGameJoinInProgress(m_Game);
-      m_Game->AnnounceDecreateToRealms();
-      if (m_Game->GetUDPEnabled()) m_Game->SendGameDiscoveryDecreate();
+    if (!m_Game.expired()) {
+      shared_ptr<CGame> game = m_Game.lock();
+      m_Aura->UntrackGameJoinInProgress(game);
+      game->AnnounceDecreateToRealms();
+      if (game->GetUDPEnabled()) game->SendGameDiscoveryDecreate();
     }
   }
 
@@ -617,7 +625,7 @@ void CAsyncObserver::SendGameLoadedReport()
   hh = mm / 60;
   mm = mm % 60;
 
-  if (m_Game && !m_Game->GetIsGameOver()) {
+  if (!m_Game.expired() && !m_Game.lock()->GetIsGameOver()) {
     SendChat("Running spectator mode (delay is " + ToDurationString(hh, mm, ss) + ")");
   } else {
     SendChat("Watching replay");
@@ -652,6 +660,6 @@ void CAsyncObserver::SendProgressReport()
 
 string CAsyncObserver::GetLogPrefix() const
 {
-  if (m_Game) return m_Game->GetLogPrefix() + "[OBSERVER] [" + m_Name + "] ";
+  if (!m_Game.expired()) return m_Game.lock()->GetLogPrefix() + "[OBSERVER] [" + m_Name + "] ";
   return "[OBSERVER] [" + m_Name + "] ";
 }

@@ -108,7 +108,7 @@ bool CQueuedChatMessage::GetIsStale() const
   switch (m_Validator[0]) {
     case CHAT_VALIDATOR_LOBBY_JOINABLE: {
       if (m_Realm->GetIsGameBroadcastErrored()) return true;
-      CGame* refLobby = m_Realm->m_Aura->GetLobbyByHostCounterExact(ByteArrayToUInt32(m_Validator, false, 1));
+      shared_ptr<CGame> refLobby = m_Realm->m_Aura->GetLobbyByHostCounterExact(ByteArrayToUInt32(m_Validator, false, 1));
       if (!refLobby) return true;
       if (refLobby->GetIsExpansion() != m_Realm->GetGameIsExpansion()) return true;
       if (!refLobby->GetIsSupportedGameVersion(m_Realm->GetGameVersion())) return true;

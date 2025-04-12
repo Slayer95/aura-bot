@@ -41,8 +41,8 @@ public:
   CCommandConfig*               m_Config;
   CRealm*                       m_SourceRealm;
   CRealm*                       m_TargetRealm;
-  CGame*                        m_SourceGame;
-  CGame*                        m_TargetGame;
+  std::weak_ptr<CGame>          m_SourceGame;
+  std::weak_ptr<CGame>          m_TargetGame;
   GameUser::CGameUser*          m_GameUser;
   CIRC*                         m_IRC;
 #ifndef DISABLE_DPP
@@ -74,25 +74,25 @@ protected:
 
 public:
   // Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
   CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // IRC, IRC->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
 
 #ifndef DISABLE_DPP
   // Discord, Discord->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
 #endif
 
   // Arbitrary, Arbitrary->Game
   CCommandContext(CAura* nAura, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CGame* targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
 
   [[nodiscard]] inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; }
 
@@ -104,8 +104,8 @@ public:
   [[nodiscard]] inline const std::string& GetSender() const { return m_FromName; }
   [[nodiscard]] inline std::string GetChannelName() const { return m_ChannelName; }
   [[nodiscard]] inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
-  [[nodiscard]] inline CGame* GetSourceGame() const { return m_SourceGame; }
-  [[nodiscard]] inline CGame* GetTargetGame() const { return m_TargetGame; }
+  [[nodiscard]] inline std::shared_ptr<CGame> GetSourceGame() const { return m_SourceGame.lock(); }
+  [[nodiscard]] inline std::shared_ptr<CGame> GetTargetGame() const { return m_TargetGame.lock(); }
   [[nodiscard]] inline CIRC* GetSourceIRC() const { return m_IRC; }
 #ifndef DISABLE_DPP
   [[nodiscard]] inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
@@ -148,7 +148,7 @@ public:
   [[nodiscard]] CRealm* GetTargetRealmOrCurrent(const std::string& target);
   [[nodiscard]] bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool allowNoRealm = false, bool searchHistory = false);
   [[nodiscard]] uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
-  [[nodiscard]] CGame* GetTargetGame(const std::string& target);
+  [[nodiscard]] std::shared_ptr<CGame> GetTargetGame(const std::string& target);
   void UseImplicitReplaceable();
   void UseImplicitHostedGame();
   void Run(const std::string& token, const std::string& command, const std::string& payload);

@@ -34,8 +34,8 @@ using namespace std;
 // CGameVirtualUser
 //
 
-CGameVirtualUser::CGameVirtualUser(CGame* nGame, uint8_t nSID, uint8_t nUID, string nName)
-  : m_Game(nGame),
+CGameVirtualUser::CGameVirtualUser(shared_ptr<CGame> nGame, uint8_t nSID, uint8_t nUID, string nName)
+  : m_Game(ref(*nGame)),
     m_Observer(false),
     m_LeftMessageSent(false),
     m_HasPlayerIntent(false),
@@ -60,7 +60,7 @@ string CGameVirtualUser::GetLowerName() const
 
 string CGameVirtualUser::GetDisplayName(optional<bool> overrideLoaded) const
 {
-  if (overrideLoaded.value_or(m_Game->GetGameLoaded())) {
+  if (overrideLoaded.value_or(m_Game.get().GetGameLoaded())) {
     return m_Name;
   } else {
     // This information is important for letting hosts know which !open, !close, commands to execute.
@@ -75,7 +75,8 @@ bool CGameVirtualUser::GetCanPause() const
 
   // Referees can pause the game without limit.
   // Full observers can never pause the game.
-  return !m_Observer || m_Game->GetHasReferees();
+  if (!m_Observer) return true;
+  return !m_Observer || m_Game.get().GetHasReferees();
 }
 
 bool CGameVirtualUser::GetCanResume() const
@@ -83,7 +84,7 @@ bool CGameVirtualUser::GetCanResume() const
   if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_RESUME)) return false;
 
   // Referees can unpause the game, but full observers cannot.
-  return !m_Observer || m_Game->GetHasReferees();
+  return !m_Observer || m_Game.get().GetHasReferees();
 }
 
 bool CGameVirtualUser::GetCanSave() const
@@ -93,13 +94,13 @@ bool CGameVirtualUser::GetCanSave() const
 
   // Referees can save the game without limit.
   // Full observers can never save the game.
-  return !m_Observer || m_Game->GetHasReferees();
+  return !m_Observer || m_Game.get().GetHasReferees();
 }
 
 vector<uint8_t> CGameVirtualUser::GetPlayerInfoBytes(optional<bool> overrideLoaded) const
 {
   const array<uint8_t, 4> IP = {0, 0, 0, 0};
-  return GameProtocol::SEND_W3GS_PLAYERINFO(m_Game->GetVersion(), m_UID, GetDisplayName(overrideLoaded), IP, IP);
+  return GameProtocol::SEND_W3GS_PLAYERINFO(m_Game.get().GetVersion(), m_UID, GetDisplayName(overrideLoaded), IP, IP);
 }
 
 vector<uint8_t> CGameVirtualUser::GetGameLoadedBytes() const
@@ -115,5 +116,5 @@ vector<uint8_t> CGameVirtualUser::GetGameQuitBytes(const uint8_t leftCode) const
 void CGameVirtualUser::RefreshUID()
 {
   m_OldUID = m_UID;
-  m_UID = m_Game->GetNewUID();
+  m_UID = m_Game.get().GetNewUID();
 }

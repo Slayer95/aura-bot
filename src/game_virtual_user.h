@@ -35,7 +35,7 @@
 
 struct CGameVirtualUser
 {
-  CGame*                           m_Game;
+  std::reference_wrapper<CGame>    m_Game;
   bool                             m_Observer;                     // if the virtual player is an observer
   bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
   bool                             m_HasPlayerIntent;
@@ -56,7 +56,7 @@ struct CGameVirtualUser
   std::string                      m_LeftReason;                   // the reason the virtual player left the game
   std::string                      m_Name;                         // the virtual player's name
 
-  CGameVirtualUser(CGame* game, uint8_t nSID, uint8_t nUID, std::string nName);
+  CGameVirtualUser(std::shared_ptr<CGame> game, uint8_t nSID, uint8_t nUID, std::string nName);
   ~CGameVirtualUser() = default;
 
   [[nodiscard]] inline bool                     GetIsObserver() const { return m_Observer; }

@@ -65,9 +65,9 @@ using namespace GameUser;
 // CGameUser
 //
 
-CGameUser::CGameUser(CGame* nGame, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
+CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
   : CConnection(*connection),
-    m_Game(nGame),
+    m_Game(ref(*nGame)),
     m_IPv4Internal(std::move(nInternalIP)),
     m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
@@ -150,13 +150,13 @@ CGameUser::~CGameUser()
 {
   if (m_Socket) {
     if (!m_LeftMessageSent) {
-      Send(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), m_Game->GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : GetLeftCode()));
+      Send(GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(GetUID(), m_Game.get().GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : GetLeftCode()));
     }
     m_Socket->Flush();
     UnrefConnection();
   }
 
-  for (const auto& ptr : m_Game->m_Aura->m_ActiveContexts) {
+  for (const auto& ptr : m_Game.get().m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
     if (ctx && ctx->m_GameUser == this) {
       ctx->SetPartiallyDestroyed();
@@ -202,7 +202,7 @@ uint32_t CGameUser::GetDisplayRTT() const
 
 uint32_t CGameUser::GetRTT() const
 {
-  if (m_Game->m_Aura->m_Net.m_Config.m_LiteralRTT) {
+  if (m_Game.get().m_Aura->m_Net.m_Config.m_LiteralRTT) {
     return GetOperationalRTT();
   }
   return GetOperationalRTT() * 2;
@@ -236,7 +236,7 @@ string CGameUser::GetLowerName() const
 
 string CGameUser::GetDisplayName() const
 {
-  if (m_Game->GetIsHiddenPlayerNames() && !(m_Observer && m_Game->GetGameLoaded())) {
+  if (m_Game.get().GetIsHiddenPlayerNames() && !(m_Observer && m_Game.get().GetGameLoaded())) {
     if (m_PseudonymUID == 0xFF) {
       return "Player " + ToDecString(m_UID);
     } else {
@@ -247,10 +247,15 @@ string CGameUser::GetDisplayName() const
   return m_Name;
 }
 
+shared_ptr<CGame> CGameUser::GetGame()
+{
+  return m_Game.get().shared_from_this();
+}
+
 uint32_t CGameUser::GetPingEqualizerDelay() const
 {
-  if (!m_Game->GetGameLoaded()) return 0u;
-  return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game->GetActiveLatency());
+  if (!m_Game.get().GetGameLoaded()) return 0u;
+  return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game.get().GetActiveLatency());
 }
 
 CQueuedActionsFrame& CGameUser::GetPingEqualizerFrame()
@@ -265,7 +270,7 @@ void CGameUser::AdvanceActiveGameFrame()
 
 bool CGameUser::AddDelayPingEqualizerFrame()
 {
-  if (m_PingEqualizerFrameNode->next == m_Game->GetFirstActionFrameNode()) {
+  if (m_PingEqualizerFrameNode->next == m_Game.get().GetFirstActionFrameNode()) {
     return false;
   }
   m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->next;
@@ -275,7 +280,7 @@ bool CGameUser::AddDelayPingEqualizerFrame()
 
 bool CGameUser::SubDelayPingEqualizerFrame()
 {
-  if (m_PingEqualizerFrameNode == m_Game->GetFirstActionFrameNode()) {
+  if (m_PingEqualizerFrameNode == m_Game.get().GetFirstActionFrameNode()) {
     return false;
   }
   m_PingEqualizerFrameNode = m_PingEqualizerFrameNode->prev;
@@ -288,7 +293,7 @@ void CGameUser::ReleaseOnHoldActionsCount(size_t count)
   size_t doneCount = GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
   if (doneCount > 0 && GetHasAPMQuota()) {
     if (!GetAPMQuota().TryConsume(static_cast<double>(doneCount))) {
-      Print(m_Game->GetLogPrefix() + "[APMLimit] Malfunction detected - " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)");
+      Print(m_Game.get().GetLogPrefix() + "[APMLimit] Malfunction detected - " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)");
     }
   }
 }
@@ -302,14 +307,14 @@ void CGameUser::UpdateAPMQuota()
 {
   if (GetHasAPMQuota()) {
     // Note: Idempotent within the same game tick
-    GetAPMQuota().Refill(m_Game->GetEffectiveTicks());
+    GetAPMQuota().Refill(m_Game.get().GetEffectiveTicks());
   }
 }
 
 bool CGameUser::GetShouldHoldActionInner()
 {
-  if (m_Game->GetEffectiveTicks() < GetHandicapTicks()) return true;
-  if (m_Game->m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT && GetHasControlOverAnyAlliedUnits()) return true;
+  if (m_Game.get().GetEffectiveTicks() < GetHandicapTicks()) return true;
+  if (m_Game.get().m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT && GetHasControlOverAnyAlliedUnits()) return true;
   if (GetHasAPMQuota()) {
     UpdateAPMQuota();
     if (GetAPMQuota().GetCurrentCapacity() < 1.) return true;
@@ -357,7 +362,7 @@ CRealm* CGameUser::GetRealm(bool mustVerify) const
     return nullptr;
   }
 
-  return m_Game->m_Aura->GetRealmByInputId(m_Game->m_Aura->m_RealmsIdentifiers[m_RealmInternalId]);
+  return m_Game.get().m_Aura->GetRealmByInputId(m_Game.get().m_Aura->m_RealmsIdentifiers[m_RealmInternalId]);
 }
 
 string CGameUser::GetRealmDataBaseID(bool mustVerify) const
@@ -369,26 +374,26 @@ string CGameUser::GetRealmDataBaseID(bool mustVerify) const
 
 bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
 {
-  return m_Game->GetSyncCounter() > GetNormalSyncCounter() && m_Game->GetSyncCounter() - GetNormalSyncCounter() >= frameLimit;
+  return m_Game.get().GetSyncCounter() > GetNormalSyncCounter() && m_Game.get().GetSyncCounter() - GetNormalSyncCounter() >= frameLimit;
 }
 
 bool CGameUser::CloseConnection(bool fromOpen)
 {
   if (m_Disconnected) return false;
-  if (!m_Game->GetGameLoaded() || !m_GProxy) {
+  if (!m_Game.get().GetGameLoaded() || !m_GProxy) {
     TrySetEnding();
     DisableReconnect();
   }
   m_LastDisconnectTicks = GetTicks();
   m_Disconnected = true;
   m_Socket->Close();
-  m_Game->EventUserAfterDisconnect(this, fromOpen);
+  m_Game.get().EventUserAfterDisconnect(this, fromOpen);
   return true;
 }
 
 void CGameUser::UnrefConnection(bool deferred)
 {
-  m_Game->m_Aura->m_Net.OnUserKicked(this, deferred);
+  m_Game.get().m_Aura->m_Net.OnUserKicked(this, deferred);
 
   if (!m_Disconnected) {
     m_LastDisconnectTicks = GetTicks();
@@ -405,20 +410,20 @@ void CGameUser::ClearStalePings() {
 void CGameUser::RefreshUID()
 {
   m_OldUID = m_UID;
-  m_UID = m_Game->GetNewUID();
+  m_UID = m_Game.get().GetNewUID();
 }
 
 bool CGameUser::Update(fd_set* fd, int64_t timeout)
 {
   if (m_Disconnected) {
-    if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game->m_Aura->m_Net.m_Config.m_ReconnectWaitTicks) {
-      m_Game->EventUserKickGProxyExtendedTimeout(this);
+    if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game.get().m_Aura->m_Net.m_Config.m_ReconnectWaitTicks) {
+      m_Game.get().EventUserKickGProxyExtendedTimeout(this);
     }
     return m_DeleteMe;
   }
 
   if (m_Socket->HasError()) {
-    m_Game->EventUserDisconnectSocketError(this);
+    m_Game.get().EventUserDisconnectSocketError(this);
     return m_DeleteMe;
   }
 
@@ -445,7 +450,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
       // bytes 2 and 3 contain the length of the packet
       const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
       if (Length < 4) {
-        m_Game->EventUserDisconnectGameProtocolError(this, true);
+        m_Game.get().EventUserDisconnectGameProtocolError(this, true);
         Abort = true;
         break;
       }
@@ -463,10 +468,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           case GameProtocol::Magic::LEAVEGAME: {
             if (ValidateLength(Data) && Data.size() >= 8) {
               const uint32_t reason = ByteArrayToUInt32(Data, false, 4);
-              m_Game->EventUserLeft(this, reason);
+              m_Game.get().EventUserLeft(this, reason);
               m_Socket->SetLogErrors(false);
             } else {
-              m_Game->EventUserDisconnectGameProtocolError(this, false);
+              m_Game.get().EventUserDisconnectGameProtocolError(this, false);
             }
             Abort = true;
             break;
@@ -474,10 +479,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
           case GameProtocol::Magic::GAMELOADED_SELF:
             if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
-              if (m_Game->GetGameLoading() && !m_FinishedLoading) {
+              if (m_Game.get().GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
                 m_FinishedLoadingTicks = GetTicks();
-                m_Game->EventUserLoaded(this);
+                m_Game.get().EventUserLoaded(this);
               }
             }
 
@@ -486,8 +491,8 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           case GameProtocol::Magic::OUTGOING_ACTION: {
             if (ValidateLength(Data) && Data.size() >= 8) {
               CIncomingAction action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
-              if (!m_Game->EventUserIncomingAction(this, action)) {
-                m_Game->EventUserDisconnectGameProtocolError(this, false);
+              if (!m_Game.get().EventUserIncomingAction(this, action)) {
+                m_Game.get().EventUserDisconnectGameProtocolError(this, false);
                 Abort = true;
               } else if (m_Disconnected) {
                 Abort = true;
@@ -500,14 +505,14 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
-            if (m_SyncCounter >= m_Game->GetSyncCounter()) {
-              m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] incorrectly ahead of sync", LOG_C | LOG_P);
-              m_Game->EventUserDisconnectGameProtocolError(this, false);
+            if (m_SyncCounter >= m_Game.get().GetSyncCounter()) {
+              m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] incorrectly ahead of sync", LOG_C | LOG_P);
+              m_Game.get().EventUserDisconnectGameProtocolError(this, false);
               Abort = true;
             } else {
               m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
               ++m_SyncCounter;
-              m_Game->EventUserKeepAlive(this);
+              m_Game.get().EventUserKeepAlive(this);
             }
             break;
           }
@@ -516,7 +521,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             CIncomingChatMessage* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
             if (ChatPlayer) {
-              m_Game->EventUserChatToHost(this, ChatPlayer);
+              m_Game.get().EventUserChatToHost(this, ChatPlayer);
               delete ChatPlayer;
 
               if (m_Disconnected) {
@@ -527,22 +532,22 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::DROPREQ:
-            if (m_Game->GetIsLagging() && !m_DropVote) {
+            if (m_Game.get().GetIsLagging() && !m_DropVote) {
               m_DropVote = true;
-              m_Game->EventUserDropRequest(this);
+              m_Game.get().EventUserDropRequest(this);
             }
 
             break;
 
           case GameProtocol::Magic::MAPSIZE: {
-            if (m_MapReady || m_Game->GetGameLoading() || m_Game->GetGameLoaded()) {
+            if (m_MapReady || m_Game.get().GetGameLoading() || m_Game.get().GetGameLoaded()) {
               // Protection against rogue clients
               break;
             }
 
             CIncomingMapFileSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
             if (MapSize) {
-              m_Game->EventUserMapSize(this, MapSize);
+              m_Game.get().EventUserMapSize(this, MapSize);
             }
             delete MapSize;
             break;
@@ -551,9 +556,9 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           case GameProtocol::Magic::PONG_TO_HOST: {
             uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
 
-            const bool bufferBloatForbidden = m_Game->m_Aura->m_Net.m_Config.m_HasBufferBloat && m_Game->IsDownloading();
-            bool useSystemRTT = !m_Socket->GetIsLoopback() && m_Game->GetGameLoaded() && m_Game->m_Aura->m_Net.m_Config.m_UseSystemRTT;
-            const bool useLiteralRTT = m_Game->m_Aura->m_Net.m_Config.m_LiteralRTT;
+            const bool bufferBloatForbidden = m_Game.get().m_Aura->m_Net.m_Config.m_HasBufferBloat && m_Game.get().IsDownloading();
+            bool useSystemRTT = !m_Socket->GetIsLoopback() && m_Game.get().GetGameLoaded() && m_Game.get().m_Aura->m_Net.m_Config.m_UseSystemRTT;
+            const bool useLiteralRTT = m_Game.get().m_Aura->m_Net.m_Config.m_LiteralRTT;
 
             // discard pong values when anyone else is downloading if we're configured to do so
             if (!bufferBloatForbidden) {
@@ -581,7 +586,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               }
 
               if (useSystemRTT || Pong != 1) {
-                m_Game->EventUserPongToHost(this);
+                m_Game.get().EventUserPongToHost(this);
               }
 
               if (!GetIsRTTMeasuredConsistent()) {
@@ -595,40 +600,40 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::DESYNC: {
-            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::DESYNC", LOG_C | LOG_P);
+            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::DESYNC", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::GAME_OVER: {
-            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::GAME_OVER", LOG_C | LOG_P);
+            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::GAME_OVER", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::LEAVE_ACK: {
-            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::LEAVE_ACK", LOG_C | LOG_P);
+            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::LEAVE_ACK", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::CLIENT_INFO: {
-            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::CLIENT_INFO", LOG_C | LOG_P);
+            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::CLIENT_INFO", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::PEER_SET: {
-            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::PEER_SET", LOG_C | LOG_P);
+            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::PEER_SET", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::MAPPART_ERR: {
-            m_Game->LogApp(m_Game->GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_ERR", LOG_C | LOG_P);
+            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_ERR", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::PROTO_BUF: {
             // Serialized protocol buffers
             // TODO: Not sure how to handle PROTO_BUF in the most compatible way yet.
-            if (m_Game->GetIsSupportedGameVersion(GAMEVER(1u, 31u))) {
-              m_Game->SendAll(Data);
+            if (m_Game.get().GetIsSupportedGameVersion(GAMEVER(1u, 31u))) {
+              m_Game.get().SendAll(Data);
             } else {
               Send(Data);
             }
@@ -641,7 +646,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
         }
       }
-      else if (Bytes[0] == GPSProtocol::Magic::GPS_HEADER && m_Game->GetIsProxyReconnectable()) {
+      else if (Bytes[0] == GPSProtocol::Magic::GPS_HEADER && m_Game.get().GetIsProxyReconnectable()) {
         if (Bytes[1] == GPSProtocol::Magic::ACK && Length == 8) {
           const size_t LastPacket               = ByteArrayToUInt32(Data, false, 4);
           const size_t PacketsAlreadyUnqueued   = m_TotalPacketsSent - m_GProxyBuffer.size();
@@ -662,12 +667,12 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
         } else if (Bytes[1] == GPSProtocol::Magic::INIT) {
           InitGProxy(Length >= 8 ? ByteArrayToUInt32(Bytes, false, 4) : 0);
         } else if (Bytes[1] == GPSProtocol::Magic::SUPPORT_EXTENDED && Length >= 8) {
-          if (m_GProxy && m_Game->GetIsProxyReconnectableLong()) {
+          if (m_GProxy && m_Game.get().GetIsProxyReconnectableLong()) {
             ConfirmGProxyExtended(Data);
           }
         } else if (Bytes[1] == GPSProtocol::Magic::CHANGEKEY && Length >= 8) {
           m_GProxyReconnectKey = ByteArrayToUInt32(Bytes, false, 4);
-          Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
+          Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
         }
       }
 
@@ -690,7 +695,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     // if we don't receive anything from a player for 70 seconds (20 seconds if reconnectable) we can assume they've dropped
     // this works because in the lobby we send pings every 5 seconds and expect a response to each one
     // and in the game the Warcraft 3 client sends keepalives frequently (at least once per second it looks like)
-    m_Game->EventUserDisconnectTimedOut(this);
+    m_Game.get().EventUserDisconnectTimedOut(this);
     if (m_Disconnected) {
       if (m_DeleteMe) {
         m_Socket->Discard(fd);
@@ -706,20 +711,20 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     // try to find out why we're requesting deletion
     // in cases other than the ones covered here m_LeftReason should have been set when m_DeleteMe was set
     if (m_Socket->HasError()) {
-      m_Game->EventUserDisconnectSocketError(this);
+      m_Game.get().EventUserDisconnectSocketError(this);
     } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
-      m_Game->EventUserDisconnectConnectionClosed(this);
+      m_Game.get().EventUserDisconnectConnectionClosed(this);
     } else if (m_KickByTicks.has_value() && m_KickByTicks.value() < Ticks) {
-      m_Game->EventUserKickHandleQueued(this);
-    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Ticks - m_JoinTicks >= GAME_USER_UNVERIFIED_KICK_TICKS && m_Game->GetIsLobbyStrict()) {
+      m_Game.get().EventUserKickHandleQueued(this);
+    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Ticks - m_JoinTicks >= GAME_USER_UNVERIFIED_KICK_TICKS && m_Game.get().GetIsLobbyStrict()) {
       CRealm* Realm = GetRealm(false);
       if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
-        m_Game->EventUserKickUnverified(this);
+        m_Game.get().EventUserKickUnverified(this);
       }
     }
 
     if (!m_StatusMessageSent && m_CheckStatusByTicks < Ticks) {
-      m_Game->EventUserCheckStatus(this);
+      m_Game.get().EventUserCheckStatus(this);
     }
   }
 
@@ -735,14 +740,14 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Ticks - m_JoinTicks >= AUTO_REALM_VERIFY_LATENCY) {
       CRealm* Realm = GetRealm(false);
       if (Realm) {
-        if (m_Game->GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
-          if (m_Game->GetSentPriorityWhois()) {
+        if (m_Game.get().GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
+          if (m_Game.get().GetSentPriorityWhois()) {
             Realm->QueuePriorityWhois("/whois " + m_Name);
-            m_Game->SetSentPriorityWhois(true);
+            m_Game.get().SetSentPriorityWhois(true);
           } else {
             Realm->QueueCommand("/whois " + m_Name);
           }
-        } else if (m_Game->GetDisplayMode() == GAME_PRIVATE) {
+        } else if (m_Game.get().GetDisplayMode() == GAME_PRIVATE) {
           Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
         }
       }
@@ -756,9 +761,9 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
   }
   if (m_Socket) {
     if (m_Socket->HasError()) {
-      m_Game->EventUserDisconnectSocketError(this);
+      m_Game.get().EventUserDisconnectSocketError(this);
     } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
-      m_Game->EventUserDisconnectConnectionClosed(this);
+      m_Game.get().EventUserDisconnectConnectionClosed(this);
     }
     return m_DeleteMe;
   }
@@ -768,7 +773,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
 uint8_t CGameUser::NextSendMap()
 {
-  return m_Game->NextSendMap(this, GetUID(), GetMapTransfer());
+  return m_Game.get().NextSendMap(this, GetUID(), GetMapTransfer());
 }
 
 void CGameUser::Send(const std::vector<uint8_t>& data)
@@ -779,7 +784,7 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
 
   ++m_TotalPacketsSent;
 
-  if (m_GProxy && m_Game->GetGameLoaded())
+  if (m_GProxy && m_Game.get().GetGameLoaded())
     m_GProxyBuffer.push(data);
 
   if (!m_Disconnected && !m_Socket->HasError()) {
@@ -798,9 +803,9 @@ void CGameUser::InitGProxy(const uint32_t version)
   // this means that if Aura is behind a reverse proxy,
   // this port should match its publicly visible port
   if (realm) {
-    m_GProxyPort = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : m_Game->GetHostPort();
+    m_GProxyPort = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : m_Game.get().GetHostPort();
   } else if (m_RealmInternalId == 0) {
-    m_GProxyPort = m_Game->m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Game->m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_Game->GetHostPort();
+    m_GProxyPort = m_Game.get().m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Game.get().m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_Game.get().GetHostPort();
   } else {
     m_GProxyPort = 6112;
   }
@@ -808,7 +813,7 @@ void CGameUser::InitGProxy(const uint32_t version)
   UpdateGProxyEmptyActions();
   CheckGProxyExtendedStartHandShake();
 
-  Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
+  Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
 }
 
 void CGameUser::ConfirmGProxyExtended(const vector<uint8_t>& data)
@@ -816,28 +821,28 @@ void CGameUser::ConfirmGProxyExtended(const vector<uint8_t>& data)
   m_GProxyExtended = true;
   if (data.size() >= 12) {
     m_GProxyCheckGameID = true;
-    Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
+    Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
   } else {
-    Print(m_Game->GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
+    Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
   }
 }
 
 double CGameUser::GetAPM() const
 {
-  if (m_Game->GetEffectiveTicks() == 0) return 0.;
-  return static_cast<double>(m_ActionCounter) * 60000. / m_Game->GetEffectiveTicks();
+  if (m_Game.get().GetEffectiveTicks() == 0) return 0.;
+  return static_cast<double>(m_ActionCounter) * 60000. / m_Game.get().GetEffectiveTicks();
 }
 
 double CGameUser::GetRecentAPM() const
 {
-  if (m_Game->GetEffectiveTicks() == 0) return 0.;
+  if (m_Game.get().GetEffectiveTicks() == 0) return 0.;
   uint32_t weightedSum = m_RecentActionCounter[0] * 24 + m_RecentActionCounter[1] * 36 + m_RecentActionCounter[1] * 60;
   return static_cast<double>(weightedSum) / 10.;
 }
 
 double CGameUser::GetMostRecentAPM() const
 {
-  if (m_Game->GetEffectiveTicks() == 0) return 0.;
+  if (m_Game.get().GetEffectiveTicks() == 0) return 0.;
   return static_cast<double>(m_RecentActionCounter[2]) * 12.;
 }
 
@@ -848,13 +853,13 @@ void CGameUser::RestrictAPM(double apm, double burstActions)
 
 void CGameUser::UpdateGProxyEmptyActions() const
 {
-  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game->GetGProxyEmptyActions()));
+  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game.get().GetGProxyEmptyActions()));
 }
 
 void CGameUser::CheckGProxyExtendedStartHandShake() const
 {
-  if (m_GProxyVersion >= 2 && m_Game->GetIsProxyReconnectableLong()) {
-    m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game->m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game->GetGameID())));
+  if (m_GProxyVersion >= 2 && m_Game.get().GetIsProxyReconnectableLong()) {
+    m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game.get().m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game.get().GetGameID())));
   }
 }
 
@@ -909,9 +914,9 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
   if (m_LastDisconnectTicks.has_value()) {
     m_TotalDisconnectTicks += GetTicks() - m_LastDisconnectTicks.value();
   }
-  m_Game->SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
-  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
-    Print(m_Game->GetLogPrefix() + "user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
+  m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
+  if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
+    Print(m_Game.get().GetLogPrefix() + "user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
   }
 }
 
@@ -952,15 +957,15 @@ string CGameUser::GetDelayText(bool displaySync) const
       pingText = "*" + to_string(rtt);
     }
     if (equalizerDelay > 0) {
-      if (!m_Game->m_Aura->m_Net.m_Config.m_LiteralRTT) equalizerDelay /= 2;
+      if (!m_Game.get().m_Aura->m_Net.m_Config.m_LiteralRTT) equalizerDelay /= 2;
       pingText += "(" + to_string(equalizerDelay) + ")";
     }
   }
-  if (!displaySync || !m_Game->GetGameLoaded() || GetNormalSyncCounter() >= m_Game->GetSyncCounter()) {
+  if (!displaySync || !m_Game.get().GetGameLoaded() || GetNormalSyncCounter() >= m_Game.get().GetSyncCounter()) {
     if (anyPings) return pingText + "ms";
     return pingText;
   }
-  float syncDelay = static_cast<float>(m_Game->GetActiveLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
+  float syncDelay = static_cast<float>(m_Game.get().GetActiveLatency()) * static_cast<float>(m_Game.get().GetSyncCounter() - GetNormalSyncCounter());
 
   if (m_SyncCounterOffset == 0) {
     // Expect clients to always be at least one RTT behind.
@@ -990,17 +995,17 @@ string CGameUser::GetReconnectionText() const
 
 string CGameUser::GetSyncText() const
 {
-  if (!m_Game->GetGameLoaded() || GetSyncCounter() >= m_Game->GetSyncCounter()) {
+  if (!m_Game.get().GetGameLoaded() || GetSyncCounter() >= m_Game.get().GetSyncCounter()) {
     return string();
   }
   bool isNormalized = m_SyncCounterOffset > 0;
   string behindTimeText;
-  if (GetNormalSyncCounter() < m_Game->GetSyncCounter()) {
-    float normalSyncDelay = static_cast<float>(m_Game->GetActiveLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetNormalSyncCounter());
+  if (GetNormalSyncCounter() < m_Game.get().GetSyncCounter()) {
+    float normalSyncDelay = static_cast<float>(m_Game.get().GetActiveLatency()) * static_cast<float>(m_Game.get().GetSyncCounter() - GetNormalSyncCounter());
     behindTimeText = ToFormattedString(normalSyncDelay / 1000) + "s behind";
   }
-  if (isNormalized && GetSyncCounter() < m_Game->GetSyncCounter()) {
-    float totalSyncDelay = static_cast<float>(m_Game->GetActiveLatency()) * static_cast<float>(m_Game->GetSyncCounter() - GetSyncCounter());
+  if (isNormalized && GetSyncCounter() < m_Game.get().GetSyncCounter()) {
+    float totalSyncDelay = static_cast<float>(m_Game.get().GetActiveLatency()) * static_cast<float>(m_Game.get().GetSyncCounter() - GetSyncCounter());
     if (behindTimeText.empty()) {
       behindTimeText += ToFormattedString(totalSyncDelay / 1000) + "s behind unnormalized";
     } else {
@@ -1021,8 +1026,8 @@ bool CGameUser::CheckSudoMode()
   if (GetIsSudoMode()) return true;
   if (m_SudoMode.has_value()) {
     m_SudoMode = nullopt;
-    if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print(m_Game->GetLogPrefix() + "sudo session expired for [" + m_Name + "]");
+    if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+      Print(m_Game.get().GetLogPrefix() + "sudo session expired for [" + m_Name + "]");
     }
   }
   return false;
@@ -1030,8 +1035,8 @@ bool CGameUser::CheckSudoMode()
 
 void CGameUser::SudoModeStart()
 {
-  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-    Print(m_Game->GetLogPrefix() + "sudo session started by [" + m_Name + "]");
+  if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    Print(m_Game.get().GetLogPrefix() + "sudo session started by [" + m_Name + "]");
   }
   m_SudoMode = GetTime() + 600;
 }
@@ -1041,22 +1046,22 @@ void CGameUser::SudoModeEnd()
   if (!GetIsSudoMode()) {
     return;
   }
-  if (m_Game->m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-    Print(m_Game->GetLogPrefix() + "sudo session ended by [" + m_Name + "]");
+  if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    Print(m_Game.get().GetLogPrefix() + "sudo session ended by [" + m_Name + "]");
   }
   m_SudoMode = nullopt;
 }
 
 bool CGameUser::GetIsNativeReferee() const
 {
-  return m_Observer && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
+  return m_Observer && m_Game.get().GetMap()->GetMapObservers() == MAPOBS_REFEREES;
 }
 
 bool CGameUser::GetCanUsePublicChat() const
 {
   if (GetIsInLoadingScreen()) return false;
-  if (!m_Observer || m_PowerObserver || (!m_Game->GetGameLoading() && !m_Game->GetGameLoaded())) return true;
-  return !m_Game->GetUsesCustomReferees() && m_Game->GetMap()->GetMapObservers() == MAPOBS_REFEREES;
+  if (!m_Observer || m_PowerObserver || (!m_Game.get().GetGameLoading() && !m_Game.get().GetGameLoaded())) return true;
+  return !m_Game.get().GetUsesCustomReferees() && m_Game.get().GetMap()->GetMapObservers() == MAPOBS_REFEREES;
 }
 
 bool CGameUser::Mute(const int64_t seconds)
@@ -1085,7 +1090,7 @@ bool CGameUser::GetIsOwner(optional<bool> assumeVerified) const
   } else {
     isVerified = IsRealmVerified();
   }
-  return m_Game->MatchOwnerName(m_Name) && m_RealmHostName == m_Game->GetOwnerRealm() && (
+  return m_Game.get().MatchOwnerName(m_Name) && m_RealmHostName == m_Game.get().GetOwnerRealm() && (
     isVerified || m_RealmHostName.empty()
   );
 }
@@ -1099,17 +1104,17 @@ bool CGameUser::UpdateReady()
   if (!m_MapReady) {
     return m_Ready;
   }
-  switch (m_Game->GetPlayersReadyMode()) {
+  switch (m_Game.get().GetPlayersReadyMode()) {
     case READY_MODE_FAST:
       m_Ready = true;
       break;
     case READY_MODE_EXPECT_RACE:
-      if (m_Game->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
+      if (m_Game.get().GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
         m_Ready = true;
-      } else if (m_Game->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+      } else if (m_Game.get().GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
         m_Ready = true;
       } else {
-        const CGameSlot* slot = m_Game->InspectSlot(m_Game->GetSIDFromUID(GetUID()));
+        const CGameSlot* slot = m_Game.get().InspectSlot(m_Game.get().GetSIDFromUID(GetUID()));
         if (slot) {
           m_Ready = slot->GetRaceFixed() != SLOTRACE_RANDOM;
         } else {

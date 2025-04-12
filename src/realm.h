@@ -67,8 +67,8 @@ private:
   CTCPClient*                      m_Socket;                    // the connection to battle.net
   CBNCSUtilInterface*              m_BNCSUtil;                  // the interface to the bncsutil library (used for logging into battle.net)
 
-  CGame*                           m_GameBroadcast;
-  CGame*                           m_GameBroadcastPending;
+  std::weak_ptr<CGame>             m_GameBroadcast;
+  std::weak_ptr<CGame>             m_GameBroadcastPending;
   bool                             m_GameIsExpansion;
   Version                          m_GameVersion;
   Version                          m_AuthGameVersion;
@@ -142,9 +142,9 @@ public:
   inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
-  inline bool                             GetGameBroadcastIsPending() const { return m_GameBroadcastPending != nullptr; }
-  inline CGame*                           GetGameBroadcastPending() const { return m_GameBroadcastPending; }
-  inline CGame*                           GetGameBroadcast() const { return m_GameBroadcast; }
+  inline bool                             GetGameBroadcastIsPending() const { return m_GameBroadcastPending.lock() != nullptr; }
+  inline std::shared_ptr<CGame>           GetGameBroadcastPending() const { return m_GameBroadcastPending.lock(); }
+  inline std::shared_ptr<CGame>           GetGameBroadcast() const { return m_GameBroadcast.lock(); }
   inline bool                             GetGameIsExpansion() const { return m_GameIsExpansion; }
   inline const Version&                   GetGameVersion() const { return m_GameVersion; }
   inline const Version&                   GetAuthGameVersion() const { return m_AuthGameVersion; }
@@ -169,7 +169,7 @@ public:
   std::string                             GetLogPrefix() const;
   std::optional<Version>                  GetExpectedGameVersion() const;
   bool                                    ResolveGameVersion();
-  std::optional<bool>                     GetIsGameVersionCompatible(const CGame* game) const;
+  std::optional<bool>                     GetIsGameVersionCompatible(std::shared_ptr<const CGame> game) const;
   inline uint8_t       GetHostCounterID() const { return m_PublicServerID; }
   inline uint32_t      GetInternalID() const { return m_InternalServerID; }
   std::string          GetLoginName() const;
@@ -232,10 +232,10 @@ public:
   CQueuedChatMessage* QueueChatChannel(const std::string& message, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   CQueuedChatMessage* QueueChatReply(const uint8_t messageValue, const std::string& message, const std::string& user, const uint8_t selector, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   CQueuedChatMessage* QueueWhisper(const std::string& message, const std::string& user, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
-  CQueuedChatMessage* QueueGameChatAnnouncement(const CGame* game, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
+  CQueuedChatMessage* QueueGameChatAnnouncement(std::shared_ptr<const CGame> game, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   void TryQueueChat(const std::string& chatCommand, const std::string& user, bool isPrivate, std::shared_ptr<CCommandContext> ctx = nullptr, const uint8_t ctxFlags = 0);
-  void TryQueueGameChatAnnouncement(const CGame* game);
-  void SendGameRefresh(const uint8_t displayMode, CGame* game);
+  void TryQueueGameChatAnnouncement(std::shared_ptr<const CGame> game);
+  void SendGameRefresh(const uint8_t displayMode, std::shared_ptr<CGame> game);
   void QueueGameUncreate();
   void TrySendEnterChat();
   void TrySendGetGamesList();
@@ -245,8 +245,8 @@ public:
   void ResolveGameBroadcastStatus(bool nResult) { m_GameBroadcastStatus = nResult; }
   void ResetGameBroadcastData();
 
-  inline void SetPendingBroadcast(CGame* nGame) { m_GameBroadcastPending = nGame; }
-  inline void ResetGameBroadcastPending() { m_GameBroadcastPending = nullptr; }
+  inline void SetPendingBroadcast(std::shared_ptr<CGame> nGame) { m_GameBroadcastPending = nGame; }
+  inline void ResetGameBroadcastPending() { m_GameBroadcastPending.reset(); }
 
   void ResetConnection(bool hadError);
   void ResetGameChatAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
@@ -261,8 +261,8 @@ public:
   bool GetIsSudoer(std::string name) const;
   bool IsBannedPlayer(std::string name, std::string hostName) const;
   bool IsBannedIP(std::string ip) const;
-  void HoldFriends(CGame* game);
-  void HoldClan(CGame* game);
+  void HoldFriends(std::shared_ptr<CGame> game);
+  void HoldClan(std::shared_ptr<CGame> game);
   void Disable();
   void ResetLogin();
 

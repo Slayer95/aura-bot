@@ -68,7 +68,7 @@ public:
   std::string                                                   m_Name;               // (NO), (OK), (OK), (NO), (NO)
   std::vector<std::string>                                      m_Values;             // (NO), (1), (n), (NO), (?)
 
-  CW3MMDAction(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType = 0, uint8_t nSID = 0);
+  CW3MMDAction(std::shared_ptr<CGame> nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType = 0, uint8_t nSID = 0);
   ~CW3MMDAction();
 
   inline int64_t GetRecvTicks() { return m_Ticks; }
@@ -103,7 +103,7 @@ public:
   std::string                                                   m_Name;               // (pid OK, version NO), (OK, OK, OK), (OK+)
   std::vector<std::string>                                      m_Values;             // (pid NO, version 2), (NO), (n)
 
-  CW3MMDDefinition(CGame* nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType = 0, uint8_t nSID = 0);
+  CW3MMDDefinition(std::shared_ptr<CGame> nGame, uint8_t nFromUID, uint32_t nID, uint8_t nType, uint8_t nSubType = 0, uint8_t nSID = 0);
   ~CW3MMDDefinition();
 
   inline int64_t GetRecvTicks() const { return m_Ticks; }
@@ -127,7 +127,7 @@ public:
 class CW3MMD
 {
 private:
-  CGame*                                          m_Game;
+  std::reference_wrapper<CGame>                   m_Game;
   bool                                            m_GameOver;
   bool                                            m_Error;
   uint32_t                                        m_Version;
@@ -149,9 +149,10 @@ private:
   std::queue<CW3MMDAction*>                       m_ActionQueue;
 
 public:
-  CW3MMD(CGame* nGame);
+  CW3MMD(std::shared_ptr<CGame> nGame);
   ~CW3MMD();
 
+  [[nodiscard]] std::shared_ptr<CGame> GetGame();
   [[nodiscard]] inline bool GetIsGameOver() { return m_GameOver; }
 
   bool HandleTokens(uint8_t fromUID, uint32_t valueID, std::vector<std::string> tokens);

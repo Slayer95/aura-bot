@@ -37,14 +37,14 @@
 class CDotaStats
 {
 public:
-  CGame*                                        m_Game;
+  std::reference_wrapper<CGame>                 m_Game;
   CDBDotAPlayer*                                m_Players[12];
   uint8_t                                       m_Winner;
   bool                                          m_SwitchEnabled;
   std::pair<uint32_t, uint32_t>                 m_Time;
   std::optional<uint64_t>                       m_GameOverTime;
 
-  explicit CDotaStats(CGame* nGame);
+  explicit CDotaStats(std::shared_ptr<CGame> nGame);
   ~CDotaStats();
   CDotaStats(CDotaStats&) = delete;
 

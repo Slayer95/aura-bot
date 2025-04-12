@@ -278,11 +278,18 @@ public:
   void SetDisplayMode(const uint8_t nDisplayMode);
   void SetOwner(const std::string& nOwner, const CRealm* nRealm);
   void SetOwnerLess(const bool nValue) { m_OwnerLess = nValue; }
-  void SetCreator(const std::string& nCreator);
+  /*
+  void SetCreator(const std::string& nCreator, const uint8_t serviceType);
+  void SetCreator(const std::string& nCreator, const uint8_t serviceType, std::weak_ptr<void> servicePtr);
+  */
+  /*
+  // TODO: SetCreator() smart pointers
+  // std::static_pointer_cast<T>(ptr.lock())
   void SetCreator(const std::string& nCreator, CGame* nGame);
   void SetCreator(const std::string& nCreator, CRealm* nRealm);
   void SetCreator(const std::string& nCreator, CIRC* nIRC);
   void SetCreator(const std::string& nCreator, CDiscord* nDiscord);
+  */
   void RemoveCreator();
   [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
   void SetName(const std::string& nName) { m_Name = nName; }

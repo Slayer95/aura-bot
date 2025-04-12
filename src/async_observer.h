@@ -40,7 +40,7 @@
 class CAsyncObserver final : public CConnection
 {
 public:
-  CGame*                                                        m_Game;
+  std::weak_ptr<CGame>                                          m_Game;
   MapTransfer                                                   m_MapTransfer;
   const CRealm*                                                 m_FromRealm;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
@@ -84,7 +84,7 @@ public:
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
 
-  CAsyncObserver(CGame* nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const std::string& nName);
+  CAsyncObserver(std::shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const std::string& nName);
   ~CAsyncObserver();
 
   // processing functions
@@ -103,7 +103,7 @@ public:
   [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
   [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
   [[nodiscard]] inline const std::string&       GetName() { return m_Name; }
-  [[nodiscard]] inline CGame*                   GetGame() { return m_Game; }
+  [[nodiscard]] inline std::shared_ptr<CGame>   GetGame() { return m_Game.lock(); }
 
   [[nodiscard]] inline bool                     HasLeftReason() { return !m_LeftReason.empty(); }
   [[nodiscard]] inline std::string              GetLeftReason() { return m_LeftReason; }
@@ -124,7 +124,7 @@ public:
   bool PushGameFrames(bool isFlush = false);
   inline void FlushGameFrames() { PushGameFrames(true); }
   void CheckGameOver();
-  void OnGameReset(const CGame* nGame);
+  void OnGameReset(std::shared_ptr<const CGame> nGame);
   void OnRealmDestroy(const CRealm* nRealm);
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();

@@ -285,7 +285,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
   return true;
 }
 
-inline PLATFORM_STRING_TYPE GetAuraTitle(CGame* detailsGame, size_t lobbyCount, size_t gameCount, bool hasRehost)
+inline PLATFORM_STRING_TYPE GetAuraTitle(shared_ptr<CGame> detailsGame, size_t lobbyCount, size_t gameCount, bool hasRehost)
 {
   const static PLATFORM_STRING_TYPE HyphenConnector = PLATFORM_STRING(" - ");
   const static PLATFORM_STRING_TYPE DetailsLobbyPrefix = PLATFORM_STRING(" - Lobby: ");
@@ -826,8 +826,8 @@ CAura::~CAura()
     delete realm;
   }
 
-  for (const auto& game : GetAllGames()) {
-    delete game;
+  for (auto& game : GetAllGames()) {
+    game.reset();
   }
 
   m_JoinInProgressGames.clear();
@@ -844,14 +844,14 @@ vector<Version> CAura::GetSupportedVersionsCrossPlayRangeHeads() const
   return vector<Version>(versionHeads.begin(), versionHeads.end());
 }
 
-CGame* CAura::GetMostRecentLobby(bool allowPending) const
+shared_ptr<CGame> CAura::GetMostRecentLobby(bool allowPending) const
 {
   if (allowPending && !m_LobbiesPending.empty()) return m_LobbiesPending.back();
   if (m_Lobbies.empty()) return nullptr;
   return m_Lobbies.back();
 }
 
-CGame* CAura::GetMostRecentLobbyFromCreator(const string& fromName) const
+shared_ptr<CGame> CAura::GetMostRecentLobbyFromCreator(const string& fromName) const
 {
   for (auto it = rbegin(m_Lobbies); it != rend(m_Lobbies); ++it) {
     if ((*it)->GetCreatorName() == fromName) {
@@ -861,7 +861,7 @@ CGame* CAura::GetMostRecentLobbyFromCreator(const string& fromName) const
   return nullptr;
 }
 
-CGame* CAura::GetLobbyByHostCounterExact(uint32_t hostCounter) const
+shared_ptr<CGame> CAura::GetLobbyByHostCounterExact(uint32_t hostCounter) const
 {
   for (const auto& lobby : m_Lobbies) {
     if (lobby->GetHostCounter() == hostCounter) {
@@ -871,7 +871,7 @@ CGame* CAura::GetLobbyByHostCounterExact(uint32_t hostCounter) const
   return nullptr;
 }
 
-CGame* CAura::GetLobbyOrObservableByHostCounterExact(uint32_t hostCounter) const
+shared_ptr<CGame> CAura::GetLobbyOrObservableByHostCounterExact(uint32_t hostCounter) const
 {
   for (const auto& game : GetJoinableGames()) {
     if (game->GetHostCounter() == hostCounter) {
@@ -881,17 +881,17 @@ CGame* CAura::GetLobbyOrObservableByHostCounterExact(uint32_t hostCounter) const
   return nullptr;
 }
 
-CGame* CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
+shared_ptr<CGame> CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
 {
   return GetLobbyByHostCounterExact(hostCounter & 0x00FFFFFF);
 }
 
-CGame* CAura::GetLobbyOrObservableByHostCounter(uint32_t hostCounter) const
+shared_ptr<CGame> CAura::GetLobbyOrObservableByHostCounter(uint32_t hostCounter) const
 {
   return GetLobbyOrObservableByHostCounterExact(hostCounter & 0x00FFFFFF);
 }
 
-CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
+shared_ptr<CGame> CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
 {
   for (const auto& game : GetAllGames()) {
     if (game->GetGameID() == gameIdentifier) {
@@ -901,7 +901,7 @@ CGame* CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const
   return nullptr;
 }
 
-CGame* CAura::GetGameByString(const string& rawInput) const
+shared_ptr<CGame> CAura::GetGameByString(const string& rawInput) const
 {
   // See also util.h:CheckTargetGameSyntax
   if (rawInput.empty()) {
@@ -988,9 +988,9 @@ uint8_t CAura::FindServiceFromHostName(const string& hostName, void*& location) 
   return SERVICE_TYPE_INVALID;
 }
 
-vector<CGame*> CAura::GetAllGames() const
+vector<shared_ptr<CGame>> CAura::GetAllGames() const
 {
-  vector<CGame*> joinables;
+  vector<shared_ptr<CGame>> joinables;
   joinables.reserve(m_Lobbies.size() + m_StartedGames.size() + m_LobbiesPending.size());
   joinables.insert(joinables.end(), m_Lobbies.begin(), m_Lobbies.end());
   joinables.insert(joinables.end(), m_StartedGames.begin(), m_StartedGames.end());
@@ -998,9 +998,9 @@ vector<CGame*> CAura::GetAllGames() const
   return joinables;
 }
 
-vector<CGame*> CAura::GetJoinableGames() const
+vector<shared_ptr<CGame>> CAura::GetJoinableGames() const
 {
-  vector<CGame*> joinables;
+  vector<shared_ptr<CGame>> joinables;
   joinables.reserve(m_Lobbies.size() + m_JoinInProgressGames.size());
   joinables.insert(joinables.end(), m_Lobbies.begin(), m_Lobbies.end());
   joinables.insert(joinables.end(), m_JoinInProgressGames.begin(), m_JoinInProgressGames.end());
@@ -1224,7 +1224,7 @@ bool CAura::Update()
     if ((*it)->Update(&fd, &send_fd)) {
       if ((*it)->GetExiting()) {
         EventGameDeleted(*it);
-        delete *it;
+        it->reset();
       } else {
         EventGameStarted(*it);
       }
@@ -1241,7 +1241,7 @@ bool CAura::Update()
       (*it)->FlushLogs();
       if ((*it)->GetExiting()) {
         EventGameDeleted(*it);
-        delete *it;
+        it->reset();
       } else {
         EventGameRemake(*it);
       }
@@ -1273,7 +1273,7 @@ bool CAura::Update()
     UpdateMetaData();
 #ifndef DISABLE_DPP
     if (m_Discord.GetIsEnabled()) {
-      CGame* game = GetMostRecentLobby();
+      shared_ptr<CGame> game = GetMostRecentLobby();
       if (game) {
         m_Discord.SetStatusHostingLobby(game->GetMap()->GetMapTitle(), game->GetCreationTime());
       } else if (!m_StartedGames.empty()) {
@@ -1319,7 +1319,7 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
   // If the game has someone in it, advertise the fail only in the lobby (as it is probably a rehost).
   // Otherwise whisper the game creator that the (re)host failed.
 
-  CGame* game = errorRealm->GetGameBroadcast();
+  shared_ptr<CGame> game = errorRealm->GetGameBroadcast();
 
   if (game->GetHasAnyUser()) {
     game->SendAllChat("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
@@ -1394,7 +1394,7 @@ void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
   }
 }
 
-void CAura::EventGameDeleted(CGame* game)
+void CAura::EventGameDeleted(shared_ptr<CGame> game)
 {
   if (game->GetFromAutoReHost()) {
     m_AutoReHosted = false;
@@ -1437,7 +1437,7 @@ void CAura::EventGameDeleted(CGame* game)
   }
 }
 
-void CAura::EventGameRemake(CGame* game)
+void CAura::EventGameRemake(shared_ptr<CGame> game)
 {
   // Only called from CGame::Update() while iterating m_StartedGames
   Print("[AURA] remaking game [" + game->GetGameName() + "]");
@@ -1458,7 +1458,7 @@ void CAura::EventGameRemake(CGame* game)
   }
 }
 
-void CAura::EventGameStarted(CGame* game)
+void CAura::EventGameStarted(shared_ptr<CGame> game)
 {
   // Only called from CGame::Update() while iterating m_Lobbies
   Print("[AURA] started game [" + game->GetGameName() + "]");
@@ -1856,7 +1856,7 @@ void CAura::InitSystem()
 
 void CAura::UpdateWindowTitle()
 {
-  CGame* detailsGame = nullptr;
+  shared_ptr<CGame> detailsGame = nullptr;
   if (m_Lobbies.size() == 1) {
     if (m_StartedGames.size() == 0) detailsGame = m_Lobbies.back();
   } else if (m_Lobbies.empty() && m_StartedGames.size() == 1) {
@@ -2135,7 +2135,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     Print("[AURA] creating game [" + gameSetup->m_Name + "]");
   }
 
-  CGame* createdLobby = new CGame(this, gameSetup);
+  shared_ptr<CGame> createdLobby = make_shared<CGame>(this, gameSetup);
   m_LobbiesPending.push_back(createdLobby);
   m_LastGameHostedTicks = GetTicks();
   if (createdLobby->GetFromAutoReHost()) {
@@ -2146,8 +2146,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   gameSetup->OnGameCreate();
 
   if (createdLobby->GetExiting()) {
-    delete createdLobby;
-    createdLobby = nullptr;
+    createdLobby.reset();
     gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_Name + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
@@ -2242,15 +2241,15 @@ bool CAura::MergePendingLobbies()
   return true;
 }
 
-void CAura::TrackGameJoinInProgress(CGame* game)
+void CAura::TrackGameJoinInProgress(shared_ptr<CGame> game)
 {
-  m_JoinInProgressGames.push_back(game);
+  m_JoinInProgressGames.emplace_back(game);
 }
 
-void CAura::UntrackGameJoinInProgress(CGame* game)
+void CAura::UntrackGameJoinInProgress(shared_ptr<CGame> game)
 {
   for (auto it = begin(m_JoinInProgressGames); it != end(m_JoinInProgressGames);) {
-    if (*it == game) {
+    if ((*it).lock() == game) {
       it = m_JoinInProgressGames.erase(it);
       break;
     } else {

@@ -76,8 +76,6 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_Socket(nullptr),
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
 
-    m_GameBroadcast(nullptr),
-    m_GameBroadcastPending(nullptr),
     m_GameIsExpansion(false),
     m_GameVersion(GAMEVER(0u, 0u)),
     m_AuthGameVersion(GAMEVER(0u, 0u)),
@@ -275,7 +273,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::STARTADVEX3:
-            if (m_GameBroadcast) {
+            if (!m_GameBroadcast.expired()) {
               if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
                 m_Aura->EventBNETGameRefreshSuccess(this);
               } else {
@@ -591,9 +589,10 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
   // note that this means you can whisper "spoofcheck" even in a public game to manually spoofcheck if the /whois fails
 
   if (eventType == BNETProtocol::IncomingChatEvent::WHISPER && (message == "s" || message == "sc" || message == "spoofcheck")) {
-    if (m_GameBroadcast && !m_GameBroadcast->GetIsMirror()) {
-      GameUser::CGameUser* matchUser = m_GameBroadcast->GetUserFromName(fromUser, true);
-      if (matchUser) m_GameBroadcast->AddToRealmVerified(m_Config.m_HostName, matchUser, true);
+    shared_ptr<CGame> gameBroadcast = GetGameBroadcast();
+    if (gameBroadcast && !gameBroadcast->GetIsMirror()) {
+      GameUser::CGameUser* matchUser = gameBroadcast->GetUserFromName(fromUser, true);
+      if (matchUser) gameBroadcast->AddToRealmVerified(m_Config.m_HostName, matchUser, true);
       return;
     }
   }
@@ -668,19 +667,20 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     // extract the first word which we hope is the username
     // this is not necessarily true though since info messages also include channel MOTD's and such
 
-    if (m_GameBroadcast && m_GameBroadcast->GetIsLobbyStrict()) {
+    shared_ptr<CGame> gameBroadcast = GetGameBroadcast();
+    if (gameBroadcast && gameBroadcast->GetIsLobbyStrict()) {
       // note: if the game is rehosted, bnet will not be aware of the game being renamed
       optional<BNETProtocol::WhoisInfo> whoisInfo = ParseWhoisInfo(message);
       if (whoisInfo.has_value() && !whoisInfo->name.empty()) {
-        GameUser::CGameUser* aboutPlayer = m_GameBroadcast->GetUserFromName(whoisInfo->name, true);
+        GameUser::CGameUser* aboutPlayer = gameBroadcast->GetUserFromName(whoisInfo->name, true);
         if (aboutPlayer && aboutPlayer->GetRealmInternalID() == m_InternalServerID) {
           // handle spoof checking for current game
           // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
           // at all times you can still /w the bot with "spoofcheck" to manually spoof check
-          if (whoisInfo->GetIsInGame() && whoisInfo->location == GetCustomGameName(m_GameBroadcast->GetGameName(), false)) {
-            m_GameBroadcast->AddToRealmVerified(m_HostName, aboutPlayer, true);
+          if (whoisInfo->GetIsInGame() && whoisInfo->location == GetCustomGameName(gameBroadcast->GetGameName(), false)) {
+            gameBroadcast->AddToRealmVerified(m_HostName, aboutPlayer, true);
           } else {
-            m_GameBroadcast->ReportSpoofed(m_HostName, aboutPlayer);
+            gameBroadcast->ReportSpoofed(m_HostName, aboutPlayer);
           }
         }
       }
@@ -781,7 +781,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   switch (message->GetCallback()) {
     case CHAT_CALLBACK_REFRESH_GAME: {
       m_ChatQueuedGameAnnouncement = false;
-      CGame* matchLobby = m_Aura->GetLobbyByHostCounterExact(message->GetCallbackData());
+      shared_ptr<CGame> matchLobby = m_Aura->GetLobbyByHostCounterExact(message->GetCallbackData());
       if (!matchLobby) {
         Print(GetLogPrefix() + " !! lobby not found !! host counter 0x" + ToHexString(message->GetCallbackData()));
         if (message->GetIsStale()) {
@@ -879,7 +879,7 @@ bool CRealm::ResolveGameVersion()
   if (m_Config.m_GameVersion.has_value()) {
     m_GameVersion = m_Config.m_GameVersion.value();
   } else {
-    const CGame* lobby = m_Aura->GetMostRecentLobby();
+    shared_ptr<const CGame> lobby = m_Aura->GetMostRecentLobby();
     if (lobby) {
       m_GameVersion = lobby->m_Config.m_GameVersion.value();
     } else if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->m_GameVersion.has_value()) {
@@ -896,7 +896,7 @@ bool CRealm::ResolveGameVersion()
   if (m_Config.m_GameIsExpansion.has_value()) {
     m_GameIsExpansion = m_Config.m_GameIsExpansion.value();
   } else {
-    const CGame* lobby = m_Aura->GetMostRecentLobby();
+    shared_ptr<const CGame> lobby = m_Aura->GetMostRecentLobby();
     if (lobby) {
       m_GameIsExpansion = lobby->m_Config.m_GameIsExpansion;
     } else if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->m_GameIsExpansion.has_value()) {
@@ -915,7 +915,7 @@ bool CRealm::ResolveGameVersion()
   return true;
 }
 
-optional<bool> CRealm::GetIsGameVersionCompatible(const CGame* game) const
+optional<bool> CRealm::GetIsGameVersionCompatible(shared_ptr<const CGame> game) const
 {
   Version realmGameVersion = GetGameVersion();
   if (realmGameVersion.first == 0) return nullopt;
@@ -1080,7 +1080,7 @@ void CRealm::TrySendGetGamesList()
 
 void CRealm::SendNetworkConfig()
 {
-  CGame* lobbyPendingForBroadcast = m_Aura->GetMostRecentLobby();
+  shared_ptr<CGame> lobbyPendingForBroadcast = m_Aura->GetMostRecentLobby();
   if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetIsMirror() && !m_Config.m_IsMirror) {
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "mirroring public game host " + IPv4ToString(lobbyPendingForBroadcast->GetPublicHostAddress()) + ":" + to_string(lobbyPendingForBroadcast->GetPublicHostPort()))
     SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(lobbyPendingForBroadcast->GetPublicHostAddress(), lobbyPendingForBroadcast->GetPublicHostPort()));
@@ -1291,7 +1291,7 @@ CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& us
   return entry;
 }
 
-void CRealm::TryQueueGameChatAnnouncement(const CGame* game)
+void CRealm::TryQueueGameChatAnnouncement(shared_ptr<const CGame> game)
 {
   if (!game || !m_LoggedIn) {
     return;
@@ -1313,7 +1313,7 @@ void CRealm::TryQueueGameChatAnnouncement(const CGame* game)
   }
 }
 
-CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(const CGame* game, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
+CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(shared_ptr<const CGame> game, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
 {
   if (!m_LoggedIn)
     return nullptr;
@@ -1415,33 +1415,35 @@ void CRealm::CheckPendingGameBroadcast()
     return;
   }
 
+  shared_ptr<CGame> pendingGame = GetGameBroadcastPending();
+
   if (
-    (m_GameBroadcastPending->GetIsExpansion() != GetGameIsExpansion()) ||
-    !(m_GameBroadcastPending->GetIsSupportedGameVersion(GetGameVersion()))
+    (pendingGame->GetIsExpansion() != GetGameIsExpansion()) ||
+    !(pendingGame->GetIsSupportedGameVersion(GetGameVersion()))
   ) {
-    m_GameBroadcastPending = nullptr;
+    m_GameBroadcastPending.reset();
     return;
   }
 
-  if (m_GameBroadcastPending->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
-    QueueGameChatAnnouncement(m_GameBroadcastPending);
+  if (pendingGame->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
+    QueueGameChatAnnouncement(pendingGame);
   } else {
     // Send STARTADVEX3
-    m_GameBroadcastPending->AnnounceToRealm(this);
+    pendingGame->AnnounceToRealm(this);
 
     // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
     // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
     // so don't rejoin the chat if we're using PVPGN
 
-    if (m_GameBroadcastPending->GetDisplayMode() == GAME_PRIVATE && !GetPvPGN()) {
+    if (pendingGame->GetDisplayMode() == GAME_PRIVATE && !GetPvPGN()) {
       SendEnterChat();
     }
   }
 
-  m_GameBroadcastPending = nullptr;
+  m_GameBroadcastPending.reset();
 }
 
-void CRealm::SendGameRefresh(const uint8_t displayMode, CGame* game)
+void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
 {
   if (!m_LoggedIn || GetIsGameBroadcastErrored()) {
     return;
@@ -1517,7 +1519,7 @@ void CRealm::QueueGameUncreate()
 
 void CRealm::ResetGameBroadcastData()
 {
-  m_GameBroadcast = nullptr;
+  m_GameBroadcast.reset();
   ResetGameBroadcastStatus();
   QueueGameUncreate();
   SendEnterChat();
@@ -1610,13 +1612,13 @@ bool CRealm::IsBannedIP(string ip) const
   return m_Aura->m_DB->GetIsIPBanned(ip, m_Config.m_DataBaseID);
 }
 
-void CRealm::HoldFriends(CGame* game)
+void CRealm::HoldFriends(shared_ptr<CGame> game)
 {
   for (auto& friend_ : m_Friends)
     game->AddToReserved(friend_);
 }
 
-void CRealm::HoldClan(CGame* game)
+void CRealm::HoldClan(shared_ptr<CGame> game)
 {
   for (auto& clanmate : m_Clan)
     game->AddToReserved(clanmate);

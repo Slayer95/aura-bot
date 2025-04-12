@@ -362,13 +362,13 @@ void CGame::Reset()
   for (const auto& ptr : m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
     if (!ctx) continue;
-    if (ctx->m_SourceGame == this) {
+    if (ctx->m_SourceGame.lock() == shared_from_this()) {
       ctx->SetPartiallyDestroyed();
-      ctx->m_SourceGame = nullptr;
+      ctx->m_SourceGame.reset();
     }
-    if (ctx->m_TargetGame == this) {
+    if (ctx->m_TargetGame.lock() == shared_from_this()) {
       ctx->SetPartiallyDestroyed();
-      ctx->m_TargetGame = nullptr;
+      ctx->m_TargetGame.reset();
     }
   }
 
@@ -376,7 +376,7 @@ void CGame::Reset()
     realm->ResetGameChatAnnouncement();
   }
 
-  m_Aura->m_Net.OnGameReset(this);
+  m_Aura->m_Net.OnGameReset(shared_from_this());
 }
 
 CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
@@ -445,9 +445,9 @@ bool CGame::InitStats()
     return false;
   }
   if (m_Map->GetMMDType() == MMD_TYPE_DOTA) {
-    m_DotaStats = new CDotaStats(this);
+    m_DotaStats = new CDotaStats(shared_from_this());
   } else {
-    m_CustomStats = new CW3MMD(this);
+    m_CustomStats = new CW3MMD(shared_from_this());
   }
   return true;
 }
@@ -602,7 +602,7 @@ void CGame::StartGameOverTimer(bool isMMD)
     StopCountDown();
   }
 
-  m_Aura->UntrackGameJoinInProgress(this);
+  m_Aura->UntrackGameJoinInProgress(shared_from_this());
 }
 
 CGame::~CGame()
@@ -617,7 +617,7 @@ CGame::~CGame()
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
   }
-  m_Aura->UntrackGameJoinInProgress(this);
+  m_Aura->UntrackGameJoinInProgress(shared_from_this());
 }
 
 void CGame::InitPRNG()
@@ -4075,7 +4075,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
 void CGame::AnnounceToRealm(CRealm* realm)
 {
   if (m_DisplayMode == GAME_NONE) return;
-  realm->SendGameRefresh(m_DisplayMode, this);
+  realm->SendGameRefresh(m_DisplayMode, shared_from_this());
 }
 
 void CGame::AnnounceDecreateToRealms()
@@ -4084,12 +4084,12 @@ void CGame::AnnounceDecreateToRealms()
     if (m_IsMirror && realm->GetIsMirror())
       continue;
 
-    if (realm->GetGameBroadcast() == this) {
+    if (realm->GetGameBroadcast() == shared_from_this()) {
       realm->ResetGameChatAnnouncement();
       realm->ResetGameBroadcastData();
     }
 
-    if (realm->GetGameBroadcastPending() == this) {
+    if (realm->GetGameBroadcastPending() == shared_from_this()) {
       realm->ResetGameBroadcastPending();
     }
   }
@@ -4997,7 +4997,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   optional<Version> gameVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm);
 
   GameUser::CGameUser* Player = new GameUser::CGameUser(
-    this,
+    shared_from_this(),
     connection, 
     UID == 0xFF ? GetNewUID() : UID,
     gameVersion.has_value(),
@@ -5105,7 +5105,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* jo
   const optional<Version> gameVersion = GetIncomingPlayerVersion(connection, joinRequest, fromRealm);
 
   CAsyncObserver* observer = new CAsyncObserver(
-    this,
+    shared_from_this(),
     connection,
     m_JoinInProgressVirtualUser->GetUID(),
     gameVersion.has_value(),
@@ -5970,7 +5970,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage*
             }
             shared_ptr<CCommandContext> ctx = nullptr;
             try {
-              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             } catch (...) {}
             if (ctx) ctx->Run(cmdToken, command, payload);
           } else if (message == "?trigger") {
@@ -5988,7 +5988,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage*
             }
             shared_ptr<CCommandContext> ctx = nullptr;
             try {
-              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
+              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
             } catch (...) {}
             if (ctx) {
               cmdToken = m_Config.m_PrivateCmdToken;
@@ -6738,7 +6738,7 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
       if (activeCmd == SMART_COMMAND_GO) {
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(m_Aura, commandCFG, this, user, false, &std::cout);
+          ctx = make_shared<CCommandContext>(m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
         } catch (...) {
           return true;
         }
@@ -6882,7 +6882,7 @@ void CGame::EventGameLoaded()
 
   // move the game to the games in progress vector
   if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
-    m_Aura->TrackGameJoinInProgress(this);
+    m_Aura->TrackGameJoinInProgress(shared_from_this());
   }
 
   HandleGameLoadedStats();
@@ -9353,8 +9353,8 @@ void CGame::StartCountDown(bool fromUser, bool force)
 
   if (m_ChatOnly) {
     SendAllChat("This lobby is in chat-only mode. Please join another hosted game.");
-    const CGame* recentLobby = m_Aura->GetMostRecentLobby();
-    if (recentLobby && recentLobby != this) {
+    shared_ptr<const CGame> recentLobby = m_Aura->GetMostRecentLobby();
+    if (recentLobby && recentLobby != shared_from_this()) {
       SendAllChat("Currently hosting: " + recentLobby->GetStatusDescription());
     }
     return;
@@ -10027,7 +10027,7 @@ CGameVirtualUser* CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UI
   );
   if (!isCustomForces && !asObserver) SetSlotTeamAndColorAuto(SID);
 
-  m_FakeUsers.emplace_back(this, SID, UID, name).SetIsObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
+  m_FakeUsers.emplace_back(shared_from_this(), SID, UID, name).SetIsObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   return &m_FakeUsers.back();
 }

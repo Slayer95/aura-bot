@@ -71,7 +71,7 @@ namespace GameUser
   class CGameUser final : public CConnection
   {
   public:
-    CGame*                           m_Game;
+    std::reference_wrapper<CGame>    m_Game;
     MapTransfer                      m_MapTransfer;
     std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
     std::vector<uint32_t>            m_RTTValues;                    // store the last few (10) pings received so we can take an average
@@ -169,7 +169,7 @@ namespace GameUser
     std::optional<TokenBucketRateLimiter>       m_APMQuota;
     std::optional<double>                       m_APMTrainer;
 
-    CGameUser(CGame* game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
+    CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
 
     [[nodiscard]] uint32_t GetOperationalRTT() const;
@@ -187,7 +187,7 @@ namespace GameUser
     [[nodiscard]] inline std::string              GetName() const { return m_Name; }
     [[nodiscard]] std::string                     GetLowerName() const;
     [[nodiscard]] std::string                     GetDisplayName() const;
-    [[nodiscard]] inline CGame*                   GetGame() { return m_Game; }
+    [[nodiscard]] std::shared_ptr<CGame>          GetGame();
     [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
     [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
     [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
