@@ -729,7 +729,7 @@ bool CCLI::QueueActions(CAura* nAura) const
       }
     }
     for (const auto& id : m_ExcludedRealms) {
-      CRealm* excludedRealm = nAura->GetRealmByInputId(id);
+      shared_ptr<CRealm> excludedRealm = nAura->GetRealmByInputId(id);
       if (excludedRealm) {
         gameSetup->AddIgnoredRealm(excludedRealm);
       } else {

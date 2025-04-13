@@ -271,8 +271,8 @@ public:
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
-  std::string                                            GetCustomGameName(const CRealm* realm = nullptr) const;
-  std::string                                            GetAnnounceText(const CRealm* realm = nullptr) const;
+  std::string                                            GetCustomGameName(std::shared_ptr<const CRealm> realm = nullptr) const;
+  std::string                                            GetAnnounceText(std::shared_ptr<const CRealm> realm = nullptr) const;
   inline bool                                            GetFromAutoReHost() const { return m_FromAutoReHost; }
   inline bool                                            GetLockedOwnerLess() const { return m_OwnerLess; }
   inline std::string                                     GetOwnerName() const { return m_OwnerName; }
@@ -367,8 +367,8 @@ public:
   ImmutableUserList                                      GetUnreadyPlayers() const;
   ImmutableUserList                                      GetWaitingReconnectPlayers() const;
   std::optional<Version>                                 GetOverrideLANVersion(const std::string& playerName, const sockaddr_storage* address) const;
-  std::optional<Version>                                 GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const;
-  Version                                                GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const;
+  std::optional<Version>                                 GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
+  Version                                                GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
   bool                                                   GetIsAutoStartDue() const;
   std::string                                            GetAutoStartText() const;
   std::string                                            GetReadyStatusText() const;
@@ -484,7 +484,7 @@ public:
   std::vector<uint8_t>                                   GetFakeUsersLoadedInfo() const;
   std::vector<uint8_t>                                   GetJoinedPlayersInfo() const;
 
-  void                                                   AnnounceToRealm(CRealm* realm);
+  void                                                   AnnounceToRealm(std::shared_ptr<CRealm> realm);
   void                                                   AnnounceDecreateToRealms();
   void                                                   AnnounceToAddress(std::string& address, const std::optional<Version>& customGameVersion);
   void                                                   ReplySearch(sockaddr_storage* address, CSocket* socket, const std::optional<Version>& customGameVersion);
@@ -508,8 +508,8 @@ public:
   std::pair<int64_t, int64_t> GetReconnectWaitTicks() const;
   void                      ReportRecoverableDisconnect(GameUser::CGameUser* user);
   void                      OnRecoverableDisconnect(GameUser::CGameUser* user);
-  bool                      CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
-  bool                      CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, std::string& hostName);
+  bool                      CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, std::shared_ptr<CRealm> matchingRealm, std::string& hostName);
+  bool                      CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, std::shared_ptr<CRealm> matchingRealm, std::string& hostName);
   void                      EventUserDisconnectTimedOut(GameUser::CGameUser* user);
   void                      EventUserDisconnectSocketError(GameUser::CGameUser* user);
   void                      EventUserDisconnectConnectionClosed(GameUser::CGameUser* user);
@@ -615,13 +615,13 @@ public:
 
   // Observer features
   inline std::shared_ptr<GameHistory> GetGameHistory() { return m_GameHistory; }
-  void                                JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm);
+  void                                JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, std::shared_ptr<CRealm> fromRealm);
   void                                EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason);
   void                                EventObserverMapSize(CAsyncObserver* connection, CIncomingMapFileSize* mapSize);
   void                                EventObserverDisconnectProtocolError(CAsyncObserver* user);
 
   // Map transfer
-  uint8_t                   CheckCanTransferMap(const CConnection* connection, const CRealm* realm, const Version& version, const bool gotPermission);
+  uint8_t                   CheckCanTransferMap(const CConnection* connection, std::shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission);
   inline SharedByteArray    GetLoadedMapChunk() { return m_LoadedMapChunk; }
   void                      SetLoadedMapChunk(SharedByteArray nLoadedMapChunk) { m_LoadedMapChunk = nLoadedMapChunk; }
   void                      ClearLoadedMapChunk() { m_LoadedMapChunk.reset(); }

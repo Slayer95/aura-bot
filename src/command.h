@@ -39,8 +39,8 @@ class CCommandContext : public std::enable_shared_from_this<CCommandContext>
 public:
   CAura*                        m_Aura;
   CCommandConfig*               m_Config;
-  CRealm*                       m_SourceRealm;
-  CRealm*                       m_TargetRealm;
+  std::weak_ptr<CRealm>         m_SourceRealm;
+  std::weak_ptr<CRealm>         m_TargetRealm;
   std::weak_ptr<CGame>          m_SourceGame;
   std::weak_ptr<CGame>          m_TargetGame;
   GameUser::CGameUser*          m_GameUser;
@@ -77,8 +77,8 @@ public:
   CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // IRC, IRC->Game
   CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
@@ -103,7 +103,8 @@ public:
   [[nodiscard]] inline bool GetIsWhisper() const { return m_FromWhisper; }
   [[nodiscard]] inline const std::string& GetSender() const { return m_FromName; }
   [[nodiscard]] inline std::string GetChannelName() const { return m_ChannelName; }
-  [[nodiscard]] inline CRealm* GetSourceRealm() const { return m_SourceRealm; }
+  [[nodiscard]] inline std::shared_ptr<CRealm> GetSourceRealm() const { return m_SourceRealm.lock(); }
+  [[nodiscard]] inline std::shared_ptr<CRealm> GetTargetRealm() const { return m_TargetRealm.lock(); }
   [[nodiscard]] inline std::shared_ptr<CGame> GetSourceGame() const { return m_SourceGame.lock(); }
   [[nodiscard]] inline std::shared_ptr<CGame> GetTargetGame() const { return m_TargetGame.lock(); }
   [[nodiscard]] inline CIRC* GetSourceIRC() const { return m_IRC; }
@@ -145,7 +146,7 @@ public:
   [[nodiscard]] bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, GameUser::CGameUser*& user);
   [[nodiscard]] bool GetParseNonPlayerSlot(const std::string& target, uint8_t& SID);
   [[nodiscard]] bool RunParseNonPlayerSlot(const std::string& target, uint8_t& SID);
-  [[nodiscard]] CRealm* GetTargetRealmOrCurrent(const std::string& target);
+  [[nodiscard]] std::shared_ptr<CRealm> GetTargetRealmOrCurrent(const std::string& target);
   [[nodiscard]] bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool allowNoRealm = false, bool searchHistory = false);
   [[nodiscard]] uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
   [[nodiscard]] std::shared_ptr<CGame> GetTargetGame(const std::string& target);

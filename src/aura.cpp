@@ -681,7 +681,8 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
   while (i--) {
     string inputID = m_Realms[i]->GetInputID();
     if (uniqueInputIds.find(inputID) == uniqueInputIds.end()) {
-      delete m_Realms[i];
+      EventRealmDeleted(m_Realms[i]);
+      m_Realms[i].reset();
       m_RealmsByInputID.erase(inputID);
       m_Realms.erase(m_Realms.begin() + i);
     }
@@ -689,10 +690,10 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
 
   size_t longestGameParticlesSize = 0;
   for (const auto& entry : uniqueInputIds) {
-    CRealm* matchingRealm = GetRealmByInputId(entry.first);
+    shared_ptr<CRealm> matchingRealm = GetRealmByInputId(entry.first);
     CRealmConfig* realmConfig = realmConfigs[entry.second];
     if (matchingRealm == nullptr) {
-      matchingRealm = new CRealm(this, realmConfig);
+      matchingRealm = make_shared<CRealm>(this, realmConfig);
       m_Realms.push_back(matchingRealm);
       m_RealmsByInputID[entry.first] = matchingRealm;
       m_RealmsIdentifiers.push_back(entry.first);
@@ -701,6 +702,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
         Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
       }
     } else {
+      // TODO: Update CAura::LoadBNETs to check for new DoResetConnection conditions (versions, etc.?)
       const bool DoResetConnection = (
         matchingRealm->GetServer() != realmConfig->m_HostName ||
         matchingRealm->GetServerPort() != realmConfig->m_ServerPort ||
@@ -822,11 +824,13 @@ CAura::~CAura()
     m_GameSetup->m_ExitingSoon = true;
   }
 
-  for (const auto& realm : m_Realms) {
-    delete realm;
+  for (auto& realm : m_Realms) {
+    EventRealmDeleted(realm);
+    realm.reset();
   }
 
   for (auto& game : GetAllGames()) {
+    EventGameDeleted(game);
     game.reset();
   }
 
@@ -944,21 +948,21 @@ shared_ptr<CGame> CAura::GetGameByString(const string& rawInput) const
   return GetGameByIdentifier(gameID);
 }
 
-CRealm* CAura::GetRealmByInputId(const string& inputId) const
+shared_ptr<CRealm> CAura::GetRealmByInputId(const string& inputId) const
 {
   auto it = m_RealmsByInputID.find(inputId);
   if (it == m_RealmsByInputID.end()) return nullptr;
-  return it->second;
+  return it->second.lock();
 }
 
-CRealm* CAura::GetRealmByHostCounter(const uint8_t hostCounter) const
+shared_ptr<CRealm> CAura::GetRealmByHostCounter(const uint8_t hostCounter) const
 {
   auto it = m_RealmsByHostCounter.find(hostCounter);
   if (it == m_RealmsByHostCounter.end()) return nullptr;
-  return it->second;
+  return it->second.lock();
 }
 
-CRealm* CAura::GetRealmByHostName(const string& hostName) const
+shared_ptr<CRealm> CAura::GetRealmByHostName(const string& hostName) const
 {
   for (const auto& realm : m_Realms) {
     if (!realm->GetLoggedIn()) continue;
@@ -1303,12 +1307,12 @@ void CAura::AwaitSettled()
   m_Discord.AwaitSettled();
 }
 
-void CAura::EventBNETGameRefreshSuccess(CRealm* successRealm)
+void CAura::EventBNETGameRefreshSuccess(shared_ptr<CRealm> successRealm)
 {
   successRealm->ResolveGameBroadcastStatus(true);
 }
 
-void CAura::EventBNETGameRefreshError(CRealm* errorRealm)
+void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
 {
   if (errorRealm->GetIsGameBroadcastErrored()) {
     return;
@@ -1435,6 +1439,8 @@ void CAura::EventGameDeleted(shared_ptr<CGame> game)
       }
     }
   }
+
+  UntrackGameJoinInProgress(game);
 }
 
 void CAura::EventGameRemake(shared_ptr<CGame> game)
@@ -1477,6 +1483,36 @@ void CAura::EventGameStarted(shared_ptr<CGame> game)
     }
   }
   */
+}
+
+void CAura::EventRealmDeleted(shared_ptr<CRealm> realm)
+{
+  for (const auto& ptr : m_ActiveContexts) {
+    auto ctx = ptr.lock();
+    if (!ctx) continue;
+    if (ctx->GetSourceRealm() == realm) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_SourceRealm.reset();
+    }
+    if (ctx->GetTargetRealm() == realm) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_TargetRealm.reset();
+    }
+  }
+
+  for (auto& game : GetAllGames()) {
+    // TODO: SetCreator()
+    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(realm.get()))) {
+      game->RemoveCreator();
+    }
+  }
+
+  // // TODO: SetCreator()
+  if (m_GameSetup && m_GameSetup->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(realm.get()))) {
+    m_GameSetup->RemoveCreator();
+  }
+
+  m_Net.EventRealmDeleted(realm);
 }
 
 bool CAura::ReloadConfigs()

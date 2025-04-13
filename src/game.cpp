@@ -376,7 +376,7 @@ void CGame::Reset()
     realm->ResetGameChatAnnouncement();
   }
 
-  m_Aura->m_Net.OnGameReset(shared_from_this());
+  m_Aura->m_Net.EventGameReset(shared_from_this());
 }
 
 CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
@@ -617,7 +617,6 @@ CGame::~CGame()
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
   }
-  m_Aura->UntrackGameJoinInProgress(shared_from_this());
 }
 
 void CGame::InitPRNG()
@@ -793,6 +792,7 @@ void CGame::InitSlots()
 bool CGame::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const
 {
   if (m_CreatedFromType != fromType) return false;
+  // TODO: SetCreator()
   switch (fromType) {
     case SERVICE_TYPE_REALM:
       return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
@@ -2975,7 +2975,7 @@ optional<Version> CGame::GetOverrideLANVersion(const string& playerName, const s
   return optional<Version>(match->second);
 }
 
-optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const
+optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, shared_ptr<const CRealm> fromRealm) const
 {
   optional<Version> result;
   if (user->GetIsGameSeeker()) {
@@ -3011,7 +3011,7 @@ optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const
   return result;
 }
 
-Version CGame::GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm) const
+Version CGame::GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, shared_ptr<const CRealm> fromRealm) const
 {
   string lowerName = ToLowerCase(joinRequest->GetName());
   auto versionErrors = m_VersionErrors.find(lowerName);
@@ -3762,13 +3762,13 @@ void CGame::SendAllActions()
   RunActionsScheduler();
 }
 
-std::string CGame::GetCustomGameName(const CRealm* realm) const
+std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
 {
   if (realm == nullptr) return m_GameName;
   return realm->GetCustomGameName(m_GameName, m_GameLoading || m_GameLoaded);
 }
 
-std::string CGame::GetAnnounceText(const CRealm* realm) const
+std::string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
 {
   Version version = GetVersion();
   if (realm) {
@@ -4072,7 +4072,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
   );
 }
 
-void CGame::AnnounceToRealm(CRealm* realm)
+void CGame::AnnounceToRealm(shared_ptr<CRealm> realm)
 {
   if (m_DisplayMode == GAME_NONE) return;
   realm->SendGameRefresh(m_DisplayMode, shared_from_this());
@@ -4988,7 +4988,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   // However, internal realm IDs maps to constant realm input IDs.
   // Hence, CGamePlayers are created with references to internal realm IDs.
   uint32_t internalRealmId = HostCounterID;
-  CRealm* matchingRealm = nullptr;
+  shared_ptr<CRealm> matchingRealm = nullptr;
   if (HostCounterID >= 0x10) {
     matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
     if (matchingRealm) internalRealmId = matchingRealm->GetInternalID();
@@ -5097,7 +5097,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   return Player;
 }
 
-void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, const CRealm* fromRealm)
+void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, shared_ptr<CRealm> fromRealm)
 {
   // This leaves no chance for GProxy handshake
 
@@ -5253,7 +5253,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, CIncomingJoinRequest* j
   uint8_t HostCounterID = joinRequest->GetHostCounter() >> 24;
   bool IsUnverifiedAdmin = false;
 
-  CRealm* matchingRealm = nullptr;
+  shared_ptr<CRealm> matchingRealm = nullptr;
   if (HostCounterID >= 0x10) {
     matchingRealm = m_Aura->GetRealmByHostCounter(HostCounterID);
     if (matchingRealm) {
@@ -5451,12 +5451,13 @@ void CGame::EventBeforeJoin(CConnection* connection)
   }
 }
 
-bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
+bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, shared_ptr<CRealm> matchingRealm, string& hostName)
 {
   // check if the new user's name is banned
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), hostName);
   bool isBanned = isSelfServerBanned;
-  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
+  // TODO: SetCreator()
+  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm.get() != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
     isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedPlayer(joinRequest->GetName(), hostName);
   }
   if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
@@ -5484,7 +5485,7 @@ bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinR
   return isBanned;
 }
 
-bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, CRealm* matchingRealm, string& hostName)
+bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, shared_ptr<CRealm> matchingRealm, string& hostName)
 {
   if (isLoopbackAddress(connection->GetRemoteAddress())) {
     return false;
@@ -5492,7 +5493,8 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   // check if the new user's IP is banned
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedIP(connection->GetIPStringStrict());
   bool isBanned = isSelfServerBanned;
-  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
+  // TODO: SetCreator()
+  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm.get() != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
     isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedIP(connection->GetIPStringStrict());
   }
   if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
@@ -5948,7 +5950,7 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage*
 
       // handle bot commands
       {
-        CRealm* realm = user->GetRealm(false);
+        shared_ptr<CRealm> realm = user->GetRealm(false);
         CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config.m_LANCommandCFG;
         const bool commandsEnabled = commandCFG->m_Enabled && (
           !realm || !(commandCFG->m_RequireVerified && !user->IsRealmVerified())
@@ -7852,7 +7854,7 @@ uint8_t CGame::GetHostUID() const
   }
 }
 
-uint8_t CGame::CheckCanTransferMap(const CConnection* connection, const CRealm* realm, const Version& version, const bool gotPermission)
+uint8_t CGame::CheckCanTransferMap(const CConnection* connection, shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission)
 {
   if (!m_Map->GetMapFileIsValid()) {
     return m_Map->HasMismatch() ? MAP_TRANSFER_CHECK_INVALID : MAP_TRANSFER_CHECK_MISSING;
@@ -9333,7 +9335,7 @@ bool CGame::GetCanStartGracefulCountDown() const
       if (m_UsesCustomReferees && !user->GetIsPowerObserver()) continue;
     }
 
-    CRealm* realm = user->GetRealm(false);
+    shared_ptr<CRealm> realm = user->GetRealm(false);
     if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
       return false;
     }
@@ -9392,7 +9394,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
     for (const auto& user : m_Users) {
       bool shouldKick = !user->GetMapReady();
       if (!shouldKick) {
-        CRealm* realm = user->GetRealm(false);
+        shared_ptr<CRealm> realm = user->GetRealm(false);
         if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
           shouldKick = true;
         }
@@ -9469,7 +9471,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
         if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
         if (m_UsesCustomReferees && !user->GetIsPowerObserver()) continue;
       }
-      CRealm* realm = user->GetRealm(false);
+      shared_ptr<CRealm> realm = user->GetRealm(false);
       if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
         unverifiedUsers.push_back(user);
       }

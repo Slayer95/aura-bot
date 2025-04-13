@@ -60,7 +60,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_pt
     m_Config(config),
 
     m_SourceRealm(user->GetRealm(false)),
-    m_TargetRealm(nullptr),
     m_SourceGame(game),
     m_TargetGame(game),
     m_GameUser(user), // m_GameUser is always bound to m_SourceGame
@@ -86,11 +85,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_pt
 }
 
 /* Command received from BNET but targetting a game */
-CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, CRealm* fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_SourceRealm(fromRealm),
-    m_TargetRealm(nullptr),
     m_TargetGame(targetGame),
     m_GameUser(nullptr),
     m_IRC(nullptr),
@@ -118,8 +116,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_pt
 CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, CIRC* ircNetwork, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
     m_TargetGame(targetGame),
     m_GameUser(nullptr),
     m_IRC(ircNetwork),
@@ -148,8 +144,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_pt
 CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
     m_TargetGame(targetGame),
     m_GameUser(nullptr),
     m_IRC(nullptr),
@@ -180,8 +174,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_pt
 CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
     m_TargetGame(targetGame),
     m_GameUser(nullptr),
     m_IRC(nullptr),
@@ -205,11 +197,10 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_pt
 }
 
 /* BNET command */
-CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_SourceRealm(fromRealm),
-    m_TargetRealm(nullptr),
     m_GameUser(nullptr),
     m_IRC(nullptr),
     m_DiscordAPI(nullptr),
@@ -236,8 +227,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CRealm* f
 CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
     m_GameUser(nullptr),
     m_IRC(ircNetwork),
     m_DiscordAPI(nullptr),
@@ -264,8 +253,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* irc
 CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
     m_GameUser(nullptr),
     m_IRC(nullptr),
     m_DiscordAPI(discordAPI),
@@ -297,8 +284,6 @@ CCommandContext::CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slas
 CCommandContext::CCommandContext(CAura* nAura, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(nAura->m_CommandDefaultConfig),
-    m_SourceRealm(nullptr),
-    m_TargetRealm(nullptr),
     m_GameUser(nullptr),
     m_IRC(nullptr),
     m_DiscordAPI(nullptr),
@@ -329,8 +314,8 @@ string CCommandContext::GetUserAttribution()
 {
   if (m_GameUser) {
     return m_FromName + "@" + ToFormattedRealm(m_ServerName);
-  } else if (m_SourceRealm) {
-    return m_FromName + "@" + m_SourceRealm->GetServer();
+  } else if (!m_SourceRealm.expired()) {
+    return m_FromName + "@" + m_SourceRealm.lock()->GetServer();
   } else if (m_IRC) {
     return m_FromName + "@" + m_ServerName;
   } else if (m_DiscordAPI) {
@@ -346,8 +331,8 @@ string CCommandContext::GetUserAttributionPreffix()
 {
   if (m_GameUser) {
     return m_TargetGame.lock()->GetLogPrefix() + "Player [" + m_FromName + "@" + ToFormattedRealm(m_ServerName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
-  } else if (m_SourceRealm) {
-    return m_SourceRealm->GetLogPrefix() + "User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
+  } else if (!m_SourceRealm.expired()) {
+    return m_SourceRealm.lock()->GetLogPrefix() + "User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (m_IRC) {
     return "[IRC] User [" + m_FromName + "] (Mode " + ToHexString(m_Permissions) + ") ";
   } else if (m_DiscordAPI) {
@@ -406,37 +391,39 @@ void CCommandContext::UpdatePermissions()
     return;
   }
 
-  bool IsRealmVerified = false;
+  shared_ptr<CGame> targetGame = GetTargetGame();
+  shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+  bool isRealmVerified = false;
   if (m_OverrideVerified.has_value()) {
-    IsRealmVerified = m_OverrideVerified.value();
+    isRealmVerified = m_OverrideVerified.value();
   } else {
-    IsRealmVerified = m_GameUser ? m_GameUser->IsRealmVerified() : m_SourceRealm != nullptr;
+    isRealmVerified = m_GameUser ? m_GameUser->IsRealmVerified() : (sourceRealm != nullptr);
   }
 
   // Trust PvPGN servers on users identities for admin powers. Their impersonation is not a threat we worry about.
   // However, do NOT trust them regarding sudo access, since those commands may cause data deletion or worse.
   // Note also that sudo permissions must be ephemeral, since neither WC3 nor PvPGN TCP connections are secure.
   bool IsOwner = false;
-  if (m_GameUser && (&(m_GameUser->m_Game.get()) == m_TargetGame.lock().get())) {
+  if (m_GameUser && (&(m_GameUser->m_Game.get()) == targetGame.get())) {
     IsOwner = m_GameUser->GetIsOwner(m_OverrideVerified);
-  } else if (!m_TargetGame.expired()) {
-    IsOwner = IsRealmVerified && m_TargetGame.lock()->MatchOwnerName(m_FromName) && m_ServerName == m_TargetGame.lock()->GetOwnerRealm();
+  } else if (targetGame) {
+    IsOwner = isRealmVerified && targetGame->MatchOwnerName(m_FromName) && m_ServerName == targetGame->GetOwnerRealm();
   }
-  bool IsCreatorRealm = !m_TargetGame.expired() && m_SourceRealm && m_TargetGame.lock()->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(m_SourceRealm));
-  bool IsRootAdmin = IsRealmVerified && m_SourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && m_SourceRealm->GetIsAdmin(m_FromName);
-  bool IsAdmin = IsRootAdmin || (IsRealmVerified && m_SourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && m_SourceRealm->GetIsModerator(m_FromName));
-  bool IsSudoSpoofable = IsRealmVerified && m_SourceRealm != nullptr && m_SourceRealm->GetIsSudoer(m_FromName);
+  bool IsCreatorRealm = targetGame && sourceRealm && targetGame->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(sourceRealm.get()));
+  bool IsRootAdmin = isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && sourceRealm->GetIsAdmin(m_FromName);
+  bool IsAdmin = IsRootAdmin || (isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && sourceRealm->GetIsModerator(m_FromName));
+  bool IsSudoSpoofable = isRealmVerified && sourceRealm != nullptr && sourceRealm->GetIsSudoer(m_FromName);
 
   // GOTCHA: Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
-  if (m_GameUser || (IsOwner && !m_TargetGame.expired() && m_TargetGame.lock()->GetIsLobbyStrict())) {
+  if (m_GameUser || (IsOwner && targetGame && targetGame->GetIsLobbyStrict())) {
     m_Permissions |= USER_PERMISSIONS_GAME_PLAYER;
   }
 
   // Leaver or absent owners are automatically demoted.
-  if (IsRealmVerified) {
+  if (isRealmVerified) {
     m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
   }
-  if (IsOwner && (m_GameUser || (!m_TargetGame.expired() && m_TargetGame.lock()->GetIsLobbyStrict()))) {
+  if (IsOwner && (m_GameUser || (targetGame && targetGame->GetIsLobbyStrict()))) {
     m_Permissions |= USER_PERMISSIONS_GAME_OWNER;
   }
   if (IsAdmin) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
@@ -548,8 +535,8 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
   }
   bool isValidCaller = (
     m_FromName == m_Aura->m_SudoContext->m_FromName &&
-    m_SourceRealm == m_Aura->m_SudoContext->m_SourceRealm &&
-    m_TargetRealm == m_Aura->m_SudoContext->m_TargetRealm &&
+    m_SourceRealm.lock() == m_Aura->m_SudoContext->m_SourceRealm.lock() &&
+    m_TargetRealm.lock() == m_Aura->m_SudoContext->m_TargetRealm.lock() &&
     m_SourceGame.lock() == m_Aura->m_SudoContext->m_SourceGame.lock() &&
     m_TargetGame.lock() == m_Aura->m_SudoContext->m_TargetGame.lock() &&
     m_GameUser == m_Aura->m_SudoContext->m_GameUser &&
@@ -626,27 +613,32 @@ void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxF
   if (message.empty())
     return;
 
+  //const shared_ptr<CGame> sourceGame = GetSourceGame();
+  const shared_ptr<CGame> targetGame = GetTargetGame();
+  const shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+  //const shared_ptr<CRealm> targetRealm = GetTargetRealm();
+
   switch (m_FromType) {
     case FROM_GAME: {
-      if (m_TargetGame.expired()) break;
+      if (!targetGame) break;
       if (message.length() <= 100) {
-        m_TargetGame.lock()->SendChat(m_GameUser, message);
+        targetGame->SendChat(m_GameUser, message);
       } else {
         string leftMessage = message;
         do {
-          m_TargetGame.lock()->SendChat(m_GameUser, leftMessage.substr(0, 100));
+          targetGame->SendChat(m_GameUser, leftMessage.substr(0, 100));
           leftMessage = leftMessage.substr(100);
         } while (leftMessage.length() > 100);
         if (!leftMessage.empty()) {
-          m_TargetGame.lock()->SendChat(m_GameUser, leftMessage);
+          targetGame->SendChat(m_GameUser, leftMessage);
         }
       }
       break;
     }
 
     case FROM_BNET: {
-      if (m_SourceRealm) {
-        m_SourceRealm->TryQueueChat(message, m_FromName, true, shared_from_this(), ctxFlags);
+      if (sourceRealm) {
+        sourceRealm->TryQueueChat(message, m_FromName, true, shared_from_this(), ctxFlags);
       }
       break;
     }
@@ -677,8 +669,12 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
   bool AllTarget = ctxFlags & CHAT_SEND_TARGET_ALL;
   bool AllSource = ctxFlags & CHAT_SEND_SOURCE_ALL;
   bool AllSourceSuccess = false;
-  shared_ptr<CGame> targetGame = m_TargetGame.lock();
-  shared_ptr<CGame> sourceGame = m_SourceGame.lock();
+
+  const shared_ptr<CGame> sourceGame = GetSourceGame();
+  const shared_ptr<CGame> targetGame = GetTargetGame();
+  const shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+  const shared_ptr<CRealm> targetRealm = GetTargetRealm();
+
   if (AllTarget) {
     if (targetGame) {
       targetGame->SendAllChat(message);
@@ -686,9 +682,9 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
         AllSourceSuccess = true;
       }
     }
-    if (m_TargetRealm) {
-      m_TargetRealm->TryQueueChat(message, m_FromName, false, shared_from_this(), ctxFlags);
-      if (m_TargetRealm == m_SourceRealm) {
+    if (targetRealm) {
+      targetRealm->TryQueueChat(message, m_FromName, false, shared_from_this(), ctxFlags);
+      if (targetRealm == sourceRealm) {
         AllSourceSuccess = true;
       }
     }
@@ -699,8 +695,8 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       sourceGame->SendAllChat(message);
       AllSourceSuccess = true;
     }
-    if (m_SourceRealm && !AllSourceSuccess) {
-      m_SourceRealm->TryQueueChat(message, m_FromName, false, shared_from_this(), ctxFlags);
+    if (sourceRealm && !AllSourceSuccess) {
+      sourceRealm->TryQueueChat(message, m_FromName, false, shared_from_this(), ctxFlags);
       AllSourceSuccess = true;
     }
     if (m_IRC) {
@@ -722,8 +718,8 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
   if (m_FromType != FROM_OTHER && (ctxFlags & CHAT_LOG_INCIDENT)) {
     if (!m_TargetGame.expired()) {
       LogStream(*m_Output, m_TargetGame.lock()->GetLogPrefix() + message);
-    } else if (m_SourceRealm) {
-      LogStream(*m_Output, m_SourceRealm->GetLogPrefix() + message);
+    } else if (sourceRealm) {
+      LogStream(*m_Output, sourceRealm->GetLogPrefix() + message);
     } else if (m_IRC) {
       LogStream(*m_Output, "[IRC] " + message);
     } else if (m_DiscordAPI) {
@@ -1015,18 +1011,19 @@ bool CCommandContext::RunParseNonPlayerSlot(const std::string& target, uint8_t& 
   return true;
 }
 
-CRealm* CCommandContext::GetTargetRealmOrCurrent(const string& target)
+shared_ptr<CRealm> CCommandContext::GetTargetRealmOrCurrent(const string& target)
 {
   if (target.empty()) {
-    return m_SourceRealm;
+    return m_SourceRealm.lock();
   }
   string realmId = TrimString(target);
   transform(begin(realmId), end(realmId), begin(realmId), [](char c) { return static_cast<char>(std::tolower(c)); });
-  CRealm* exactMatch = m_Aura->GetRealmByInputId(realmId);
+  shared_ptr<CRealm> exactMatch = m_Aura->GetRealmByInputId(realmId);
   if (exactMatch) return exactMatch;
   return m_Aura->GetRealmByHostName(realmId);
 }
 
+// TODO: Migrate
 bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string& nameFragment, string& realmFragment, CRealm*& realm, bool allowNoRealm, bool searchHistory)
 {
   if (inputTarget.empty()) {
@@ -1074,7 +1071,7 @@ bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string&
     }
     realmFragment = targetPlayer->GetRealmHostName();
     nameFragment = targetPlayer->GetName();
-  } else if (m_SourceRealm) {
+  } else if (!m_SourceRealm.expired()) {
     realmFragment = m_ServerName;
     nameFragment = TrimString(target);
   } else {
@@ -1158,6 +1155,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
   uint64_t CommandHash = HashCode(Command);
 
+  const shared_ptr<CGame> baseSourceGame = GetSourceGame();
+  const shared_ptr<CGame> baseTargetGame = GetTargetGame();
+  const shared_ptr<CRealm> baseSourceRealm = GetSourceRealm();
+  const shared_ptr<CRealm> baseTargetRealm = GetTargetRealm();
+
   if (CommandHash == HashCode("su")) {
     // Allow !su for LAN connections
     if (!m_ServerName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
@@ -1169,8 +1171,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     m_Aura->m_SudoExecCommand = Payload;
     SendReply("Sudo command requested. See Aura's console for further steps.");
     Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + cmdToken + Payload + "\"");
-    if (m_SourceRealm && m_FromWhisper) {
-      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + m_SourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
+    if (baseSourceRealm && m_FromWhisper) {
+      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + baseSourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     } else if (m_IRC || m_DiscordAPI) {
       Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthPayload + "\"");
     } else {
@@ -1196,8 +1198,6 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     }
   }
 
-  const shared_ptr<CGame> baseSourceGame = GetSourceGame();
-  const shared_ptr<CGame> baseTargetGame = GetTargetGame();
   const bool isLocked = baseTargetGame && ((m_GameUser && m_GameUser->GetIsActionLocked()) || baseTargetGame->GetLocked());
   if (isLocked && 0 == (m_Permissions & (USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
     LogStream(*m_Output, baseTargetGame->GetLogPrefix() + "Command ignored, the game is locked");
@@ -1404,7 +1404,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("This command is disabled in incognito mode games.");
         break;
       }
-      CRealm* targetPlayerRealm = targetPlayer->GetRealm(true);
+      shared_ptr<CRealm> targetPlayerRealm = targetPlayer->GetRealm(true);
       bool IsRealmVerified = targetPlayerRealm != nullptr;
       bool IsOwner = targetPlayer->GetIsOwner(nullopt);
       bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(targetPlayer->GetName());
@@ -1586,8 +1586,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("statsdota"):
     case HashCode("stats"): {
+      shared_ptr<CGame> sourceGame = GetSourceGame();
       if (
-        (m_SourceGame.expired() || !m_SourceGame.lock()->GetIsLobbyStrict()) &&
+        (!sourceGame || sourceGame->GetIsLobbyStrict()) &&
         !CheckPermissions(m_Config->m_StatsPermissions, COMMAND_PERMISSIONS_VERIFIED)
       ) {
         ErrorReply("Not allowed to look up stats.");
@@ -1756,6 +1757,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("yes"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!m_GameUser || targetGame->m_KickVotePlayer.empty() || m_GameUser->GetKickVote().value_or(false))
         break;
 
@@ -1772,6 +1774,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("no"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!m_GameUser || targetGame->m_KickVotePlayer.empty() || !m_GameUser->GetKickVote().value_or(true))
         break;
 
@@ -1802,7 +1805,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       size_t LastSlash = MapPath.rfind('\\');
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, false, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -2263,6 +2266,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("pbl"):
     case HashCode("pbanlast"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
 
       if (!targetGame || !targetGame->GetGameLoaded())
         break;
@@ -2295,8 +2299,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         string authServer = m_ServerName;
-        if (m_SourceRealm) {
-          authServer = m_SourceRealm->GetDataBaseID();
+        if (sourceRealm) {
+          authServer = sourceRealm->GetDataBaseID();
         }
         m_Aura->m_DB->BanAdd(
           targetGame->m_LastLeaverBannable->GetName(),
@@ -2937,6 +2941,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
 
       if (targetGame) {
         if (!targetGame->GetIsLobbyStrict() || targetGame->GetCountDownStarted()) {
@@ -2952,7 +2957,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
-          ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
+          ErrorReply("A map must be loaded with " + (sourceRealm ? sourceRealm->GetCommandToken() : "!") + "map first.");
           break;
         }
       }
@@ -2995,7 +3000,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         targetGame->m_CreationTime = targetGame->m_LastRefreshTime = GetTime();
       } else {
         if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
-          ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
+          ErrorReply("A map must be loaded with " + (sourceRealm ? sourceRealm->GetCommandToken() : "!") + "map first.");
           break;
         }
         if (!m_Aura->GetNewGameIsInQuotaConservative()) {
@@ -3006,12 +3011,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_Aura->m_GameSetup->SetBaseName(Payload);
         m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
         if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
-          m_Aura->m_GameSetup->SetOwner(m_FromName, m_SourceRealm);
+          m_Aura->m_GameSetup->SetOwner(m_FromName, sourceRealm);
         }
         /*
         // TODO: SetCreator
-        if (m_SourceRealm) {
-          m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
+        if (sourceRealm) {
+          m_Aura->m_GameSetup->SetCreator(m_FromName, sourceRealm);
         } else if (m_IRC) {
           m_Aura->m_GameSetup->SetCreator(m_FromName, m_IRC);
         } else if (m_DiscordAPI) {
@@ -3036,6 +3041,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       vector<string> Args = SplitArgs(Payload, 2u, 2u);
       string gameName;
       if (Args.empty() || (gameName = TrimString(Args[1])).empty()) {
@@ -3045,7 +3052,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
-        ErrorReply("A map must be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map first.");
+        ErrorReply("A map must be loaded with " + (sourceRealm ? sourceRealm->GetCommandToken() : "!") + "map first.");
         break;
       }
 
@@ -3057,7 +3064,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool IsPrivate = CommandHash == HashCode("privby");
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(Args[0], targetName, targetHostName, targetRealm, true)) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
@@ -3066,8 +3073,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
       //TODO: SetCreator()
-      //m_Aura->m_GameSetup->SetCreator(m_FromName, m_SourceRealm);
-      m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : m_SourceRealm);
+      //m_Aura->m_GameSetup->SetCreator(m_FromName, sourceRealm);
+      m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : sourceRealm);
       m_Aura->m_GameSetup->RunHost();
       break;
     }
@@ -3594,6 +3601,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("mute"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!targetGame || targetGame->GetIsMirror())
         break;
 
@@ -3621,9 +3630,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Cannot mute yourself.");
           break;
         }
-        if (m_SourceRealm && (
-          m_SourceRealm->GetIsAdmin(targetPlayer->GetName()) || (
-            m_SourceRealm->GetIsModerator(targetPlayer->GetName()) &&
+        if (sourceRealm && (
+          sourceRealm->GetIsAdmin(targetPlayer->GetName()) || (
+            sourceRealm->GetIsModerator(targetPlayer->GetName()) &&
             !CheckPermissions(m_Config->m_AdminBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN)
           )
         )) {
@@ -3648,6 +3657,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("muteall"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame || targetGame->GetIsMirror() || !targetGame->GetGameLoaded())
         break;
 
@@ -3679,6 +3689,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("abort"):
     case HashCode("a"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame || !targetGame->GetIsLobbyStrict())
         break;
 
@@ -3708,6 +3719,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("checknetwork"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
 
       if (!targetGame || !targetGame->GetIsStageAcceptingJoins()) {
         ErrorReply("Use this command when you are hosting a game lobby.");
@@ -3723,8 +3735,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Not allowed to check network status.");
         break;
       }
-      const bool TargetAllRealms = Payload == "*" || (Payload.empty() && !m_SourceRealm);
-      CRealm* targetRealm = nullptr;
+      const bool TargetAllRealms = Payload == "*" || (Payload.empty() && !sourceRealm);
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!TargetAllRealms) {
         targetRealm = GetTargetRealmOrCurrent(Payload);
         if (!targetRealm) {
@@ -3751,6 +3763,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("portforward"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
@@ -3808,7 +3821,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -3859,12 +3872,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Only root admins may list bans.");
         break;
       }
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!targetRealm) {
         ErrorReply("Usage: " + cmdToken + "listbans <REALM>");
         break;
       }
-      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
+      if (targetRealm != sourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to list bans in arbitrary realms.");
         break;
       }
@@ -3947,8 +3962,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -3988,6 +4004,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("ban"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame || !targetGame->GetIsLobbyStrict()) {
         ErrorReply("This command may only be used in a game lobby, and will only affect it. For persistent bans, use " + cmdToken + "pban .");
         break;
@@ -4016,7 +4033,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string reason = Args[1];
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -4060,6 +4077,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("unban"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame || !targetGame->GetIsLobbyStrict()) {
         ErrorReply("This command may only be used in a game lobby, and will only affect it. For persistent bans, use " + cmdToken + "punban .");
         break;
@@ -4076,7 +4094,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -4122,12 +4140,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
 
       string inputTarget = Args[0];
       string reason = Args[1];
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -4139,8 +4158,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       string authServer = m_ServerName;
-      if (m_SourceRealm) {
-        authServer = m_SourceRealm->GetDataBaseID();
+      if (sourceRealm) {
+        authServer = sourceRealm->GetDataBaseID();
       }
       if (targetRealm) {
         targetHostName = targetRealm->GetDataBaseID();
@@ -4155,8 +4174,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string ip = m_Aura->m_DB->GetLatestIP(targetName, targetHostName);
 
-      if (m_SourceRealm && authServer == targetHostName) {
-        if (m_SourceRealm->GetIsAdmin(targetName) || (m_SourceRealm->GetIsModerator(targetName) &&
+      if (sourceRealm && authServer == targetHostName) {
+        if (sourceRealm->GetIsAdmin(targetName) || (sourceRealm->GetIsModerator(targetName) &&
           !CheckPermissions(m_Config->m_AdminBasePermissions, COMMAND_PERMISSIONS_ROOTADMIN))
         ) {
           ErrorReply("User [" + targetName + "] is an admin on server [" + m_ServerName + "]");
@@ -4187,6 +4206,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("unpban"):
     case HashCode("punban"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to remove persistent bans.");
         break;
@@ -4196,7 +4217,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
         if (!targetHostName.empty()) {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -4209,8 +4230,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         targetHostName = targetRealm->GetDataBaseID();
       }
       string authServer = m_ServerName;
-      if (m_SourceRealm) {
-        authServer = m_SourceRealm->GetDataBaseID();
+      if (sourceRealm) {
+        authServer = sourceRealm->GetDataBaseID();
       }
       CDBBan* Ban = m_Aura->m_DB->UserBanCheck(targetName, targetHostName, authServer);
       if (Ban) {
@@ -4305,6 +4326,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("sendlan"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame || !targetGame->GetIsStageAcceptingJoins()) {
         break;
       }
@@ -4400,6 +4422,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("sendlaninfo"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame || !targetGame->GetIsStageAcceptingJoins()) {
         break;
       }
@@ -4434,6 +4457,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("lanversion"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame || !targetGame->GetIsLobbyStrict()) {
         break;
       }
@@ -4496,6 +4520,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("owner"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!targetGame) {
         ErrorReply("No game found.");
         break;
@@ -4528,11 +4554,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (Payload.empty()) {
         targetName = m_FromName;
-        if (m_SourceRealm) {
-          targetRealm = m_SourceRealm;
+        if (sourceRealm) {
+          targetRealm = sourceRealm;
           targetHostName = m_ServerName;
         }
       } else if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
@@ -4586,6 +4612,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     case HashCode("unowner"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!targetGame) {
         ErrorReply("No game found.");
         break;
@@ -4724,7 +4751,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       bool toAllRealms = Args[0] == "*";
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (toAllRealms) {
         if (0 != (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
           ErrorReply("Announcing on all realms requires sudo permissions."); // But not really
@@ -6410,7 +6437,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      CRealm* targetRealm = targetPlayer->GetRealm(false);
+      shared_ptr<CRealm> targetRealm = targetPlayer->GetRealm(false);
       if (!targetRealm) {
         SendReply("Player [" + targetPlayer->GetName() + "] joined from LAN/VPN.");
         break;
@@ -6440,7 +6467,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       string targetName, targetHostName;
-      CRealm* targetRealm = nullptr;
+      shared_ptr<CRealm> targetRealm = nullptr;
       if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, false, true)) {
         if (!targetHostName.empty() && targetHostName != "*") {
           ErrorReply(targetHostName + " is not a valid PvPGN realm.");
@@ -6521,7 +6548,9 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     // !GETCLAN
     case HashCode("getclan"): {
-      if (!m_SourceRealm)
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
+      if (!sourceRealm)
         break;
 
       if (!GetIsSudo()) {
@@ -6529,14 +6558,16 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_SourceRealm->SendGetClanList();
+      sourceRealm->SendGetClanList();
       SendReply("Fetching clan member list from " + m_ServerName + "...");
       break;
     }
 
     // !GETFRIENDS
     case HashCode("getfriends"): {
-      if (!m_SourceRealm)
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
+      if (!sourceRealm)
         break;
 
       if (!GetIsSudo()) {
@@ -6544,13 +6575,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      m_SourceRealm->SendGetFriendsList();
+      sourceRealm->SendGetFriendsList();
       SendReply("Fetching friends list from " + m_ServerName + "...");
       break;
     }
 
     case HashCode("egame"):
     case HashCode("eg"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();      
       if (!GetIsSudo()) {
         ErrorReply("Requires sudo permissions.");
         break;
@@ -6583,8 +6615,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         } else if (m_DiscordAPI) {
           ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_DiscordAPI, &std::cout);
 #endif
-        } else if (m_SourceRealm) {
-          ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_SourceRealm, m_FromName, m_FromWhisper, m_IsBroadcast, &std::cout);
+        } else if (sourceRealm) {
+          ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, sourceRealm, m_FromName, m_FromWhisper, m_IsBroadcast, &std::cout);
         } else {
           ctx = make_shared<CCommandContext>(m_Aura, m_Config, targetGame, m_FromName, m_IsBroadcast, &std::cout);
         }
@@ -6775,6 +6807,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       } else {
         shared_ptr<CGame> targetGame = GetTargetGame(GameId);
+        shared_ptr<CGame> sourceGame = GetSourceGame();
         if (!targetGame) {
           ErrorReply("Game [" + GameId + "] not found.");
           break;
@@ -6787,7 +6820,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Failed to send chat message to [" + targetGame->GetGameName() + "]");
           break;
         }
-        if (targetGame != m_SourceGame.lock()) {
+        if (targetGame != sourceGame) {
           SendReply("Sent chat message to [" + targetGame->GetGameName() + "]");
         }
       }
@@ -6831,12 +6864,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!targetRealm) {
         ErrorReply("Usage: " + cmdToken + "disablepub <REALM>");
         break;
       }
-      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
+      if (targetRealm != sourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
@@ -6858,12 +6893,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Only root admins may toggle public game creation.");
         break;
       }
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!targetRealm) {
         ErrorReply("Usage: " + cmdToken + "enablepub <REALM>");
         break;
       }
-      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
+      if (targetRealm != sourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to toggle game creation in arbitrary realms.");
         break;
       }
@@ -6999,6 +7036,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("checkadmin"):
     case HashCode("checkstaff"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may list staff.");
         break;
@@ -7009,12 +7048,12 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_SourceRealm) {
+      if (!sourceRealm) {
         ErrorReply("Realm not found.");
         break;
       }
-      bool IsRootAdmin = m_SourceRealm->GetIsAdmin(Payload);
-      bool IsAdmin = IsRootAdmin || m_SourceRealm->GetIsModerator(Payload);
+      bool IsRootAdmin = sourceRealm->GetIsAdmin(Payload);
+      bool IsAdmin = IsRootAdmin || sourceRealm->GetIsModerator(Payload);
       if (!IsAdmin && !IsRootAdmin)
         SendReply("User [" + Payload + "] is not staff on server [" + m_ServerName + "]");
       else if (IsRootAdmin)
@@ -7034,17 +7073,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Only root admins may list staff.");
         break;
       }
-      CRealm* targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> targetRealm = GetTargetRealmOrCurrent(Payload);
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!targetRealm) {
         ErrorReply("Usage: " + cmdToken + "liststaff <REALM>");
         break;
       }
-      if (targetRealm != m_SourceRealm && !GetIsSudo()) {
+      if (targetRealm != sourceRealm && !GetIsSudo()) {
         ErrorReply("Not allowed to list staff in arbitrary realms.");
         break;
       }
       vector<string> admins = vector<string>(targetRealm->m_Config.m_Admins.begin(), targetRealm->m_Config.m_Admins.end());
-      vector<string> moderators = m_Aura->m_DB->ListModerators(m_SourceRealm->GetDataBaseID());
+      vector<string> moderators = m_Aura->m_DB->ListModerators(sourceRealm->GetDataBaseID());
       if (admins.empty() && moderators.empty()) {
         ErrorReply("No staff has been designated in " + targetRealm->GetCanonicalDisplayName());
         break;
@@ -7060,8 +7101,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("admin"):
     case HashCode("staff"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
-        if (!m_SourceGame.expired() && !m_SourceGame.lock()->m_OwnerLess) {
+        shared_ptr<CGame> sourceGame = GetSourceGame();
+        if (sourceGame && !sourceGame->m_OwnerLess) {
           ErrorReply("Only root admins may add staff. Did you mean to acquire control of this game? Use " + cmdToken + "owner");
         } else {
           ErrorReply("Only root admins may add staff.");
@@ -7072,15 +7116,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "staff <NAME>");
         break;
       }
-      if (!m_SourceRealm) {
+      if (!sourceRealm) {
         ErrorReply("Realm not found.");
         break;
       }
-      if (m_SourceRealm->GetIsModerator(Payload)) {
+      if (sourceRealm->GetIsModerator(Payload)) {
         ErrorReply("User [" + Payload + "] is already staff on server [" + m_ServerName + "]");
         break;
       }
-      if (!m_Aura->m_DB->ModeratorAdd(m_SourceRealm->GetDataBaseID(), Payload)) {
+      if (!m_Aura->m_DB->ModeratorAdd(sourceRealm->GetDataBaseID(), Payload)) {
         ErrorReply("Failed to add user [" + Payload + "] as moderator [" + m_ServerName + "]");
         break;
       }
@@ -7093,6 +7137,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("delstaff"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Only root admins may change staff.");
         break;
@@ -7102,19 +7148,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      if (!m_SourceRealm) {
+      if (!sourceRealm) {
         ErrorReply("Realm not found.");
         break;
       }
-      if (m_SourceRealm->GetIsAdmin(Payload)) {
+      if (sourceRealm->GetIsAdmin(Payload)) {
         ErrorReply("User [" + Payload + "] is a root admin on server [" + m_ServerName + "]");
         break;
       }
-      if (!m_SourceRealm->GetIsModerator(Payload)) {
+      if (!sourceRealm->GetIsModerator(Payload)) {
         ErrorReply("User [" + Payload + "] is not staff on server [" + m_ServerName + "]");
         break;
       }
-      if (!m_Aura->m_DB->ModeratorRemove(m_SourceRealm->GetDataBaseID(), Payload)) {
+      if (!m_Aura->m_DB->ModeratorRemove(sourceRealm->GetDataBaseID(), Payload)) {
         ErrorReply("Error deleting user [" + Payload + "] from the moderator database on server [" + m_ServerName + "]");
         break;
       }
@@ -7298,6 +7344,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("query"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Requires sudo permissions."); // But not really
         break;
@@ -7311,14 +7359,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       vector<string> Args = SplitArgs(Payload, 1u, 2u);
-      if (Args.empty() || (Args.size() < 2 && !m_SourceRealm)) {
+      if (Args.empty() || (Args.size() < 2 && !sourceRealm)) {
         ErrorReply("Usage: " + cmdToken + "query <QUERY>");
         ErrorReply("Usage: " + cmdToken + "query <REALM>, <QUERY>");
         ErrorReply("Valid queries are: listgames, printgames, netinfo, quota");
         break;
       }
 
-      CRealm* targetRealm = m_SourceRealm;
+      shared_ptr<CRealm> targetRealm = sourceRealm;
       if (Args.size() > 1) {
         targetRealm = GetTargetRealmOrCurrent(Args[0]);
       }
@@ -7352,6 +7400,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("channel"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (!CheckPermissions(m_Config->m_ModeratorBasePermissions, COMMAND_PERMISSIONS_ADMIN)) {
         ErrorReply("Not allowed to invite the bot to another channel.");
         break;
@@ -7360,15 +7410,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "channel <CHANNEL>");
         break;
       }
-      if (!m_SourceRealm) {
+      if (!sourceRealm) {
         ErrorReply("Realm not found.");
         break;
       }
-      if (m_SourceRealm->GetGameBroadcast()) {
+      if (sourceRealm->GetGameBroadcast()) {
         ErrorReply("Cannot join a chat channel while hosting a lobby.");
         break;
       }
-      if (!m_SourceRealm->QueueCommand("/join " + Payload)) {
+      if (!sourceRealm->QueueCommand("/join " + Payload)) {
         ErrorReply("Failed to join channel.");
         break;
       }
@@ -7413,6 +7463,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       UseImplicitReplaceable();
       shared_ptr<CGame> sourceGame = GetSourceGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
 
       if (!CheckPermissions(m_Config->m_HostPermissions, (
         targetGame && targetGame->GetIsLobbyStrict() && targetGame->GetIsReplaceable() ?
@@ -7430,7 +7481,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (Args.empty() || Args[0].empty() || (isHostCommand && Args[Args.size() - 1].empty())) {
         if (isHostCommand) {
           ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <GAME NAME>");
-          if (m_GameUser || !m_SourceRealm || m_SourceRealm->GetIsFloodImmune()) {
+          if (m_GameUser || !sourceRealm || sourceRealm->GetIsFloodImmune()) {
             ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <OBSERVERS> , <GAME NAME>");
             ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <GAME NAME>");
             ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <OBSERVERS> , <VISIBILITY> , <RANDOM RACES> , <GAME NAME>");
@@ -7512,13 +7563,15 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
     //
 
     case HashCode("mirror"): {
+      shared_ptr<CRealm> sourceRealm = GetSourceRealm();
+
       if (0 == (m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("Not allowed to mirror games.");
         break;
       }
 
       if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
-        ErrorReply("A map must first be loaded with " + (m_SourceRealm ? m_SourceRealm->GetCommandToken() : "!") + "map.");
+        ErrorReply("A map must first be loaded with " + (sourceRealm ? sourceRealm->GetCommandToken() : "!") + "map.");
         break;
       }
 
@@ -7537,7 +7590,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       uint16_t gamePort = 6112;
       uint32_t gameHostCounter = 1;
 
-      CRealm* excludedServer = m_Aura->GetRealmByInputId(Args[0]);
+      shared_ptr<CRealm> excludedServer = m_Aura->GetRealmByInputId(Args[0]);
 
       optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(Args[1], ACCEPT_IPV4);
       if (!maybeAddress.has_value()) {
@@ -7738,6 +7791,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("pin"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!m_GameUser) {
         break;
       }
@@ -7762,6 +7816,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
     case HashCode("unpin"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
+
       if (!m_GameUser) {
         break;
       }
@@ -7922,8 +7977,8 @@ CCommandContext::~CCommandContext()
   m_SourceGame.reset();
   m_TargetGame.reset();
   m_GameUser = nullptr;
-  m_SourceRealm = nullptr;
-  m_TargetRealm = nullptr;
+  m_SourceRealm.reset();
+  m_TargetRealm.reset();
   m_IRC = nullptr;
 #ifndef DISABLE_DPP
   delete m_DiscordAPI;

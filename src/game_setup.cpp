@@ -1223,7 +1223,7 @@ void CGameSetup::OnLoadMapSuccess()
       targetGame->SetIsBeingReplaced(true);
       ++m_Aura->m_ReplacingLobbiesCounter;
     }
-    CRealm* sourceRealm = m_Ctx->GetSourceRealm();
+    shared_ptr<CRealm> sourceRealm = m_Ctx->GetSourceRealm();
     if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
       SetOwner(m_Ctx->GetSender(), sourceRealm);
     }
@@ -1425,12 +1425,12 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   return SetMirrorSource(maybeAddress.value(), gameId);
 }
 
-void CGameSetup::AddIgnoredRealm(const CRealm* nRealm)
+void CGameSetup::AddIgnoredRealm(shared_ptr<const CRealm> nRealm)
 {
   m_RealmsExcluded.insert(nRealm->GetServer());
 }
 
-void CGameSetup::RemoveIgnoredRealm(const CRealm* nRealm)
+void CGameSetup::RemoveIgnoredRealm(shared_ptr<const CRealm> nRealm)
 {
   m_RealmsExcluded.erase(nRealm->GetServer());
 }
@@ -1440,7 +1440,7 @@ void CGameSetup::SetDisplayMode(const uint8_t nDisplayMode)
   m_RealmsDisplayMode = nDisplayMode;
 }
 
-void CGameSetup::SetOwner(const string& nOwner, const CRealm* nRealm)
+void CGameSetup::SetOwner(const string& nOwner, shared_ptr<const CRealm> nRealm)
 {
   if (nRealm == nullptr) {
     m_Owner = make_pair(nOwner, string());
@@ -1497,6 +1497,7 @@ void CGameSetup::RemoveCreator()
 
 bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const
 {
+  // TODO: SetCreator()
   if (m_CreatedFromType != fromType) return false;
   switch (fromType) {
     case SERVICE_TYPE_REALM:

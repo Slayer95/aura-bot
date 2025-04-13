@@ -57,7 +57,7 @@
 // CRealm
 //
 
-class CRealm
+class CRealm : public std::enable_shared_from_this<CRealm>
 {
 public:
   CAura* m_Aura;

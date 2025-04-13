@@ -43,8 +43,8 @@ using namespace std;
 // CQueuedChatMessage
 //
 
-CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, shared_ptr<CCommandContext> nCtx, const bool isProxy)
-  : m_Realm(nRealm),
+CQueuedChatMessage::CQueuedChatMessage(shared_ptr<CRealm> nRealm, shared_ptr<CCommandContext> nCtx, const bool isProxy)
+  : m_Realm(ref(*nRealm)),
     m_QueuedTime(0),
     m_ReceiverSelector(0),
     m_MessageValue(0),
@@ -54,7 +54,7 @@ CQueuedChatMessage::CQueuedChatMessage(CRealm* nRealm, shared_ptr<CCommandContex
     m_CallbackData(0),
     m_WasThrottled(false)
 {
-  if (nCtx && nCtx->m_SourceRealm == nRealm) {
+  if (nCtx && nCtx->GetSourceRealm() == nRealm) {
     m_Channel = nCtx->GetChannelName();
   }
   if (m_Channel.empty()) {
@@ -107,11 +107,11 @@ bool CQueuedChatMessage::GetIsStale() const
   if (m_Validator.empty()) return false;
   switch (m_Validator[0]) {
     case CHAT_VALIDATOR_LOBBY_JOINABLE: {
-      if (m_Realm->GetIsGameBroadcastErrored()) return true;
-      shared_ptr<CGame> refLobby = m_Realm->m_Aura->GetLobbyByHostCounterExact(ByteArrayToUInt32(m_Validator, false, 1));
+      if (m_Realm.get().GetIsGameBroadcastErrored()) return true;
+      shared_ptr<CGame> refLobby = m_Realm.get().m_Aura->GetLobbyByHostCounterExact(ByteArrayToUInt32(m_Validator, false, 1));
       if (!refLobby) return true;
-      if (refLobby->GetIsExpansion() != m_Realm->GetGameIsExpansion()) return true;
-      if (!refLobby->GetIsSupportedGameVersion(m_Realm->GetGameVersion())) return true;
+      if (refLobby->GetIsExpansion() != m_Realm.get().GetGameIsExpansion()) return true;
+      if (!refLobby->GetIsSupportedGameVersion(m_Realm.get().GetGameVersion())) return true;
       return false;
     }
 

@@ -131,7 +131,7 @@ public:
   std::filesystem::path                              m_GameInstallPath;
 
   std::queue<GenericAppAction>                       m_PendingActions;
-  std::vector<CRealm*>                               m_Realms;                     // all our battle.net clients (there can be more than one)
+  std::vector<std::shared_ptr<CRealm>>               m_Realms;                     // all our battle.net clients (there can be more than one)
   std::vector<std::shared_ptr<CGame>>                m_StartedGames;               // all games after they have started
   std::vector<std::shared_ptr<CGame>>                m_Lobbies;                    // all games before they are started
   std::vector<std::shared_ptr<CGame>>                m_LobbiesPending;             // vector for just-created lobbies before they get into m_Lobbies
@@ -143,8 +143,8 @@ public:
   std::map<std::string, std::string>                 m_LastMapIdentifiersFromSuggestions;
 
   std::vector<std::string>                           m_RealmsIdentifiers;
-  std::map<uint8_t, CRealm*>                         m_RealmsByHostCounter;
-  std::map<std::string, CRealm*>                     m_RealmsByInputID;
+  std::map<uint8_t, std::weak_ptr<CRealm>>           m_RealmsByHostCounter;
+  std::map<std::string, std::weak_ptr<CRealm>>       m_RealmsByInputID;
 
   explicit CAura(CConfig& CFG, const CCLI& nCLI);
   ~CAura();
@@ -160,9 +160,9 @@ public:
   [[nodiscard]] std::shared_ptr<CGame> GetGameByIdentifier(const uint64_t gameIdentifier) const;
   [[nodiscard]] std::shared_ptr<CGame> GetGameByString(const std::string& targetGame) const;
 
-  [[nodiscard]] CRealm* GetRealmByInputId(const std::string& inputId) const;
-  [[nodiscard]] CRealm* GetRealmByHostCounter(const uint8_t hostCounter) const;
-  [[nodiscard]] CRealm* GetRealmByHostName(const std::string& hostName) const;
+  [[nodiscard]] std::shared_ptr<CRealm> GetRealmByInputId(const std::string& inputId) const;
+  [[nodiscard]] std::shared_ptr<CRealm> GetRealmByHostCounter(const uint8_t hostCounter) const;
+  [[nodiscard]] std::shared_ptr<CRealm> GetRealmByHostName(const std::string& hostName) const;
   [[nodiscard]] uint8_t FindServiceFromHostName(const std::string& hostName, void*& location) const;
 
   [[nodiscard]] std::vector<std::shared_ptr<CGame>> GetAllGames() const;
@@ -205,11 +205,12 @@ public:
 
   // events
 
-  void EventBNETGameRefreshSuccess(CRealm* realm);
-  void EventBNETGameRefreshError(CRealm* realm);
+  void EventBNETGameRefreshSuccess(std::shared_ptr<CRealm> realm);
+  void EventBNETGameRefreshError(std::shared_ptr<CRealm> realm);
   void EventGameDeleted(std::shared_ptr<CGame> game);
   void EventGameRemake(std::shared_ptr<CGame> game);
   void EventGameStarted(std::shared_ptr<CGame> game);
+  void EventRealmDeleted(std::shared_ptr<CRealm> realm);
 
   // other functions
 

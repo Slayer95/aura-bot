@@ -52,7 +52,7 @@ using namespace std;
 // CGameTestConnection
 //
 
-CGameTestConnection::CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const string& nName)
+CGameTestConnection::CGameTestConnection(CAura* nAura, shared_ptr<CRealm> nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const string& nName)
   : m_TargetHost(nTargetHost),
     m_Aura(nAura),
     m_RealmInternalId(nRealm ? nRealm->GetInternalID() : 0),
@@ -86,7 +86,7 @@ bool CGameTestConnection::GetIsRealmOnline() const
 {
   if (m_RealmInternalId < 0x10) return true;
   string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
-  CRealm* realm = m_Aura->GetRealmByInputId(realmId);
+  shared_ptr<CRealm> realm = m_Aura->GetRealmByInputId(realmId);
   if (realm == nullptr) return false;
   return realm->GetLoggedIn();
 }
@@ -95,7 +95,7 @@ bool CGameTestConnection::GetIsRealmListed() const
 {
   if (m_RealmInternalId < 0x10) return true;
   string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
-  CRealm* realm = m_Aura->GetRealmByInputId(realmId);
+  shared_ptr<CRealm> realm = m_Aura->GetRealmByInputId(realmId);
   if (realm == nullptr) return false;
   return realm->GetIsGameBroadcastSucceeded();
 }
@@ -108,7 +108,7 @@ uint32_t CGameTestConnection::GetHostCounter() const
   }
   uint32_t hostCounter = m_BaseHostCounter | (0x01 << 24); // informational bit
   string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
-  CRealm* realm = m_Aura->GetRealmByInputId(realmId);
+  shared_ptr<CRealm> realm = m_Aura->GetRealmByInputId(realmId);
   if (realm == nullptr) {
     return hostCounter;
   }
@@ -736,7 +736,8 @@ void CNet::UpdateMapTransfers()
   }
 
   for (const auto& user : downloaderPlayers) {
-    if (!user->GetGame()->GetMap()->GetMapFileIsValid()) {
+    shared_ptr<CGame> game = user->GetGame();
+    if (game->GetMap()->GetMapFileIsValid()) {
       user->AddKickReason(GameUser::KickReason::MAP_MISSING);
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
@@ -761,7 +762,7 @@ void CNet::UpdateMapTransfers()
 
     if (mapIsInvalid) {
       // Flag the map as invalid so that new users joining the lobby get a notice that the map cannot be transferred (and get eventually kicked.)
-      user->GetGame()->GetMap()->InvalidateMapFile();
+      game->GetMap()->InvalidateMapFile();
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (deleted)");
       }
@@ -770,7 +771,8 @@ void CNet::UpdateMapTransfers()
   }
 
   for (const auto& user : downloaderObservers) {
-    if (!user->GetGame()->GetMap()->GetMapFileIsValid()) {
+    shared_ptr<CGame> game = user->GetGame();
+    if (game->GetMap()->GetMapFileIsValid()) {
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
       }
@@ -794,7 +796,7 @@ void CNet::UpdateMapTransfers()
 
     if (mapIsInvalid) {
       // Flag the map as invalid so that new users joining the lobby get a notice that the map cannot be transferred (and get eventually kicked.)
-      user->GetGame()->GetMap()->InvalidateMapFile();
+      game->GetMap()->InvalidateMapFile();
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (deleted)");
       }
@@ -1272,7 +1274,7 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
 }
 #endif
 
-bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t checkMode, CRealm* targetRealm, shared_ptr<const CGame> game)
+bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t checkMode, shared_ptr<CRealm> targetRealm, shared_ptr<const CGame> game)
 {
   if (m_Aura->m_ExitingSoon || m_HealthCheckInProgress) {
     return false;
@@ -1927,20 +1929,20 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
   seeker->Init();
 }
 
-void CNet::OnGameReset(shared_ptr<const CGame> game)
+void CNet::EventGameReset(shared_ptr<const CGame> game)
 {
   for (auto& serverConnections : m_GameObservers) {
     for (auto& connection : serverConnections.second) {
-      connection->OnGameReset(game);
+      connection->EventGameReset(game);
     }
   }
 }
 
-void CNet::OnRealmDestroy(const CRealm* realm)
+void CNet::EventRealmDeleted(shared_ptr<const CRealm> realm)
 {
   for (auto& serverConnections : m_GameObservers) {
     for (auto& connection : serverConnections.second) {
-      connection->OnRealmDestroy(realm);
+      connection->EventRealmDeleted(realm);
     }
   }
 }

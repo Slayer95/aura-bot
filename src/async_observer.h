@@ -42,7 +42,7 @@ class CAsyncObserver final : public CConnection
 public:
   std::weak_ptr<CGame>                                          m_Game;
   MapTransfer                                                   m_MapTransfer;
-  const CRealm*                                                 m_FromRealm;
+  std::weak_ptr<CRealm>                                         m_FromRealm;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
   bool                                                          m_MapChecked;                   // if we received any W3GS_MAPSIZE packet from the client
   bool                                                          m_MapReady;                     // if we received a valid W3GS_MAPSIZE packet from the client matching the map size
@@ -84,7 +84,7 @@ public:
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
 
-  CAsyncObserver(std::shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const std::string& nName);
+  CAsyncObserver(std::shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, std::shared_ptr<CRealm> nFromRealm, const std::string& nName);
   ~CAsyncObserver();
 
   // processing functions
@@ -98,7 +98,7 @@ public:
 
   [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
   [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
-  [[nodiscard]] inline const CRealm*            GetRealm() { return m_FromRealm; }
+  [[nodiscard]] inline std::shared_ptr<CRealm>  GetRealm() { return m_FromRealm.lock(); }
 
   [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
   [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
@@ -124,8 +124,8 @@ public:
   bool PushGameFrames(bool isFlush = false);
   inline void FlushGameFrames() { PushGameFrames(true); }
   void CheckGameOver();
-  void OnGameReset(std::shared_ptr<const CGame> nGame);
-  void OnRealmDestroy(const CRealm* nRealm);
+  void EventGameReset(std::shared_ptr<const CGame> nGame);
+  void EventRealmDeleted(std::shared_ptr<const CRealm> nRealm);
   void UpdateClientGameState(const uint32_t checkSum);
   void CheckClientGameState();
   void UpdateDownloadProgression(const uint8_t downloadProgression);

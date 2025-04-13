@@ -219,7 +219,7 @@ namespace GameUser
     inline void                                   SubtractOnHoldActionsCount(size_t count) { m_OnHoldActionsCount -= count; }
     [[nodiscard]] size_t                          GetOnHoldActionsCount() const { return m_OnHoldActionsCount; }
 
-    [[nodiscard]] CRealm*                         GetRealm(bool mustVerify) const;
+    [[nodiscard]] std::shared_ptr<CRealm>         GetRealm(bool mustVerify) const;
     [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
     [[nodiscard]] inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
     [[nodiscard]] inline std::string              GetRealmHostName() const { return m_RealmHostName; }

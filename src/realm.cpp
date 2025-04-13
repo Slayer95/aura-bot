@@ -123,31 +123,6 @@ CRealm::~CRealm()
 
   delete m_Socket;
   delete m_BNCSUtil;
-
-  for (const auto& ptr : m_Aura->m_ActiveContexts) {
-    auto ctx = ptr.lock();
-    if (!ctx) continue;
-    if (ctx->m_SourceRealm == this) {
-      ctx->SetPartiallyDestroyed();
-      ctx->m_SourceRealm = nullptr;
-    }
-    if (ctx->m_TargetRealm == this) {
-      ctx->SetPartiallyDestroyed();
-      ctx->m_TargetRealm = nullptr;
-    }
-  }
-
-  for (auto& game : m_Aura->GetAllGames()) {
-    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
-      game->RemoveCreator();
-    }
-  }
-
-  if (m_Aura->m_GameSetup && m_Aura->m_GameSetup->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
-    m_Aura->m_GameSetup->RemoveCreator();
-  }
-
-  m_Aura->m_Net.OnRealmDestroy(this);
 }
 
 uint32_t CRealm::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
@@ -275,10 +250,10 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           case BNETProtocol::Magic::STARTADVEX3:
             if (!m_GameBroadcast.expired()) {
               if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
-                m_Aura->EventBNETGameRefreshSuccess(this);
+                m_Aura->EventBNETGameRefreshSuccess(shared_from_this());
               } else {
                 PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish hosted game")
-                m_Aura->EventBNETGameRefreshError(this);
+                m_Aura->EventBNETGameRefreshError(shared_from_this());
               }
             }
             break;
@@ -790,7 +765,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
           Print(GetLogPrefix() + " !! lobby is not stale !!");
         }
       } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion()) && matchLobby->GetIsExpansion() == GetGameIsExpansion()) {
-        matchLobby->AnnounceToRealm(this);
+        matchLobby->AnnounceToRealm(shared_from_this());
       }
       break;
     }
@@ -1207,7 +1182,7 @@ CQueuedChatMessage* CRealm::QueueCommand(const string& message, shared_ptr<CComm
     return nullptr;
   }
 
-  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  CQueuedChatMessage* entry = new CQueuedChatMessage(shared_from_this(), fromCtx, isProxy);
   entry->SetMessage(message);
   entry->SetReceiver(RECV_SELECTOR_SYSTEM);
   m_ChatQueueMain.push(entry);
@@ -1229,7 +1204,7 @@ CQueuedChatMessage* CRealm::QueuePriorityWhois(const string& message)
   if (m_ChatQueueGameHostWhois) {
     delete m_ChatQueueGameHostWhois;
   }
-  m_ChatQueueGameHostWhois = new CQueuedChatMessage(this, nullptr, false);
+  m_ChatQueueGameHostWhois = new CQueuedChatMessage(shared_from_this(), nullptr, false);
   m_ChatQueueGameHostWhois->SetMessage(message);
   m_ChatQueueGameHostWhois->SetReceiver(RECV_SELECTOR_SYSTEM);
   m_HadChatActivity = true;
@@ -1243,7 +1218,7 @@ CQueuedChatMessage* CRealm::QueueChatChannel(const string& message, shared_ptr<C
   if (message.empty() || !m_LoggedIn)
     return nullptr;
 
-  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  CQueuedChatMessage* entry = new CQueuedChatMessage(shared_from_this(), fromCtx, isProxy);
   if (!m_Config.m_FloodImmune && m_Config.m_MaxLineLength < message.length()) {
     entry->SetMessage(message.substr(0, m_Config.m_MaxLineLength));
   } else {
@@ -1262,7 +1237,7 @@ CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const str
   if (message.empty() || !m_LoggedIn)
     return nullptr;
 
-  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  CQueuedChatMessage* entry = new CQueuedChatMessage(shared_from_this(), fromCtx, isProxy);
   entry->SetMessage(messageValue, message);
   entry->SetReceiver(selector, user);
   m_ChatQueueMain.push(entry);
@@ -1277,7 +1252,7 @@ CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& us
   if (message.empty() || !m_LoggedIn)
     return nullptr;
 
-  CQueuedChatMessage* entry = new CQueuedChatMessage(this, fromCtx, isProxy);
+  CQueuedChatMessage* entry = new CQueuedChatMessage(shared_from_this(), fromCtx, isProxy);
   if (!m_Config.m_FloodImmune && (m_Config.m_MaxLineLength - 20u) < message.length()) {
     entry->SetMessage(message.substr(0, m_Config.m_MaxLineLength - 20u));
   } else {
@@ -1320,8 +1295,8 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(shared_ptr<const CGame> ga
 
   m_ChatQueuedGameAnnouncement = true;
 
-  m_ChatQueueJoinCallback = new CQueuedChatMessage(this, fromCtx, isProxy);
-  m_ChatQueueJoinCallback->SetMessage(game->GetAnnounceText(this));
+  m_ChatQueueJoinCallback = new CQueuedChatMessage(shared_from_this(), fromCtx, isProxy);
+  m_ChatQueueJoinCallback->SetMessage(game->GetAnnounceText(shared_from_this()));
   m_ChatQueueJoinCallback->SetReceiver(RECV_SELECTOR_ONLY_PUBLIC);
   m_ChatQueueJoinCallback->SetCallback(CHAT_CALLBACK_REFRESH_GAME, game->GetHostCounter());
   if (!game->GetIsMirror()) {
@@ -1429,7 +1404,7 @@ void CRealm::CheckPendingGameBroadcast()
     QueueGameChatAnnouncement(pendingGame);
   } else {
     // Send STARTADVEX3
-    pendingGame->AnnounceToRealm(this);
+    pendingGame->AnnounceToRealm(shared_from_this());
 
     // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
     // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
@@ -1495,7 +1470,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
     game->GetGameFlags(),
     game->GetAnnounceWidth(),
     game->GetAnnounceHeight(),
-    game->GetCustomGameName(this),
+    game->GetCustomGameName(shared_from_this()),
     m_Config.m_UserName,
     game->GetUptime(),
     game->GetSourceFilePath(),

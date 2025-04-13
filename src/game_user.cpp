@@ -353,7 +353,7 @@ void CGameUser::ShiftRecentActionCounters() {
   m_RecentActionCounter[2] = 0;
 }
 
-CRealm* CGameUser::GetRealm(bool mustVerify) const
+shared_ptr<CRealm> CGameUser::GetRealm(bool mustVerify) const
 {
   if (m_RealmInternalId < 0x10)
     return nullptr;
@@ -367,7 +367,7 @@ CRealm* CGameUser::GetRealm(bool mustVerify) const
 
 string CGameUser::GetRealmDataBaseID(bool mustVerify) const
 {
-  CRealm* Realm = GetRealm(mustVerify);
+  shared_ptr<CRealm> Realm = GetRealm(mustVerify);
   if (Realm) return Realm->GetDataBaseID();
   return string();
 }
@@ -717,7 +717,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     } else if (m_KickByTicks.has_value() && m_KickByTicks.value() < Ticks) {
       m_Game.get().EventUserKickHandleQueued(this);
     } else if (!m_Verified && m_RealmInternalId >= 0x10 && Ticks - m_JoinTicks >= GAME_USER_UNVERIFIED_KICK_TICKS && m_Game.get().GetIsLobbyStrict()) {
-      CRealm* Realm = GetRealm(false);
+      shared_ptr<CRealm> Realm = GetRealm(false);
       if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
         m_Game.get().EventUserKickUnverified(this);
       }
@@ -738,7 +738,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     // wait 5 seconds after joining before sending the /whois or /w
     // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
     if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Ticks - m_JoinTicks >= AUTO_REALM_VERIFY_LATENCY) {
-      CRealm* Realm = GetRealm(false);
+      shared_ptr<CRealm> Realm = GetRealm(false);
       if (Realm) {
         if (m_Game.get().GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
           if (m_Game.get().GetSentPriorityWhois()) {
@@ -794,7 +794,7 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
 
 void CGameUser::InitGProxy(const uint32_t version)
 {
-  CRealm* realm = GetRealm(false);
+  shared_ptr<CRealm> realm = GetRealm(false);
 
   m_GProxy = true;
   m_GProxyVersion = version;

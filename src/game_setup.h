@@ -273,10 +273,10 @@ public:
 
   [[nodiscard]] bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
   [[nodiscard]] bool SetMirrorSource(const std::string& nInput);
-  void AddIgnoredRealm(const CRealm* nRealm);
-  void RemoveIgnoredRealm(const CRealm* nRealm);
+  void AddIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
+  void RemoveIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   void SetDisplayMode(const uint8_t nDisplayMode);
-  void SetOwner(const std::string& nOwner, const CRealm* nRealm);
+  void SetOwner(const std::string& nOwner, std::shared_ptr<const CRealm> nRealm);
   void SetOwnerLess(const bool nValue) { m_OwnerLess = nValue; }
   /*
   void SetCreator(const std::string& nCreator, const uint8_t serviceType);

@@ -31,22 +31,22 @@
 class CQueuedChatMessage
 {
 private:
-  CRealm*               m_Realm;
-  int64_t               m_QueuedTime;
-  std::string           m_Channel; // Empty if whisper-only.
-  uint8_t               m_ReceiverSelector; // force whisper, prefer channel, wait for channel, channel or drop
-  std::vector<uint8_t>  m_ReceiverName; // Empty if the message cannot fall back to whispering.
-  std::vector<uint8_t>  m_Message;
-  uint8_t               m_MessageValue; // If m_Message is too long, Aura MAY replace it by a shorter one, respecting this value.
+  std::reference_wrapper<CRealm>               m_Realm;
+  int64_t                                      m_QueuedTime;
+  std::string                                  m_Channel; // Empty if whisper-only.
+  uint8_t                                      m_ReceiverSelector; // force whisper, prefer channel, wait for channel, channel or drop
+  std::vector<uint8_t>                         m_ReceiverName; // Empty if the message cannot fall back to whispering.
+  std::vector<uint8_t>                         m_Message;
+  uint8_t                                      m_MessageValue; // If m_Message is too long, Aura MAY replace it by a shorter one, respecting this value.
 
-  std::shared_ptr<CCommandContext>      m_ProxySenderCtx;
-  std::vector<uint8_t>  m_ProxySenderName; // !whois, !tell, !invite, !say, !announce
-  std::string           m_EarlyFeedback;
+  std::shared_ptr<CCommandContext>             m_ProxySenderCtx;
+  std::vector<uint8_t>                         m_ProxySenderName; // !whois, !tell, !invite, !say, !announce
+  std::string                                  m_EarlyFeedback;
 
-  std::vector<uint8_t>  m_Validator; // First byte CHAT_VALIDATOR_NONE, CHAT_VALIDATOR_LOBBY_JOINABLE. Rest is parsed.
-  uint8_t               m_Callback;
-  uint32_t              m_CallbackData;
-  bool                  m_WasThrottled;
+  std::vector<uint8_t>                         m_Validator; // First byte CHAT_VALIDATOR_NONE, CHAT_VALIDATOR_LOBBY_JOINABLE. Rest is parsed.
+  uint8_t                                      m_Callback;
+  uint32_t                                     m_CallbackData;
+  bool                                         m_WasThrottled;
 
 public:
   void SetMessage(const std::string& body) {
@@ -95,7 +95,7 @@ public:
   inline uint32_t GetCallbackData() const { return m_CallbackData; }
   inline bool GetWasThrottled() const { return m_WasThrottled; }
 
-  CQueuedChatMessage(CRealm* nRealm, std::shared_ptr<CCommandContext> nCtx, const bool isProxy);
+  CQueuedChatMessage(std::shared_ptr<CRealm> nRealm, std::shared_ptr<CCommandContext> nCtx, const bool isProxy);
   ~CQueuedChatMessage();
 };
 

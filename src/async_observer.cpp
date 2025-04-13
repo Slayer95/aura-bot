@@ -45,7 +45,7 @@ using namespace std;
 // CAsyncObserver
 //
 
-CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, const CRealm* nFromRealm, const string& nName)
+CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, shared_ptr<CRealm> nFromRealm, const string& nName)
   : CConnection(*nConnection),
     m_Game(nGame),
     m_GameHistory(nGame->GetGameHistory()),
@@ -400,17 +400,17 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
   return success;
 }
 
-void CAsyncObserver::OnGameReset(shared_ptr<const CGame> nGame)
+void CAsyncObserver::EventGameReset(shared_ptr<const CGame> nGame)
 {
   if (m_Game.lock() == nGame) {
     m_Game.reset();
   }
 }
 
-void CAsyncObserver::OnRealmDestroy(const CRealm* nRealm)
+void CAsyncObserver::EventRealmDeleted(shared_ptr<const CRealm> nRealm)
 {
-  if (m_FromRealm == nRealm) {
-    m_FromRealm = nullptr;
+  if (m_FromRealm.lock() == nRealm) {
+    m_FromRealm.reset();
   }
 }
 

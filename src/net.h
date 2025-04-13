@@ -39,7 +39,7 @@
 class CGameTestConnection
 {
 public:
-  CGameTestConnection(CAura* nAura, CRealm* nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const std::string& nName);
+  CGameTestConnection(CAura* nAura, std::shared_ptr<CRealm> nRealm, sockaddr_storage nTargetHost, const uint32_t nBaseHostCounter, const uint8_t nType, const std::string& nName);
   ~CGameTestConnection();
 
   [[nodiscard]] uint32_t  SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
@@ -178,7 +178,7 @@ public:
 #ifndef DISABLE_MINIUPNP
   uint8_t RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel, bool ignoreCache = false);
 #endif
-  bool QueryHealthCheck(std::shared_ptr<CCommandContext> ctx, const uint8_t checkMode, CRealm* realm, std::shared_ptr<const CGame> game);
+  bool QueryHealthCheck(std::shared_ptr<CCommandContext> ctx, const uint8_t checkMode, std::shared_ptr<CRealm> realm, std::shared_ptr<const CGame> game);
   void ResetHealthCheck();
   void ReportHealthCheck();
 
@@ -208,8 +208,8 @@ public:
   void                                   OnConfigReload();
   void                                   OnUserKicked(GameUser::CGameUser* user, bool deferred = false);
   void                                   RegisterGameSeeker(CConnection* connection, uint8_t nType);
-  void                                   OnGameReset(std::shared_ptr<const CGame> nGame);
-  void                                   OnRealmDestroy(const CRealm* nRealm);
+  void                                   EventGameReset(std::shared_ptr<const CGame> nGame);
+  void                                   EventRealmDeleted(std::shared_ptr<const CRealm> nRealm);
   void                                   GracefulExit();
   bool                                   CheckGracefulExit() const;
   bool                                   GetIsStandby() const;
