@@ -5890,7 +5890,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
   }
 
   if (m_Map->GetMapType() == "microtraining") {
-    if (chatMessage == "g") {
+    if (chatMessage == "g" || chatMessage == "go") {
       if (!user->GetInGameReady()) {
         user->SetInGameReady();
         if (GetNumInGameReadyUsers() >= 2) {
