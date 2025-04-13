@@ -525,6 +525,7 @@
     <ClInclude Include="game.h" />
     <ClInclude Include="aura.h" />
     <ClInclude Include="cli.h" />
+    <ClInclude Include="command_structs.h" />
     <ClInclude Include="command.h" />
     <ClInclude Include="rate_limiter.h" />
     <ClInclude Include="integration\discord.h" />

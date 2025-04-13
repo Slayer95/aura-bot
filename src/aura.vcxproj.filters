@@ -320,6 +320,9 @@
     <ClInclude Include="cli.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="command_structs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="command.h">
       <Filter>Header Files</Filter>
     </ClInclude>
