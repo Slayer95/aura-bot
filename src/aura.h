@@ -208,6 +208,7 @@ public:
 
   void EventBNETGameRefreshSuccess(std::shared_ptr<CRealm> realm);
   void EventBNETGameRefreshError(std::shared_ptr<CRealm> realm);
+  void EventGameReset(std::shared_ptr<CGame> game);
   void EventGameDeleted(std::shared_ptr<CGame> game);
   void EventGameRemake(std::shared_ptr<CGame> game);
   void EventGameStarted(std::shared_ptr<CGame> game);

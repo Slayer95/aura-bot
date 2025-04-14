@@ -357,24 +357,9 @@ void CGame::Reset()
 
   DestroyStats();
 
-  for (const auto& ptr : m_Aura->m_ActiveContexts) {
-    auto ctx = ptr.lock();
-    if (!ctx) continue;
-    if (ctx->m_SourceGame.lock() == shared_from_this()) {
-      ctx->SetPartiallyDestroyed();
-      ctx->m_SourceGame.reset();
-    }
-    if (ctx->m_TargetGame.lock() == shared_from_this()) {
-      ctx->SetPartiallyDestroyed();
-      ctx->m_TargetGame.reset();
-    }
-  }
-
   for (auto& realm : m_Aura->m_Realms) {
     realm->ResetGameChatAnnouncement();
   }
-
-  m_Aura->m_Net.EventGameReset(shared_from_this());
 }
 
 CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
@@ -7000,6 +6985,7 @@ void CGame::RemakeStart()
 
 void CGame::Remake()
 {
+  m_Aura->EventGameReset(shared_from_this());
   Reset();
 
   int64_t Time = GetTime();

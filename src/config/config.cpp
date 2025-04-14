@@ -288,7 +288,7 @@ uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromLis
   value = ToLowerCase(value);
   auto match = find(fromList.begin(), fromList.end(), value);
   if (match != fromList.end()) {
-    SUCCESS(distance(fromList.begin(), match))
+    SUCCESS((uint8_t)distance(fromList.begin(), match))
   }
   CONFIG_ERROR_ALLOWED_VALUES(key, defaultValue, fromList)
 }
@@ -298,7 +298,7 @@ uint8_t CConfig::GetStringIndexSensitive(const string& key, const vector<string>
   GET_KEY(key, value, defaultValue)
   auto match = find(fromList.begin(), fromList.end(), value);
   if (match != fromList.end()) {
-    SUCCESS(distance(fromList.begin(), match))
+    SUCCESS((uint8_t)distance(fromList.begin(), match))
   }
   CONFIG_ERROR_ALLOWED_VALUES(key, defaultValue, fromList)
 }

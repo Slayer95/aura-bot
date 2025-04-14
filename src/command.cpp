@@ -848,7 +848,6 @@ GameControllerSearchResult CCommandContext::GetParseController(const std::string
   }
   shared_ptr<const CGame> targetGame = GetTargetGame();
 
-  uint8_t SID = 0;
   GameUser::CGameUser* user = nullptr;
 
   switch (target[0]) {
@@ -893,7 +892,6 @@ GameControllerSearchResult CCommandContext::RunParseController(const std::string
   }
   shared_ptr<const CGame> targetGame = GetTargetGame();
 
-  uint8_t SID = 0;
   GameUser::CGameUser* user = nullptr;
 
   switch (target[0]) {
@@ -4972,7 +4970,11 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      SendReply("Color changed to " + GetColorName(color) + ".");
+      if (targetPlayer) {
+        SendReply("[" + targetPlayer->GetDisplayName() + "]'s color changed to " + GetColorName(color) + ".");
+      } else {
+        SendReply("Color changed to " + GetColorName(color) + ".");
+      }
       break;
     }
 

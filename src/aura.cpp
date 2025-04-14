@@ -1397,6 +1397,25 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
   }
 }
 
+void CAura::EventGameReset(shared_ptr<CGame> game)
+{
+  for (const auto& ptr : m_ActiveContexts) {
+    auto ctx = ptr.lock();
+    if (!ctx) continue;
+    if (ctx->m_SourceGame.lock() == game) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_SourceGame.reset();
+    }
+    if (ctx->m_TargetGame.lock() == game) {
+      ctx->SetPartiallyDestroyed();
+      ctx->m_TargetGame.reset();
+    }
+  }
+
+  m_Net.EventGameReset(game);
+  UntrackGameJoinInProgress(game);
+}
+
 void CAura::EventGameDeleted(shared_ptr<CGame> game)
 {
   if (game->GetFromAutoReHost()) {
@@ -1439,7 +1458,8 @@ void CAura::EventGameDeleted(shared_ptr<CGame> game)
     }
   }
 
-  UntrackGameJoinInProgress(game);
+  EventGameReset(game);
+  // CGame::Reset() is the first thing done by CGame::~CGame()
 }
 
 void CAura::EventGameRemake(shared_ptr<CGame> game)
@@ -2011,6 +2031,9 @@ void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, c
     "%swarning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
    prefix.c_str(), expectedInterval, actualInterval, averageInterval
   );
+  buffer[length] = '\x00';
+  Print(buffer);
+
   m_LastPerformanceWarningTicks = Ticks;
 }
 

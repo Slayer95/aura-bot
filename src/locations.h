@@ -110,7 +110,7 @@ struct ServiceUser
   template <typename T>
   [[nodiscard]] inline std::shared_ptr<T> GetService() const
   {
-    return static_pointer_cast<T>(servicePtr.lock());
+    return std::static_pointer_cast<T>(servicePtr.lock());
   }
   inline bool GetIsExpired() const { return servicePtr.expired(); }
   inline uint8_t GetServiceType() const { return serviceType; }

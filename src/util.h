@@ -494,9 +494,10 @@ template <size_t SIZE>
   if (size == 0)
     return std::string();
 
-  std::string result = std::to_string(start[size - 1]);
+  size_t i = size - 1;
+  std::string result = std::to_string(start[i]);
 
-  for (size_t i = size - 2; i >= 0; --i) {
+  while (i--) {
     result += " " + std::to_string(start[i]);
   }
 
