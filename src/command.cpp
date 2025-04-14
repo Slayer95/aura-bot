@@ -789,54 +789,38 @@ void CCommandContext::SendAllUnlessHidden(const string& message)
 
 GameUser::CGameUser* CCommandContext::GetTargetUser(const string& target)
 {
-  GameUser::CGameUser* targetUser = nullptr;
   if (m_TargetGame.expired()) {
-    return targetUser;
+    return nullptr;
   }
-  if (m_TargetGame.lock()->GetIsHiddenPlayerNames()) {
-    m_TargetGame.lock()->GetUserFromDisplayNamePartial(target, targetUser);
-  } else {
-    m_TargetGame.lock()->GetUserFromNamePartial(target, targetUser);
-  }
-  return targetUser;
+  return GetTargetGame()->GetUserFromDisplayNamePartial(target).user;
 }
 
 GameUser::CGameUser* CCommandContext::RunTargetUser(const string& target)
 {
-  GameUser::CGameUser* targetUser = nullptr;
   if (m_TargetGame.expired()) {
-    return targetUser;
+    return nullptr;
   }
 
-  uint8_t Matches;
-  if (m_TargetGame.lock()->GetIsHiddenPlayerNames()) {
-    Matches = m_TargetGame.lock()->GetUserFromDisplayNamePartial(target, targetUser);
-  } else {
-    Matches = m_TargetGame.lock()->GetUserFromNamePartial(target, targetUser);
-  }
-  if (Matches > 1) {
+  GameUserSearchResult searchResult = GetTargetGame()->GetUserFromDisplayNamePartial(target);
+  if (searchResult.matchCount > 1) {
     ErrorReply("Player [" + target + "] ambiguous.");
-  } else if (Matches == 0) {
+  } else if (searchResult.matchCount == 1) {
     ErrorReply("Player [" + target + "] not found.");
   }
-  return targetUser;
+  return searchResult.user;
 }
 
 GameUser::CGameUser* CCommandContext::GetTargetUserOrSelf(const string& target)
 {
+  if (m_TargetGame.expired()) {
+    return nullptr;
+  }
   if (target.empty()) {
     return m_GameUser;
   }
 
-  GameUser::CGameUser* targetUser = nullptr;
-  shared_ptr<const CGame> targetGame = GetTargetGame();
-  if (!targetGame) return targetUser;
-  if (targetGame->GetIsHiddenPlayerNames()) {
-    targetGame->GetUserFromDisplayNamePartial(target, targetUser);
-  } else {
-    targetGame->GetUserFromNamePartial(target, targetUser);
-  }
-  return targetUser;
+  GameUserSearchResult searchResult = GetTargetGame()->GetUserFromDisplayNamePartial(target);
+  return searchResult.user;
 }
 
 GameUser::CGameUser* CCommandContext::RunTargetPlayerOrSelf(const string& target)
@@ -845,48 +829,44 @@ GameUser::CGameUser* CCommandContext::RunTargetPlayerOrSelf(const string& target
     return m_GameUser;
   }
 
-  GameUser::CGameUser* targetUser = nullptr;
   shared_ptr<const CGame> targetGame = GetTargetGame();
   if (!targetGame) {
     ErrorReply("Please specify target user.");
-    return targetUser;
+    return nullptr;
   }
-  if (targetGame->GetIsHiddenPlayerNames()) {
-    targetGame->GetUserFromDisplayNamePartial(target, targetUser);
-  } else {
-    targetGame->GetUserFromNamePartial(target, targetUser);
-  }
-  if (!targetUser) {
+  GameUserSearchResult searchResult = targetGame->GetUserFromDisplayNamePartial(target);
+  if (!searchResult.user) {
     ErrorReply("Player [" + target + "] not found.");
   }
-  return targetUser;
+  return searchResult.user;
 }
 
-bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, GameUser::CGameUser*& user)
+GameControllerSearchResult CCommandContext::GetParseController(const std::string& target)
 {
   if (m_TargetGame.expired() || target.empty()) {
-    return false;
+    return {};
   }
   shared_ptr<const CGame> targetGame = GetTargetGame();
+
+  uint8_t SID = 0;
+  GameUser::CGameUser* user = nullptr;
+
   switch (target[0]) {
     case '#': {
       uint8_t testSID = ParseSID(target.substr(1));
       const CGameSlot* slot = targetGame->InspectSlot(testSID);
       if (!slot) {
-        return false;
+        return {};
       }
-      SID = testSID;
-      user = targetGame->GetUserFromUID(slot->GetUID());
-      return true;
+      return GameControllerSearchResult(testSID, targetGame->GetUserFromUID(slot->GetUID()));
     }
 
     case '@': {
       user = GetTargetUser(target.substr(1));
       if (user == nullptr) {
-        return false;
+        return {};
       }
-      SID = targetGame->GetSIDFromUID(user->GetUID());
-      return true;
+      return GameControllerSearchResult(targetGame->GetSIDFromUID(user->GetUID()), user);
     }
 
     default: {
@@ -894,47 +874,45 @@ bool CCommandContext::GetParsePlayerOrSlot(const std::string& target, uint8_t& S
       const CGameSlot* slot = targetGame->InspectSlot(testSID);
       GameUser::CGameUser* testPlayer = GetTargetUser(target.substr(1));
       if ((slot == nullptr) == (testPlayer == nullptr)) {
-        return false;
+        return {};
       }
       if (testPlayer == nullptr) {
-        SID = testSID;
-        user = targetGame->GetUserFromUID(slot->GetUID());
+        return GameControllerSearchResult(testSID, targetGame->GetUserFromUID(slot->GetUID()));
       } else {
-        SID = targetGame->GetSIDFromUID(testPlayer->GetUID());
-        user = testPlayer;
+        return GameControllerSearchResult(targetGame->GetSIDFromUID(testPlayer->GetUID()), testPlayer);
       }
-      return true;
     }
   }
 }
 
-bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, GameUser::CGameUser*& user)
+GameControllerSearchResult CCommandContext::RunParseController(const std::string& target)
 {
   if (m_TargetGame.expired() || target.empty()) {
     ErrorReply("Please provide a user @name or #slot.");
-    return false;
+    return {};
   }
   shared_ptr<const CGame> targetGame = GetTargetGame();
+
+  uint8_t SID = 0;
+  GameUser::CGameUser* user = nullptr;
+
   switch (target[0]) {
     case '#': {
       uint8_t testSID = ParseSID(target.substr(1));
       const CGameSlot* slot = targetGame->InspectSlot(testSID);
       if (!slot) {
         ErrorReply("Slot " + ToDecString(testSID + 1) + " not found.");
-        return false;
+        return {};
       }
-      SID = testSID;
-      user = targetGame->GetUserFromUID(slot->GetUID());
-      return true;
+      return GameControllerSearchResult(testSID, targetGame->GetUserFromUID(slot->GetUID()));
     }
 
     case '@': {
       user = RunTargetUser(target.substr(1));
       if (user == nullptr) {
-        return false;
+        return {};
       }
-      SID = targetGame->GetSIDFromUID(user->GetUID());
-      return true;
+      return GameControllerSearchResult(targetGame->GetSIDFromUID(user->GetUID()), user);
     }
 
     default: {
@@ -943,24 +921,21 @@ bool CCommandContext::RunParsePlayerOrSlot(const std::string& target, uint8_t& S
       GameUser::CGameUser* testPlayer = GetTargetUser(target.substr(1));
       if ((slot == nullptr) == (testPlayer == nullptr)) {
         ErrorReply("Please provide a user @name or #slot.");
-        return false;
+        return {};
       }
       if (testPlayer == nullptr) {
-        SID = testSID;
-        user = targetGame->GetUserFromUID(slot->GetUID());
+        return GameControllerSearchResult(testSID, targetGame->GetUserFromUID(slot->GetUID()));
       } else {
-        SID = targetGame->GetSIDFromUID(testPlayer->GetUID());
-        user = testPlayer;
+        return GameControllerSearchResult(targetGame->GetSIDFromUID(testPlayer->GetUID()), testPlayer);
       }
-      return true;
     }
   }
 }
 
-bool CCommandContext::GetParseNonPlayerSlot(const std::string& target, uint8_t& SID)
+optional<uint8_t> CCommandContext::GetParseNonPlayerSlot(const std::string& target)
 {
   if (m_TargetGame.expired() || target.empty()) {
-    return false;
+    return nullopt;
   }
   shared_ptr<const CGame> targetGame = GetTargetGame();
 
@@ -973,20 +948,20 @@ bool CCommandContext::GetParseNonPlayerSlot(const std::string& target, uint8_t& 
 
   const CGameSlot* slot = targetGame->InspectSlot(testSID);
   if (!slot) {
-    return false;
+    return nullopt;
   }
   if (targetGame->GetIsRealPlayerSlot(testSID)) {
-    return false;
+    return nullopt;
   }
-  SID = testSID;
-  return true;
+
+  return optional<uint8_t>(testSID);
 }
 
-bool CCommandContext::RunParseNonPlayerSlot(const std::string& target, uint8_t& SID)
+optional<uint8_t> CCommandContext::RunParseNonPlayerSlot(const std::string& target)
 {
   if (m_TargetGame.expired() || target.empty()) {
     ErrorReply("Please provide a user #slot.");
-    return false;
+    return nullopt;
   }
   shared_ptr<const CGame> targetGame = GetTargetGame();
 
@@ -1000,14 +975,14 @@ bool CCommandContext::RunParseNonPlayerSlot(const std::string& target, uint8_t& 
   const CGameSlot* slot = targetGame->InspectSlot(testSID);
   if (!slot) {
     ErrorReply("Slot [" + target + "] not found.");
-    return false;
+    return nullopt;
   }
   if (targetGame->GetIsRealPlayerSlot(testSID)) {
     ErrorReply("Slot is occupied by a player.");
-    return false;
+    return nullopt;
   }
-  SID = testSID;
-  return true;
+
+  return optional<uint8_t>(testSID);
 }
 
 shared_ptr<CRealm> CCommandContext::GetTargetRealmOrCurrent(const string& target)
@@ -1022,12 +997,15 @@ shared_ptr<CRealm> CCommandContext::GetTargetRealmOrCurrent(const string& target
   return m_Aura->GetRealmByHostName(realmId);
 }
 
-// TODO: Migrate
-bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string& nameFragment, string& realmFragment, CRealm*& realm, bool allowNoRealm, bool searchHistory)
+RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inputTarget, bool allowNoRealm, bool searchHistory)
 {
   if (inputTarget.empty()) {
-    return false;
+    return {};
   }
+
+  string nameFragment;
+  string realmFragment;
+  shared_ptr<CRealm> realm = nullptr;
 
   string target = inputTarget;
   string::size_type realmStart = inputTarget.find('@');
@@ -1037,13 +1015,14 @@ bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string&
     nameFragment = TrimString(inputTarget.substr(0, realmStart));
     if (!nameFragment.empty() && nameFragment.size() <= MAX_PLAYER_NAME_SIZE) {
       if (allowNoRealm && realmFragment.empty()) {
-        return true;
+        return RealmUserSearchResult(nameFragment, realmFragment, realm);
       }
       realm = GetTargetRealmOrCurrent(realmFragment);
       if (realm) {
         realmFragment = realm->GetServer();
       }
-      return realm != nullptr;
+      if (realm == nullptr) return RealmUserSearchResult(nameFragment, realmFragment);
+      return RealmUserSearchResult(nameFragment, realmFragment, realm);
     }
     // Handle @PLAYER
     target = realmFragment;
@@ -1052,21 +1031,21 @@ bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string&
     //isFullyQualified = false;
   }
 
-  if (/*!isFullyQualified && */m_GameUser && m_SourceGame.lock()->GetIsHiddenPlayerNames()) {
-    return false;
+  if (/*!isFullyQualified && */m_GameUser && (m_SourceGame.expired() || m_SourceGame.lock()->GetIsHiddenPlayerNames())) {
+    return {};
   }
 
   if (m_GameUser && searchHistory) {
     CDBBan* targetPlayer = nullptr;
     if (m_SourceGame.lock()->GetBannableFromNamePartial(target, targetPlayer) != 1) {
-      return false;
+      return {};
     }
     realmFragment = targetPlayer->GetServer();
     nameFragment = targetPlayer->GetName();
   } else if (m_GameUser) {
     GameUser::CGameUser* targetPlayer = GetTargetUser(target);
     if (!targetPlayer) {
-      return false;
+      return {};
     }
     realmFragment = targetPlayer->GetRealmHostName();
     nameFragment = targetPlayer->GetName();
@@ -1074,28 +1053,34 @@ bool CCommandContext::GetParseTargetRealmUser(const string& inputTarget, string&
     realmFragment = m_ServerName;
     nameFragment = TrimString(target);
   } else {
-    return false;
+    return {};
   }
 
   if (nameFragment.empty() || nameFragment.size() > MAX_PLAYER_NAME_SIZE) {
-    return false;
+    return {};
   }
 
   if (realmFragment.empty()) {
-    return true;
+    return RealmUserSearchResult(nameFragment, realmFragment, realm);
   } else {
     realm = GetTargetRealmOrCurrent(realmFragment);
     if (realm) {
       realmFragment = realm->GetServer();
     }
-    return realm != nullptr;
+    if (realm == nullptr) return RealmUserSearchResult(nameFragment, realmFragment);
+    return RealmUserSearchResult(nameFragment, realmFragment, realm);
   }
 }
 
 uint8_t CCommandContext::GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location)
 {
-  bool isRealm = GetParseTargetRealmUser(target, nameFragment, locationFragment, reinterpret_cast<CRealm*&>(location));
-  if (isRealm) return SERVICE_TYPE_REALM;
+  RealmUserSearchResult realmSearchResult = GetParseTargetRealmUser(target);
+  if (realmSearchResult.success) {
+    nameFragment = realmSearchResult.userName;
+    locationFragment = realmSearchResult.hostName;
+    location = realmSearchResult.realm.get();
+    return SERVICE_TYPE_REALM;
+  }
   shared_ptr<CGame> matchingGame = GetTargetGame(locationFragment);
   if (matchingGame) {
     if (nameFragment.size() > MAX_PLAYER_NAME_SIZE) {
@@ -1284,12 +1269,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         ErrorReply("Usage: " + cmdToken + "slot <PLAYER>");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
+
       const CGameSlot* slot = targetGame->InspectSlot(SID);
       if (targetPlayer) {
         SendReply("Player " + targetPlayer->GetName() + " (slot #" + ToDecString(SID + 1) + ") = " + ByteArrayToDecString(slot->GetByteArray()));
@@ -1719,12 +1706,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         ErrorReply("Usage: " + cmdToken + "votekick <PLAYERNAME>");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
+
       if (!targetPlayer) {
         ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a user.");
         break;
@@ -1803,16 +1792,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       const string MapPath = targetGame->GetMap()->GetClientPath();
       size_t LastSlash = MapPath.rfind('\\');
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, false, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      auto realmUserResult = GetParseTargetRealmUser(Payload, false, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
           ErrorReply("Usage: " + cmdToken + "invite <PLAYERNAME>@<REALM>");
         }
         break;
       }
+
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
 
       // Name of sender and receiver should be included in the message,
       // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
@@ -2671,12 +2663,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         ErrorReply("Usage: " + cmdToken + "kick <PLAYERNAME>");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
+
       if (!targetPlayer) {
         ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a user.");
         break;
@@ -3052,12 +3046,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       bool IsPrivate = CommandHash == HashCode("privby");
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Args[0], targetName, targetHostName, targetRealm, true)) {
+      auto realmUserResult = GetParseTargetRealmUser(Args[0], true);
+      if (!realmUserResult.success) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
       m_Aura->m_GameSetup->SetContext(shared_from_this());
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
@@ -3328,13 +3324,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      GameUser::CGameUser* userOne = nullptr;
-      GameUser::CGameUser* userTwo = nullptr;
-      uint8_t slotNumOne = 0xFF;
-      uint8_t slotNumTwo = 0xFF;
-      if (!RunParsePlayerOrSlot(Args[0], slotNumOne, userOne) || !RunParsePlayerOrSlot(Args[1], slotNumTwo, userTwo)) {
+      auto searchResultOne = RunParseController(Args[0]);
+      auto searchResultTwo = RunParseController(Args[0]);
+      if (!searchResultOne.success || !searchResultTwo.success) {
         break;
       }
+
+      uint8_t slotNumOne = searchResultOne.SID;
+      uint8_t slotNumTwo = searchResultTwo.SID;
+      GameUser::CGameUser* userOne = searchResultOne.user;
+      GameUser::CGameUser* userTwo = searchResultTwo.user;
+
       if (slotNumOne == slotNumTwo) {
         ErrorReply("Usage: " + cmdToken + "swap <PLAYER> , <PLAYER>");
         break;
@@ -3808,16 +3808,18 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      auto realmUserResult = GetParseTargetRealmUser(Payload, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
           ErrorReply("Usage: " + cmdToken + "checkban <PLAYERNAME>@<REALM>");
         }
         break;
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
       if (targetRealm) {
         targetHostName = targetRealm->GetDataBaseID();
       }
@@ -3951,17 +3953,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       shared_ptr<CGame> targetGame = GetTargetGame();
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
           ErrorReply("Usage: " + cmdToken + "alts <PLAYERNAME>");
           ErrorReply("Usage: " + cmdToken + "alts <PLAYERNAME>@<REALM>");
         }
         break;
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+
       string targetIP;
       if (targetGame) {
         targetIP = targetGame->GetBannableIP(targetName, targetHostName);
@@ -4020,17 +4025,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string inputTarget = Args[0];
       string reason = Args[1];
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      auto realmUserResult = GetParseTargetRealmUser(inputTarget, true, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
           ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>");
           ErrorReply("Usage: " + cmdToken + "ban <PLAYERNAME>@<REALM>");
         }
         break;
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
 
       string targetIP = targetGame->GetBannableIP(targetName, targetHostName);
       if (targetIP.empty()) {
@@ -4081,16 +4088,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
           ErrorReply("Usage: " + cmdToken + "unban <PLAYERNAME>@<REALM>");
         }
         break;
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+
       string emptyAddress;
       if (!targetGame->GetIsScopeBanned(targetName, targetHostName, emptyAddress)) {
         ErrorReply("[" + targetName + "@" + targetHostName + "] was not banned from this game.");
@@ -4133,17 +4143,19 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string inputTarget = Args[0];
       string reason = Args[1];
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(inputTarget, targetName, targetHostName, targetRealm, true, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      auto realmUserResult = GetParseTargetRealmUser(inputTarget, true, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
           ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>");
           ErrorReply("Usage: " + cmdToken + "pban <PLAYERNAME>@<REALM>");
         }
         break;
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
 
       string authServer = m_ServerName;
       if (sourceRealm) {
@@ -4204,16 +4216,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         ErrorReply("Usage: " + cmdToken + "punban <PLAYERNAME>@<REALM>");
         break;
       }
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+
+      auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
           ErrorReply("Usage: " + cmdToken + "punban <PLAYERNAME>@<REALM>");
         }
         break;
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+
       if (targetRealm) {
         targetHostName = targetRealm->GetDataBaseID();
       }
@@ -4549,14 +4565,20 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           targetRealm = sourceRealm;
           targetHostName = m_ServerName;
         }
-      } else if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, true, true)) {
-        if (!targetHostName.empty()) {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      } else {
+        auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
+        if (!realmUserResult.success) {
+          if (!realmUserResult.hostName.empty()) {
+            ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
+          } else {
+            ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>");
+            ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>@<REALM>");
+          }
           break;
         }
-        ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>");
-        ErrorReply("Usage: " + cmdToken + "owner <PLAYERNAME>@<REALM>");
-        break;
+        targetName = realmUserResult.userName;
+        targetHostName = realmUserResult.hostName;
+        targetRealm = realmUserResult.realm;
       }
 
       GameUser::CGameUser* targetPlayer = targetGame->GetUserFromName(targetName, false);
@@ -4848,8 +4870,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      if (!RunParseNonPlayerSlot(Args[0], SID)) {
+      optional<uint8_t> maybeSID = RunParseNonPlayerSlot(Args[0]);
+      if (!maybeSID.has_value()) {
         ErrorReply("Usage: " + cmdToken + "comp <SLOT> , <SKILL> - Skill is any of: easy, normal, insane");
         break;
       }
@@ -4857,7 +4879,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       if (Args.size() >= 2) {
         skill = ParseComputerSkill(Args[1]);
       }
-      if (!targetGame->ComputerSlot(SID, skill, false)) {
+      if (!targetGame->ComputerSlot(maybeSID.value(), skill, false)) {
         ErrorReply("Cannot add computer on that slot.");
         break;
       }
@@ -4927,12 +4949,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
 
       uint8_t color = ParseColor(Args[1]);
       if (color >= targetGame->GetMap()->GetVersionMaxSlots()) {
@@ -4990,12 +5013,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
 
       vector<uint32_t> handicap = SplitNumericArgs(Args[1], 1u, 1u);
       if (handicap.empty() || handicap[0] % 10 != 0 || !(50 <= handicap[0] && handicap[0] <= 100)) {
@@ -5070,12 +5094,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         Args[0] = m_FromName;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
 
       if ((!m_GameUser || m_GameUser != targetPlayer) && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
@@ -5166,13 +5191,14 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Args[0], SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         if (m_GameUser) ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
 
       uint8_t targetTeam = 0xFF;
       if (Args.size() >= 2) {
@@ -5265,12 +5291,13 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      uint8_t SID = 0xFF;
-      GameUser::CGameUser* targetPlayer = nullptr;
-      if (!RunParsePlayerOrSlot(Payload, SID, targetPlayer)) {
+      auto searchResult = RunParseController(Payload);
+      if (!searchResult.success) {
         ErrorReply("Usage: " + cmdToken + "observer <PLAYER>");
         break;
       }
+      uint8_t SID = searchResult.SID;
+      GameUser::CGameUser* targetPlayer = searchResult.user;
 
       if (!(targetGame->GetMap()->GetMapObservers() == MAPOBS_ALLOWED || targetGame->GetMap()->GetMapObservers() == MAPOBS_REFEREES)) {
         ErrorReply("This lobby does not allow observers.");
@@ -6384,17 +6411,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           ErrorReply("Cannot send messages to an incognito mode game.");
           break;
         }
-        GameUser::CGameUser* targetPlayer = nullptr;
-        if (matchingGame->GetUserFromNamePartial(inputName, targetPlayer) != 1) {
+        auto searchResult = matchingGame->GetUserFromNamePartial(inputName);
+        if (searchResult.matchCount != 1) {
           ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetGameName() + ">>.");
           break;
         }
         if (m_ServerName.empty()) {
-          matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>");
+          matchingGame->SendChat(searchResult.user, inputName + ", " + m_FromName + " tells you: <<" + subMessage + ">>");
         } else {
-          matchingGame->SendChat(targetPlayer, inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>");
+          matchingGame->SendChat(searchResult.user, inputName + ", " + m_FromName + " at " + m_ServerName + " tells you: <<" + subMessage + ">>");
         }
-        SendReply("Message sent to " + targetPlayer->GetName() + ".");
+        SendReply("Message sent to " + searchResult.user->GetName() + ".");
       } else {
         ErrorReply("Usage: " + cmdToken + "w <PLAYERNAME>@<LOCATION> , <MESSAGE>");
         break;
@@ -6454,14 +6481,17 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         break;
       }
 
-      string targetName, targetHostName;
-      shared_ptr<CRealm> targetRealm = nullptr;
-      if (!GetParseTargetRealmUser(Payload, targetName, targetHostName, targetRealm, false, true)) {
-        if (!targetHostName.empty() && targetHostName != "*") {
-          ErrorReply(targetHostName + " is not a valid PvPGN realm.");
+      auto realmUserResult = GetParseTargetRealmUser(Payload, true);
+      if (!realmUserResult.success) {
+        if (!realmUserResult.hostName.empty() && realmUserResult.hostName != "*") {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
           break;
         }
       }
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+
       if (targetHostName.empty()) {
         targetName = Payload;
       }
@@ -7918,12 +7948,12 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       try {
          if (targetGame) {
           ctx = make_shared<CCommandContext>(
-            nAura, commandCFG, targetGame, sourceRealm,
+            nAura, commandCFG, targetGame, sourceRealm->shared_from_this(),
             lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
           );
          } else {
            ctx = make_shared<CCommandContext>(
-            nAura, commandCFG, sourceRealm,
+            nAura, commandCFG, sourceRealm->shared_from_this(),
             lazyCtx.identityName, true, lazyCtx.broadcast, &std::cout
           );
          }

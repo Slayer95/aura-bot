@@ -29,17 +29,28 @@
 #include "includes.h"
 
 //
-// GameUserSearchResult
+// GameControllerSearchResult
 //
 
-struct GameUserSearchResult
+struct GameControllerSearchResult
 {
-  uint8_t status;
-  GameUserSearchResult()
-   : status(0)
+  bool success;
+  uint8_t SID;
+  GameUser::CGameUser* user;
+
+  GameControllerSearchResult()
+   : success(false),
+     SID(0),
+     user(nullptr)
   {}
 
-  ~GameUserSearchResult() = default;
+  GameControllerSearchResult(uint8_t nSID, GameUser::CGameUser* nUser)
+   : success(true),
+     SID(nSID),
+     user(nUser)
+  {}
+
+  ~GameControllerSearchResult() = default;
 };
 
 //
@@ -48,9 +59,26 @@ struct GameUserSearchResult
 
 struct RealmUserSearchResult
 {
-  uint8_t status;
+  bool success;
+  std::string userName;
+  std::string hostName;
+  std::shared_ptr<CRealm> realm;
+
   RealmUserSearchResult()
-   : status(0)
+   : success(false)
+  {}
+
+  RealmUserSearchResult(const std::string& nUserName, const std::string& nHostName)
+   : success(false),
+     userName(nUserName),
+     hostName(nHostName)
+  {}
+
+  RealmUserSearchResult(const std::string& nUserName, const std::string& nHostName, std::shared_ptr<CRealm> nRealm)
+   : success(true),
+     userName(nUserName),
+     hostName(nHostName),
+     realm(nRealm)
   {}
 
   ~RealmUserSearchResult() = default;

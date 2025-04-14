@@ -289,8 +289,8 @@ public:
 
   [[nodiscard]]                                          bool MatchesCreatedFrom(const uint8_t fromType) const;
   [[nodiscard]]                                          bool MatchesCreatedFrom(const uint8_t fromType, std::shared_ptr<const void> fromThing) const;
-  [[nodiscard]]                                          bool MatchesCreatedFromGame(std::shared_ptr<CGame> nGame) const;
-  [[nodiscard]]                                          bool MatchesCreatedFromRealm(std::shared_ptr<CRealm> nRealm) const;
+  [[nodiscard]]                                          bool MatchesCreatedFromGame(std::shared_ptr<const CGame> nGame) const;
+  [[nodiscard]]                                          bool MatchesCreatedFromRealm(std::shared_ptr<const CRealm> nRealm) const;
   [[nodiscard]]                                          bool MatchesCreatedFromIRC() const;
   [[nodiscard]]                                          bool MatchesCreatedFromDiscord() const;
 
@@ -585,8 +585,8 @@ public:
   GameUser::CGameUser*      GetOwner() const;
   bool                      HasOwnerSet() const;
   bool                      HasOwnerInGame() const;
-  uint8_t                   GetUserFromNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
-  uint8_t                   GetUserFromDisplayNamePartial(const std::string& name, GameUser::CGameUser*& matchPlayer) const;
+  GameUserSearchResult      GetUserFromNamePartial(const std::string& name) const;
+  GameUserSearchResult      GetUserFromDisplayNamePartial(const std::string& name) const;
   uint8_t                   GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
   GameUser::CGameUser*      GetUserFromColor(uint8_t colour) const;
   uint8_t                   GetColorFromUID(uint8_t UID) const;

@@ -789,12 +789,12 @@ void CGame::InitSlots()
   }
 }
 
-bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType) const
+bool CGame::MatchesCreatedFrom(const uint8_t fromType) const
 {
   return m_CreatedFromType == fromType;
 }
 
-bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
+bool CGame::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
 {
   if (m_CreatedFromType != fromType) return false;
   switch (fromType) {
@@ -807,22 +807,22 @@ bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const voi
   }
 }
 
-bool CGameSetup::MatchesCreatedFromGame(shared_ptr<const CGame> nGame) const
+bool CGame::MatchesCreatedFromGame(shared_ptr<const CGame> nGame) const
 {
   return MatchesCreatedFrom(SERVICE_TYPE_GAME, static_pointer_cast<const void>(nGame));
 }
 
-bool CGameSetup::MatchesCreatedFromRealm(shared_ptr<const CRealm> nRealm) const
+bool CGame::MatchesCreatedFromRealm(shared_ptr<const CRealm> nRealm) const
 {
   return MatchesCreatedFrom(SERVICE_TYPE_REALM, static_pointer_cast<const void>(nRealm));
 }
 
-bool CGameSetup::MatchesCreatedFromIRC() const
+bool CGame::MatchesCreatedFromIRC() const
 {
   return MatchesCreatedFrom(SERVICE_TYPE_IRC);
 }
 
-bool CGameSetup::MatchesCreatedFromDiscord() const
+bool CGame::MatchesCreatedFromDiscord() const
 {
   return MatchesCreatedFrom(SERVICE_TYPE_DISCORD);
 }
@@ -7190,12 +7190,11 @@ GameUser::CGameUser* CGame::GetUserFromName(string name, bool sensitive) const
   return nullptr;
 }
 
-uint8_t CGame::GetUserFromNamePartial(const string& name, GameUser::CGameUser*& matchPlayer) const
+GameUserSearchResult CGame::GetUserFromNamePartial(const string& name) const
 {
-  uint8_t matches = 0;
+  struct GameUserSearchResult result;
   if (name.empty()) {
-    matchPlayer = nullptr;
-    return matches;
+    return result;
   }
 
   string inputLower = ToLowerCase(name);
@@ -7206,31 +7205,30 @@ uint8_t CGame::GetUserFromNamePartial(const string& name, GameUser::CGameUser*& 
     if (!user->GetDeleteMe()) {
       string testName = user->GetLowerName();
       if (testName.find(inputLower) != string::npos) {
-        ++matches;
-        matchPlayer = user;
+        ++result.matchCount;
+        result.user = user;
 
         // if the name matches exactly stop any further matching
 
         if (testName == inputLower) {
-          matches = 1;
+          result.matchCount = 1;
           break;
         }
       }
     }
   }
 
-  if (matches != 1) {
-    matchPlayer = nullptr;
+  if (result.matchCount != 1) {
+    result.user = nullptr;
   }
-  return matches;
+  return result;
 }
 
-uint8_t CGame::GetUserFromDisplayNamePartial(const string& name, GameUser::CGameUser*& matchPlayer) const
+GameUserSearchResult CGame::GetUserFromDisplayNamePartial(const string& name) const
 {
-  uint8_t matches = 0;
+  struct GameUserSearchResult result;
   if (name.empty()) {
-    matchPlayer = nullptr;
-    return matches;
+    return result;
   }
 
   string inputLower = ToLowerCase(name);
@@ -7241,23 +7239,23 @@ uint8_t CGame::GetUserFromDisplayNamePartial(const string& name, GameUser::CGame
     if (!user->GetDeleteMe()) {
       string testName = ToLowerCase(user->GetDisplayName());
       if (testName.find(inputLower) != string::npos) {
-        ++matches;
-        matchPlayer = user;
+        ++result.matchCount;
+        result.user = user;
 
         // if the name matches exactly stop any further matching
 
         if (testName == inputLower) {
-          matches = 1;
+          result.matchCount = 1;
           break;
         }
       }
     }
   }
 
-  if (matches != 1) {
-    matchPlayer = nullptr;
+  if (result.matchCount != 1) {
+    result.user = nullptr;
   }
-  return matches;
+  return result;
 }
 
 uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanPlayer) const

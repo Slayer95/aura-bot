@@ -143,12 +143,12 @@ public:
   [[nodiscard]] GameUser::CGameUser* RunTargetUser(const std::string& target);
   [[nodiscard]] GameUser::CGameUser* GetTargetUserOrSelf(const std::string& target);
   [[nodiscard]] GameUser::CGameUser* RunTargetPlayerOrSelf(const std::string& target);
-  [[nodiscard]] bool GetParsePlayerOrSlot(const std::string& target, uint8_t& SID, GameUser::CGameUser*& user);
-  [[nodiscard]] bool RunParsePlayerOrSlot(const std::string& target, uint8_t& SID, GameUser::CGameUser*& user);
-  [[nodiscard]] bool GetParseNonPlayerSlot(const std::string& target, uint8_t& SID);
-  [[nodiscard]] bool RunParseNonPlayerSlot(const std::string& target, uint8_t& SID);
+  [[nodiscard]] GameControllerSearchResult GetParseController(const std::string& target);
+  [[nodiscard]] GameControllerSearchResult RunParseController(const std::string& target);
+  [[nodiscard]] std::optional<uint8_t> GetParseNonPlayerSlot(const std::string& target);
+  [[nodiscard]] std::optional<uint8_t> RunParseNonPlayerSlot(const std::string& target);
   [[nodiscard]] std::shared_ptr<CRealm> GetTargetRealmOrCurrent(const std::string& target);
-  [[nodiscard]] bool GetParseTargetRealmUser(const std::string& target, std::string& nameFragment, std::string& realmFragment, CRealm*& realm, bool allowNoRealm = false, bool searchHistory = false);
+  [[nodiscard]] RealmUserSearchResult GetParseTargetRealmUser(const std::string& target, bool allowNoRealm = false, bool searchHistory = false);
   [[nodiscard]] uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
   [[nodiscard]] std::shared_ptr<CGame> GetTargetGame(const std::string& target);
   void UseImplicitReplaceable();

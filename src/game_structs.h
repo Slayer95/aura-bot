@@ -157,4 +157,26 @@ struct GameHistory
   inline int64_t GetStartedTicks() { return m_StartedTicks.value(); }
 };
 
+//
+// GameUserSearchResult
+//
+
+struct GameUserSearchResult
+{
+  uint8_t matchCount;
+  GameUser::CGameUser* user;
+
+  GameUserSearchResult()
+   : matchCount(0),
+     user(nullptr)
+  {}
+
+  GameUserSearchResult(GameUser::CGameUser* nUser)
+   : matchCount(1),
+     user(nUser)
+  {}
+
+  ~GameUserSearchResult() = default;
+};
+
 #endif // AURA_GAME_STRUCTS_H_
