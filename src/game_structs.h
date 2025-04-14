@@ -177,6 +177,8 @@ struct GameUserSearchResult
   {}
 
   ~GameUserSearchResult() = default;
+
+  [[nodiscard]] inline bool GetSuccess() const { return matchCount == 1; }
 };
 
 //
@@ -199,6 +201,8 @@ struct BannableUserSearchResult
   {}
 
   ~BannableUserSearchResult() = default;
+
+  [[nodiscard]] inline bool GetSuccess() const { return matchCount == 1; }
 };
 
 

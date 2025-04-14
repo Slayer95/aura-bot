@@ -1037,7 +1037,7 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
 
   if (m_GameUser && searchHistory) {
     BannableUserSearchResult bannableUserSearchResult = m_SourceGame.lock()->GetBannableFromNamePartial(target);
-    if (bannableUserSearchResult.matchCount != 1) {
+    if (!bannableUserSearchResult.GetSuccess()) {
       return {};
     }
     realmFragment = bannableUserSearchResult.bannable->GetServer();
@@ -1075,7 +1075,7 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
 uint8_t CCommandContext::GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location)
 {
   RealmUserSearchResult realmSearchResult = GetParseTargetRealmUser(target);
-  if (realmSearchResult.success) {
+  if (realmSearchResult.GetSuccess()) {
     nameFragment = realmSearchResult.userName;
     locationFragment = realmSearchResult.hostName;
     location = realmSearchResult.realm.get();
@@ -1270,7 +1270,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "slot <PLAYER>");
         break;
       }
@@ -1707,7 +1707,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "votekick <PLAYERNAME>");
         break;
       }
@@ -1793,7 +1793,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       size_t LastSlash = MapPath.rfind('\\');
 
       auto realmUserResult = GetParseTargetRealmUser(Payload, false, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty()) {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
@@ -2664,7 +2664,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "kick <PLAYERNAME>");
         break;
       }
@@ -3047,7 +3047,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       bool IsPrivate = CommandHash == HashCode("privby");
 
       auto realmUserResult = GetParseTargetRealmUser(Args[0], true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "pubby <PLAYERNAME>@<REALM>");
         break;
       }
@@ -3325,8 +3325,8 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResultOne = RunParseController(Args[0]);
-      auto searchResultTwo = RunParseController(Args[0]);
-      if (!searchResultOne.success || !searchResultTwo.success) {
+      auto searchResultTwo = RunParseController(Args[1]);
+      if (!searchResultOne.GetSuccess() || !searchResultTwo.GetSuccess()) {
         break;
       }
 
@@ -3809,7 +3809,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto realmUserResult = GetParseTargetRealmUser(Payload, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty()) {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
@@ -3954,7 +3954,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       shared_ptr<CGame> targetGame = GetTargetGame();
 
       auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty()) {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
@@ -4026,7 +4026,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string reason = Args[1];
 
       auto realmUserResult = GetParseTargetRealmUser(inputTarget, true, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty()) {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
@@ -4089,7 +4089,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty()) {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
@@ -4144,7 +4144,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       string reason = Args[1];
 
       auto realmUserResult = GetParseTargetRealmUser(inputTarget, true, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty()) {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
@@ -4218,7 +4218,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty()) {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
         } else {
@@ -4567,7 +4567,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
       } else {
         auto realmUserResult = GetParseTargetRealmUser(Payload, true, true);
-        if (!realmUserResult.success) {
+        if (!realmUserResult.GetSuccess()) {
           if (!realmUserResult.hostName.empty()) {
             ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
           } else {
@@ -4950,7 +4950,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
         break;
       }
@@ -5014,7 +5014,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
       }
@@ -5095,7 +5095,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
       }
@@ -5192,7 +5192,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         if (m_GameUser) ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
@@ -5292,7 +5292,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto searchResult = RunParseController(Payload);
-      if (!searchResult.success) {
+      if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "observer <PLAYER>");
         break;
       }
@@ -6412,7 +6412,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         auto searchResult = matchingGame->GetUserFromNamePartial(inputName);
-        if (searchResult.matchCount != 1) {
+        if (!searchResult.matchCount.GetSuccess()) {
           ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetGameName() + ">>.");
           break;
         }
@@ -6482,7 +6482,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
 
       auto realmUserResult = GetParseTargetRealmUser(Payload, true);
-      if (!realmUserResult.success) {
+      if (!realmUserResult.GetSuccess()) {
         if (!realmUserResult.hostName.empty() && realmUserResult.hostName != "*") {
           ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
           break;

@@ -51,6 +51,8 @@ struct GameControllerSearchResult
   {}
 
   ~GameControllerSearchResult() = default;
+
+  [[nodiscard]] inline bool GetSuccess() const { return success; }
 };
 
 //
@@ -82,6 +84,8 @@ struct RealmUserSearchResult
   {}
 
   ~RealmUserSearchResult() = default;
+
+  [[nodiscard]] inline bool GetSuccess() const { return success; }
 };
 
 //
