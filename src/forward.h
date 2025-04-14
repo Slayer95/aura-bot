@@ -101,15 +101,20 @@ struct CGameVirtualUser;
 struct CGameVirtualUserReference;
 
 struct AppAction;
+struct BannableUserSearchResult;
 struct CGameLogRecord;
 struct FileChunkCached;
 struct FileChunkTransient;
+struct GameControllerSearchResult;
 struct GameHistory;
+struct GameUserSearchResult;
 struct GameResults;
 struct GameResultTeamAnalysis;
 struct GameResultConstraints;
 struct LazyCommandContext;
 struct MapTransfer;
+struct RealmUserSearchResult;
+struct ServiceUserSearchResult;
 struct UDPPkt;
 
 template <typename T>

@@ -7192,7 +7192,7 @@ GameUser::CGameUser* CGame::GetUserFromName(string name, bool sensitive) const
 
 GameUserSearchResult CGame::GetUserFromNamePartial(const string& name) const
 {
-  struct GameUserSearchResult result;
+  GameUserSearchResult result;
   if (name.empty()) {
     return result;
   }
@@ -7226,7 +7226,7 @@ GameUserSearchResult CGame::GetUserFromNamePartial(const string& name) const
 
 GameUserSearchResult CGame::GetUserFromDisplayNamePartial(const string& name) const
 {
-  struct GameUserSearchResult result;
+  GameUserSearchResult result;
   if (name.empty()) {
     return result;
   }
@@ -7258,12 +7258,12 @@ GameUserSearchResult CGame::GetUserFromDisplayNamePartial(const string& name) co
   return result;
 }
 
-uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanPlayer) const
+BannableUserSearchResult CGame::GetBannableFromNamePartial(const string& name) const
 {
-  uint8_t matches = 0;
+  BannableUserSearchResult result;
+
   if (name.empty()) {
-    matchBanPlayer = nullptr;
-    return matches;
+    return result;
   }
 
   string inputLower = ToLowerCase(name);
@@ -7274,22 +7274,22 @@ uint8_t CGame::GetBannableFromNamePartial(const string& name, CDBBan*& matchBanP
     string testName = ToLowerCase(bannable->GetName());
 
     if (testName.find(inputLower) != string::npos) {
-      ++matches;
-      matchBanPlayer = bannable;
+      ++result.matchCount;
+      result.bannable = bannable;
 
       // if the name matches exactly stop any further matching
 
       if (testName == inputLower) {
-        matches = 1;
+        result.matchCount = 1;
         break;
       }
     }
   }
 
-  if (matches != 1) {
-    matchBanPlayer = nullptr;
+  if (result.matchCount != 1) {
+    result.bannable = nullptr;
   }
-  return matches;
+  return result;
 }
 
 GameUser::CGameUser* CGame::GetUserFromColor(uint8_t colour) const

@@ -179,4 +179,27 @@ struct GameUserSearchResult
   ~GameUserSearchResult() = default;
 };
 
+//
+// BannableUserSearchResult
+//
+
+struct BannableUserSearchResult
+{
+  uint8_t matchCount;
+  CDBBan* bannable;
+
+  BannableUserSearchResult()
+   : matchCount(0),
+     bannable(nullptr)
+  {}
+
+  BannableUserSearchResult(CDBBan* nBannable)
+   : matchCount(1),
+     bannable(nBannable)
+  {}
+
+  ~BannableUserSearchResult() = default;
+};
+
+
 #endif // AURA_GAME_STRUCTS_H_

@@ -587,7 +587,7 @@ public:
   bool                      HasOwnerInGame() const;
   GameUserSearchResult      GetUserFromNamePartial(const std::string& name) const;
   GameUserSearchResult      GetUserFromDisplayNamePartial(const std::string& name) const;
-  uint8_t                   GetBannableFromNamePartial(const std::string& name, CDBBan*& matchBanPlayer) const;
+  BannableUserSearchResult  GetBannableFromNamePartial(const std::string& name) const;
   GameUser::CGameUser*      GetUserFromColor(uint8_t colour) const;
   uint8_t                   GetColorFromUID(uint8_t UID) const;
   uint8_t                   GetNewUID() const;

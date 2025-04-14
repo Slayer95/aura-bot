@@ -1036,12 +1036,12 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
   }
 
   if (m_GameUser && searchHistory) {
-    CDBBan* targetPlayer = nullptr;
-    if (m_SourceGame.lock()->GetBannableFromNamePartial(target, targetPlayer) != 1) {
+    BannableUserSearchResult bannableUserSearchResult = m_SourceGame.lock()->GetBannableFromNamePartial(target);
+    if (bannableUserSearchResult.matchCount != 1) {
       return {};
     }
-    realmFragment = targetPlayer->GetServer();
-    nameFragment = targetPlayer->GetName();
+    realmFragment = bannableUserSearchResult.bannable->GetServer();
+    nameFragment = bannableUserSearchResult.bannable->GetName();
   } else if (m_GameUser) {
     GameUser::CGameUser* targetPlayer = GetTargetUser(target);
     if (!targetPlayer) {
