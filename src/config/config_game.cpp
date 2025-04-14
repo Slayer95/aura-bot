@@ -294,7 +294,10 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
 
   INHERIT(m_IndexHostName)
   if (m_IndexHostName.empty()) {
-    m_IndexHostName = nGameSetup->m_CreatedBy.empty() ? "Aura Bot" : nGameSetup->m_CreatedBy;
+    m_IndexHostName = nGameSetup->m_Creator.GetUser();
+  }
+  if (m_IndexHostName.empty()) {
+    m_IndexHostName = "Aura Bot";
   }
 
   INHERIT(m_LobbyVirtualHostName)

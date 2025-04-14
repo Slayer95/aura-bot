@@ -1078,7 +1078,7 @@ uint8_t CCommandContext::GetParseTargetServiceUser(const std::string& target, st
   if (realmSearchResult.GetSuccess()) {
     nameFragment = realmSearchResult.userName;
     locationFragment = realmSearchResult.hostName;
-    location = realmSearchResult.realm.get();
+    location = realmSearchResult.GetRealm().get();
     return SERVICE_TYPE_REALM;
   }
   shared_ptr<CGame> matchingGame = GetTargetGame(locationFragment);
@@ -1088,7 +1088,7 @@ uint8_t CCommandContext::GetParseTargetServiceUser(const std::string& target, st
       return SERVICE_TYPE_GAME;
     }
   }
-  return SERVICE_TYPE_INVALID;
+  return SERVICE_TYPE_NONE;
 }
 
 shared_ptr<CGame> CCommandContext::GetTargetGame(const string& rawInput)
@@ -1804,7 +1804,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
 
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
 
       // Name of sender and receiver should be included in the message,
       // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
@@ -3053,7 +3053,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
       m_Aura->m_GameSetup->SetContext(shared_from_this());
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
@@ -3819,7 +3819,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
       if (targetRealm) {
         targetHostName = targetRealm->GetDataBaseID();
       }
@@ -3965,7 +3965,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
 
       string targetIP;
       if (targetGame) {
@@ -4037,7 +4037,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
 
       string targetIP = targetGame->GetBannableIP(targetName, targetHostName);
       if (targetIP.empty()) {
@@ -4099,7 +4099,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
 
       string emptyAddress;
       if (!targetGame->GetIsScopeBanned(targetName, targetHostName, emptyAddress)) {
@@ -4155,7 +4155,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
 
       string authServer = m_ServerName;
       if (sourceRealm) {
@@ -4228,7 +4228,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
 
       if (targetRealm) {
         targetHostName = targetRealm->GetDataBaseID();
@@ -4578,7 +4578,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         }
         targetName = realmUserResult.userName;
         targetHostName = realmUserResult.hostName;
-        targetRealm = realmUserResult.realm;
+        targetRealm = realmUserResult.GetRealm();
       }
 
       GameUser::CGameUser* targetPlayer = targetGame->GetUserFromName(targetName, false);
@@ -6412,7 +6412,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
           break;
         }
         auto searchResult = matchingGame->GetUserFromNamePartial(inputName);
-        if (!searchResult.matchCount.GetSuccess()) {
+        if (!searchResult.GetSuccess()) {
           ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetGameName() + ">>.");
           break;
         }
@@ -6490,7 +6490,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       }
       string targetName = realmUserResult.userName;
       string targetHostName = realmUserResult.hostName;
-      shared_ptr<CRealm> targetRealm = realmUserResult.realm;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
 
       if (targetHostName.empty()) {
         targetName = Payload;
@@ -7878,9 +7878,14 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
   CCommandConfig* commandCFG = nAura->m_Config.m_LANCommandCFG;
   shared_ptr<CCommandContext> ctx = nullptr;
 
+  if (lazyCtx.identityLoc.empty()) {
+    Print("[AURA] --exec service empty.");
+    return APP_ACTION_ERROR;
+  }
+
   void* servicePtr = nullptr;
   uint8_t serviceType = nAura->FindServiceFromHostName(lazyCtx.identityLoc, servicePtr);
-  if (serviceType == SERVICE_TYPE_INVALID) {
+  if (serviceType == SERVICE_TYPE_NONE) {
     Print("[AURA] --exec parsed user at service invalid.");
     return APP_ACTION_ERROR;
   }

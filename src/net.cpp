@@ -737,7 +737,7 @@ void CNet::UpdateMapTransfers()
 
   for (const auto& user : downloaderPlayers) {
     shared_ptr<CGame> game = user->GetGame();
-    if (game->GetMap()->GetMapFileIsValid()) {
+    if (!game->GetMap()->GetMapFileIsValid()) {
       user->AddKickReason(GameUser::KickReason::MAP_MISSING);
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
@@ -772,7 +772,7 @@ void CNet::UpdateMapTransfers()
 
   for (const auto& user : downloaderObservers) {
     shared_ptr<CGame> game = user->GetGame();
-    if (game->GetMap()->GetMapFileIsValid()) {
+    if (!game->GetMap()->GetMapFileIsValid()) {
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
       }

@@ -157,7 +157,7 @@ template <typename T>
 
 [[nodiscard]] inline std::string ToFormattedRealm(const std::string& hostName)
 {
-  if (hostName.empty()) return "@@LAN/VPN";
+  if (hostName.empty()) return ToFormattedRealm();
   return hostName;
 }
 

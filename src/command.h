@@ -27,7 +27,7 @@
 #define AURA_COMMAND_H_
 
 #include "includes.h"
-#include "command_structs.h"
+#include "locations.h"
 
 #include <ostream>
 

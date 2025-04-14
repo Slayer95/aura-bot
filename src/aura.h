@@ -52,11 +52,12 @@
 #include "config/config_realm.h"
 #include "config/config_game.h"
 #include "cli.h"
+#include "command.h"
+#include "game_setup.h"
+#include "locations.h"
+#include "net.h"
 #include "integration/irc.h"
 #include "integration/discord.h"
-#include "command.h"
-#include "net.h"
-#include "game_setup.h"
 
 #include <sha1/sha1.h>
 #include <random>

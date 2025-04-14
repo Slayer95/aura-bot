@@ -114,7 +114,7 @@ struct GameResultConstraints;
 struct LazyCommandContext;
 struct MapTransfer;
 struct RealmUserSearchResult;
-struct ServiceUserSearchResult;
+struct ServiceUser;
 struct UDPPkt;
 
 template <typename T>

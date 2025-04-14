@@ -192,9 +192,9 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
-    m_CreationCounter(0),
 
-    m_CreatedFromType(SERVICE_TYPE_NONE),
+    m_CreationCounter(0),
+    m_Creator(ServiceUser()),
 
     m_MapExtraOptions(nullptr),
     m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
@@ -237,9 +237,9 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_RealmsDisplayMode(GAME_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
-    m_CreationCounter(0),
 
-    m_CreatedFromType(SERVICE_TYPE_NONE),
+    m_CreationCounter(0),
+    m_Creator(ServiceUser()),
 
     m_MapExtraOptions(nullptr),
     m_MapReadyCallbackAction(MAP_ONREADY_SET_ACTIVE),
@@ -1434,43 +1434,37 @@ void CGameSetup::SetOwner(const string& nOwner, shared_ptr<const CRealm> nRealm)
 
 void CGameSetup::RemoveCreator()
 {
-  m_CreatedFromType = SERVICE_TYPE_INVALID;
-  m_CreatedFrom.reset();
-  m_CreatedBy.clear();
+  m_Creator.Reset();
 }
 
-void CGameSetup::SetCreator(const uint8_t serviceType, const string& nCreator)
+void CGameSetup::SetCreator(const uint8_t serviceType, const string& creatorName)
 {
-  m_CreatedFromType = serviceType;
-  m_CreatedFrom.reset();
-  m_CreatedBy = nCreator;
+  m_Creator = ServiceUser(serviceType, creatorName);
 }
 
-void CGameSetup::SetCreator(const uint8_t serviceType, const string& nCreator, weak_ptr<void> servicePtr)
+void CGameSetup::SetCreator(const uint8_t serviceType, const string& creatorName, weak_ptr<void> servicePtr)
 {
-  m_CreatedFromType = serviceType;
-  m_CreatedFrom = servicePtr;
-  m_CreatedBy = nCreator;
+  m_Creator = ServiceUser(serviceType, creatorName, servicePtr.lock());
 }
 
-void CGameSetup::SetCreatorGameUser(const string& nCreator, shared_ptr<CGame> nGame)
+void CGameSetup::SetCreatorGameUser(const string& creatorName, shared_ptr<CGame> nGame)
 {
-  SetCreator(SERVICE_TYPE_GAME, nCreator, static_pointer_cast<void>(nGame));
+  SetCreator(SERVICE_TYPE_GAME, creatorName, static_pointer_cast<void>(nGame));
 }
 
-void CGameSetup::SetCreatorRealmUser(const string& nCreator, shared_ptr<CRealm> nRealm)
+void CGameSetup::SetCreatorRealmUser(const string& creatorName, shared_ptr<CRealm> nRealm)
 {
-  SetCreator(SERVICE_TYPE_REALM, nCreator, static_pointer_cast<void>(nRealm));
+  SetCreator(SERVICE_TYPE_REALM, creatorName, static_pointer_cast<void>(nRealm));
 }
 
-void CGameSetup::SetCreatorIRCUser(const string& nCreator)
+void CGameSetup::SetCreatorIRCUser(const string& creatorName)
 {
-  SetCreator(SERVICE_TYPE_IRC, nCreator);
+  SetCreator(SERVICE_TYPE_IRC, creatorName);
 }
 
-void CGameSetup::SetCreatorDiscordUser(const string& nCreator)
+void CGameSetup::SetCreatorDiscordUser(const string& creatorName)
 {
-  SetCreator(SERVICE_TYPE_DISCORD, nCreator);
+  SetCreator(SERVICE_TYPE_DISCORD, creatorName);
 }
 
 void CGameSetup::AcquireCreator()
@@ -1491,12 +1485,12 @@ void CGameSetup::AcquireCreator()
 
 bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType) const
 {
-  return m_CreatedFromType == fromType;
+  return m_Creator.GetServiceType() == fromType;
 }
 
 bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
 {
-  if (m_CreatedFromType != fromType) return false;
+  if (m_Creator.GetServiceType() != fromType) return false;
   switch (fromType) {
     case SERVICE_TYPE_GAME:
       return static_pointer_cast<const CGame>(fromThing) == GetCreatedFrom<const CGame>();
@@ -1657,7 +1651,7 @@ void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
     }
   }
   if (mpName.has_value()) {
-    SetCreator(SERVICE_TYPE_UNKNOWN, mpName.value());
+    SetCreator(SERVICE_TYPE_CLI, mpName.value());
   }
   if (nCLI->m_GameOwner.has_value()) {
     pair<string, string> owner = SplitAddress(nCLI->m_GameOwner.value());
@@ -1753,7 +1747,7 @@ CGameSetup::~CGameSetup()
   delete m_RestoredGame;
   m_RestoredGame = nullptr;
 
-  m_CreatedFrom.reset();
+  m_Creator.Reset();
   m_Aura = nullptr;
 
   m_Map.reset();

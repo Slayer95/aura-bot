@@ -179,6 +179,9 @@ struct GameUserSearchResult
   ~GameUserSearchResult() = default;
 
   [[nodiscard]] inline bool GetSuccess() const { return matchCount == 1; }
+  [[nodiscard]] inline bool has_value() { return GetSuccess(); }
+  [[nodiscard]] inline GameUser::CGameUser& value() { return *user; }
+  [[nodiscard]] inline GameUser::CGameUser& operator*() { return value(); }
 };
 
 //
@@ -203,6 +206,9 @@ struct BannableUserSearchResult
   ~BannableUserSearchResult() = default;
 
   [[nodiscard]] inline bool GetSuccess() const { return matchCount == 1; }
+  [[nodiscard]] inline bool has_value() { return GetSuccess(); }
+  [[nodiscard]] inline CDBBan& value() { return *bannable; }
+  [[nodiscard]] inline CDBBan& operator*() { return value(); }
 };
 
 

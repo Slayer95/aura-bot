@@ -23,8 +23,8 @@
 
  */
 
-#ifndef AURA_COMMAND_STRUCTS_H_
-#define AURA_COMMAND_STRUCTS_H_
+#ifndef AURA_LOCATIONS_H_
+#define AURA_LOCATIONS_H_
 
 #include "includes.h"
 
@@ -64,7 +64,7 @@ struct RealmUserSearchResult
   bool success;
   std::string userName;
   std::string hostName;
-  std::shared_ptr<CRealm> realm;
+  std::weak_ptr<CRealm> realm;
 
   RealmUserSearchResult()
    : success(false)
@@ -86,20 +86,36 @@ struct RealmUserSearchResult
   ~RealmUserSearchResult() = default;
 
   [[nodiscard]] inline bool GetSuccess() const { return success; }
+  [[nodiscard]] inline std::string GetUser() const { return userName; }
+  [[nodiscard]] inline std::string GetHostName() const { return hostName; }
+  [[nodiscard]] inline std::shared_ptr<CRealm> GetRealm() const { return realm.lock(); }
 };
 
 //
-// ServiceUserSearchResult
+// ServiceUser
 //
 
-struct ServiceUserSearchResult
+struct ServiceUser
 {
-  uint8_t status;
-  ServiceUserSearchResult()
-   : status(0)
-  {}
+  uint8_t serviceType;
+  std::weak_ptr<void> servicePtr;
+  std::string userName;
 
-  ~ServiceUserSearchResult() = default;
+  ServiceUser();
+  ServiceUser(const ServiceUser& otherService);
+  ServiceUser(uint8_t serviceType, std::string nUserName);
+  ServiceUser(uint8_t serviceType, std::string nUserName, std::shared_ptr<void> nServicePtr);
+  ~ServiceUser();
+
+  template <typename T>
+  [[nodiscard]] inline std::shared_ptr<T> GetService() const
+  {
+    return static_pointer_cast<T>(servicePtr.lock());
+  }
+  inline bool GetIsExpired() const { return servicePtr.expired(); }
+  inline uint8_t GetServiceType() const { return serviceType; }
+  inline std::string GetUser() const { return userName; }
+  void Reset();
 };
 
 #endif

@@ -118,9 +118,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_OwnerName(nGameSetup->m_Owner.first),
     m_OwnerRealm(nGameSetup->m_Owner.second),
     m_CreatorText(nGameSetup->m_Attribution),
-    m_CreatedBy(nGameSetup->m_CreatedBy),
-    m_CreatedFrom(nGameSetup->m_CreatedFrom),
-    m_CreatedFromType(nGameSetup->m_CreatedFromType),
+    m_Creator(nGameSetup->m_Creator),
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
@@ -791,12 +789,12 @@ void CGame::InitSlots()
 
 bool CGame::MatchesCreatedFrom(const uint8_t fromType) const
 {
-  return m_CreatedFromType == fromType;
+  return m_Creator.GetServiceType() == fromType;
 }
 
 bool CGame::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
 {
-  if (m_CreatedFromType != fromType) return false;
+  if (m_Creator.GetServiceType() != fromType) return false;
   switch (fromType) {
     case SERVICE_TYPE_GAME:
       return static_pointer_cast<const CGame>(fromThing) == GetCreatedFrom<const CGame>();
@@ -3506,9 +3504,9 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       Line.replace(matchIndex, 9, m_CreatorText);
     }
     while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      switch (m_CreatedFromType) {
+      switch (m_Creator.GetServiceType()) {
         case SERVICE_TYPE_REALM: {
-          if (m_CreatedFrom.expired()) {
+          if (m_Creator.GetIsExpired()) {
             Line.replace(matchIndex, 11, "@unknown.battle.net");
           } else {
             Line.replace(matchIndex, 11, "@" + GetCreatedFrom<const CRealm>()->GetCanonicalDisplayName());
@@ -5490,11 +5488,11 @@ bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinR
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), hostName);
   bool isBanned = isSelfServerBanned;
   // check if the user name is banned in the game creator's realm
-  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && !m_CreatedFrom.expired() && !MatchesCreatedFromRealm(matchingRealm)) {
+  if (!isBanned && m_Creator.GetServiceType() == SERVICE_TYPE_REALM && !m_Creator.GetIsExpired() && !MatchesCreatedFromRealm(matchingRealm)) {
     isBanned = GetCreatedFrom<const CRealm>()->IsBannedPlayer(joinRequest->GetName(), hostName);
   }
   // check if the user name is banned in whatever alternate service the game creator comes from
-  if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
+  if (!isBanned && m_Creator.GetServiceType() != SERVICE_TYPE_REALM) {
     isBanned = m_Aura->m_DB->GetIsUserBanned(joinRequest->GetName(), hostName, string());
   }
   if (isBanned) {
@@ -5528,11 +5526,11 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedIP(connection->GetIPStringStrict());
   bool isBanned = isSelfServerBanned;
   // check if the user IP is banned in the game creator's realm
-  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && !m_CreatedFrom.expired() && !MatchesCreatedFromRealm(matchingRealm)) {
+  if (!isBanned && m_Creator.GetServiceType() == SERVICE_TYPE_REALM && !m_Creator.GetIsExpired() && !MatchesCreatedFromRealm(matchingRealm)) {
     isBanned = GetCreatedFrom<const CRealm>()->IsBannedIP(connection->GetIPStringStrict());
   }
   // check if the user IP is banned in whatever alternate service the game creator comes from
-  if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
+  if (!isBanned && m_Creator.GetServiceType() != SERVICE_TYPE_REALM) {
     isBanned = m_Aura->m_DB->GetIsIPBanned(connection->GetIPStringStrict(), string());
   }
   if (isBanned) {
@@ -10260,9 +10258,7 @@ void CGame::DeleteFakeUsersLoaded()
 
 void CGame::RemoveCreator()
 {
-  m_CreatedBy.clear();
-  m_CreatedFrom.reset();
-  m_CreatedFromType = SERVICE_TYPE_INVALID;
+  m_Creator.Reset();
 }
 
 bool CGame::GetIsStageAcceptingJoins() const

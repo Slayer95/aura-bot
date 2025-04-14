@@ -49,6 +49,7 @@
 #include "includes.h"
 #include "list.h"
 #include "async_observer.h"
+#include "locations.h"
 #include "map.h"
 #include "game_result.h"
 #include "game_seeker.h"
@@ -111,10 +112,8 @@ protected:
   bool                                                   m_OwnerLess;
   std::string                                            m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                                            m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
+  ServiceUser                                            m_Creator;
   std::string                                            m_CreatorText;                   // who created this game
-  uint8_t                                                m_CreatedFromType;               // type of service m_CreatedFrom is
-  std::weak_ptr<void>                                    m_CreatedFrom;                   // service from which this game was created (CRealm, CGame, other is empty)
-  std::string                                            m_CreatedBy;                     // name of the battle.net user who created this game
   std::set<std::string>                                  m_RealmsExcluded;                // battle.net servers where the mirrored game is not to be broadcasted
   std::string                                            m_PlayedBy;
   std::string                                            m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
@@ -277,14 +276,15 @@ public:
   inline bool                                            GetLockedOwnerLess() const { return m_OwnerLess; }
   inline std::string                                     GetOwnerName() const { return m_OwnerName; }
   inline std::string                                     GetOwnerRealm() const { return m_OwnerRealm; }
-  inline std::string                                     GetCreatorName() const { return m_CreatedBy; }
-  inline uint8_t                                         GetCreatedFromType() const { return m_CreatedFromType; }
-  inline bool                                            GetCreatedFromIsExpired() const { return m_CreatedFrom.expired(); }
+
+  inline std::string                                     GetCreatorName() const { return m_Creator.GetUser(); }
+  inline uint8_t                                         GetCreatedFromType() const { return m_Creator.GetServiceType(); }
+  inline bool                                            GetCreatedFromIsExpired() const { return m_Creator.GetIsExpired(); }
 
   template <typename T>
   [[nodiscard]] inline std::shared_ptr<T> GetCreatedFrom() const
   {
-    return static_pointer_cast<T>(m_CreatedFrom.lock());
+    return m_Creator.GetService<T>();
   }
 
   [[nodiscard]]                                          bool MatchesCreatedFrom(const uint8_t fromType) const;

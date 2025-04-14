@@ -144,6 +144,9 @@
     <ClCompile Include="command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="locations.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="rate_limiter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -320,14 +323,14 @@
     <ClInclude Include="cli.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="command_structs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="command.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClCompile Include="rate_limiter.cpp">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="locations.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClCompile Include="rate_limiter.h">
+      <Filter>Header Files</Filter>
     </ClCompile>
     <ClInclude Include="integration\discord.h">
       <Filter>Header Files</Filter>

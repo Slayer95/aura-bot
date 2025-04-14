@@ -975,9 +975,6 @@ shared_ptr<CRealm> CAura::GetRealmByHostName(const string& hostName) const
 uint8_t CAura::FindServiceFromHostName(const string& hostName, void*& location) const
 {
   // TODO: CAura::FindServiceFromHostName() location ptr
-  if (hostName.empty()) {
-    return SERVICE_TYPE_NONE;
-  }
   if (m_IRC.MatchHostName(hostName)) {
     return SERVICE_TYPE_IRC;
   }
@@ -989,7 +986,7 @@ uint8_t CAura::FindServiceFromHostName(const string& hostName, void*& location) 
       return SERVICE_TYPE_REALM;
     }
   }
-  return SERVICE_TYPE_INVALID;
+  return SERVICE_TYPE_NONE;
 }
 
 vector<shared_ptr<CGame>> CAura::GetAllGames() const
@@ -2233,7 +2230,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   }
 
   if (createdLobby->GetDisplayMode() != GAME_PUBLIC ||
-    gameSetup->m_CreatedFromType != SERVICE_TYPE_REALM ||
+    gameSetup->GetCreatedFromType() != SERVICE_TYPE_REALM ||
     gameSetup->m_Ctx->GetIsWhisper()) {
     gameSetup->m_Ctx->SendPrivateReply(createdLobby->GetAnnounceText());
   }

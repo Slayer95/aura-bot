@@ -27,6 +27,7 @@
 #define AURA_GAMESETUP_H_
 
 #include "includes.h"
+#include "locations.h"
 #include "socket.h"
 
 #include <atomic>
@@ -145,6 +146,7 @@ public:
   bool                                            m_LobbyReplaceable;
   bool                                            m_LobbyAutoRehosted;
   uint16_t                                        m_CreationCounter;
+  ServiceUser                                     m_Creator;
 
   std::optional<uint8_t>                          m_LobbyTimeoutMode;
   std::optional<uint8_t>                          m_LobbyOwnerTimeoutMode;
@@ -204,10 +206,6 @@ public:
   std::optional<bool>                             m_SyncNormalize;
   std::optional<uint16_t>                         m_MaxAPM;
   std::optional<uint16_t>                         m_MaxBurstAPM;
-
-  uint8_t                                         m_CreatedFromType;
-  std::weak_ptr<void>                             m_CreatedFrom;
-  std::string                                     m_CreatedBy;
 
   CGameExtraOptions*                              m_MapExtraOptions;
   uint8_t                                         m_MapReadyCallbackAction;
@@ -291,11 +289,12 @@ public:
 
   void AcquireCreator();
 
-  inline bool GetCreatedFromIsExpired() const { return m_CreatedFrom.expired(); }
+  inline uint8_t GetCreatedFromType() const { return m_Creator.GetServiceType(); }
+  inline bool GetCreatedFromIsExpired() const { return m_Creator.GetIsExpired(); }
   template <typename T>
   [[nodiscard]] inline std::shared_ptr<T> GetCreatedFrom() const
   {
-    return static_pointer_cast<T>(m_CreatedFrom.lock());
+    return m_Creator.GetService<T>();
   }
 
   [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType) const;
