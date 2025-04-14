@@ -205,9 +205,9 @@ public:
   std::optional<uint16_t>                         m_MaxAPM;
   std::optional<uint16_t>                         m_MaxBurstAPM;
 
-  std::string                                     m_CreatedBy;
-  void*                                           m_CreatedFrom;
   uint8_t                                         m_CreatedFromType;
+  std::weak_ptr<void>                             m_CreatedFrom;
+  std::string                                     m_CreatedBy;
 
   CGameExtraOptions*                              m_MapExtraOptions;
   uint8_t                                         m_MapReadyCallbackAction;
@@ -278,20 +278,33 @@ public:
   void SetDisplayMode(const uint8_t nDisplayMode);
   void SetOwner(const std::string& nOwner, std::shared_ptr<const CRealm> nRealm);
   void SetOwnerLess(const bool nValue) { m_OwnerLess = nValue; }
-  /*
-  void SetCreator(const std::string& nCreator, const uint8_t serviceType);
-  void SetCreator(const std::string& nCreator, const uint8_t serviceType, std::weak_ptr<void> servicePtr);
-  */
-  /*
-  // TODO: SetCreator() smart pointers
-  // std::static_pointer_cast<T>(ptr.lock())
-  void SetCreator(const std::string& nCreator, CGame* nGame);
-  void SetCreator(const std::string& nCreator, CRealm* nRealm);
-  void SetCreator(const std::string& nCreator, CIRC* nIRC);
-  void SetCreator(const std::string& nCreator, CDiscord* nDiscord);
-  */
+
+  // Game creator stuff
   void RemoveCreator();
-  [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
+
+  void SetCreator(const uint8_t serviceType, const std::string& nCreator);
+  void SetCreator(const uint8_t serviceType, const std::string& nCreator, std::weak_ptr<void> servicePtr);
+  void SetCreatorGameUser(const std::string& nCreator, std::shared_ptr<CGame> nGame);
+  void SetCreatorRealmUser(const std::string& nCreator, std::shared_ptr<CRealm> nRealm);
+  void SetCreatorIRCUser(const std::string& nCreator);
+  void SetCreatorDiscordUser(const std::string& nCreator);
+
+  void AcquireCreator();
+
+  inline bool GetCreatedFromIsExpired() const { return m_CreatedFrom.expired(); }
+  template <typename T>
+  [[nodiscard]] inline std::shared_ptr<T> GetCreatedFrom() const
+  {
+    return static_pointer_cast<T>(m_CreatedFrom.lock());
+  }
+
+  [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType) const;
+  [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType, std::shared_ptr<const void> fromThing) const;
+  [[nodiscard]] bool MatchesCreatedFromGame(std::shared_ptr<const CGame> nGame) const;
+  [[nodiscard]] bool MatchesCreatedFromRealm(std::shared_ptr<const CRealm> nRealm) const;
+  [[nodiscard]] bool MatchesCreatedFromIRC() const;
+  [[nodiscard]] bool MatchesCreatedFromDiscord() const;
+
   void SetName(const std::string& nName) { m_Name = nName; }
   void SetBaseName(const std::string& nName) {
     m_Name = nName;

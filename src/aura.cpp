@@ -1330,15 +1330,17 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
   } else {
     switch (game->GetCreatedFromType()) {
       case SERVICE_TYPE_REALM:
-        reinterpret_cast<CRealm*>(game->GetCreatedFrom())->QueueWhisper("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
+        if (!game->GetCreatedFromIsExpired()) {
+          game->GetCreatedFrom<CRealm>()->QueueWhisper("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
+        }
         break;
       case SERVICE_TYPE_IRC:
-        reinterpret_cast<CIRC*>(game->GetCreatedFrom())->SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
+        m_IRC.SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
       /*
       // FIXME: CAura::EventBNETGameRefreshError SendUser() - Discord case
       case SERVICE_TYPE_DISCORD:
-        reinterpret_cast<CDiscord*>(game->GetCreatedFrom())->SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
+        m_Discord.SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;*/
       default:
         break;
@@ -1433,7 +1435,7 @@ void CAura::EventGameDeleted(shared_ptr<CGame> game)
       if (!realm->GetAnnounceHostToChat()) continue;
       if (game->GetGameLoaded()) {
         realm->QueueChatChannel("Game ended: " + game->GetEndDescription());
-        if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
+        if (game->MatchesCreatedFromRealm(realm)) {
           realm->QueueWhisper("Game ended: " + game->GetEndDescription(), game->GetCreatorName());
         }
       }
@@ -1458,7 +1460,7 @@ void CAura::EventGameRemake(shared_ptr<CGame> game)
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     realm->QueueChatChannel("Game remake: " + game->GetMap()->GetServerFileName());
-    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
+    if (game->MatchesCreatedFromRealm(realm)) {
       realm->QueueWhisper("Game remake: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
     }
   }
@@ -1478,7 +1480,7 @@ void CAura::EventGameStarted(shared_ptr<CGame> game)
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
     realm->QueueChatChannel("Game started: " + game->GetMap()->GetServerFileName());
-    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(this))) {
+    if (game->MatchesCreatedFromRealm(realm)) {
       realm->QueueWhisper("Game started: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
     }
   }
@@ -1501,14 +1503,12 @@ void CAura::EventRealmDeleted(shared_ptr<CRealm> realm)
   }
 
   for (auto& game : GetAllGames()) {
-    // TODO: SetCreator()
-    if (game->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(realm.get()))) {
+    if (game->MatchesCreatedFromRealm(realm)) {
       game->RemoveCreator();
     }
   }
 
-  // // TODO: SetCreator()
-  if (m_GameSetup && m_GameSetup->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(realm.get()))) {
+  if (m_GameSetup && m_GameSetup->MatchesCreatedFromRealm(realm)) {
     m_GameSetup->RemoveCreator();
   }
 

@@ -112,9 +112,9 @@ protected:
   std::string                                            m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                                            m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
   std::string                                            m_CreatorText;                   // who created this game
+  uint8_t                                                m_CreatedFromType;               // type of service m_CreatedFrom is
+  std::weak_ptr<void>                                    m_CreatedFrom;                   // service from which this game was created (CRealm, CGame, other is empty)
   std::string                                            m_CreatedBy;                     // name of the battle.net user who created this game
-  void*                                                  m_CreatedFrom;                   // battle.net or IRC server the player who created this game was on
-  uint8_t                                                m_CreatedFromType;               // type of server m_CreatedFrom is
   std::set<std::string>                                  m_RealmsExcluded;                // battle.net servers where the mirrored game is not to be broadcasted
   std::string                                            m_PlayedBy;
   std::string                                            m_KickVotePlayer;                // the player to be kicked with the currently running kick vote
@@ -279,8 +279,21 @@ public:
   inline std::string                                     GetOwnerRealm() const { return m_OwnerRealm; }
   inline std::string                                     GetCreatorName() const { return m_CreatedBy; }
   inline uint8_t                                         GetCreatedFromType() const { return m_CreatedFromType; }
-  inline void*                                           GetCreatedFrom() const { return m_CreatedFrom; }
-  bool                                                   MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const;
+  inline bool                                            GetCreatedFromIsExpired() const { return m_CreatedFrom.expired(); }
+
+  template <typename T>
+  [[nodiscard]] inline std::shared_ptr<T> GetCreatedFrom() const
+  {
+    return static_pointer_cast<T>(m_CreatedFrom.lock());
+  }
+
+  [[nodiscard]]                                          bool MatchesCreatedFrom(const uint8_t fromType) const;
+  [[nodiscard]]                                          bool MatchesCreatedFrom(const uint8_t fromType, std::shared_ptr<const void> fromThing) const;
+  [[nodiscard]]                                          bool MatchesCreatedFromGame(std::shared_ptr<CGame> nGame) const;
+  [[nodiscard]]                                          bool MatchesCreatedFromRealm(std::shared_ptr<CRealm> nRealm) const;
+  [[nodiscard]]                                          bool MatchesCreatedFromIRC() const;
+  [[nodiscard]]                                          bool MatchesCreatedFromDiscord() const;
+
   inline uint32_t                                        GetHostCounter() const { return m_HostCounter; }
   inline int64_t                                         GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool                                            GetIsReplaceable() const { return m_Replaceable;}

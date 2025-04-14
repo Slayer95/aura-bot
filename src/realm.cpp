@@ -611,7 +611,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     }
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, this, fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+      ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, shared_from_this(), fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
     } catch (...) {
     }
     if (ctx) {

@@ -194,7 +194,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_LobbyAutoRehosted(false),
     m_CreationCounter(0),
 
-    m_CreatedFrom(nullptr),
     m_CreatedFromType(SERVICE_TYPE_NONE),
 
     m_MapExtraOptions(nullptr),
@@ -240,7 +239,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_LobbyAutoRehosted(false),
     m_CreationCounter(0),
 
-    m_CreatedFrom(nullptr),
     m_CreatedFromType(SERVICE_TYPE_NONE),
 
     m_MapExtraOptions(nullptr),
@@ -1227,22 +1225,7 @@ void CGameSetup::OnLoadMapSuccess()
     if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
       SetOwner(m_Ctx->GetSender(), sourceRealm);
     }
-    /*
-    // TODO: SetCreator
-    if (sourceGame) {
-      SetCreator(m_Ctx->GetSender(), sourceGame);
-    } else if (sourceRealm) {
-      SetCreator(m_Ctx->GetSender(), sourceRealm);
-    } else if (m_Ctx->GetSourceIRC()) {
-      SetCreator(m_Ctx->GetSender(), m_Ctx->GetSourceIRC());
-#ifndef DISABLE_DPP
-    } else if (m_Ctx->GetDiscordAPI()) {
-      SetCreator(m_Ctx->GetSender(), &m_Aura->m_Discord);
-#endif
-    } else {
-      SetCreator(m_Ctx->GetSender());
-    }
-    */
+    AcquireCreator();
     RunHost();
   }
 }
@@ -1449,65 +1432,99 @@ void CGameSetup::SetOwner(const string& nOwner, shared_ptr<const CRealm> nRealm)
   }
 }
 
-/*
-TODO: SetCreator
-void CGameSetup::SetCreator(const string& nCreator)
-{
-  m_CreatedBy = nCreator;
-  m_CreatedFrom = nullptr;
-  m_CreatedFromType = SERVICE_TYPE_NONE;
-}
-
-void CGameSetup::SetCreator(const string& nCreator, CGame* nGame)
-{
-  m_CreatedBy = nCreator;
-  m_CreatedFrom = reinterpret_cast<void*>(nGame);
-  m_CreatedFromType = SERVICE_TYPE_GAME;
-}
-
-void CGameSetup::SetCreator(const string& nCreator, CRealm* nRealm)
-{
-  m_CreatedBy = nCreator;
-  m_CreatedFrom = reinterpret_cast<void*>(nRealm);
-  m_CreatedFromType = SERVICE_TYPE_REALM;
-}
-
-void CGameSetup::SetCreator(const string& nCreator, CIRC* nIRC)
-{
-  m_CreatedBy = nCreator;
-  m_CreatedFrom = reinterpret_cast<void*>(nIRC);
-  m_CreatedFromType = SERVICE_TYPE_IRC;
-}
-
-void CGameSetup::SetCreator(const string& nCreator, CDiscord* nDiscord)
-{
-  // TODO: CGameSetup::SetCreator() - Discord case
-  m_CreatedBy = nCreator;
-  m_CreatedFrom = reinterpret_cast<void*>(nDiscord);
-  m_CreatedFromType = SERVICE_TYPE_DISCORD;
-}
-*/
-
 void CGameSetup::RemoveCreator()
 {
-  m_CreatedBy.clear();
-  m_CreatedFrom = nullptr;
   m_CreatedFromType = SERVICE_TYPE_INVALID;
+  m_CreatedFrom.reset();
+  m_CreatedBy.clear();
 }
 
-bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const
+void CGameSetup::SetCreator(const uint8_t serviceType, const string& nCreator)
 {
-  // TODO: SetCreator()
+  m_CreatedFromType = serviceType;
+  m_CreatedFrom.reset();
+  m_CreatedBy = nCreator;
+}
+
+void CGameSetup::SetCreator(const uint8_t serviceType, const string& nCreator, weak_ptr<void> servicePtr)
+{
+  m_CreatedFromType = serviceType;
+  m_CreatedFrom = servicePtr;
+  m_CreatedBy = nCreator;
+}
+
+void CGameSetup::SetCreatorGameUser(const string& nCreator, shared_ptr<CGame> nGame)
+{
+  SetCreator(SERVICE_TYPE_GAME, nCreator, static_pointer_cast<void>(nGame));
+}
+
+void CGameSetup::SetCreatorRealmUser(const string& nCreator, shared_ptr<CRealm> nRealm)
+{
+  SetCreator(SERVICE_TYPE_REALM, nCreator, static_pointer_cast<void>(nRealm));
+}
+
+void CGameSetup::SetCreatorIRCUser(const string& nCreator)
+{
+  SetCreator(SERVICE_TYPE_IRC, nCreator);
+}
+
+void CGameSetup::SetCreatorDiscordUser(const string& nCreator)
+{
+  SetCreator(SERVICE_TYPE_DISCORD, nCreator);
+}
+
+void CGameSetup::AcquireCreator()
+{
+  if (!m_Ctx) return;
+  shared_ptr<CRealm> sourceRealm = m_Ctx->GetSourceRealm();
+  shared_ptr<CGame> sourceGame = m_Ctx->GetSourceGame();
+  if (sourceRealm) {
+    SetCreatorRealmUser(m_Ctx->GetSender(), sourceRealm);
+  } else if (sourceGame) {
+    SetCreatorGameUser(m_Ctx->GetSender(), sourceGame);
+  } else if (m_Ctx->m_IRC) {
+    SetCreatorIRCUser(m_Ctx->GetSender());
+  } else if (m_Ctx->m_DiscordAPI) {
+    SetCreatorDiscordUser(m_Ctx->GetSender());
+  }
+}
+
+bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType) const
+{
+  return m_CreatedFromType == fromType;
+}
+
+bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
+{
   if (m_CreatedFromType != fromType) return false;
   switch (fromType) {
+    case SERVICE_TYPE_GAME:
+      return static_pointer_cast<const CGame>(fromThing) == GetCreatedFrom<const CGame>();
     case SERVICE_TYPE_REALM:
-      return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
-    case SERVICE_TYPE_IRC:
-      return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
-    case SERVICE_TYPE_DISCORD:
-      return reinterpret_cast<const CDiscord*>(m_CreatedFrom) == reinterpret_cast<const CDiscord*>(fromThing);
+      return static_pointer_cast<const CRealm>(fromThing) == GetCreatedFrom<const CRealm>();
+    default:
+      return true;
   }
-  return false;
+}
+
+bool CGameSetup::MatchesCreatedFromGame(shared_ptr<const CGame> nGame) const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_GAME, static_pointer_cast<const void>(nGame));
+}
+
+bool CGameSetup::MatchesCreatedFromRealm(shared_ptr<const CRealm> nRealm) const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_REALM, static_pointer_cast<const void>(nRealm));
+}
+
+bool CGameSetup::MatchesCreatedFromIRC() const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_IRC);
+}
+
+bool CGameSetup::MatchesCreatedFromDiscord() const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_DISCORD);
 }
 
 void CGameSetup::OnGameCreate()
@@ -1640,8 +1657,7 @@ void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
     }
   }
   if (mpName.has_value()) {
-    //TODO: SetCreator
-    //SetCreator(mpName.value());
+    SetCreator(SERVICE_TYPE_UNKNOWN, mpName.value());
   }
   if (nCLI->m_GameOwner.has_value()) {
     pair<string, string> owner = SplitAddress(nCLI->m_GameOwner.value());
@@ -1737,7 +1753,7 @@ CGameSetup::~CGameSetup()
   delete m_RestoredGame;
   m_RestoredGame = nullptr;
 
-  m_CreatedFrom = nullptr;
+  m_CreatedFrom.reset();
   m_Aura = nullptr;
 
   m_Map.reset();

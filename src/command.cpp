@@ -372,8 +372,7 @@ void CCommandContext::UpdatePermissions()
         m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
       }
       const bool IsCreatorIRC = (
-        !m_TargetGame.expired() && m_TargetGame.lock()->GetCreatedFromType() == SERVICE_TYPE_IRC &&
-        reinterpret_cast<CIRC*>(m_TargetGame.lock()->GetCreatedFrom()) == m_IRC
+        !m_TargetGame.expired() && m_TargetGame.lock()->GetCreatedFromType() == SERVICE_TYPE_IRC
       );
       if ((m_TargetGame.expired() || IsCreatorIRC) && m_IRC->GetIsModerator(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
       if (m_IRC->GetIsSudoer(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
@@ -409,7 +408,7 @@ void CCommandContext::UpdatePermissions()
   } else if (targetGame) {
     IsOwner = isRealmVerified && targetGame->MatchOwnerName(m_FromName) && m_ServerName == targetGame->GetOwnerRealm();
   }
-  bool IsCreatorRealm = targetGame && sourceRealm && targetGame->MatchesCreatedFrom(SERVICE_TYPE_REALM, reinterpret_cast<void*>(sourceRealm.get()));
+  bool IsCreatorRealm = targetGame && sourceRealm && targetGame->MatchesCreatedFromRealm(sourceRealm);
   bool IsRootAdmin = isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && sourceRealm->GetIsAdmin(m_FromName);
   bool IsAdmin = IsRootAdmin || (isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && sourceRealm->GetIsModerator(m_FromName));
   bool IsSudoSpoofable = isRealmVerified && sourceRealm != nullptr && sourceRealm->GetIsSudoer(m_FromName);
@@ -3010,20 +3009,10 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
         m_Aura->m_GameSetup->SetContext(shared_from_this());
         m_Aura->m_GameSetup->SetBaseName(Payload);
         m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
+        m_Aura->m_GameSetup->AcquireCreator();
         if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
           m_Aura->m_GameSetup->SetOwner(m_FromName, sourceRealm);
         }
-        /*
-        // TODO: SetCreator
-        if (sourceRealm) {
-          m_Aura->m_GameSetup->SetCreator(m_FromName, sourceRealm);
-        } else if (m_IRC) {
-          m_Aura->m_GameSetup->SetCreator(m_FromName, m_IRC);
-        } else if (m_DiscordAPI) {
-          m_Aura->m_GameSetup->SetCreator(m_FromName, &m_Aura->m_Discord);
-        }
-        */
-
         m_Aura->m_GameSetup->RunHost();
       }
       break;
@@ -3072,8 +3061,7 @@ void CCommandContext::Run(const string& cmdToken, const string& command, const s
       m_Aura->m_GameSetup->SetContext(shared_from_this());
       m_Aura->m_GameSetup->SetBaseName(gameName);
       m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
-      //TODO: SetCreator()
-      //m_Aura->m_GameSetup->SetCreator(m_FromName, sourceRealm);
+      m_Aura->m_GameSetup->AcquireCreator();
       m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : sourceRealm);
       m_Aura->m_GameSetup->RunHost();
       break;

@@ -789,19 +789,42 @@ void CGame::InitSlots()
   }
 }
 
-bool CGame::MatchesCreatedFrom(const uint8_t fromType, const void* fromThing) const
+bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType) const
+{
+  return m_CreatedFromType == fromType;
+}
+
+bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
 {
   if (m_CreatedFromType != fromType) return false;
-  // TODO: SetCreator()
   switch (fromType) {
+    case SERVICE_TYPE_GAME:
+      return static_pointer_cast<const CGame>(fromThing) == GetCreatedFrom<const CGame>();
     case SERVICE_TYPE_REALM:
-      return reinterpret_cast<const CRealm*>(m_CreatedFrom) == reinterpret_cast<const CRealm*>(fromThing);
-    case SERVICE_TYPE_IRC:
-      return reinterpret_cast<const CIRC*>(m_CreatedFrom) == reinterpret_cast<const CIRC*>(fromThing);
-    case SERVICE_TYPE_DISCORD:
-      return reinterpret_cast<const CDiscord*>(m_CreatedFrom) == reinterpret_cast<const CDiscord*>(fromThing);
+      return static_pointer_cast<const CRealm>(fromThing) == GetCreatedFrom<const CRealm>();
+    default:
+      return true;
   }
-  return false;
+}
+
+bool CGameSetup::MatchesCreatedFromGame(shared_ptr<const CGame> nGame) const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_GAME, static_pointer_cast<const void>(nGame));
+}
+
+bool CGameSetup::MatchesCreatedFromRealm(shared_ptr<const CRealm> nRealm) const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_REALM, static_pointer_cast<const void>(nRealm));
+}
+
+bool CGameSetup::MatchesCreatedFromIRC() const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_IRC);
+}
+
+bool CGameSetup::MatchesCreatedFromDiscord() const
+{
+  return MatchesCreatedFrom(SERVICE_TYPE_DISCORD);
 }
 
 uint8_t CGame::GetLayout() const
@@ -3483,14 +3506,24 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       Line.replace(matchIndex, 9, m_CreatorText);
     }
     while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      if (m_CreatedFromType == SERVICE_TYPE_REALM) {
-        Line.replace(matchIndex, 11, "@" + reinterpret_cast<CRealm*>(m_CreatedFrom)->GetCanonicalDisplayName());
-      } else if (m_CreatedFromType == SERVICE_TYPE_IRC) {
-        Line.replace(matchIndex, 11, "@" + reinterpret_cast<CIRC*>(m_CreatedFrom)->m_Config.m_HostName);
-      } else if (m_CreatedFromType == SERVICE_TYPE_DISCORD) {
-        // TODO: {HOSTREALM} Discord
-      } else {
-        Line.replace(matchIndex, 11, "@" + ToFormattedRealm());
+      switch (m_CreatedFromType) {
+        case SERVICE_TYPE_REALM: {
+          if (m_CreatedFrom.expired()) {
+            Line.replace(matchIndex, 11, "@unknown.battle.net");
+          } else {
+            Line.replace(matchIndex, 11, "@" + GetCreatedFrom<const CRealm>()->GetCanonicalDisplayName());
+          }
+          break;
+        }
+        case SERVICE_TYPE_IRC:
+          Line.replace(matchIndex, 11, "@" + m_Aura->m_IRC.m_Config.m_HostName);
+          break;
+        case SERVICE_TYPE_DISCORD:
+          // FIXME: {HOSTREALM} may need to display the Discord guild
+          Line.replace(matchIndex, 11, "@users.discord.com");
+          break;
+        default:
+          Line.replace(matchIndex, 11, "@" + ToFormattedRealm());
       }
     }
     while ((matchIndex = Line.find("{OWNER}")) != string::npos) {
@@ -5453,13 +5486,14 @@ void CGame::EventBeforeJoin(CConnection* connection)
 
 bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, shared_ptr<CRealm> matchingRealm, string& hostName)
 {
-  // check if the new user's name is banned
+  // check if the user name is banned in their own realm
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), hostName);
   bool isBanned = isSelfServerBanned;
-  // TODO: SetCreator()
-  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm.get() != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
-    isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedPlayer(joinRequest->GetName(), hostName);
+  // check if the user name is banned in the game creator's realm
+  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && !m_CreatedFrom.expired() && !MatchesCreatedFromRealm(matchingRealm)) {
+    isBanned = GetCreatedFrom<const CRealm>()->IsBannedPlayer(joinRequest->GetName(), hostName);
   }
+  // check if the user name is banned in whatever alternate service the game creator comes from
   if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
     isBanned = m_Aura->m_DB->GetIsUserBanned(joinRequest->GetName(), hostName, string());
   }
@@ -5490,13 +5524,14 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   if (isLoopbackAddress(connection->GetRemoteAddress())) {
     return false;
   }
-  // check if the new user's IP is banned
+  // check if the user IP is banned in their own realm
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedIP(connection->GetIPStringStrict());
   bool isBanned = isSelfServerBanned;
-  // TODO: SetCreator()
-  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && matchingRealm.get() != reinterpret_cast<const CRealm*>(m_CreatedFrom)) {
-    isBanned = reinterpret_cast<const CRealm*>(m_CreatedFrom)->IsBannedIP(connection->GetIPStringStrict());
+  // check if the user IP is banned in the game creator's realm
+  if (!isBanned && m_CreatedFromType == SERVICE_TYPE_REALM && !m_CreatedFrom.expired() && !MatchesCreatedFromRealm(matchingRealm)) {
+    isBanned = GetCreatedFrom<const CRealm>()->IsBannedIP(connection->GetIPStringStrict());
   }
+  // check if the user IP is banned in whatever alternate service the game creator comes from
   if (!isBanned && m_CreatedFromType != SERVICE_TYPE_REALM) {
     isBanned = m_Aura->m_DB->GetIsIPBanned(connection->GetIPStringStrict(), string());
   }
@@ -10228,7 +10263,7 @@ void CGame::DeleteFakeUsersLoaded()
 void CGame::RemoveCreator()
 {
   m_CreatedBy.clear();
-  m_CreatedFrom = nullptr;
+  m_CreatedFrom.reset();
   m_CreatedFromType = SERVICE_TYPE_INVALID;
 }
 
