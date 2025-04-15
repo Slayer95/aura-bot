@@ -249,6 +249,7 @@ public:
   void ResetGameBroadcastData();
 
   inline void SetPendingBroadcast(std::shared_ptr<CGame> nGame) { m_GameBroadcastPending = nGame; }
+  inline void SetGameBroadcastInFlight() { m_GameBroadcastInFlight = true; }
   inline void ResetGameBroadcastPending() { m_GameBroadcastPending.reset(); }
   inline void ResetGameBroadcastInFlight() { m_GameBroadcastInFlight = false; }
 

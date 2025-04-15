@@ -1484,6 +1484,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
     hostCounter,
     game->GetMap()->GetVersionMaxSlots()
   ));
+  SetGameBroadcastInFlight();
 
   if (!m_CurrentChannel.empty()) {
     m_AnchorChannel = m_CurrentChannel;
