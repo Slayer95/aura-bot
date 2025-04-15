@@ -53,7 +53,6 @@ protected:
 
   std::string                   m_ServerName;
   std::string                   m_ReverseHostName; // user hostname, reversed from their IP (received from IRC chat)
-  std::string                   m_ChannelName;
   std::string                   m_ActionMessage;
 
   std::ostream*                 m_Output;
@@ -102,7 +101,7 @@ public:
   [[nodiscard]] inline bool GetIsAnonymous() const { return m_ServiceSource.GetIsAnonymous(); }
   [[nodiscard]] inline bool GetIsGameUser() const { return m_GameSource.GetIsUser(); }
   [[nodiscard]] inline const std::string& GetSender() const { return m_ServiceSource.GetUser(); }
-  [[nodiscard]] inline std::string GetChannelName() const { return m_ChannelName; }
+  [[nodiscard]] std::string GetChannelName() const;
   [[nodiscard]] std::shared_ptr<CRealm> GetSourceRealm() const;
   [[nodiscard]] std::shared_ptr<CGame> GetSourceGame() const;
   [[nodiscard]] GameUser::CGameUser* GetGameUser() const;

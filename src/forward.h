@@ -116,6 +116,7 @@ struct LazyCommandContext;
 struct MapTransfer;
 struct RealmUserSearchResult;
 struct ServiceUser;
+struct SimpleNestedLocation;
 struct UDPPkt;
 
 template <typename T>

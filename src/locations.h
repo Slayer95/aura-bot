@@ -92,6 +92,53 @@ struct RealmUserSearchResult
 };
 
 //
+// SimpleNestedLocation
+//
+
+struct SimpleNestedLocation
+{
+  uint8_t order;
+  std::string name;
+  std::optional<uint64_t> id;
+  SimpleNestedLocation* subLocation;
+
+  SimpleNestedLocation(uint8_t nOrder, const std::string& locationName)
+   : order(nOrder),
+     name(locationName)
+  {
+  }
+
+  SimpleNestedLocation(uint8_t nOrder, const std::string& locationName, const uint64_t locationIdentifier)
+   : order(nOrder),
+     name(locationName),
+     id(locationIdentifier)
+  {
+  }
+
+  ~SimpleNestedLocation() {
+    delete subLocation;
+    subLocation = nullptr;
+  }
+
+  inline uint8_t GetOrder() const { return order; }
+  inline const std::string& GetName() const { return name; }
+  inline SimpleNestedLocation* GetSubLocation() const { return subLocation; }
+  inline const SimpleNestedLocation* InspectSubLocation() const { return subLocation; }
+
+  SimpleNestedLocation* AddNested(const std::string& locationName)
+  {
+    subLocation = new SimpleNestedLocation(order + 1, locationName);
+    return subLocation;
+  }
+
+  SimpleNestedLocation* AddNested(const std::string& locationName, const uint64_t locationIdentifier)
+  {
+    subLocation = new SimpleNestedLocation(order + 1, locationName, locationIdentifier);
+    return subLocation;
+  }
+};
+
+//
 // ServiceUser
 //
 
@@ -102,6 +149,7 @@ struct ServiceUser
   std::weak_ptr<void> servicePtr;
   std::optional<int64_t> userIdentifier;
   std::string userName;
+  SimpleNestedLocation* subLocation;
 
   ServiceUser();
   ServiceUser(const ServiceUser& otherService);
@@ -130,6 +178,22 @@ struct ServiceUser
 
   inline void SetServiceType(uint8_t nServiceType) { serviceType = nServiceType; }
   inline void SetName(const std::string& nUserName) { userName = nUserName; }
+
+  inline uint8_t GetOrder() const { return 0; }
+  inline SimpleNestedLocation* GetSubLocation() const { return subLocation; }
+  inline const SimpleNestedLocation* InspectSubLocation() const { return subLocation; }
+
+  SimpleNestedLocation* AddNested(const std::string& locationName)
+  {
+    subLocation = new SimpleNestedLocation(1, locationName);
+    return subLocation;
+  }
+
+  SimpleNestedLocation* AddNested(const std::string& locationName, const uint64_t locationIdentifier)
+  {
+    subLocation = new SimpleNestedLocation(1, locationName, locationIdentifier);
+    return subLocation;
+  }
 };
 
 //

@@ -48,6 +48,15 @@
 #include <dpp/dpp.h>
 #endif
 
+#ifndef NDEBUG
+#define CHECK_SERVICE_TYPE(T) \
+  do {\
+    CheckServiceType(T);\
+  } while (0);
+#else
+#define CHECK_SERVICE_TYPE(T)
+#endif
+
 using namespace std;
 
 //
@@ -70,14 +79,10 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_ServerName(user->GetRealmHostName()),
 
-    m_ChannelName(string()),
-
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
   shared_ptr<CRealm> sourceRealm = user->GetRealm(false);
   if (sourceRealm) {
     m_ServiceSource = ServiceUser(SERVICE_TYPE_REALM, m_ServiceSource.GetUser(), sourceRealm);
@@ -99,15 +104,16 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
     m_Permissions(USER_PERMISSIONS_NONE),
 
     m_ServerName(fromRealm->GetServer()),
-    m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
+
+  if (!isWhisper) {
+    m_ServiceSource.AddNested(fromRealm->GetCurrentChannel());
+  }
 }
 
 /* Command received from IRC but targetting a game */
@@ -125,15 +131,13 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_ServerName(nAura->m_IRC.m_Config.m_HostName),
     m_ReverseHostName(reverseHostName),
-    m_ChannelName(channelName),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
+  m_ServiceSource.AddNested(channelName);
 }
 
 #ifndef DISABLE_DPP
@@ -153,14 +157,25 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
+  string serverName, channelName;
+  dpp::snowflake serverId, channelId;
   try {
-    m_ServerName = discordAPI->command.get_guild().name;
-    m_ChannelName = discordAPI->command.get_channel().name;
+    serverName = discordAPI->command.get_guild().name;
+    channelName = discordAPI->command.get_channel().name;
+    serverId = discordAPI->command.get_guild().id;
+    channelId = discordAPI->command.get_channel().id;
   } catch (...) {
     m_FromWhisper = true;
+    serverName = "users.discord.com";
+  }
+  m_ServerName = serverName;
+
+  if (m_FromWhisper) {
+    Print("[DISCORD] Received slash command on " + GetSender() + "'s DM");
+  } else {
+    m_ServiceSource.AddNested(serverName, (uint64_t)serverId)->AddNested(channelName, (uint64_t)channelId);
+    Print("[DISCORD] Received slash command in " + serverName + "'s server - channel " + channelName);
   }
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
@@ -180,14 +195,11 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
     m_Permissions(USER_PERMISSIONS_NONE),
 
     m_ServerName(string()),
-    m_ChannelName(string()),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
@@ -204,15 +216,15 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_ServerName(fromRealm->GetServer()),
 
-    m_ChannelName(isWhisper ? string() : fromRealm->GetCurrentChannel()),
-
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
+
+  if (!isWhisper) {
+    m_ServiceSource.AddNested(fromRealm->GetCurrentChannel());
+  }
 }
 
 /* IRC command */
@@ -228,15 +240,13 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_ServerName(nAura->m_IRC.m_Config.m_HostName),
     m_ReverseHostName(reverseHostName),
-    m_ChannelName(channelName),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
+  m_ServiceSource.AddNested(channelName);
 }
 
 #ifndef DISABLE_DPP
@@ -254,17 +264,25 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
+  string serverName, channelName;
+  dpp::snowflake serverId, channelId;
   try {
-    m_ServerName = discordAPI->command.get_guild().name;
-    m_ChannelName = discordAPI->command.get_channel().name;
-    Print("[DISCORD] Received slash command in " + m_ServerName + "'s server - channel " + m_ChannelName);
+    serverName = discordAPI->command.get_guild().name;
+    channelName = discordAPI->command.get_channel().name;
+    serverId = discordAPI->command.get_guild().id;
+    channelId = discordAPI->command.get_channel().id;
   } catch (...) {
-    Print("[DISCORD] Received slash command on " + GetSender() + "'s DM");
-    m_ServerName = "users.discord.com";
     m_FromWhisper = true;
+    serverName = "users.discord.com";
+  }
+  m_ServerName = serverName;
+
+  if (m_FromWhisper) {
+    Print("[DISCORD] Received slash command on " + GetSender() + "'s DM");
+  } else {
+    m_ServiceSource.AddNested(serverName, (uint64_t)serverId)->AddNested(channelName, (uint64_t)channelId);
+    Print("[DISCORD] Received slash command in " + serverName + "'s server - channel " + channelName);
   }
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
@@ -284,16 +302,14 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, const string
 
     m_ServerName(string()),
 
-    m_ChannelName(string()),
-
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
 {
-#ifdef DEBUG
-  CheckServiceType(serviceType);
-#endif
+  CHECK_SERVICE_TYPE(serviceType);
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
+
+#undef CHECK_SERVICE_TYPE
 
 void CCommandContext::SetIdentity(const string& userName)
 {
@@ -340,7 +356,27 @@ string CCommandContext::GetUserAttributionPreffix()
       return "[ANONYMOUS] (Mode " + ToHexString(m_Permissions) + ") ";
     }
   }
+}
 
+string CCommandContext::GetChannelName() const
+{
+  SimpleNestedLocation* subLoc = nullptr;
+  switch (GetServiceSourceType()) {
+    case SERVICE_TYPE_IRC:
+    case SERVICE_TYPE_REALM:
+      subLoc = InspectServiceSource().InspectSubLocation();
+      if (subLoc) return subLoc->GetName();
+      break;
+    case SERVICE_TYPE_DISCORD:
+      subLoc = InspectServiceSource().InspectSubLocation();
+      if (subLoc) {
+        subLoc = subLoc->InspectSubLocation();
+        if (subLoc) return subLoc->GetName();
+      }
+      break;
+    default:
+      return string();
+  }
 }
 
 shared_ptr<CRealm> CCommandContext::GetSourceRealm() const
@@ -712,7 +748,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       AllSourceSuccess = true;
     }
     if (GetServiceSourceType() == SERVICE_TYPE_IRC) {
-      m_Aura->m_IRC.SendChannel(message, m_ChannelName);
+      m_Aura->m_IRC.SendChannel(message, GetChannelName());
       AllSourceSuccess = true;
     }
 #ifndef DISABLE_DPP
@@ -6656,7 +6692,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       shared_ptr<CCommandContext> ctx = nullptr;
       try {
         if (serviceSourceType == SERVICE_TYPE_IRC) {
-          ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, m_ChannelName, GetSender(), m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
+          ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, GetChannelName(), GetSender(), m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
 #ifndef DISABLE_DPP
         } else if (serviceSourceType == SERVICE_TYPE_DISCORD) {
           ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, GetServiceSource().GetDiscordAPI(), &std::cout);
@@ -8033,3 +8069,4 @@ CCommandContext::~CCommandContext()
   ResetGameSource();
   ResetServiceSource();
 }
+
