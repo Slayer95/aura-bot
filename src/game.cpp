@@ -1251,7 +1251,7 @@ void CGame::UpdateJoinable()
 
     if (m_DisplayMode == GAME_PUBLIC && (HasSlotsOpen() || m_JoinInProgressVirtualUser.has_value())) {
       for (auto& realm : m_Aura->m_Realms) {
-        if (!realm->GetLoggedIn() || realm->GetGameBroadcastIsPending()) {
+        if (!realm->GetLoggedIn() || realm->GetIsGameBroadcastPending()) {
           continue;
         }
         if (m_IsMirror && realm->GetIsMirror()) {

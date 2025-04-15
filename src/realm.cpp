@@ -76,9 +76,11 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_Socket(nullptr),
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
 
+    m_GameBroadcastInFlight(false),
     m_GameIsExpansion(false),
     m_GameVersion(GAMEVER(0u, 0u)),
     m_AuthGameVersion(GAMEVER(0u, 0u)),
+
     m_LastGamePort(6112),
     m_LastGameHostCounter(0),
 
@@ -248,6 +250,10 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::STARTADVEX3:
+            if (!GetIsGameBroadcastInFlight()) {
+              Print(GetLogPrefix() + "got STARTADVEX3 but there was no broadcast in flight");
+              break;
+            }
             if (!m_GameBroadcast.expired()) {
               if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
                 m_Aura->EventBNETGameRefreshSuccess(shared_from_this());
@@ -256,6 +262,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
                 m_Aura->EventBNETGameRefreshError(shared_from_this());
               }
             }
+            ResetGameBroadcastInFlight();
             break;
 
           case BNETProtocol::Magic::PING:
@@ -756,7 +763,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   switch (message->GetCallback()) {
     case CHAT_CALLBACK_REFRESH_GAME: {
       m_ChatQueuedGameAnnouncement = false;
-      shared_ptr<CGame> matchLobby = m_Aura->GetLobbyByHostCounterExact(message->GetCallbackData());
+      shared_ptr<CGame> matchLobby = m_Aura->GetLobbyOrObservableByHostCounterExact(message->GetCallbackData());
       if (!matchLobby) {
         Print(GetLogPrefix() + " !! lobby not found !! host counter 0x" + ToHexString(message->GetCallbackData()));
         if (message->GetIsStale()) {
@@ -765,7 +772,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
           Print(GetLogPrefix() + " !! lobby is not stale !!");
         }
       } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion()) && matchLobby->GetIsExpansion() == GetGameIsExpansion()) {
-        matchLobby->AnnounceToRealm(shared_from_this());
+        SetPendingBroadcast(matchLobby);
       }
       break;
     }
@@ -1386,17 +1393,17 @@ void CRealm::TrySendPendingChats()
 
 void CRealm::CheckPendingGameBroadcast()
 {
-  if (!m_LoggedIn || !GetGameBroadcastIsPending()) {
+  if (!m_LoggedIn || !GetIsGameBroadcastPending() || GetIsGameBroadcastInFlight()) {
     return;
   }
 
   shared_ptr<CGame> pendingGame = GetGameBroadcastPending();
+  ResetGameBroadcastPending(); // early reset to unlock CRealm::SendGameRefresh
 
   if (
     (pendingGame->GetIsExpansion() != GetGameIsExpansion()) ||
     !(pendingGame->GetIsSupportedGameVersion(GetGameVersion()))
   ) {
-    m_GameBroadcastPending.reset();
     return;
   }
 
@@ -1414,13 +1421,11 @@ void CRealm::CheckPendingGameBroadcast()
       SendEnterChat();
     }
   }
-
-  m_GameBroadcastPending.reset();
 }
 
 void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
 {
-  if (!m_LoggedIn || GetIsGameBroadcastErrored()) {
+  if (!m_LoggedIn || GetIsGameBroadcastErrored() || GetIsGameBroadcastInFlight() || GetIsGameBroadcastPending()) {
     return;
   }
 
@@ -1524,6 +1529,7 @@ void CRealm::StopConnection(bool hadError)
   m_CurrentChannel.clear();
   m_AnchorChannel.clear();
   m_WaitingToConnect = true;
+  ResetGameBroadcastInFlight();
   ResetGameBroadcastStatus();
 
   m_ChatQuotaInUse.clear();

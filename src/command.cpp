@@ -3001,13 +3001,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           if (targetGame->m_RealmsExcluded.find(realm->GetServer()) != targetGame->m_RealmsExcluded.end()) {
             continue;
           }
-
-          // unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
-          // this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
-          // we assume this won't happen very often since the only downside is a potential false positive, which will soon be corrected
-          // (CAura::EventBNETGameRefreshSuccess doesn't do much)
-
-          realm->ResetGameBroadcastData();
+          realm->SetPendingBroadcast(targetGame);
         }
 
         targetGame->m_CreationTime = targetGame->m_LastRefreshTime = GetTime();
@@ -4797,6 +4791,14 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("Crossplay is not enabled. [" + targetRealm->GetCanonicalDisplayName() + "] is running v" + ToVersionString(targetRealm->GetGameVersion()));
           break;
         }
+        if (targetGame->GetIsExpansion() != targetRealm->GetGameIsExpansion()) {
+          if (targetGame->GetIsExpansion()) {
+            ErrorReply("Cannot announce TFT game in a Reign of Chaos realm.");
+          } else {
+            ErrorReply("Cannot announce ROC game in a Frozen Throne realm.");
+          }
+          break;
+        }
       }
 
       targetGame->m_DisplayMode = GAME_PUBLIC;
@@ -4809,6 +4811,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (toAllRealms) {
         for (auto& bnet : m_Aura->m_Realms) {
           if (!targetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
+          if (targetGame->GetIsExpansion() != bnet->GetGameIsExpansion()) continue;
           bnet->ResetGameBroadcastData();
           bnet->ResetGameBroadcastPending();
           bnet->QueueGameChatAnnouncement(targetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);

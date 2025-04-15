@@ -69,11 +69,13 @@ private:
 
   std::weak_ptr<CGame>             m_GameBroadcast;
   std::weak_ptr<CGame>             m_GameBroadcastPending;
+  bool                             m_GameBroadcastInFlight;     // whether the last game broadcast packet has been replied to
+  std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
+  std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted at least once or not, or it is pending its first callback
+
   bool                             m_GameIsExpansion;
   Version                          m_GameVersion;
   Version                          m_AuthGameVersion;
-  std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
-  std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted or not, or it is pending
   uint16_t                         m_LastGamePort;              // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
   uint32_t                         m_LastGameHostCounter;       // game host counter for the game that is being broadcasted
 
@@ -142,8 +144,9 @@ public:
   inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }
 
-  inline bool                             GetGameBroadcastIsPending() const { return m_GameBroadcastPending.lock() != nullptr; }
+  inline bool                             GetIsGameBroadcastPending() const { return m_GameBroadcastPending.lock() != nullptr; }
   inline std::shared_ptr<CGame>           GetGameBroadcastPending() const { return m_GameBroadcastPending.lock(); }
+  inline bool                             GetIsGameBroadcastInFlight() const { return m_GameBroadcastInFlight; }
   inline std::shared_ptr<CGame>           GetGameBroadcast() const { return m_GameBroadcast.lock(); }
   inline bool                             GetGameIsExpansion() const { return m_GameIsExpansion; }
   inline const Version&                   GetGameVersion() const { return m_GameVersion; }
@@ -247,6 +250,7 @@ public:
 
   inline void SetPendingBroadcast(std::shared_ptr<CGame> nGame) { m_GameBroadcastPending = nGame; }
   inline void ResetGameBroadcastPending() { m_GameBroadcastPending.reset(); }
+  inline void ResetGameBroadcastInFlight() { m_GameBroadcastInFlight = false; }
 
   void ResetConnection(bool hadError);
   void ResetGameChatAnnouncement() { m_ChatQueuedGameAnnouncement = false; }
