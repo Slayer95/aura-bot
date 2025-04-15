@@ -69,6 +69,7 @@ private:
 
   std::weak_ptr<CGame>             m_GameBroadcast;
   std::weak_ptr<CGame>             m_GameBroadcastPending;
+  std::optional<bool>              m_GameBroadcastPendingChat;
   bool                             m_GameBroadcastInFlight;     // whether the last game broadcast packet has been replied to
   std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
   std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted at least once or not, or it is pending its first callback
@@ -248,9 +249,11 @@ public:
   void ResolveGameBroadcastStatus(bool nResult) { m_GameBroadcastStatus = nResult; }
   void ResetGameBroadcastData();
 
-  inline void SetPendingBroadcast(std::shared_ptr<CGame> nGame) { m_GameBroadcastPending = nGame; }
+  inline void SetGameBroadcastPending(std::shared_ptr<CGame> nGame) { m_GameBroadcastPending = nGame; }
+  inline void SetGameBroadcastPendingChat(bool shouldAnnounce) { m_GameBroadcastPendingChat = shouldAnnounce; }
   inline void SetGameBroadcastInFlight() { m_GameBroadcastInFlight = true; }
   inline void ResetGameBroadcastPending() { m_GameBroadcastPending.reset(); }
+  inline void ResetGameBroadcastPendingChat() { m_GameBroadcastPendingChat.reset(); }
   inline void ResetGameBroadcastInFlight() { m_GameBroadcastInFlight = false; }
 
   void ResetConnection(bool hadError);

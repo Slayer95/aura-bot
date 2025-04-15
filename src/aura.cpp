@@ -2255,7 +2255,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
       continue;
     }
 
-    realm->SetPendingBroadcast(createdLobby);
+    realm->SetGameBroadcastPending(createdLobby);
   }
 
   if (createdLobby->GetDisplayMode() != GAME_PUBLIC ||

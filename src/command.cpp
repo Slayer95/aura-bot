@@ -3038,7 +3038,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           if (targetGame->m_RealmsExcluded.find(realm->GetServer()) != targetGame->m_RealmsExcluded.end()) {
             continue;
           }
-          realm->SetPendingBroadcast(targetGame);
+          realm->SetGameBroadcastPending(targetGame);
         }
 
         targetGame->m_CreationTime = targetGame->m_LastRefreshTime = GetTime();

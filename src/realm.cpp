@@ -733,6 +733,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   if (message->GetSendsEarlyFeedback()) {
     message->SendEarlyFeedback();
   }
+
   if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
     string modeFragment = "sent message <<";
     if (message->GetWasThrottled()) {
@@ -772,7 +773,8 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
           Print(GetLogPrefix() + " !! lobby is not stale !!");
         }
       } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion()) && matchLobby->GetIsExpansion() == GetGameIsExpansion()) {
-        SetPendingBroadcast(matchLobby);
+        SetGameBroadcastPending(matchLobby);
+        SetGameBroadcastPendingChat(false);
       }
       break;
     }
@@ -1289,6 +1291,13 @@ void CRealm::TryQueueGameChatAnnouncement(shared_ptr<const CGame> game)
     return;
   }
 
+  if (
+    (game->GetIsExpansion() != GetGameIsExpansion()) ||
+    !(game->GetIsSupportedGameVersion(GetGameVersion()))
+  ) {
+    return;
+  }
+
   if (game->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
     QueueGameChatAnnouncement(game);
     return;
@@ -1398,7 +1407,9 @@ void CRealm::CheckPendingGameBroadcast()
   }
 
   shared_ptr<CGame> pendingGame = GetGameBroadcastPending();
+  optional<bool> pendingChat = m_GameBroadcastPendingChat;
   ResetGameBroadcastPending(); // early reset to unlock CRealm::SendGameRefresh
+  ResetGameBroadcastPendingChat();
 
   if (
     (pendingGame->GetIsExpansion() != GetGameIsExpansion()) ||
@@ -1407,7 +1418,7 @@ void CRealm::CheckPendingGameBroadcast()
     return;
   }
 
-  if (pendingGame->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
+  if (pendingGame->GetDisplayMode() == GAME_PUBLIC && pendingChat.value_or(GetAnnounceHostToChat())) {
     QueueGameChatAnnouncement(pendingGame);
   } else {
     // Send STARTADVEX3
