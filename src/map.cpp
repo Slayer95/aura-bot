@@ -2351,7 +2351,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_HMC.supported = CFG.GetBool("map.w3hmc.supported", false);
   m_HMC.toggle = CFG.GetStringIndex("map.w3hmc.toggle", {"disabled", "optional", "required"}, MAP_FEATURE_TOGGLE_DISABLED);
   m_HMC.dwordA = CFG.GetUint32("map.w3hmc.trigger.main", 0);
-  m_HMC.dwordB = CFG.GetUint32("map.w3hmc.trigger.secondary", m_HMC.dwordA); // often these are the same, but not always!
+  m_HMC.dwordB = CFG.GetUint32("map.w3hmc.trigger.complement", m_HMC.dwordA); // often these are the same, but not always!
   m_HMC.slot = CFG.GetSlot("map.w3hmc.slot", 0xFF); // cannot be observer
   m_HMC.playerName = CFG.GetString("map.w3hmc.player_name", 1, 15, "[HMC]Aura");
   m_HMC.fileName = CFG.GetString("map.w3hmc.file_name", 1, 15, "W3HMC");
