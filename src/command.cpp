@@ -360,7 +360,7 @@ string CCommandContext::GetUserAttributionPreffix()
 
 string CCommandContext::GetChannelName() const
 {
-  SimpleNestedLocation* subLoc = nullptr;
+  const SimpleNestedLocation* subLoc = nullptr;
   switch (GetServiceSourceType()) {
     case SERVICE_TYPE_IRC:
     case SERVICE_TYPE_REALM:
@@ -377,6 +377,7 @@ string CCommandContext::GetChannelName() const
     default:
       return string();
   }
+  return string();
 }
 
 shared_ptr<CRealm> CCommandContext::GetSourceRealm() const
