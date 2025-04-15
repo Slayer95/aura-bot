@@ -96,6 +96,7 @@ public:
   [[nodiscard]] inline uint8_t GetGameSourceUserType() const { return m_GameSource.GetType(); }
   inline void ResetGameSource() { m_GameSource.Reset(); }
   [[nodiscard]] inline ServiceUser& GetServiceSource() { return m_ServiceSource; }
+  [[nodiscard]] inline const ServiceUser& InspectServiceSource() const { return m_ServiceSource; }
   [[nodiscard]] inline uint8_t GetServiceSourceType() const { return m_ServiceSource.GetServiceType(); }
   inline void ResetServiceSource() { m_ServiceSource.Reset(); }
   [[nodiscard]] inline bool GetIsAnonymous() const { return m_ServiceSource.GetIsAnonymous(); }
