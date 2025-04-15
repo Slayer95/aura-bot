@@ -185,7 +185,8 @@ struct W3HMCConfig
 {
   bool supported;
   uint8_t toggle;
-  uint16_t trigger;
+  uint32_t dwordA;
+  uint32_t dwordB;
   uint8_t slot;
   std::string playerName;
   std::string fileName;
@@ -194,7 +195,8 @@ struct W3HMCConfig
   W3HMCConfig()
    : supported(false),
      toggle(MAP_FEATURE_TOGGLE_DISABLED),
-     trigger(0),
+     dwordA(0),
+     dwordB(0),
      slot(0xFF)
   {
   }
@@ -565,7 +567,7 @@ public:
   [[nodiscard]] inline uint8_t                           GetHMCMode() const { return m_HMC.toggle; }
   [[nodiscard]] inline uint8_t                           GetHMCSlot() const { return m_HMC.slot; }
   [[nodiscard]] inline const std::string&                GetHMCPlayerName() const { return m_HMC.playerName; }
-  [[nodiscard]] inline uint16_t                          GetHMCTrigger() const { return m_HMC.trigger; }
+  [[nodiscard]] inline std::array<uint8_t, 8>            GetHMCTrigger() const { return CreateFixedByteArray64((uint64_t) m_HMC.dwordA | ((uint64_t)(m_HMC.dwordB) << 32u), false); }
   [[nodiscard]] inline const std::string&                GetHMCFileName() const { return m_HMC.fileName; }
   [[nodiscard]] inline const std::string&                GetHMCSecret() const { return m_HMC.secret; }
 

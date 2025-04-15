@@ -323,6 +323,20 @@ inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, cons
     };
 }
 
+[[nodiscard]] inline std::array<uint8_t, 8> CreateFixedByteArray64(const uint64_t i, bool bigEndian)
+{
+  if (!bigEndian)
+    return std::array<uint8_t, 8>{
+      static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24),
+      static_cast<uint8_t>(i >> 32), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 56)
+    };
+  else
+    return std::array<uint8_t, 8>{
+      static_cast<uint8_t>(i >> 56), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(32),
+      static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)
+    };
+}
+
 inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 1>>& optArray, const uint8_t c)
 {
   std::array<uint8_t, 1> val = CreateFixedByteArray(c);

@@ -402,7 +402,7 @@ uint8_t CConfig::GetPlayerCount(const string& key, uint8_t maxSlots, uint8_t def
 float CConfig::GetFloat(const string& key, float defaultValue)
 {
   GET_KEY(key, value, defaultValue)
-  optional<float> maybeResult = ParseFloat(value); // TODO: Do we need value.c_str() ?
+  optional<float> maybeResult = ParseFloat(value);
   if (!maybeResult.has_value()) {
     CONFIG_ERROR(key, defaultValue)
   }

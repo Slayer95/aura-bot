@@ -5879,12 +5879,18 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
   // let N be the first integer output here.
   //
   // Then, W3HMC trigger constants are:
-  // <map.w3hmc.trigger = N & 0xFFFF>
-  // <map.w3hmc.trigger = (map_w3hmctid1) | (map_w3hmctid2 << 8)> (in terms of TH's implementation)
+  // <map.w3hmc.trigger.main = N & 0xFFFF>
+  // <map.w3hmc.trigger.main = (map_w3hmctid1) | (map_w3hmctid2 << 8)> (in terms of TH's implementation)
   //
   // Or, in simpler maths terms:
-  // <map.w3hmc.trigger = N mod 65536>
-  // <map.w3hmc.trigger = (map_w3hmctid1) + (map_w3hmctid2 * 256)> (in terms of TH's implementation)
+  // <map.w3hmc.trigger.main = N mod 65536>
+  // <map.w3hmc.trigger.main = (map_w3hmctid1) + (map_w3hmctid2 * 256)> (in terms of TH's implementation)
+  //
+  // IF those assumptions don't hold and it turns out that e.g. both uint32_t values are different, just set
+  // (hex works, with 0x prefix)
+  // <map.w3hmc.trigger.main = first>
+  // <map.w3hmc.trigger.main = second>
+  //
 
   if (canLogChatTriggers) {
     LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(first) + " | 0x" + ToHexString(second) + "]")
@@ -9789,6 +9795,17 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   return true;
 }
 
+bool CGame::SendChatTriggerBytes(const uint8_t UID, const string& message, const array<uint8_t, 8>& triggerBytes)
+{
+  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
+  AppendByteArrayFast(packet, triggerBytes);
+  vector<uint8_t> action;
+  AppendByteArrayFast(packet, message);
+  AppendByteArray(action, packet);
+  GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
+  return true;
+}
+
 bool CGame::SendChatTriggerSymmetric(const uint8_t UID, const string& message, const uint16_t identifier)
 {
   return SendChatTrigger(UID, message, (uint32_t)identifier, (uint32_t)identifier);
@@ -10658,9 +10675,9 @@ void CGame::RunHCLEncoding()
 bool CGame::SendHMC(const string& message)
 {
   if (!m_HMCVirtualUser.has_value()) return false;
-  const uint16_t triggerID = m_Map->GetHMCTrigger();
+  const array<uint8_t, 8> triggerBytes = m_Map->GetHMCTrigger();
   const uint8_t UID = m_HMCVirtualUser->GetUID();
-  return SendChatTriggerSymmetric(UID, message, triggerID);
+  return SendChatTriggerBytes(UID, message, triggerBytes);
 }
 
 bool CGame::CreateHMCPlayer()
