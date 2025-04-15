@@ -29,6 +29,7 @@
 #include "includes.h"
 #include "hash.h"
 
+#include <cfloat>
 #include <filesystem>
 
 [[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString)
@@ -129,8 +130,10 @@
 {
   std::optional<int8_t> result;
   try {
-    int64_t userValue = stoll(input);
-    if (userValue < (int64_t)(std::numeric_limits<int8_t>::min()) || 0x7F < userValue) {
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoll(input, &parseEnd, base);
+    if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int8_t>::min()) || 0x7F < userValue) {
       return result;
     }
     result = static_cast<int8_t>(userValue);
@@ -143,8 +146,10 @@
 {
   std::optional<uint8_t> result;
   try {
-    int64_t userValue = stoll(input);
-    if (userValue < 0 || 0xFF < userValue) {
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoll(input, &parseEnd, base);
+    if (parseEnd != input.size() || userValue < 0 || 0xFF < userValue) {
       return result;
     }
     result = static_cast<uint8_t>(userValue);
@@ -157,8 +162,10 @@
 {
   std::optional<int16_t> result;
   try {
-    int64_t userValue = stoll(input);
-    if (userValue < (int64_t)(std::numeric_limits<int16_t>::min()) || 0x7FFF < userValue) {
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoll(input, &parseEnd, base);
+    if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int16_t>::min()) || 0x7FFF < userValue) {
       return result;
     }
     result = static_cast<int16_t>(userValue);
@@ -171,8 +178,10 @@
 {
   std::optional<uint16_t> result;
   try {
-    int64_t userValue = stoll(input);
-    if (userValue < 0 || 0xFFFF < userValue) {
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoll(input, &parseEnd, base);
+    if (parseEnd != input.size() || userValue < 0 || 0xFFFF < userValue) {
       return result;
     }
     result = static_cast<uint16_t>(userValue);
@@ -185,8 +194,10 @@
 {
   std::optional<int32_t> result;
   try {
-    int64_t userValue = stoll(input);
-    if (userValue < (int64_t)(std::numeric_limits<int32_t>::min()) || 0x7FFFFFFF < userValue) {
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoll(input, &parseEnd, base);
+    if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int32_t>::min()) || 0x7FFFFFFF < userValue) {
       return result;
     }
     result = static_cast<int32_t>(userValue);
@@ -199,8 +210,10 @@
 {
   std::optional<uint32_t> result;
   try {
-    int64_t userValue = stoll(input);
-    if (userValue < 0 || 0xFFFFFFFF < userValue) {
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoll(input, &parseEnd, base);
+    if (parseEnd != input.size() || userValue < 0 || 0xFFFFFFFF < userValue) {
       return result;
     }
     result = static_cast<uint32_t>(userValue);
@@ -213,7 +226,13 @@
 {
   std::optional<int64_t> result;
   try {
-    result = stoll(input);
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoll(input, &parseEnd, base);
+    if (parseEnd != input.size()) {
+      return result;
+    }
+    result = userValue;
   } catch (...) {
   }
   return result;
@@ -223,7 +242,13 @@
 {
   std::optional<uint64_t> result;
   try {
-    result = stoull(input);
+    size_t parseEnd;
+    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int64_t userValue = stoull(input, &parseEnd, base);
+    if (parseEnd != input.size()) {
+      return result;
+    }
+    result = userValue;
   } catch (...) {
   }
   return result;
@@ -233,7 +258,16 @@
 {
   std::optional<float> result;
   try {
-    result = stof(input);
+    size_t parseEnd;
+    float userValue = stof(input, &parseEnd);
+    if (parseEnd != input.size() || std::isnan(userValue) || !std::isfinite(userValue)) {
+      return result;
+    }
+    if (userValue == 0.0f) {
+      result = 0.0f;
+    } else {
+      result = userValue;
+    }
   } catch (...) {
   }
   return result;
@@ -243,7 +277,16 @@
 {
   std::optional<double> result;
   try {
-    result = stod(input);
+    size_t parseEnd;
+    double userValue = stod(input, &parseEnd);
+    if (parseEnd != input.size() || std::isnan(userValue) || !std::isfinite(userValue)) {
+      return result;
+    }
+    if (userValue == 0.0f) {
+      result = 0.0f;
+    } else {
+      result = userValue;
+    }
   } catch (...) {
   }
   return result;
