@@ -86,8 +86,8 @@ struct RealmUserSearchResult
   ~RealmUserSearchResult() = default;
 
   [[nodiscard]] inline bool GetSuccess() const { return success; }
-  [[nodiscard]] inline std::string GetUser() const { return userName; }
-  [[nodiscard]] inline std::string GetHostName() const { return hostName; }
+  [[nodiscard]] inline const std::string& GetUser() const { return userName; }
+  [[nodiscard]] inline const std::string& GetHostName() const { return hostName; }
   [[nodiscard]] inline std::shared_ptr<CRealm> GetRealm() const { return realm.lock(); }
 };
 
@@ -98,12 +98,15 @@ struct RealmUserSearchResult
 struct ServiceUser
 {
   uint8_t serviceType;
+  void* api;
   std::weak_ptr<void> servicePtr;
+  std::optional<int64_t> userIdentifier;
   std::string userName;
 
   ServiceUser();
   ServiceUser(const ServiceUser& otherService);
   ServiceUser(uint8_t serviceType, std::string nUserName);
+  ServiceUser(uint8_t serviceType, int64_t nUserIdentifier, std::string nUserName, void* nAPI = nullptr);
   ServiceUser(uint8_t serviceType, std::string nUserName, std::shared_ptr<void> nServicePtr);
   ~ServiceUser();
 
@@ -112,9 +115,51 @@ struct ServiceUser
   {
     return std::static_pointer_cast<T>(servicePtr.lock());
   }
+  inline bool GetIsEmpty() const { return serviceType == SERVICE_TYPE_NONE; }
+  inline bool GetIsAnonymous() const { return userName.empty(); }
   inline bool GetIsExpired() const { return servicePtr.expired(); }
   inline uint8_t GetServiceType() const { return serviceType; }
-  inline std::string GetUser() const { return userName; }
+  inline void* GetAPI() const { return api; }
+#ifndef DISABLE_DPP
+  inline dpp::slashcommand_t* GetDiscordAPI() const { return static_cast<dpp::slashcommand_t*>(api); }
+#endif
+  inline int64_t GetUserIdentifier() const { return userIdentifier.value(); }
+  inline const std::string& GetUser() const { return userName; }
+  inline std::string GetUserOrAnon() const { return userName.empty() ? "[Anonymous]" : userName; }
+  void Reset();
+
+  inline void SetServiceType(uint8_t nServiceType) { serviceType = nServiceType; }
+  inline void SetName(const std::string& nUserName) { userName = nUserName; }
+};
+
+//
+// GameSource
+//
+
+struct GameSource
+{
+  uint8_t userType;
+  std::weak_ptr<CGame> game;
+  union {
+    GameUser::CGameUser* user;
+    CAsyncObserver* spectator;
+  };
+
+  GameSource();
+  GameSource(const GameSource& otherSource);
+  GameSource(GameUser::CGameUser* user);
+  GameSource(CAsyncObserver* spectator);
+  ~GameSource();
+
+  inline uint8_t GetType() const { return userType; }
+  inline bool GetIsEmpty() const { return userType == COMMAND_SOURCE_GAME_NONE; }
+  inline bool GetIsUser() const { return userType == COMMAND_SOURCE_GAME_USER; }
+  inline bool GetIsSpectator() const { return userType == COMMAND_SOURCE_GAME_ASYNC_OBSERVER; }
+
+  inline GameUser::CGameUser* GetUser() const { return user; }
+  inline CAsyncObserver* GetSpectator() const { return spectator; }
+  inline std::shared_ptr<CGame> GetGame() const { return game.lock(); }
+
   void Reset();
 };
 

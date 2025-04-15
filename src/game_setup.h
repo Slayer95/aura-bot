@@ -281,11 +281,13 @@ public:
   void RemoveCreator();
 
   void SetCreator(const uint8_t serviceType, const std::string& nCreator);
+  /*
   void SetCreator(const uint8_t serviceType, const std::string& nCreator, std::weak_ptr<void> servicePtr);
   void SetCreatorGameUser(const std::string& nCreator, std::shared_ptr<CGame> nGame);
   void SetCreatorRealmUser(const std::string& nCreator, std::shared_ptr<CRealm> nRealm);
   void SetCreatorIRCUser(const std::string& nCreator);
   void SetCreatorDiscordUser(const std::string& nCreator);
+  */
 
   void AcquireCreator();
 

@@ -696,7 +696,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     optional<string> userName = GetUserMultiPlayerName();
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(nAura, userName.value_or(string()), false, &cout);
+      ctx = make_shared<CCommandContext>(SERVICE_TYPE_CLI, nAura, userName.value_or(string()), false, &cout);
     } catch (...) {
       return false;
     }
@@ -759,10 +759,10 @@ bool CCLI::QueueActions(CAura* nAura) const
   }
 
   for (const auto& execEntry : m_ExecCommands) {
-    string cmdToken, command, payload;
-    uint8_t tokenMatch = ExtractMessageTokensAny(execEntry, cmdToken, cmdToken, cmdToken, command, payload);
+    string cmdToken, command, target;
+    uint8_t tokenMatch = ExtractMessageTokensAny(execEntry, cmdToken, cmdToken, cmdToken, command, target);
     pair<string, string> identity = SplitAddress(m_ExecAs.value());
-    LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, command, payload, ToLowerCase(identity.first), ToLowerCase(identity.second), m_ExecGame, m_ExecAuth);
+    LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, command, target, ToLowerCase(identity.first), ToLowerCase(identity.second), m_ExecGame, m_ExecAuth);
     nAura->m_PendingActions.push(lazyCommand);
   }
 

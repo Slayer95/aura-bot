@@ -414,7 +414,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             shared_ptr<CCommandContext> ctx = nullptr;
             shared_ptr<CGameSetup> gameSetup = nullptr;
             try {
-              ctx = make_shared<CCommandContext>(m_Aura, string(), false, &cout);
+              ctx = make_shared<CCommandContext>(SERVICE_TYPE_REALM, m_Aura, string(), false, &cout);
               gameSetup = make_shared<CGameSetup>(m_Aura, ctx, &(hostedGameConfig.value()));
             } catch (...) {
               PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "hostgame memory allocation failure")
@@ -599,8 +599,8 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       return;
     }
 
-    string cmdToken, command, payload;
-    uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, payload);
+    string cmdToken, command, target;
+    uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
     if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
       if (isWhisper) {
         string tokenName = GetTokenName(m_Config.m_PrivateCmdToken);
@@ -611,11 +611,11 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     }
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, shared_from_this(), fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+      ctx = make_shared<CCommandContext>(SERVICE_TYPE_REALM, m_Aura, m_Config.m_CommandCFG, shared_from_this(), fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
     } catch (...) {
     }
     if (ctx) {
-      ctx->Run(cmdToken, command, payload);
+      ctx->Run(cmdToken, command, target);
     }
   }
   else if (eventType == BNETProtocol::IncomingChatEvent::CHANNEL)

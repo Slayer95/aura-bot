@@ -393,7 +393,7 @@ uint8_t CConfig::GetPlayerCount(const string& key, uint8_t maxSlots, uint8_t def
   if (!maybeResult.has_value()) {
     CONFIG_ERROR(key, defaultValue)
   }
-  if (maybeResult.value() < 0 || maxSlots < maybeResult.value()) {
+  if (maxSlots < maybeResult.value()) {
     CONFIG_ERROR(key, defaultValue)
   }
   SUCCESS(maybeResult.value())

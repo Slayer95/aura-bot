@@ -24,6 +24,9 @@
  */
 
 #include "locations.h"
+#include "game.h"
+#include "game_user.h"
+#include "async_observer.h"
 
 using namespace std;
 
@@ -32,25 +35,37 @@ using namespace std;
 //
 
 ServiceUser::ServiceUser()
- : serviceType(SERVICE_TYPE_NONE)
+ : serviceType(SERVICE_TYPE_NONE),
+   api(nullptr)
 {
 };
 
 ServiceUser::ServiceUser(const ServiceUser& otherService)
  : serviceType(otherService.serviceType),
    servicePtr(otherService.servicePtr.lock()),
+   api(otherService.api),
    userName(otherService.userName)
 {
 };
 
 ServiceUser::ServiceUser(uint8_t serviceType, string nUserName)
  : serviceType(SERVICE_TYPE_NONE),
+   api(nullptr),
+   userName(nUserName)
+{
+};
+
+ServiceUser::ServiceUser(uint8_t serviceType, int64_t nUserIdentifier, string nUserName, void* nAPI)
+ : serviceType(SERVICE_TYPE_NONE),
+   api(nAPI),
+   userIdentifier(nUserIdentifier),
    userName(nUserName)
 {
 };
 
 ServiceUser::ServiceUser(uint8_t serviceType, string nUserName, shared_ptr<void> nServicePtr)
  : serviceType(SERVICE_TYPE_NONE),
+   api(nullptr),
    servicePtr(nServicePtr),
    userName(nUserName)
 {
@@ -59,10 +74,55 @@ ServiceUser::ServiceUser(uint8_t serviceType, string nUserName, shared_ptr<void>
 void ServiceUser::Reset()
 {
   serviceType = SERVICE_TYPE_NONE;
+  api = nullptr;
   servicePtr.reset();
+  userIdentifier.reset();
   userName.clear();
 }
 
 ServiceUser::~ServiceUser()
 {
+}
+
+//
+// GameSource
+//
+
+
+GameSource::GameSource()
+ : userType(COMMAND_SOURCE_GAME_NONE),
+   user(nullptr)
+{
+}
+
+GameSource::GameSource(const GameSource& otherSource)
+ : userType(otherSource.userType),
+   game(otherSource.GetGame()),
+   user(otherSource.user)
+{
+}
+
+GameSource::GameSource(GameUser::CGameUser* nUser)
+ : userType(COMMAND_SOURCE_GAME_USER),
+   game(nUser->GetGame()),
+   user(nUser)
+{
+}
+
+GameSource::GameSource(CAsyncObserver* nSpectator)
+ : userType(COMMAND_SOURCE_GAME_ASYNC_OBSERVER),
+   game(nSpectator->GetGame()),
+   spectator(nSpectator)
+{
+}
+
+GameSource::~GameSource()
+{
+}
+
+void GameSource::Reset()
+{
+  userType = COMMAND_SOURCE_GAME_NONE;
+  game.reset();
+  user = nullptr;
 }

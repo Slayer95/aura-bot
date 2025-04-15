@@ -61,8 +61,8 @@ CDiscord::~CDiscord()
 {
   for (const auto& ptr : m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
-    if (ctx && ctx->m_DiscordAPI) {
-      ctx->m_DiscordAPI = nullptr;
+    if (ctx && ctx->GetServiceSourceType() == SERVICE_TYPE_DISCORD) {
+      ctx->ResetServiceSource();
       ctx->SetPartiallyDestroyed();
     }
   }
@@ -142,7 +142,7 @@ void CDiscord::RegisterCommands()
     dpp::command_option(dpp::co_string, "command", "The command to be executed.", true)
   );
   nameSpace.add_option(
-    dpp::command_option(dpp::co_string, "payload", "Any comma-separated parameters for the command.", false)
+    dpp::command_option(dpp::co_string, "target", "Any comma-separated parameters for the command.", false)
   );
   nameSpace.set_dm_permission(true);
   commands.push_back(nameSpace);
@@ -188,7 +188,7 @@ void CDiscord::Update()
 
 #ifndef DISABLE_DPP
   while (!m_CommandQueue.empty()) {
-    string cmdToken, command, payload;
+    string cmdToken, command, target;
     cmdToken = "/" + m_Config.m_CommandCFG->m_NameSpace + " ";
     dpp::slashcommand_t* event = m_CommandQueue.front();
     if (!m_Config.m_Enabled) {
@@ -197,9 +197,9 @@ void CDiscord::Update()
       continue;
     }
     if (event->command.get_command_name() == m_Config.m_CommandCFG->m_NameSpace) {
-      dpp::command_value maybePayload = event->get_parameter("payload");
-      if (holds_alternative<string>(maybePayload)) {
-        payload = get<string>(maybePayload);
+      dpp::command_value maybeTarget = event->get_parameter("target");
+      if (holds_alternative<string>(maybeTarget)) {
+        target = get<string>(maybeTarget);
       }
       command = get<string>(event->get_parameter("command"));
       event->edit_original_response(dpp::message("Command queued!"));
@@ -207,7 +207,7 @@ void CDiscord::Update()
       string mapName = get<string>(event->get_parameter("map"));
       string gameName = get<string>(event->get_parameter("title"));
       command = "host";
-      payload = mapName + ", " + gameName;
+      target = mapName + ", " + gameName;
       event->edit_original_response(dpp::message("Hosting your game briefly!"));
     } else {
       delete event;
@@ -216,13 +216,13 @@ void CDiscord::Update()
     }
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, event, &std::cout);
+      ctx = make_shared<CCommandContext>(SERVICE_TYPE_DISCORD, m_Aura, m_Config.m_CommandCFG, event, &std::cout);
     } catch (...) {
       delete event;
       m_CommandQueue.pop();
       continue;
     }
-    ctx->Run(cmdToken, command, payload);
+    ctx->Run(cmdToken, command, target);
     m_CommandQueue.pop();
   }
 #endif

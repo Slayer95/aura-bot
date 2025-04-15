@@ -40,26 +40,16 @@ class CCommandContext : public std::enable_shared_from_this<CCommandContext>
 public:
   CAura*                        m_Aura;
   CCommandConfig*               m_Config;
-  std::weak_ptr<CRealm>         m_SourceRealm;
   std::weak_ptr<CRealm>         m_TargetRealm;
-  std::weak_ptr<CGame>          m_SourceGame;
   std::weak_ptr<CGame>          m_TargetGame;
-  GameUser::CGameUser*          m_GameUser;
-  CIRC*                         m_IRC;
-#ifndef DISABLE_DPP
-  dpp::slashcommand_t*          m_DiscordAPI;
-#else
-  void*                         m_DiscordAPI;
-#endif
 
 protected:
-  std::string                   m_FromName;
-  uint64_t                      m_FromIdentifier;
+  GameSource                    m_GameSource;
+  ServiceUser                   m_ServiceSource;
   bool                          m_FromWhisper;
-  uint8_t                       m_FromType;
   bool                          m_IsBroadcast;
-  char                          m_Token;
-  uint16_t                      m_Permissions;
+  char                          m_Token;           // command token (e.g. !)
+  uint16_t                      m_Permissions;     // bitmask
 
   std::string                   m_ServerName;
   std::string                   m_ReverseHostName; // user hostname, reversed from their IP (received from IRC chat)
@@ -75,43 +65,49 @@ protected:
 
 public:
   // Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // IRC, IRC->Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, CIRC* ircNetwork, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
 
 #ifndef DISABLE_DPP
   // Discord, Discord->Game
-  CCommandContext(CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
 #endif
 
   // Arbitrary, Arbitrary->Game
-  CCommandContext(CAura* nAura, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
 
-  [[nodiscard]] inline bool GetWritesToStdout() const { return m_FromType == FROM_OTHER; }
+  [[nodiscard]] inline bool GetWritesToStdout() const { return m_ServiceSource.GetServiceType() == SERVICE_TYPE_CLI; }
 
   [[nodiscard]] std::string GetUserAttribution();
   [[nodiscard]] std::string GetUserAttributionPreffix();
-  [[nodiscard]] std::ostream* GetOutputStream() { return m_Output; }
+  [[nodiscard]] std::ostream* GetOutputStream() { return m_Output; }  
 
   [[nodiscard]] inline bool GetIsWhisper() const { return m_FromWhisper; }
-  [[nodiscard]] inline const std::string& GetSender() const { return m_FromName; }
+  [[nodiscard]] inline GameSource& GetGameSource() { return m_GameSource; }
+  [[nodiscard]] inline const GameSource& InspectGameSource() const { return m_GameSource; }
+  [[nodiscard]] inline uint8_t GetGameSourceUserType() const { return m_GameSource.GetType(); }
+  inline void ResetGameSource() { m_GameSource.Reset(); }
+  [[nodiscard]] inline ServiceUser& GetServiceSource() { return m_ServiceSource; }
+  [[nodiscard]] inline uint8_t GetServiceSourceType() const { return m_ServiceSource.GetServiceType(); }
+  inline void ResetServiceSource() { m_ServiceSource.Reset(); }
+  [[nodiscard]] inline bool GetIsAnonymous() const { return m_ServiceSource.GetIsAnonymous(); }
+  [[nodiscard]] inline bool GetIsGameUser() const { return m_GameSource.GetIsUser(); }
+  [[nodiscard]] inline const std::string& GetSender() const { return m_ServiceSource.GetUser(); }
   [[nodiscard]] inline std::string GetChannelName() const { return m_ChannelName; }
-  [[nodiscard]] inline std::shared_ptr<CRealm> GetSourceRealm() const { return m_SourceRealm.lock(); }
+  [[nodiscard]] std::shared_ptr<CRealm> GetSourceRealm() const;
+  [[nodiscard]] std::shared_ptr<CGame> GetSourceGame() const;
+  [[nodiscard]] GameUser::CGameUser* GetGameUser() const;
   [[nodiscard]] inline std::shared_ptr<CRealm> GetTargetRealm() const { return m_TargetRealm.lock(); }
-  [[nodiscard]] inline std::shared_ptr<CGame> GetSourceGame() const { return m_SourceGame.lock(); }
   [[nodiscard]] inline std::shared_ptr<CGame> GetTargetGame() const { return m_TargetGame.lock(); }
-  [[nodiscard]] inline CIRC* GetSourceIRC() const { return m_IRC; }
-#ifndef DISABLE_DPP
-  [[nodiscard]] inline dpp::slashcommand_t* GetDiscordAPI() const { return m_DiscordAPI; }
-#endif
 
   void SetIdentity(const std::string& userName);
   void SetAuthenticated(const bool& nAuthenticated);
@@ -119,12 +115,13 @@ public:
   void UpdatePermissions();
   void ClearActionMessage() { m_ActionMessage.clear(); }
 
+  void CheckServiceType(uint8_t serviceType);
   [[nodiscard]] std::optional<bool> CheckPermissions(const uint8_t nPermissionsRequired) const;
   [[nodiscard]] bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
   [[nodiscard]] std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
   [[nodiscard]] bool GetIsSudo() const;
   [[nodiscard]] bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
-  [[nodiscard]] bool CheckConfirmation(const std::string& cmdToken, const std::string& cmd, const std::string& payload, const std::string& errorMessage);
+  [[nodiscard]] bool CheckConfirmation(const std::string& cmdToken, const std::string& cmd, const std::string& target, const std::string& errorMessage);
 
   [[nodiscard]] std::vector<std::string> JoinReplyListCompact(const std::vector<std::string>& stringList) const;
 
@@ -153,7 +150,7 @@ public:
   [[nodiscard]] std::shared_ptr<CGame> GetTargetGame(const std::string& target);
   void UseImplicitReplaceable();
   void UseImplicitHostedGame();
-  void Run(const std::string& token, const std::string& command, const std::string& payload);
+  void Run(const std::string& token, const std::string& command, const std::string& target);
   void SetPartiallyDestroyed() { m_PartiallyDestroyed = true; }
   bool GetPartiallyDestroyed() const { return m_PartiallyDestroyed; }
 
@@ -185,14 +182,14 @@ public:
   return std::string();
 }
 
-[[nodiscard]] inline std::string HelpMissingComma(const std::string& payload) {
-  if (payload.find(',') == std::string::npos) return " - did you miss the comma?";
+[[nodiscard]] inline std::string HelpMissingComma(const std::string& target) {
+  if (target.find(',') == std::string::npos) return " - did you miss the comma?";
   return std::string();
 }
 
-[[nodiscard]] inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchPayload)
+[[nodiscard]] inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchTarget)
 {
-  matchPayload.clear();
+  matchTarget.clear();
   if (message.empty()) return false;
   std::string::size_type tokenSize = token.length();
   if (message.length() <= tokenSize || (tokenSize > 0 && message.substr(0, tokenSize) != token)) {
@@ -208,24 +205,24 @@ public:
     matchCmd = message.substr(cmdStart);
   } else {
     matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
-    std::string::size_type payloadStart = message.find_first_not_of(' ', cmdEnd);
-    if (payloadStart != std::string::npos) {
-      std::string::size_type payloadEnd = message.find_last_not_of(' ');
-      if (payloadEnd != std::string::npos) {
-        matchPayload = message.substr(payloadStart, payloadEnd + 1 - payloadStart);
+    std::string::size_type targetStart = message.find_first_not_of(' ', cmdEnd);
+    if (targetStart != std::string::npos) {
+      std::string::size_type targetEnd = message.find_last_not_of(' ');
+      if (targetEnd != std::string::npos) {
+        matchTarget = message.substr(targetStart, targetEnd + 1 - targetStart);
       }
     }
   }
   return true;
 }
 
-[[nodiscard]] inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchPayload)
+[[nodiscard]] inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchTarget)
 {
   uint8_t result = COMMAND_TOKEN_MATCH_NONE;
   if (message.empty()) return result;
   if (!privateToken.empty()) {
     bool matchPadding = false;
-    if (ExtractMessageTokens(message, privateToken, matchPadding, matchCmd, matchPayload)) {
+    if (ExtractMessageTokens(message, privateToken, matchPadding, matchCmd, matchTarget)) {
       result = COMMAND_TOKEN_MATCH_PRIVATE;
       if (matchPadding) {
         matchToken = privateToken + " ";
@@ -236,7 +233,7 @@ public:
   }    
   if (result == COMMAND_TOKEN_MATCH_NONE && !broadcastToken.empty()) {
     bool matchPadding = false;
-    if (ExtractMessageTokens(message, broadcastToken, matchPadding, matchCmd, matchPayload)) {
+    if (ExtractMessageTokens(message, broadcastToken, matchPadding, matchCmd, matchTarget)) {
       result = COMMAND_TOKEN_MATCH_BROADCAST;
       if (matchPadding) {
         matchToken = broadcastToken + " ";

@@ -1442,6 +1442,7 @@ void CGameSetup::SetCreator(const uint8_t serviceType, const string& creatorName
   m_Creator = ServiceUser(serviceType, creatorName);
 }
 
+/*
 void CGameSetup::SetCreator(const uint8_t serviceType, const string& creatorName, weak_ptr<void> servicePtr)
 {
   m_Creator = ServiceUser(serviceType, creatorName, servicePtr.lock());
@@ -1466,21 +1467,12 @@ void CGameSetup::SetCreatorDiscordUser(const string& creatorName)
 {
   SetCreator(SERVICE_TYPE_DISCORD, creatorName);
 }
+*/
 
 void CGameSetup::AcquireCreator()
 {
   if (!m_Ctx) return;
-  shared_ptr<CRealm> sourceRealm = m_Ctx->GetSourceRealm();
-  shared_ptr<CGame> sourceGame = m_Ctx->GetSourceGame();
-  if (sourceRealm) {
-    SetCreatorRealmUser(m_Ctx->GetSender(), sourceRealm);
-  } else if (sourceGame) {
-    SetCreatorGameUser(m_Ctx->GetSender(), sourceGame);
-  } else if (m_Ctx->m_IRC) {
-    SetCreatorIRCUser(m_Ctx->GetSender());
-  } else if (m_Ctx->m_DiscordAPI) {
-    SetCreatorDiscordUser(m_Ctx->GetSender());
-  }
+  m_Creator = m_Ctx->GetServiceSource();
 }
 
 bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType) const

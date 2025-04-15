@@ -5978,8 +5978,8 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage*
         user->ClearSmartCommand();
         if (commandsEnabled) {
           const string message = chatPlayer->GetMessage();
-          string cmdToken, command, payload;
-          uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, payload);
+          string cmdToken, command, target;
+          uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
           isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
           if (isCommand) {
             user->SetUsedAnyCommands(true);
@@ -5990,9 +5990,9 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage*
             }
             shared_ptr<CCommandContext> ctx = nullptr;
             try {
-              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+              ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
             } catch (...) {}
-            if (ctx) ctx->Run(cmdToken, command, payload);
+            if (ctx) ctx->Run(cmdToken, command, target);
           } else if (message == "?trigger") {
             if (shouldRelay) {
               if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
@@ -6008,12 +6008,12 @@ void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage*
             }
             shared_ptr<CCommandContext> ctx = nullptr;
             try {
-              ctx = make_shared<CCommandContext>(m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
+              ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
             } catch (...) {}
             if (ctx) {
               cmdToken = m_Config.m_PrivateCmdToken;
               command = message.substr(1);
-              ctx->Run(cmdToken, command, payload);
+              ctx->Run(cmdToken, command, target);
             }
           } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
             if (shouldRelay) {
@@ -6758,14 +6758,14 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
       if (activeCmd == SMART_COMMAND_GO) {
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
+          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
         } catch (...) {
           return true;
         }
         string cmdToken = m_Config.m_PrivateCmdToken;
         string command = "start";
-        string payload;
-        ctx->Run(cmdToken, command, payload);
+        string target;
+        ctx->Run(cmdToken, command, target);
       } else {
         user->SetSmartCommand(SMART_COMMAND_GO);
         SendChat(user, "You may type [" + message + "] again to start the game.");

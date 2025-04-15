@@ -63,17 +63,17 @@ struct LazyCommandContext
   bool broadcast;
   int64_t queuedTime;
   std::string command;
-  std::string payload;
+  std::string target;
   std::string targetGame;
   std::string identityName;
   std::string identityLoc;
   CommandAuth auth;
 
-  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nPayload, const std::string& nTargetGame, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
+  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nTarget, const std::string& nTargetGame, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
    : broadcast(nBroadcast),
      queuedTime(GetTicks()),
      command(nCommand),
-     payload(nPayload),
+     target(nTarget),
      targetGame(nTargetGame),
      identityName(nIdentityName),
      identityLoc(nIdentityLoc),

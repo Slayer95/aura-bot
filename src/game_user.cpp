@@ -158,9 +158,9 @@ CGameUser::~CGameUser()
 
   for (const auto& ptr : m_Game.get().m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
-    if (ctx && ctx->m_GameUser == this) {
+    if (ctx && ctx->GetGameSource().GetIsUser() && ctx->GetGameSource().GetUser() == this) {
       ctx->SetPartiallyDestroyed();
-      ctx->m_GameUser = nullptr;
+      ctx->GetGameSource().Reset();
     }
   }
 }

@@ -80,7 +80,7 @@ struct GameResultConstraints
   bool m_RequireTeamWinExceptLeaver;
 
   uint8_t m_UndecidedVirtualHandler;
-  uint8_t m_UndecidedUserHandler;
+  uint8_t m_UndecidedUserHandler; // Note: We ignore "leaver" flag and just treat them as undecided
   uint8_t m_UndecidedComputerHandler;
   uint8_t m_ConflictHandler;
   uint8_t m_SourceOfTruth;

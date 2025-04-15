@@ -114,7 +114,7 @@ public:
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
 
-  std::string                                        m_SudoAuthPayload;
+  std::string                                        m_SudoAuthTarget;
   std::string                                        m_SudoExecCommand;
 
   std::string                                        m_Version;                    // Aura version string
@@ -181,7 +181,7 @@ public:
   uint64_t NextHistoryGameID();
   uint32_t NextServerID();
 
-  [[nodiscard]] std::string GetSudoAuthPayload(const std::string& payload);
+  [[nodiscard]] std::string GetSudoAuthTarget(const std::string& target);
 
   // processing functions
 

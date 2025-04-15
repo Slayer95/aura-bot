@@ -83,8 +83,8 @@ CIRC::~CIRC()
 
   for (const auto& ptr : m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
-    if (ctx && ctx->m_IRC == this) {
-      ctx->m_IRC = nullptr;
+    if (ctx && ctx->GetServiceSourceType() == SERVICE_TYPE_IRC) {
+      ctx->ResetServiceSource();
       ctx->SetPartiallyDestroyed();
     }
   }
@@ -329,18 +329,18 @@ void CIRC::ExtractPackets()
       if (message.empty() || channel.empty())
         continue;
 
-      string cmdToken, command, payload;
-      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, payload);
+      string cmdToken, command, target;
+      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
       if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
         const bool isWhisper = channel[0] != '#';
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(m_Aura, m_Config.m_CommandCFG, this, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+          ctx = make_shared<CCommandContext>(SERVICE_TYPE_IRC, m_Aura, m_Config.m_CommandCFG, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
         } catch (...) {
         }
         if (ctx) {
           ctx->UpdatePermissions();
-          ctx->Run(cmdToken, command, payload);
+          ctx->Run(cmdToken, command, target);
         }
       }
 

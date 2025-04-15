@@ -107,6 +107,7 @@ struct FileChunkCached;
 struct FileChunkTransient;
 struct GameControllerSearchResult;
 struct GameHistory;
+struct GameSource;
 struct GameUserSearchResult;
 struct GameResults;
 struct GameResultTeamAnalysis;

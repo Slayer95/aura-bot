@@ -62,8 +62,9 @@ using namespace std;
 CDotaStats::CDotaStats(shared_ptr<CGame> nGame)
   : m_Game(ref(*nGame)),
     m_Winner(DOTA_WINNER_UNDECIDED),
-    m_Time(make_pair<uint32_t, uint32_t>(0u, 0u)),
-    m_SwitchEnabled(false)
+    m_SwitchEnabled(false),
+    m_Time(make_pair<uint32_t, uint32_t>(0u, 0u))
+    
 {
   Print("[STATS] using dota stats");
 

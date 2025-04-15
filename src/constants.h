@@ -328,6 +328,7 @@ constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_NONE = 0u;
 constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_LOSER_SELF = 1u;
 constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO = 2u;
 
+// Note: We ignore "leaver" flag and just treat them as undecided
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_NONE = 0u;
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF = 1u;
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES = 2u; // causes allied computers/virtual users to lose
@@ -577,12 +578,6 @@ constexpr int64_t GPS_ACK_PERIOD = 10000u;
 
 // chat.h
 
-constexpr uint8_t FROM_GAME = (1 << 0);
-constexpr uint8_t FROM_BNET = (1 << 1);
-constexpr uint8_t FROM_IRC = (1 << 2);
-constexpr uint8_t FROM_DISCORD = (1 << 3);
-constexpr uint8_t FROM_OTHER = (1 << 7);
-
 constexpr uint8_t CHAT_SEND_SOURCE_ALL = (1 << 0);
 constexpr uint8_t CHAT_SEND_TARGET_ALL = (1 << 1);
 constexpr uint8_t CHAT_LOG_INCIDENT = (1 << 2);
@@ -592,6 +587,7 @@ constexpr uint8_t CHAT_TYPE_ERROR = (1 << 5);
 constexpr uint8_t CHAT_WRITE_TARGETS = (CHAT_SEND_SOURCE_ALL | CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
 constexpr uint8_t CHAT_RESPONSE_TYPES = (CHAT_TYPE_INFO | CHAT_TYPE_DONE | CHAT_TYPE_ERROR);
 
+constexpr uint16_t USER_PERMISSIONS_NONE = 0;
 constexpr uint16_t USER_PERMISSIONS_GAME_PLAYER = (1 << 0);
 constexpr uint16_t USER_PERMISSIONS_GAME_OWNER = (1 << 1);
 constexpr uint16_t USER_PERMISSIONS_CHANNEL_VERIFIED = (1 << 2);

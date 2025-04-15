@@ -1004,7 +1004,13 @@ vector<shared_ptr<CGame>> CAura::GetJoinableGames() const
   vector<shared_ptr<CGame>> joinables;
   joinables.reserve(m_Lobbies.size() + m_JoinInProgressGames.size());
   joinables.insert(joinables.end(), m_Lobbies.begin(), m_Lobbies.end());
-  joinables.insert(joinables.end(), m_JoinInProgressGames.begin(), m_JoinInProgressGames.end());
+
+  for (auto ptr : m_JoinInProgressGames) {
+    if (auto game = ptr.lock()) {
+      joinables.push_back(game);
+    }
+  }
+
   return joinables;
 }
 
@@ -1402,9 +1408,9 @@ void CAura::EventGameReset(shared_ptr<CGame> game)
   for (const auto& ptr : m_ActiveContexts) {
     auto ctx = ptr.lock();
     if (!ctx) continue;
-    if (ctx->m_SourceGame.lock() == game) {
+    if (ctx->GetSourceGame() == game) {
       ctx->SetPartiallyDestroyed();
-      ctx->m_SourceGame.reset();
+      ctx->ResetGameSource();
     }
     if (ctx->m_TargetGame.lock() == game) {
       ctx->SetPartiallyDestroyed();
@@ -1511,7 +1517,7 @@ void CAura::EventRealmDeleted(shared_ptr<CRealm> realm)
     if (!ctx) continue;
     if (ctx->GetSourceRealm() == realm) {
       ctx->SetPartiallyDestroyed();
-      ctx->m_SourceRealm.reset();
+      ctx->ResetServiceSource();
     }
     if (ctx->GetTargetRealm() == realm) {
       ctx->SetPartiallyDestroyed();
@@ -2029,7 +2035,7 @@ void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, c
     buffer, 256,
 #endif
     "%swarning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
-   prefix.c_str(), expectedInterval, actualInterval, averageInterval
+   prefix.c_str(), (long long int)expectedInterval, (long long int)actualInterval, (long long int)averageInterval
   );
   buffer[length] = '\x00';
   Print(buffer);
@@ -2414,7 +2420,7 @@ SharedByteArray CAura::ReadFile(const std::filesystem::path& filePath, const siz
   return fileContentsPtr;
 }
 
-string CAura::GetSudoAuthPayload(const string& payload)
+string CAura::GetSudoAuthTarget(const string& target)
 {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -2422,14 +2428,14 @@ string CAura::GetSudoAuthPayload(const string& payload)
 
   // Generate random hex digits
   string result;
-  result.reserve(21 + payload.length());
+  result.reserve(21 + target.length());
 
   for (size_t i = 0; i < 20; ++i) {
       const int randomDigit = dis(gen);
       result += (randomDigit < 10) ? (char)('0' + randomDigit) : (char)('a' + (randomDigit - 10));
   }
 
-  result += " " + payload;
-  m_SudoAuthPayload = result;
+  result += " " + target;
+  m_SudoAuthTarget = result;
   return result;
 }
