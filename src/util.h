@@ -1461,29 +1461,12 @@ inline void NormalizeDirectory(std::filesystem::path& filePath)
 
 [[nodiscard]] inline std::optional<int32_t> ToInt32(const std::string& input)
 {
-  std::optional<int32_t> container = std::nullopt;
-
-  try {
-    long Value = std::stol(input);
-    if (Value > 0xFFFFFF) {
-      return container;
-    }
-    container = static_cast<int32_t>(Value);
-  } catch (...) {}
-
-  return container;
+  return ParseInt32(input, true);
 }
 
 [[nodiscard]] inline std::optional<double> ToDouble(const std::string& input)
 {
-  std::optional<double> container = std::nullopt;
-
-  try {
-    double Value = std::stod(input);
-    container = static_cast<double>(Value);
-  } catch (...) {}
-
-  return container;
+  return ParseDouble(input);
 }
 
 [[nodiscard]] inline std::pair<std::string, std::string> SplitAddress(const std::string& fqName)

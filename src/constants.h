@@ -570,6 +570,30 @@ constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER = 1u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_PLAYER = 2u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_ANY = VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER | VIRTUAL_USER_ALLOW_CONNECTIONS_PLAYER;
 
+// game_interactive_host.h
+
+constexpr uint8_t GAME_INTERACTION_STATUS_PENDING = 0u;
+constexpr uint8_t GAME_INTERACTION_STATUS_RUNNING = 1u;
+constexpr uint8_t GAME_INTERACTION_STATUS_DONE = 2u;
+
+constexpr uint8_t W3HMC_REQUEST_INIT = 1;
+constexpr uint8_t W3HMC_REQUEST_HTTP = 2;
+constexpr uint8_t W3HMC_REQUEST_PLAYERREALM = 3;
+constexpr uint8_t W3HMC_REQUEST_DATETIME = 4;
+
+constexpr uint8_t W3HMC_PROCEDURE_SET_ARGS = 1;
+constexpr uint8_t W3HMC_PROCEDURE_EXEC = 2;
+
+constexpr uint8_t W3HMC_ARG_CURL_URL = 1;
+constexpr uint8_t W3HMC_ARG_CURL_POST = 2;
+constexpr uint8_t W3HMC_ARG_CURL_NOREPLY = 3;
+constexpr uint8_t W3HMC_ARG_CURL_APPENDSECRET = 4;
+constexpr uint8_t W3HMC_ARG_CURL_PARAMETERS = 5;
+constexpr uint8_t W3HMC_ARG_CURL_APPENDREALM = 6;
+constexpr uint8_t W3HMC_ARG_CURL_APPENDNAME = 7;
+constexpr uint8_t W3HMC_ARG_CURL_ADDHEADER = 8;
+constexpr uint8_t W3HMC_ARG_CURL_FOLLOWLOC = 9;
+
 // gps_protocol.h
 
 constexpr uint32_t REJECTGPS_INVALID = 1;

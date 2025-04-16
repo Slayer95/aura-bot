@@ -126,12 +126,12 @@
   return extension;
 }
 
-[[nodiscard]] inline std::optional<int8_t> ParseInt8(const std::string& input)
+[[nodiscard]] inline std::optional<int8_t> ParseInt8(const std::string& input, bool decimalOnly = false)
 {
   std::optional<int8_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoll(input, &parseEnd, base);
     if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int8_t>::min()) || 0x7F < userValue) {
       return result;
@@ -142,12 +142,12 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<uint8_t> ParseUInt8(const std::string& input)
+[[nodiscard]] inline std::optional<uint8_t> ParseUInt8(const std::string& input, bool decimalOnly = false)
 {
   std::optional<uint8_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoll(input, &parseEnd, base);
     if (parseEnd != input.size() || userValue < 0 || 0xFF < userValue) {
       return result;
@@ -158,12 +158,12 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<int16_t> ParseInt16(const std::string& input)
+[[nodiscard]] inline std::optional<int16_t> ParseInt16(const std::string& input, bool decimalOnly = false)
 {
   std::optional<int16_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoll(input, &parseEnd, base);
     if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int16_t>::min()) || 0x7FFF < userValue) {
       return result;
@@ -174,12 +174,12 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<uint16_t> ParseUInt16(const std::string& input)
+[[nodiscard]] inline std::optional<uint16_t> ParseUInt16(const std::string& input, bool decimalOnly = false)
 {
   std::optional<uint16_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoll(input, &parseEnd, base);
     if (parseEnd != input.size() || userValue < 0 || 0xFFFF < userValue) {
       return result;
@@ -190,12 +190,12 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<int32_t> ParseInt32(const std::string& input)
+[[nodiscard]] inline std::optional<int32_t> ParseInt32(const std::string& input, bool decimalOnly = false)
 {
   std::optional<int32_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoll(input, &parseEnd, base);
     if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int32_t>::min()) || 0x7FFFFFFF < userValue) {
       return result;
@@ -206,12 +206,12 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<uint32_t> ParseUInt32(const std::string& input)
+[[nodiscard]] inline std::optional<uint32_t> ParseUInt32(const std::string& input, bool decimalOnly = false)
 {
   std::optional<uint32_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoll(input, &parseEnd, base);
     if (parseEnd != input.size() || userValue < 0 || 0xFFFFFFFF < userValue) {
       return result;
@@ -222,12 +222,12 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<int64_t> ParseInt64(const std::string& input)
+[[nodiscard]] inline std::optional<int64_t> ParseInt64(const std::string& input, bool decimalOnly = false)
 {
   std::optional<int64_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoll(input, &parseEnd, base);
     if (parseEnd != input.size()) {
       return result;
@@ -238,12 +238,12 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<uint64_t> ParseUInt64(const std::string& input)
+[[nodiscard]] inline std::optional<uint64_t> ParseUInt64(const std::string& input, bool decimalOnly = false)
 {
   std::optional<uint64_t> result;
   try {
     size_t parseEnd;
-    int base = input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) ? 16 : 10;
+    int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
     int64_t userValue = stoull(input, &parseEnd, base);
     if (parseEnd != input.size()) {
       return result;
@@ -263,8 +263,8 @@
     if (parseEnd != input.size() || std::isnan(userValue) || !std::isfinite(userValue)) {
       return result;
     }
-    if (userValue == 0.0f) {
-      result = 0.0f;
+    if (userValue == 0.0) {
+      result = 0.0;
     } else {
       result = userValue;
     }
@@ -282,8 +282,8 @@
     if (parseEnd != input.size() || std::isnan(userValue) || !std::isfinite(userValue)) {
       return result;
     }
-    if (userValue == 0.0f) {
-      result = 0.0f;
+    if (userValue == 0.0) {
+      result = 0.0;
     } else {
       result = userValue;
     }
@@ -292,9 +292,9 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<uint8_t> ParseUint8(const std::string& input) { return ParseUInt8(input); }
-[[nodiscard]] inline std::optional<uint16_t> ParseUint16(const std::string& input) { return ParseUInt16(input); }
-[[nodiscard]] inline std::optional<uint32_t> ParseUint32(const std::string& input) { return ParseUInt32(input); }
-[[nodiscard]] inline std::optional<uint64_t> ParseUint64(const std::string& input) { return ParseUInt64(input); }
+[[nodiscard]] inline std::optional<uint8_t> ParseUint8(const std::string& input, bool decimalOnly = false) { return ParseUInt8(input, decimalOnly); }
+[[nodiscard]] inline std::optional<uint16_t> ParseUint16(const std::string& input, bool decimalOnly = false) { return ParseUInt16(input, decimalOnly); }
+[[nodiscard]] inline std::optional<uint32_t> ParseUint32(const std::string& input, bool decimalOnly = false) { return ParseUInt32(input, decimalOnly); }
+[[nodiscard]] inline std::optional<uint64_t> ParseUint64(const std::string& input, bool decimalOnly = false) { return ParseUInt64(input, decimalOnly); }
 
 #endif // AURA_PARSER_H_

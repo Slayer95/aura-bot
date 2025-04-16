@@ -46,6 +46,7 @@
 #include <crc32/crc32.h>
 
 #include "game.h"
+#include "game_interactive_host.h"
 #include "game_result.h"
 #include "game_structs.h"
 #include "command.h"
@@ -106,6 +107,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LastLeaverBannable(nullptr),
     m_CustomStats(nullptr),
     m_DotaStats(nullptr),
+    m_GameInteractiveHost(nullptr),
     m_RestoredGame(nGameSetup->m_RestoredGame),
     m_CurrentActionsFrame(nullptr),
     m_Map(nGameSetup->m_Map),
@@ -130,6 +132,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LastCountDownTicks(0),
     m_StartedLoadingTicks(0),
     m_FinishedLoadingTicks(0),
+    m_MapGameStartTime(0),
     m_EffectiveTicks(0),
     m_LatencyTicks(0),
     m_LastActionSentTicks(0),
@@ -356,6 +359,7 @@ void CGame::Reset()
   ClearBannableUsers();
 
   DestroyStats();
+  DestroyHMC();
 
   for (auto& realm : m_Aura->m_Realms) {
     realm->ResetGameChatAnnouncement();
@@ -435,9 +439,28 @@ bool CGame::InitStats()
   return true;
 }
 
+bool CGame::InitHMC()
+{
+  if (m_Map->GetHMCEnabled()) {
+    const uint8_t SID = m_Map->GetHMCSlot();
+    const CGameSlot* slot = InspectSlot(SID);
+    if (slot && slot->GetIsPlayerOrFake() && !GetUserFromSID(SID)) {
+      const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
+      if (virtualUserMatch && !virtualUserMatch->GetIsObserver()) {
+        m_HMCEnabled = true;
+      }
+    }
+  }
+
+  if (!m_HMCEnabled) return false;
+
+  m_GameInteractiveHost = new CGameInteractiveHost(shared_from_this(), m_Map->GetHMCFileName());
+  return true;
+}
+
 bool CGame::EventGameCache(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
 {
-  if (!m_CustomStats && !m_DotaStats) return false;
+  if (!m_CustomStats && !m_DotaStats && !m_GameInteractiveHost) return false;
 
   const uint8_t* stringStart;
   const uint8_t* stringEnd;
@@ -471,6 +494,13 @@ bool CGame::EventGameCache(const uint8_t UID, const uint8_t* actionStart, const 
       DestroyStats();
     }
   }
+
+  if (m_GameInteractiveHost) {
+    if (!m_GameInteractiveHost->EventGameCache(UID, cacheFileName, missionKey, key, value)) {
+      DestroyHMC();
+    }
+  }
+
   return true;
 }
 
@@ -517,13 +547,22 @@ void CGame::TrySaveStats() const
   }
 }
 
-void CGame::DestroyStats() {
+void CGame::DestroyStats()
+{
   if (m_CustomStats) {
     delete m_CustomStats;
     m_CustomStats = nullptr;
   } else if (m_DotaStats) {
     delete m_DotaStats;
     m_DotaStats = nullptr;
+  }
+}
+
+void CGame::DestroyHMC()
+{
+  if (m_GameInteractiveHost) {
+    delete m_GameInteractiveHost;
+    m_GameInteractiveHost = nullptr;
   }
 }
 
@@ -6537,17 +6576,7 @@ void CGame::EventGameStartedLoading()
 
   StoreGameControllers();
   InitStats();
-
-  if (m_Map->GetHMCEnabled()) {
-    const uint8_t SID = m_Map->GetHMCSlot();
-    const CGameSlot* slot = InspectSlot(SID);
-    if (slot && slot->GetIsPlayerOrFake() && !GetUserFromSID(SID)) {
-      const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
-      if (virtualUserMatch && !virtualUserMatch->GetIsObserver()) {
-        m_HMCEnabled = true;
-      }
-    }
-  }
+  InitHMC();
 
   m_ReconnectProtocols = CalcActiveReconnectProtocols();
 
@@ -6804,6 +6833,7 @@ void CGame::EventGameLoaded()
 
   m_LastActionSentTicks = Ticks;
   m_FinishedLoadingTicks = Ticks;
+  m_MapGameStartTime = CGameInteractiveHost::GetMapTime();
   m_GameLoading = false;
   m_GameLoaded = true;
 
@@ -7006,6 +7036,7 @@ void CGame::Remake()
   m_LastCountDownTicks = 0;
   m_StartedLoadingTicks = 0;
   m_FinishedLoadingTicks = 0;
+  m_MapGameStartTime = 0;
   m_LastActionSentTicks = 0;
   m_LastActionLateBy = 0;
   m_LastPausedTicks = 0;
@@ -9785,23 +9816,19 @@ bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, const bool is
 
 bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstValue, const uint32_t secondValue)
 {
-  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
-  AppendByteArray(packet, firstValue, false);
-  AppendByteArray(packet, secondValue, false);
-  vector<uint8_t> action;
-  AppendByteArrayFast(packet, message);
-  AppendByteArray(action, packet);
+  vector<uint8_t> action = {ACTION_CHAT_TRIGGER};
+  AppendByteArray(action, firstValue, false);
+  AppendByteArray(action, secondValue, false);
+  AppendByteArrayFast(action, message);
   GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;
 }
 
 bool CGame::SendChatTriggerBytes(const uint8_t UID, const string& message, const array<uint8_t, 8>& triggerBytes)
 {
-  vector<uint8_t> packet = {ACTION_CHAT_TRIGGER};
-  AppendByteArrayFast(packet, triggerBytes);
-  vector<uint8_t> action;
-  AppendByteArrayFast(packet, message);
-  AppendByteArray(action, packet);
+  vector<uint8_t> action = {ACTION_CHAT_TRIGGER};
+  AppendByteArrayFast(action, triggerBytes);
+  AppendByteArrayFast(action, message);
   GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;
 }

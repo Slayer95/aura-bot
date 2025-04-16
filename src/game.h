@@ -92,6 +92,7 @@ protected:
   std::vector<CDBBan*>                                   m_ScopeBans;                     // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
   CW3MMD*                                                m_CustomStats;
   CDotaStats*                                            m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
+  CGameInteractiveHost*                                  m_GameInteractiveHost;
   CSaveGame*                                             m_RestoredGame;
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
   std::vector<CGameController*>                          m_GameControllers;               // std::vector of potential gameuser data for the database
@@ -128,6 +129,7 @@ protected:
   int64_t                                                m_LastCountDownTicks;            // GetTicks when the last countdown message was sent
   int64_t                                                m_StartedLoadingTicks;           // GetTicks when the game started loading
   int64_t                                                m_FinishedLoadingTicks;          // GetTicks when the game finished loading
+  long                                                   m_MapGameStartTime;              // for W3HMC
   int64_t                                                m_EffectiveTicks;                // ingame ticks excluding paused time
   int64_t                                                m_LatencyTicks;                  // ticks between last update and next
   int64_t                                                m_LastActionSentTicks;           // GetTicks when the last action packet was sent
@@ -354,6 +356,7 @@ public:
   uint8_t                                                GetNumTeamControllersOrOpen(const uint8_t team) const;
   std::string                                            GetClientFileName() const;
   std::string                                            GetMapSiteURL() const { return m_MapSiteURL; }
+  inline long                                            GetMapGameStartTime() const { return m_MapGameStartTime; }
   inline int64_t                                         GetEffectiveTicks() const { return m_EffectiveTicks; }
   inline int64_t                                         GetLatencyTicks() const { return m_LatencyTicks; }
   inline int64_t                                         GetLastPausedTicks() const { return m_LastPausedTicks; }
@@ -820,11 +823,13 @@ public:
   CGameController*          GetGameControllerFromUID(uint8_t UID) const;
 
   bool InitStats();
+  bool InitHMC();
   bool EventGameCache(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd);
   bool UpdateStatsQueue() const;
   void FlushStatsQueue() const;
   void TrySaveStats() const;
   void DestroyStats();
+  void DestroyHMC();
 
   void                      RunHCLEncoding();
   bool                      SendHMC(const std::string& message);
