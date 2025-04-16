@@ -136,9 +136,6 @@ namespace GameUser
     bool                             m_LeftMessageSent;              // if the playerleave message has been sent or not
     bool                             m_StatusMessageSent;            // if the message regarding player connection mode has been sent or not
     bool                             m_LatencySent;
-    bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
-    bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
-    uint8_t                          m_SmartCommand;
     int64_t                          m_CheckStatusByTicks;
     int64_t                          m_MuteEndTicks;
 
@@ -153,7 +150,11 @@ namespace GameUser
     int64_t                          m_TotalDisconnectTicks;
     std::optional<int64_t>           m_LastDisconnectTicks;
 
+    bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
+    bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
+    uint8_t                          m_SmartCommand;
     std::string                      m_LastCommand;
+
     uint8_t                          m_TeamCaptain;
 
     std::string                      m_PinnedMessage;
@@ -230,7 +231,7 @@ namespace GameUser
         return m_Name + "@" + m_RealmHostName;
       }
     }
-    [[nodiscard]] inline bool                  IsRealmVerified() const { return m_Verified; }
+    [[nodiscard]] inline bool                  GetIsRealmVerified() const { return m_Verified; }
     [[nodiscard]] inline size_t                GetSyncCounter() const { return m_SyncCounter; }
     [[nodiscard]] inline size_t                GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
     [[nodiscard]] bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
@@ -289,9 +290,6 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
     [[nodiscard]] inline bool                  GetLatencySent() const { return m_LatencySent; }
     [[nodiscard]] inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
-    [[nodiscard]] inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
-    [[nodiscard]] inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
-    [[nodiscard]] inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
     [[nodiscard]] bool                         UpdateReady();
     [[nodiscard]] bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
     [[nodiscard]] inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
@@ -398,20 +396,25 @@ namespace GameUser
     [[nodiscard]] bool GetReadyReminderIsDue() const;
     void SetReadyReminded();
 
-    [[nodiscard]] inline std::string GetLastCommand() const { return m_LastCommand; }
-    inline void ClearLastCommand() { m_LastCommand.clear(); }
-    inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
     inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
     inline void DropRemainingSaves() { --m_RemainingSaves; }
     inline void SetRemainingSaves(uint8_t nCount) { m_RemainingSaves = nCount; }
     inline void SetCannotSave() { m_RemainingSaves = 0; }
+
+    inline void DropRemainingPauses() { --m_RemainingPauses; }
+    inline void SetCannotPause() { m_RemainingPauses = 0; }
+    void ClearStalePings();
+
+    [[nodiscard]] inline std::string GetLastCommand() const { return m_LastCommand; }
+    inline void ClearLastCommand() { m_LastCommand.clear(); }
+    inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
+    [[nodiscard]] inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
+    [[nodiscard]] inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
+    [[nodiscard]] inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
     inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
     inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
     inline void SetSmartCommand(const uint8_t nValue) { m_SmartCommand = nValue; }
     inline void ClearSmartCommand() { m_SmartCommand = SMART_COMMAND_NONE; }
-    inline void DropRemainingPauses() { --m_RemainingPauses; }
-    inline void SetCannotPause() { m_RemainingPauses = 0; }
-    void ClearStalePings();
 
     [[nodiscard]] inline const std::string& GetPinnedMessage() { return  m_PinnedMessage; }
     [[nodiscard]] inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }

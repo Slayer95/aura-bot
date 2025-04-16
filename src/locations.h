@@ -218,12 +218,15 @@ struct GameSource
   inline uint8_t GetType() const { return userType; }
   inline bool GetIsEmpty() const { return userType == COMMAND_SOURCE_GAME_NONE; }
   inline bool GetIsUser() const { return userType == COMMAND_SOURCE_GAME_USER; }
-  inline bool GetIsSpectator() const { return userType == COMMAND_SOURCE_GAME_ASYNC_OBSERVER; }
+  inline bool GetIsSpectator() const { return userType == COMMAND_SOURCE_GAME_ASYNC_OBSERVER || userType == COMMAND_SOURCE_GAME_REPLAY; }
+  inline bool GetIsReplay() const { return userType == COMMAND_SOURCE_GAME_REPLAY; }
+  inline bool GetIsGameExpired() const { return game.expired(); }
 
   inline GameUser::CGameUser* GetUser() const { return user; }
   inline CAsyncObserver* GetSpectator() const { return spectator; }
   inline std::shared_ptr<CGame> GetGame() const { return game.lock(); }
 
+  void Expire();
   void Reset();
 };
 

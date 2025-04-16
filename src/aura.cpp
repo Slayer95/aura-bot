@@ -1410,11 +1410,11 @@ void CAura::EventGameReset(shared_ptr<CGame> game)
     if (!ctx) continue;
     if (ctx->GetSourceGame() == game) {
       ctx->SetPartiallyDestroyed();
-      ctx->ResetGameSource();
+      ctx->ExpireGameSource();
     }
-    if (ctx->m_TargetGame.lock() == game) {
+    if (ctx->GetTargetGame() == game) {
       ctx->SetPartiallyDestroyed();
-      ctx->m_TargetGame.reset();
+      ctx->ResetTargetGame();
     }
   }
 

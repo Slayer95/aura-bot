@@ -81,6 +81,12 @@ public:
   int64_t                                                       m_LastProgressReportTime;
   uint8_t                                                       m_LastProgressReportLog;
 
+
+  bool                                                          m_UsedAnyCommands;              // if the playerleave message has been sent or not
+  bool                                                          m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
+  uint8_t                                                       m_SmartCommand;
+  std::string                                                   m_LastCommand;
+
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
 
@@ -102,8 +108,11 @@ public:
 
   [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
   [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
-  [[nodiscard]] inline const std::string&       GetName() { return m_Name; }
-  [[nodiscard]] inline std::shared_ptr<CGame>   GetGame() { return m_Game.lock(); }
+  [[nodiscard]] inline const std::string&       GetName() const { return m_Name; }
+  [[nodiscard]] inline std::shared_ptr<CGame>   GetGame() const { return m_Game.lock(); }
+
+  [[nodiscard]] inline int64_t                  GetFrameRate() const { return m_FrameRate; }
+  inline void                                   SetFrameRate(int64_t nFrameRate) { m_FrameRate = nFrameRate; }
 
   [[nodiscard]] inline bool                     HasLeftReason() { return !m_LeftReason.empty(); }
   [[nodiscard]] inline std::string              GetLeftReason() { return m_LeftReason; }
@@ -121,6 +130,8 @@ public:
   [[nodiscard]] inline int64_t                  GetGameTicks() const { return m_GameTicks; }
   int64_t                                       GetNextTimedActionByTicks() const;
 
+  [[nodiscard]] inline bool                     GetIsRealmVerified() const { return false; }
+
   bool PushGameFrames(bool isFlush = false);
   inline void FlushGameFrames() { PushGameFrames(true); }
   void CheckGameOver();
@@ -134,7 +145,8 @@ public:
   void EventMapReady();
   void StartLoading();
   void EventGameLoaded();
-  void EventChatMessage(const CIncomingChatMessage* chatMessage);
+  void EventChatOrPlayerSettings(const CIncomingChatMessage* chatPlayer);
+  void EventChat(const CIncomingChatMessage* chatPlayer);
   void EventLeft(const uint32_t clientReason);
   void EventProtocolError();
 
@@ -151,6 +163,17 @@ public:
   [[nodiscard]] inline bool static SortObserversByDownloadProgressAscending(const CAsyncObserver* a, const CAsyncObserver* b) {
     return a->InspectMapTransfer().GetLastSentOffsetEnd() < b->InspectMapTransfer().GetLastSentOffsetEnd();
   }  
+
+  [[nodiscard]] inline std::string GetLastCommand() const { return m_LastCommand; }
+  inline void ClearLastCommand() { m_LastCommand.clear(); }
+  inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
+  [[nodiscard]] inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
+  [[nodiscard]] inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
+  [[nodiscard]] inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
+  inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
+  inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
+  inline void SetSmartCommand(const uint8_t nValue) { m_SmartCommand = nValue; }
+  inline void ClearSmartCommand() { m_SmartCommand = SMART_COMMAND_NONE; }
 };
 
 #endif // AURA_ASYNC_OBSERVER_H_

@@ -120,6 +120,22 @@ GameSource::~GameSource()
 {
 }
 
+void GameSource::Expire()
+{
+  switch (userType) {
+    case COMMAND_SOURCE_GAME_USER:
+      Reset();
+      break;
+    case COMMAND_SOURCE_GAME_ASYNC_OBSERVER:
+      userType = COMMAND_SOURCE_GAME_REPLAY;
+      game.reset();
+      break;
+    case COMMAND_SOURCE_GAME_REPLAY:
+    case COMMAND_SOURCE_GAME_NONE:
+      break;
+  }
+}
+
 void GameSource::Reset()
 {
   userType = COMMAND_SOURCE_GAME_NONE;

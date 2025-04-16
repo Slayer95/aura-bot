@@ -78,6 +78,7 @@ constexpr uint8_t SERVICE_TYPE_GAME = 6; // avoided in most places, in favor of 
 constexpr uint8_t COMMAND_SOURCE_GAME_NONE = 0;
 constexpr uint8_t COMMAND_SOURCE_GAME_USER = 1;
 constexpr uint8_t COMMAND_SOURCE_GAME_ASYNC_OBSERVER = 2;
+constexpr uint8_t COMMAND_SOURCE_GAME_REPLAY = 3;
 
 constexpr uint8_t TASK_TYPE_GAME_FRAME = 0;
 constexpr uint8_t TASK_TYPE_CHECK_JOINABLE = 1;

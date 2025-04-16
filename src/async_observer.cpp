@@ -76,6 +76,9 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_LastPingTicks(APP_MIN_TICKS),
     m_LastProgressReportTime(APP_MIN_TICKS),
     m_LastProgressReportLog(0),
+    m_UsedAnyCommands(false),
+    m_SentAutoCommandsHelp(false),
+    m_SmartCommand(SMART_COMMAND_NONE),
     m_Name(nName)
 {
   m_Socket->SetLogErrors(true);
@@ -205,7 +208,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               CIncomingChatMessage* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
               if (ChatPlayer) {
-                EventChatMessage(ChatPlayer);
+                EventChatOrPlayerSettings(ChatPlayer);
                 delete ChatPlayer;
               }
               break;
@@ -521,35 +524,124 @@ void CAsyncObserver::EventGameLoaded()
   Send(m_GameHistory->m_LoadingVirtualBuffer);
 }
 
-void CAsyncObserver::EventChatMessage(const CIncomingChatMessage* incomingChatMessage)
+void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
 {
-  string message = incomingChatMessage->GetMessage();
-  Print(GetLogPrefix() + ": " + message);
-  if (message == "!ff") {
-    // 2x 4x 6x 8x 16x 32x 64x
-    if (m_FrameRate >= 64) {
-      SendChat("Playback rate is limited to 64x");
-    } else {
-      switch (m_FrameRate) {
-        // Smooth out acceleration around 8x, since
-        // 1 - many computers cannot handle such a large speed
-        // 2 - vanilla WC3 cannot actually handle speeds above 8x
-        case 4: case 8:
-          m_FrameRate = m_FrameRate * 3 / 2;
-          break;
-        case 6: case 12:
-          m_FrameRate = m_FrameRate *  4 / 3;
-          break;
-        default:
-          m_FrameRate *= 2;
-      }
-      SendProgressReport();
-    }
-  } else if (message == "!sync") {
-    m_FrameRate = 1;
-    SendChat("Playback rate set to " + to_string(m_FrameRate) + "x");
+  const bool isLobbyChat = incomingChatMessage->GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
+  if (isLobbyChat == m_StartedLoading) {
+    // Racing condition
+    return;
+  }
+
+  bool shouldRelay = !isLobbyChat && false; // relay the chat message to other users
+
+  if (!isLobbyChat && m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
+    Print(GetLogPrefix() + "[" + GetName() + "] " + incomingChatMessage->GetMessage());
+  }
+
+  CGameConfig* gameConfig;
+  if (auto game = GetGame()) {
+    gameConfig = &game->m_Config;
   } else {
-    SendChat("You are in spectator mode. Chat is RESTRICTED.");
+    gameConfig = m_Aura->m_GameDefaultConfig;
+  }
+
+  // handle bot commands
+  {
+    shared_ptr<CRealm> realm = GetRealm();
+    CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config.m_LANCommandCFG;
+    const bool commandsEnabled = commandCFG->m_Enabled && (
+      !realm || !(commandCFG->m_RequireVerified && !GetIsRealmVerified())
+    );
+    bool isCommand = false;
+    const uint8_t activeSmartCommand = GetSmartCommand();
+    ClearSmartCommand();
+    if (commandsEnabled) {
+      const string message = incomingChatMessage->GetMessage();
+      string cmdToken, command, target;
+      uint8_t tokenMatch = ExtractMessageTokensAny(message, gameConfig->m_PrivateCmdToken, gameConfig->m_BroadcastCmdToken, cmdToken, command, target);
+      isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
+      if (isCommand) {
+        SetUsedAnyCommands(true);
+        // If we want users identities hidden, we must keep bot responses private.
+        if (shouldRelay) {
+          //SendChat(incomingChatMessage);
+          shouldRelay = false;
+        }
+        shared_ptr<CCommandContext> ctx = nullptr;
+        try {
+          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, GetGame(), this, false, &std::cout);
+        } catch (...) {}
+        if (ctx) ctx->Run(cmdToken, command, target);
+      } else if (message == "?trigger") {
+        if (shouldRelay) {
+          //SendChat(incomingChatMessage);
+          shouldRelay = false;
+        }
+        //TODO:SendCommandsHelp()
+        //GetGame()->SendCommandsHelp(gameConfig->m_BroadcastCmdToken.empty() ? gameConfig->m_PrivateCmdToken : gameConfig->m_BroadcastCmdToken, this, false);
+      } else if (message == "/p" || message == "/ping" || message == "/game") {
+        // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
+        // Therefore, these commands are only effective over LAN.
+        if (shouldRelay) {
+          //SendChat(incomingChatMessage);
+          shouldRelay = false;
+        }
+        shared_ptr<CCommandContext> ctx = nullptr;
+        try {
+          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, GetGame(), this, false, &std::cout);
+        } catch (...) {}
+        if (ctx) {
+          cmdToken = gameConfig->m_PrivateCmdToken;
+          command = message.substr(1);
+          ctx->Run(cmdToken, command, target);
+        }
+      } else if (isLobbyChat && !GetUsedAnyCommands()) {
+        if (shouldRelay) {
+          //SendChat(incomingChatMessage);
+          shouldRelay = false;
+        }
+        /*
+        // TODO: SmartCommands
+        if (!GetGame()->CheckSmartCommands(this, message, activeSmartCommand, commandCFG) && !GetSentAutoCommandsHelp()) {
+          bool anySentCommands = false;
+          for (const auto& otherPlayer : m_Users) {
+            if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
+          }
+          if (!anySentCommands) {
+            SendCommandsHelp(gameConfig->m_BroadcastCmdToken.empty() ? gameConfig->m_PrivateCmdToken : gameConfig->m_BroadcastCmdToken, this, true);
+          }
+        }
+        */
+      }
+    }
+    if (!isCommand) {
+      ClearLastCommand();
+      SendChat("You are in spectator mode. Chat is RESTRICTED.");
+    }
+    if (shouldRelay) {
+      //SendChat(incomingChatMessage);
+      shouldRelay = false;
+    }
+  }
+}
+
+void CAsyncObserver::EventChatOrPlayerSettings(const CIncomingChatMessage* incomingChatMessage)
+{
+  if (incomingChatMessage->GetFromUID() != GetUID()) {
+    return;
+  }
+
+  switch (incomingChatMessage->GetType()) {
+    case GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY:
+    case GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME:
+      EventChat(incomingChatMessage);
+      break;
+    case GameProtocol::ChatToHostType::CTH_TEAMCHANGE:
+    case GameProtocol::ChatToHostType::CTH_COLOURCHANGE:
+    case GameProtocol::ChatToHostType::CTH_RACECHANGE:
+    case GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE:
+      SendChat("This game has already started. Player settings cannot be changed.");
+      break;
   }
 }
 
@@ -602,16 +694,15 @@ void CAsyncObserver::SendChat(const string& message)
   }
   if (!m_StartedLoading) {
     if (message.size() > 254)
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message.substr(0, 254)));
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_LOBBY, message.substr(0, 254)));
     else
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 16, std::vector<uint8_t>(), message));
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
   } else {
-    uint16_t receiverByte = static_cast<uint16_t>(3u + m_Color);
-    uint8_t extraFlags[] = {(uint8_t)receiverByte, 0, 0, 0};
+    uint32_t targetCode = static_cast<uint32_t>(3u + m_Color);
     if (message.size() > 127)
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message.substr(0, 127)));
     else
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), 32, CreateByteArray(extraFlags, 4), message));
+      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message));
   }
 }
 

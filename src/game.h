@@ -474,7 +474,7 @@ public:
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
   void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
   void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
-  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatPlayer) const;
+  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatMessage) const;
 
   void                                                   CheckActions();
   void                                                   PauseAPMTrainer();
@@ -543,11 +543,12 @@ public:
   bool                      EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
   void                      EventChatTrigger(GameUser::CGameUser* user, const std::string& message, const uint32_t first, const uint32_t second);
-  void                      EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage* chatPlayer);
-  void                      EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team);
-  void                      EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour);
-  void                      EventUserChangeRace(GameUser::CGameUser* user, uint8_t race);
-  void                      EventUserChangeHandicap(GameUser::CGameUser* user, uint8_t handicap);
+  void                      EventUserChatOrPlayerSettings(GameUser::CGameUser* user, CIncomingChatMessage* incomingChatMessage);
+  void                      EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incomingChatMessage);
+  void                      EventUserRequestTeam(GameUser::CGameUser* user, uint8_t team);
+  void                      EventUserRequestColor(GameUser::CGameUser* user, uint8_t colour);
+  void                      EventUserRequestRace(GameUser::CGameUser* user, uint8_t race);
+  void                      EventUserRequestHandicap(GameUser::CGameUser* user, uint8_t handicap);
   void                      EventUserDropRequest(GameUser::CGameUser* user);
   void                      EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* mapSize);
   void                      EventUserPongToHost(GameUser::CGameUser* user);

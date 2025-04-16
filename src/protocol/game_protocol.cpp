@@ -268,26 +268,21 @@ namespace GameProtocol
         const uint8_t Flag    = data[i + 1];
         i += 2;
 
-        if (Flag == 16 && data.size() >= i + 1)
-        {
+        if (Flag == GameProtocol::Magic::ChatType::CHAT_LOBBY && data.size() >= i + 1) { // 16
           // chat message
 
           const std::vector<uint8_t> Message = ExtractCString(data, i);
           return new CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)));
-        }
-        else if ((Flag >= 17 && Flag <= 20) && data.size() >= i + 1)
-        {
-          // team/colour/race/handicap change request
+        } else if ((Flag >= GameProtocol::Magic::ChatType::REQUEST_TEAM && Flag <= GameProtocol::Magic::ChatType::REQUEST_HANDICAP) && data.size() >= i + 1) { // 17-20
+          // team/colour/race/handicap change request 
 
           const uint8_t Byte = data[i];
           return new CIncomingChatMessage(FromUID, ToUIDs, Flag, Byte);
-        }
-        else if (Flag == 32 && data.size() >= i + 5)
-        {
+        } else if (Flag == GameProtocol::Magic::ChatType::CHAT_IN_GAME && data.size() >= i + 5) { // 32
           // chat message with extra flags
 
-          const std::vector<uint8_t> ExtraFlags = std::vector<uint8_t>(begin(data) + i, begin(data) + i + 4);
-          const std::vector<uint8_t> Message    = ExtractCString(data, i + 4);
+          const uint32_t ExtraFlags = ByteArrayToUInt32(data, false, i);
+          const std::vector<uint8_t> Message = ExtractCString(data, i + 4);
           return new CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)), ExtraFlags);
         }
       }
@@ -572,7 +567,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const string& message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const string& message)
   {
     if (!toUIDs.empty() && !message.empty() && message.size() < 255)
     {
@@ -580,7 +575,7 @@ namespace GameProtocol
       AppendByteArrayFast(packet, toUIDs);    // receivers
       packet.push_back(fromUID);              // sender
       packet.push_back(flag);                 // flag
-      AppendByteArrayFast(packet, flagExtra); // extra flag
+      AppendByteArray(packet, flagExtra, false); // extra flag
       AppendByteArrayFast(packet, message);   // message
       AssignLength(packet);
       return packet;
@@ -589,6 +584,23 @@ namespace GameProtocol
     Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST: \"" + message + "\"");
     return std::vector<uint8_t>();
   }
+
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const string& message)
+  {
+    if (!toUIDs.empty() && !message.empty() && message.size() < 255)
+    {
+      std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CHAT_FROM_HOST, 0, 0, static_cast<uint8_t>(toUIDs.size())};
+      AppendByteArrayFast(packet, toUIDs);    // receivers
+      packet.push_back(fromUID);              // sender
+      packet.push_back(flag);                 // flag
+      AppendByteArrayFast(packet, message);   // message
+      AssignLength(packet);
+      return packet;
+    }
+
+    Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST: \"" + message + "\"");
+    return std::vector<uint8_t>();
+  }  
 
   std::vector<uint8_t> SEND_W3GS_START_LAG(vector<GameUser::CGameUser*> users)
   {
@@ -1244,7 +1256,7 @@ vector<const uint8_t*> CIncomingAction::SplitAtomic() const
 
 CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage)
   : m_Message(std::move(nMessage)),
-    m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE),
+    m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
     m_Byte(255),
     m_FromUID(nFromUID),
     m_Flag(nFlag),
@@ -1252,14 +1264,14 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
 {
 }
 
-CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage, std::vector<uint8_t> nExtraFlags)
+CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage, uint32_t nExtraFlags)
   : m_Message(std::move(nMessage)),
-    m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE),
+    m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME),
     m_Byte(255),
     m_FromUID(nFromUID),
     m_Flag(nFlag),
     m_ToUIDs(std::move(nToUIDs)),
-    m_ExtraFlags(std::move(nExtraFlags))
+    m_ExtraFlags(nExtraFlags)
 {
 }
 
@@ -1270,14 +1282,20 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
     m_Flag(nFlag),
     m_ToUIDs(std::move(nToUIDs))
 {
-  if (nFlag == 17)
-    m_Type = GameProtocol::ChatToHostType::CTH_TEAMCHANGE;
-  else if (nFlag == 18)
-    m_Type = GameProtocol::ChatToHostType::CTH_COLOURCHANGE;
-  else if (nFlag == 19)
-    m_Type = GameProtocol::ChatToHostType::CTH_RACECHANGE;
-  else if (nFlag == 20)
-    m_Type = GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE;
+  switch (nFlag) {
+    case GameProtocol::Magic::ChatType::REQUEST_TEAM:
+      m_Type = GameProtocol::ChatToHostType::CTH_TEAMCHANGE;
+      break;
+    case GameProtocol::Magic::ChatType::REQUEST_COLOR:
+      m_Type = GameProtocol::ChatToHostType::CTH_COLOURCHANGE;
+      break;
+    case GameProtocol::Magic::ChatType::REQUEST_RACE:
+      m_Type = GameProtocol::ChatToHostType::CTH_RACECHANGE;
+      break;
+    case GameProtocol::Magic::ChatType::REQUEST_HANDICAP:
+      m_Type = GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE;
+      break;
+  }
 }
 
 CIncomingChatMessage::~CIncomingChatMessage() = default;

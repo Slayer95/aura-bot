@@ -90,6 +90,34 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
+/* Spectator command */
+CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> game, CAsyncObserver* spectator, const bool& nIsBroadcast, ostream* nOutputStream)
+  : m_Aura(nAura),
+    m_Config(config),
+
+    m_TargetGame(game),
+
+    m_GameSource(GameSource(spectator)),
+    m_ServiceSource(SERVICE_TYPE_LAN, spectator->GetName()), // may be changed to SERVICE_TYPE_REALM
+    m_FromWhisper(false),
+    m_IsBroadcast(nIsBroadcast),
+
+    m_Permissions(USER_PERMISSIONS_NONE),
+
+    m_ServerName(string()),
+
+    m_Output(nOutputStream),
+    m_PartiallyDestroyed(false)
+{
+  CHECK_SERVICE_TYPE(serviceType);
+  shared_ptr<CRealm> sourceRealm = spectator->GetRealm();
+  if (sourceRealm) {
+    m_ServiceSource = ServiceUser(SERVICE_TYPE_REALM, m_ServiceSource.GetUser(), sourceRealm);
+    m_ServerName = sourceRealm->GetServer();
+  }
+  m_Aura->m_ActiveContexts.push_back(weak_from_this());
+}
+
 /* Command received from BNET but targetting a game */
 CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
@@ -452,7 +480,7 @@ void CCommandContext::UpdatePermissions()
   if (m_OverrideVerified.has_value()) {
     isRealmVerified = m_OverrideVerified.value();
   } else {
-    isRealmVerified = GetGameUser() ? GetGameUser()->IsRealmVerified() : (sourceRealm != nullptr);
+    isRealmVerified = GetGameUser() ? GetGameUser()->GetIsRealmVerified() : (sourceRealm != nullptr);
   }
 
   // Trust PvPGN servers on users identities for admin powers. Their impersonation is not a threat we worry about.
@@ -1448,10 +1476,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
       shared_ptr<CRealm> targetPlayerRealm = targetPlayer->GetRealm(true);
-      bool IsRealmVerified = targetPlayerRealm != nullptr;
+      bool GetIsRealmVerified = targetPlayerRealm != nullptr;
       bool IsOwner = targetPlayer->GetIsOwner(nullopt);
-      bool IsRootAdmin = IsRealmVerified && targetPlayerRealm->GetIsAdmin(targetPlayer->GetName());
-      bool IsAdmin = IsRootAdmin || (IsRealmVerified && targetPlayerRealm->GetIsModerator(targetPlayer->GetName()));
+      bool IsRootAdmin = GetIsRealmVerified && targetPlayerRealm->GetIsAdmin(targetPlayer->GetName());
+      bool IsAdmin = IsRootAdmin || (GetIsRealmVerified && targetPlayerRealm->GetIsModerator(targetPlayer->GetName()));
       string SyncStatus;
       if (targetGame->GetGameLoaded()) {
         if (targetGame->m_SyncPlayers[targetPlayer].size() + 1 == targetGame->m_Users.size()) {
@@ -1492,7 +1520,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         versionFragment = " (" + targetPlayer->GetGameVersionString() + ")";
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + targetPlayer->GetReconnectionText() + FromFragment + (targetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
-      SendReply("[" + targetPlayer->GetName() + "]. " + realmFragment + versionFragment + ", Verified: " + (IsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
+      SendReply("[" + targetPlayer->GetName() + "]. " + realmFragment + versionFragment + ", Verified: " + (GetIsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
       if (IsOwner || IsAdmin || IsRootAdmin) {
         SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
       }
@@ -1648,7 +1676,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
       const bool isDota = cmdHash == HashCode("statsdota") || targetGame->GetClientFileName().find("DotA") != string::npos;
-      const bool isUnverified = targetPlayer->GetRealm(false) != nullptr && !targetPlayer->IsRealmVerified();
+      const bool isUnverified = targetPlayer->GetRealm(false) != nullptr && !targetPlayer->GetIsRealmVerified();
       string targetIdentity = "[" + targetPlayer->GetExtendedName() + "]";
       if (isUnverified) targetIdentity += " (unverified)";
 
@@ -4646,7 +4674,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetPlayer && !CheckConfirmation(cmdToken, baseCommand, baseTarget, "Player [" + targetName + "] is not in this game lobby. ")) {
         break;
       }
-      if ((targetPlayer && targetPlayer != GetGameUser() && !targetRealm && !targetPlayer->IsRealmVerified()) &&
+      if ((targetPlayer && targetPlayer != GetGameUser() && !targetRealm && !targetPlayer->GetIsRealmVerified()) &&
         !CheckConfirmation(cmdToken, baseCommand, baseTarget, "Player [" + targetName + "] has not been verified by " + targetHostName + ". ")) {
         break;
       }
@@ -7918,6 +7946,53 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       GetGameUser()->ClearPinnedMessage();
       SendReply("Pinned message removed.");
+      break;
+    }
+
+    case HashCode("ff"): {
+      // 2x 4x 6x 8x 16x 32x 64x
+      auto gameSource = GetGameSource();
+      if (!gameSource.GetIsSpectator()) {
+        ErrorReply("This command can only be used in spectator mode.");
+        break;
+      }
+      CAsyncObserver* spectator = gameSource.GetSpectator();
+      int64_t frameRate = spectator->GetFrameRate();
+      if (frameRate >= 64) {
+        spectator->SendChat("Playback rate is limited to 64x");
+      } else {
+        switch (frameRate) {
+          // Smooth out acceleration around 8x, since
+          // 1 - many computers cannot handle such a large speed
+          // 2 - vanilla WC3 cannot actually handle speeds above 8x
+          case 4: case 8:
+            spectator->SetFrameRate(frameRate * 3 / 2);
+            break;
+          case 6: case 12:
+            spectator->SetFrameRate(frameRate *  4 / 3);
+            break;
+          default:
+            spectator->SetFrameRate(2);
+        }
+        spectator->SendProgressReport();
+      }
+      break;
+    }
+
+    case HashCode("sync"): {
+      auto gameSource = GetGameSource();
+      if (!gameSource.GetIsSpectator()) {
+        ErrorReply("This command can only be used in spectator mode.");
+        break;
+      }
+      CAsyncObserver* spectator = gameSource.GetSpectator();
+      int64_t frameRate = spectator->GetFrameRate();
+      if (frameRate == 1) {
+        spectator->SendChat("Playback rate is already 1x.");
+      } else {
+        spectator->SetFrameRate(1);
+        spectator->SendChat("Playback rate set to " + to_string(spectator->GetFrameRate()) + "x");
+      }
       break;
     }
 

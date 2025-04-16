@@ -65,6 +65,7 @@ protected:
 public:
   // Game
   CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, CAsyncObserver* spectator, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
   CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
@@ -95,6 +96,7 @@ public:
   [[nodiscard]] inline const GameSource& InspectGameSource() const { return m_GameSource; }
   [[nodiscard]] inline uint8_t GetGameSourceUserType() const { return m_GameSource.GetType(); }
   inline void ResetGameSource() { m_GameSource.Reset(); }
+  inline void ExpireGameSource() { m_GameSource.Expire(); }
   [[nodiscard]] inline ServiceUser& GetServiceSource() { return m_ServiceSource; }
   [[nodiscard]] inline const ServiceUser& InspectServiceSource() const { return m_ServiceSource; }
   [[nodiscard]] inline uint8_t GetServiceSourceType() const { return m_ServiceSource.GetServiceType(); }
@@ -108,6 +110,8 @@ public:
   [[nodiscard]] GameUser::CGameUser* GetGameUser() const;
   [[nodiscard]] inline std::shared_ptr<CRealm> GetTargetRealm() const { return m_TargetRealm.lock(); }
   [[nodiscard]] inline std::shared_ptr<CGame> GetTargetGame() const { return m_TargetGame.lock(); }
+  inline void ResetTargetRealm() { m_TargetRealm.reset(); }
+  inline void ResetTargetGame() { m_TargetGame.reset(); }
 
   void SetIdentity(const std::string& userName);
   void SetAuthenticated(const bool& nAuthenticated);

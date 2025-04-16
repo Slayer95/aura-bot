@@ -101,12 +101,22 @@ namespace GameProtocol
     // Orthogonal to above
     constexpr uint8_t W3GS_HEADER        = 247u;// 0xF7
     constexpr uint8_t W3FW_HEADER        = 249u;// 0xF9
+
+    namespace ChatType
+    {
+      constexpr uint8_t CHAT_LOBBY         = 16u;
+      constexpr uint8_t REQUEST_TEAM       = 17u;
+      constexpr uint8_t REQUEST_COLOR      = 18u;
+      constexpr uint8_t REQUEST_RACE       = 19u;
+      constexpr uint8_t REQUEST_HANDICAP   = 20u;
+      constexpr uint8_t CHAT_IN_GAME       = 32u;    
+    };
   };
 
   enum class ChatToHostType : uint8_t
   {
-    CTH_MESSAGE        = 0u, // a chat message
-    CTH_MESSAGEEXTRA   = 1u, // a chat message with extra flags
+    CTH_MESSAGE_LOBBY  = 0u, // a lobby chat message
+    CTH_MESSAGE_INGAME = 1u, // an in-game chat message (has extra flags)
     CTH_TEAMCHANGE     = 2u, // a team change request
     CTH_COLOURCHANGE   = 3u, // a colour change request
     CTH_RACECHANGE     = 4u, // a race change request
@@ -152,7 +162,8 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_EMPTY_ACTIONS(uint32_t count);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(const ActionQueue& actions, uint16_t sendInterval);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(const ActionQueue& actions);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::vector<uint8_t>& flagExtra, const std::string& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const std::string& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::string& message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<GameUser::CGameUser*> users);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
@@ -310,12 +321,12 @@ private:
   uint8_t                             m_Byte;
   uint8_t                             m_FromUID;
   uint8_t                             m_Flag;
+  uint32_t                            m_ExtraFlags;
   std::vector<uint8_t>                m_ToUIDs;
-  std::vector<uint8_t>                m_ExtraFlags;
 
 public:
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage);
-  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage, std::vector<uint8_t> nExtraFlags);
+  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage, uint32_t nExtraFlags);
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
   ~CIncomingChatMessage();
 
@@ -325,7 +336,7 @@ public:
   [[nodiscard]] inline uint8_t                            GetFlag() const { return m_Flag; }
   [[nodiscard]] inline std::string                        GetMessage() const { return m_Message; }
   [[nodiscard]] inline uint8_t                            GetByte() const { return m_Byte; }
-  [[nodiscard]] inline const std::vector<uint8_t>&        GetExtraFlags() const { return m_ExtraFlags; }
+  [[nodiscard]] inline uint32_t                           GetExtraFlags() const { return m_ExtraFlags; }
 };
 
 class CIncomingMapFileSize

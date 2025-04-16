@@ -2134,23 +2134,23 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
 
   if (!m_GameLoading && !m_GameLoaded) {
     if (message.size() > 254)
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message.substr(0, 254)));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message.substr(0, 254)));
     else
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 16, std::vector<uint8_t>(), message));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
   } else {
-    uint8_t extraFlags[] = {3, 0, 0, 0};
+    uint32_t targetCode = 3;
 
     // based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
 
     uint8_t SID = GetSIDFromUID(user->GetUID());
 
     if (SID < m_Slots.size())
-      extraFlags[0] = 3 + m_Slots[SID].GetColor();
+      targetCode += m_Slots[SID].GetColor();
 
     if (message.size() > 127)
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message.substr(0, 127)));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message.substr(0, 127)));
     else
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), 32, CreateByteArray(extraFlags, 4), message));
+      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message));
   }
 }
 
@@ -2201,26 +2201,26 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
   bool success = false;
   if (message.size() < maxSize) {
     if (!m_GameLoading && !m_GameLoaded) {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), message));
+      success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
     } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_ALL), false), message));
+      success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, message));
     }
   } else {
     string leftMessage = message;
     while (leftMessage.size() > maxSize) {
       if (!m_GameLoading && !m_GameLoaded) {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage.substr(0, maxSize))) || success;
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, leftMessage.substr(0, maxSize))) || success;
       } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_ALL), false), leftMessage.substr(0, maxSize))) || success;
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, leftMessage.substr(0, maxSize))) || success;
       }
       leftMessage = leftMessage.substr(maxSize);
     }
 
     if (!leftMessage.empty()) {
       if (!m_GameLoading && !m_GameLoaded) {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 16, std::vector<uint8_t>(), leftMessage)) || success;
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, leftMessage)) || success;
       } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_ALL), false), leftMessage)) || success;
+        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, leftMessage)) || success;
       }
     }
   }
@@ -2263,16 +2263,16 @@ bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
   uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
   bool success = false;
   if (message.size() < maxSize) {
-    success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_OBS), false), message));
+    success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, message));
   } else {
     string leftMessage = message;
     while (leftMessage.size() > maxSize) {
-      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_OBS), false), leftMessage.substr(0, maxSize))) || success;
+      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, leftMessage.substr(0, maxSize))) || success;
       leftMessage = leftMessage.substr(maxSize);
     }
 
     if (!leftMessage.empty()) {
-      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, 32, CreateByteArray(static_cast<uint32_t>(CHAT_RECV_OBS), false), leftMessage)) || success;
+      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, leftMessage)) || success;
     }
   }
   return success;
@@ -4789,7 +4789,7 @@ void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
   // left reason, left code already assigned when queued
 }
 
-void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatPlayer) const
+void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatMessage) const
 {
   if (m_GameLoading && !m_Config.m_LoadInGame) {
     return;
@@ -4801,45 +4801,45 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
   const bool forceOnlyToObservers = forcePrivateChat && (
     m_Map->GetMapObservers() != MAPOBS_REFEREES || (m_UsesCustomReferees && !user->GetIsPowerObserver())
   );
-  const vector<uint8_t>& extraFlags = chatPlayer->GetExtraFlags();
+  const uint8_t extraFlags = (uint8_t)chatMessage->GetExtraFlags();
   if (forceOnlyToObservers) {
-    vector<uint8_t> overrideObserverUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
-    vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
+    vector<uint8_t> overrideObserverUIDs = GetChatObserverUIDs(chatMessage->GetFromUID()); // filters users in loading screen out
+    uint32_t overrideExtraFlags = CHAT_RECV_OBS;
     if (overrideObserverUIDs.empty()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening to [" + user->GetName() + "] --")
     } else {
-      vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideObserverUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage());
+      vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage->GetFromUID(), overrideObserverUIDs, chatMessage->GetFlag(), overrideExtraFlags, chatMessage->GetMessage());
       SendMulti(overrideObserverUIDs, packet);
     }
   } else if (forcePrivateChat) {
-    if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags[0] != CHAT_RECV_OBS) {
+    if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags != CHAT_RECV_OBS) {
       if (!m_MuteAll) {
-        vector<uint8_t> overrideTargetUIDs = GetChatUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
-        vector<uint8_t> overrideExtraFlags = {CHAT_RECV_ALL, 0, 0, 0};
+        vector<uint8_t> overrideTargetUIDs = GetChatUIDs(chatMessage->GetFromUID()); // filters users in loading screen out
+        uint32_t overrideExtraFlags = CHAT_RECV_ALL;
         if (!overrideTargetUIDs.empty()) {
-          if (extraFlags[0] != CHAT_RECV_ALL) {
+          if (extraFlags != CHAT_RECV_ALL) {
             LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All]")
           }
-          vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage());
+          vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage->GetFromUID(), overrideTargetUIDs, chatMessage->GetFlag(), overrideExtraFlags, chatMessage->GetMessage());
           SendMulti(overrideTargetUIDs, packet);
         }
-      } else if (extraFlags[0] != CHAT_RECV_ALL) { 
+      } else if (extraFlags != CHAT_RECV_ALL) { 
         LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All], but muteAll is active (message from [" + user->GetName() + "] discarded)")
       }
     } else {
       // enforce observer-only chat, just in case rogue clients are doing funny things
-      vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatPlayer->GetFromUID()); // filters users in loading screen out
-      vector<uint8_t> overrideExtraFlags = {CHAT_RECV_OBS, 0, 0, 0};
+      vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatMessage->GetFromUID()); // filters users in loading screen out
+      uint32_t overrideExtraFlags = CHAT_RECV_OBS;
       if (!overrideTargetUIDs.empty()) {
-        vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), overrideTargetUIDs, chatPlayer->GetFlag(), overrideExtraFlags, chatPlayer->GetMessage());
+        vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage->GetFromUID(), overrideTargetUIDs, chatMessage->GetFlag(), overrideExtraFlags, chatMessage->GetMessage());
         SendMulti(overrideTargetUIDs, packet);
-        if (extraFlags[0] != CHAT_RECV_OBS) {
+        if (extraFlags != CHAT_RECV_OBS) {
           LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] enforced server-side")
         }
       }
     }
   } else {
-    SendMulti(chatPlayer->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatPlayer->GetFromUID(), chatPlayer->GetToUIDs(), chatPlayer->GetFlag(), chatPlayer->GetExtraFlags(), chatPlayer->GetMessage()));
+    SendMulti(chatMessage->GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage->GetFromUID(), chatMessage->GetToUIDs(), chatMessage->GetFlag(), chatMessage->GetExtraFlags(), chatMessage->GetMessage()));
   }
 }
 
@@ -5950,180 +5950,186 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
   }
 }
 
-void CGame::EventUserChatToHost(GameUser::CGameUser* user, CIncomingChatMessage* chatPlayer)
+void CGame::EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incomingChatMessage)
 {
-  if (chatPlayer->GetFromUID() == user->GetUID())
-  {
-    if (chatPlayer->GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE || chatPlayer->GetType() == GameProtocol::ChatToHostType::CTH_MESSAGEEXTRA)
-    {
-      // relay the chat message to other users
+  const bool isLobbyChat = incomingChatMessage->GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
+  if (isLobbyChat == (m_GameLoading || m_GameLoaded)) {
+    // Racing condition
+    return;
+  }
 
-      bool shouldRelay = true;
-      if (user->GetIsMuted()) {
-        if (user->GetMuteEndTicks() < GetTicks()) {
-          user->UnMute();
-        } else {
+  bool shouldRelay = true; // relay the chat message to other users
+  if (user->GetIsMuted()) {
+    if (user->GetMuteEndTicks() < GetTicks()) {
+      user->UnMute();
+    } else {
+      shouldRelay = false;
+    }
+  }
+
+  string chatTypeFragment;
+  if (isLobbyChat) {
+    if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
+      Log("[" + user->GetDisplayName() + "] " + incomingChatMessage->GetMessage());
+      if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_NON_ASCII) && !IsASCII(incomingChatMessage->GetMessage())) {
+        m_Aura->LogPersistent(GetLogPrefix() + "[Lobby] ["+ user->GetExtendedName() + "] " + incomingChatMessage->GetMessage());
+      }
+    }
+    if (m_MuteLobby) {
+      shouldRelay = false;
+    }
+  } else {
+    const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage->GetExtraFlags());
+    switch (targetType) {
+      case CHAT_RECV_ALL:
+        chatTypeFragment = "[All] ";
+
+        if (m_MuteAll) {
+          // don't relay ingame messages targeted for all users if we're currently muting all
+          // note that any commands will still be processed
           shouldRelay = false;
         }
-      }
-      const vector<uint8_t>& extraFlags = chatPlayer->GetExtraFlags();
-      const bool isLobbyChat = extraFlags.empty();
-      if (isLobbyChat == (m_GameLoading || m_GameLoaded)) {
-        // Racing condition
-        return;
-      }
-
-      // calculate timestamp
-
-      string chatTypeFragment;
-      if (isLobbyChat) {
-        if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
-          Log("[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
-          if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_NON_ASCII) && !IsASCII(chatPlayer->GetMessage())) {
-            m_Aura->LogPersistent(GetLogPrefix() + "[Lobby] ["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
-          }
-        }
-        if (m_MuteLobby) {
-          shouldRelay = false;
-        }
-      } else {
-        if (extraFlags[0] == CHAT_RECV_ALL) {
-          chatTypeFragment = "[All] ";
-
-          if (m_MuteAll) {
-            // don't relay ingame messages targeted for all users if we're currently muting all
-            // note that any commands will still be processed
-            shouldRelay = false;
-          }
-        } else if (extraFlags[0] == CHAT_RECV_ALLY) {
-          chatTypeFragment = "[Allies] ";
-        } else if (extraFlags[0] == CHAT_RECV_OBS) {
-          // [Observer] or [Referees]
-          chatTypeFragment = "[Observer] ";
-        } else if (!m_MuteAll) {
+        break;
+      case CHAT_RECV_ALLY:
+        chatTypeFragment = "[Allies] ";
+        break;
+      case CHAT_RECV_OBS:
+        // [Observer] or [Referees]
+        chatTypeFragment = "[Observer] ";
+        break;
+      default:
+        if (!m_MuteAll) {
           // also don't relay in-game private messages if we're currently muting all
-          uint8_t privateTarget = extraFlags[0] - 2;
+          uint8_t privateTarget = targetType - 2;
           chatTypeFragment = "[Private " + ToDecString(privateTarget) + "] ";
         }
+    }
 
-        if (m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
-          Log(chatTypeFragment + "[" + user->GetDisplayName() + "] " + chatPlayer->GetMessage());
-        }
-      }
+    if (m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
+      Log(chatTypeFragment + "[" + user->GetDisplayName() + "] " + incomingChatMessage->GetMessage());
+    }
+  }
 
-      // handle bot commands
-      {
-        shared_ptr<CRealm> realm = user->GetRealm(false);
-        CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config.m_LANCommandCFG;
-        const bool commandsEnabled = commandCFG->m_Enabled && (
-          !realm || !(commandCFG->m_RequireVerified && !user->IsRealmVerified())
-        );
-        bool isCommand = false;
-        const uint8_t activeSmartCommand = user->GetSmartCommand();
-        user->ClearSmartCommand();
-        if (commandsEnabled) {
-          const string message = chatPlayer->GetMessage();
-          string cmdToken, command, target;
-          uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
-          isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
-          if (isCommand) {
-            user->SetUsedAnyCommands(true);
-            // If we want users identities hidden, we must keep bot responses private.
-            if (shouldRelay) {
-              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
-              shouldRelay = false;
-            }
-            shared_ptr<CCommandContext> ctx = nullptr;
-            try {
-              ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
-            } catch (...) {}
-            if (ctx) ctx->Run(cmdToken, command, target);
-          } else if (message == "?trigger") {
-            if (shouldRelay) {
-              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
-              shouldRelay = false;
-            }
-            SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, false);
-          } else if (message == "/p" || message == "/ping" || message == "/game") {
-            // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
-            // Therefore, these commands are only effective over LAN.
-            if (shouldRelay) {
-              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
-              shouldRelay = false;
-            }
-            shared_ptr<CCommandContext> ctx = nullptr;
-            try {
-              ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
-            } catch (...) {}
-            if (ctx) {
-              cmdToken = m_Config.m_PrivateCmdToken;
-              command = message.substr(1);
-              ctx->Run(cmdToken, command, target);
-            }
-          } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
-            if (shouldRelay) {
-              if (!GetIsHiddenPlayerNames()) SendChatMessage(user, chatPlayer);
-              shouldRelay = false;
-            }
-            if (!CheckSmartCommands(user, message, activeSmartCommand, commandCFG) && !user->GetSentAutoCommandsHelp()) {
-              bool anySentCommands = false;
-              for (const auto& otherPlayer : m_Users) {
-                if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
-              }
-              if (!anySentCommands) {
-                SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, true);
-              }
-            }
-          }
-        }
-        if (!isCommand) {
-          user->ClearLastCommand();
-        }
+  // handle bot commands
+  {
+    shared_ptr<CRealm> realm = user->GetRealm(false);
+    CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config.m_LANCommandCFG;
+    const bool commandsEnabled = commandCFG->m_Enabled && (
+      !realm || !(commandCFG->m_RequireVerified && !user->GetIsRealmVerified())
+    );
+    bool isCommand = false;
+    const uint8_t activeSmartCommand = user->GetSmartCommand();
+    user->ClearSmartCommand();
+    if (commandsEnabled) {
+      const string message = incomingChatMessage->GetMessage();
+      string cmdToken, command, target;
+      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
+      isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
+      if (isCommand) {
+        user->SetUsedAnyCommands(true);
+        // If we want users identities hidden, we must keep bot responses private.
         if (shouldRelay) {
-          SendChatMessage(user, chatPlayer);
+          if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
           shouldRelay = false;
         }
-        if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
-          bool logMessage = false;
-          for (const auto& word : m_Config.m_LoggedWords) {
-            if (chatPlayer->GetMessage().find(word) != string::npos) {
-              logMessage = true;
-              break;
-            }
+        shared_ptr<CCommandContext> ctx = nullptr;
+        try {
+          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+        } catch (...) {}
+        if (ctx) ctx->Run(cmdToken, command, target);
+      } else if (message == "?trigger") {
+        if (shouldRelay) {
+          if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
+          shouldRelay = false;
+        }
+        SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, false);
+      } else if (message == "/p" || message == "/ping" || message == "/game") {
+        // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
+        // Therefore, these commands are only effective over LAN.
+        if (shouldRelay) {
+          if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
+          shouldRelay = false;
+        }
+        shared_ptr<CCommandContext> ctx = nullptr;
+        try {
+          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
+        } catch (...) {}
+        if (ctx) {
+          cmdToken = m_Config.m_PrivateCmdToken;
+          command = message.substr(1);
+          ctx->Run(cmdToken, command, target);
+        }
+      } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
+        if (shouldRelay) {
+          if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
+          shouldRelay = false;
+        }
+        if (!CheckSmartCommands(user, message, activeSmartCommand, commandCFG) && !user->GetSentAutoCommandsHelp()) {
+          bool anySentCommands = false;
+          for (const auto& otherPlayer : m_Users) {
+            if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
           }
-          if (logMessage) {
-            m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetExtendedName() + "] " + chatPlayer->GetMessage());
+          if (!anySentCommands) {
+            SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, true);
           }
         }
       }
     }
-    else
-    {
-      if (!m_CountDownStarted && !m_RestoredGame) {
-        switch (chatPlayer->GetType()) {
-          case GameProtocol::ChatToHostType::CTH_TEAMCHANGE:
-            EventUserChangeTeam(user, chatPlayer->GetByte());
-            break;
-          case GameProtocol::ChatToHostType::CTH_COLOURCHANGE:
-            EventUserChangeColor(user, chatPlayer->GetByte());
-            break;
-          case GameProtocol::ChatToHostType::CTH_RACECHANGE:
-            EventUserChangeRace(user, chatPlayer->GetByte());
-            break;
-          case GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE:
-            EventUserChangeHandicap(user, chatPlayer->GetByte());
-            break;
-          default:
-            break;
+    if (!isCommand) {
+      user->ClearLastCommand();
+    }
+    if (shouldRelay) {
+      SendChatMessage(user, incomingChatMessage);
+      shouldRelay = false;
+    }
+    if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
+      bool logMessage = false;
+      for (const auto& word : m_Config.m_LoggedWords) {
+        if (incomingChatMessage->GetMessage().find(word) != string::npos) {
+          logMessage = true;
+          break;
         }
+      }
+      if (logMessage) {
+        m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetExtendedName() + "] " + incomingChatMessage->GetMessage());
       }
     }
   }
 }
 
-void CGame::EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team)
+void CGame::EventUserChatOrPlayerSettings(GameUser::CGameUser* user, CIncomingChatMessage* incomingChatMessage)
+{
+  if (incomingChatMessage->GetFromUID() != user->GetUID()) {
+    return;
+  }
+
+  switch (incomingChatMessage->GetType()) {
+    case GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY:
+    case GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME:
+      EventUserChat(user, incomingChatMessage);
+      break;
+    case GameProtocol::ChatToHostType::CTH_TEAMCHANGE:
+      EventUserRequestTeam(user, incomingChatMessage->GetByte());
+      break;
+    case GameProtocol::ChatToHostType::CTH_COLOURCHANGE:
+      EventUserRequestColor(user, incomingChatMessage->GetByte());
+      break;
+    case GameProtocol::ChatToHostType::CTH_RACECHANGE:
+      EventUserRequestRace(user, incomingChatMessage->GetByte());
+      break;
+    case GameProtocol::ChatToHostType::CTH_HANDICAPCHANGE:
+      EventUserRequestHandicap(user, incomingChatMessage->GetByte());
+      break;
+  }
+}
+
+void CGame::EventUserRequestTeam(GameUser::CGameUser* user, uint8_t team)
 {
   // user is requesting a team change
+
+  if (m_CountDownStarted || m_RestoredGame) {
+    return;
+  }
 
   if (m_Locked || user->GetIsActionLocked()) {
     SendChat(user, "You are not allowed to change your alignment.");
@@ -6174,9 +6180,13 @@ void CGame::EventUserChangeTeam(GameUser::CGameUser* user, uint8_t team)
   }
 }
 
-void CGame::EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour)
+void CGame::EventUserRequestColor(GameUser::CGameUser* user, uint8_t colour)
 {
   // user is requesting a colour change
+
+  if (m_CountDownStarted || m_RestoredGame) {
+    return;
+  }
 
   if (m_Locked || user->GetIsActionLocked()) {
     SendChat(user, "You are not allowed to change your player color.");
@@ -6207,9 +6217,13 @@ void CGame::EventUserChangeColor(GameUser::CGameUser* user, uint8_t colour)
   }
 }
 
-void CGame::EventUserChangeRace(GameUser::CGameUser* user, uint8_t race)
+void CGame::EventUserRequestRace(GameUser::CGameUser* user, uint8_t race)
 {
   // user is requesting a race change
+
+  if (m_CountDownStarted || m_RestoredGame) {
+    return;
+  }
 
   if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS)
     return;
@@ -6234,9 +6248,13 @@ void CGame::EventUserChangeRace(GameUser::CGameUser* user, uint8_t race)
   }
 }
 
-void CGame::EventUserChangeHandicap(GameUser::CGameUser* user, uint8_t handicap)
+void CGame::EventUserRequestHandicap(GameUser::CGameUser* user, uint8_t handicap)
 {
   // user is requesting a handicap change
+
+  if (m_CountDownStarted || m_RestoredGame) {
+    return;
+  }
 
   if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS)
     return;
@@ -7816,7 +7834,7 @@ uint8_t CGame::GetPublicHostUID() const
       continue;
     }
     if (MatchOwnerName(user->GetName())) {
-      if (user->IsRealmVerified() && user->GetRealmHostName() == m_OwnerRealm) {
+      if (user->GetIsRealmVerified() && user->GetRealmHostName() == m_OwnerRealm) {
         return user->GetUID();
       }
       if (user->GetRealmHostName().empty() && m_OwnerRealm.empty()) {
@@ -8438,7 +8456,7 @@ bool CGame::SetSlotColor(const uint8_t SID, const uint8_t colour, const bool for
 
   if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
     // With fixed user settings we try to swap slots.
-    // This is not exposed to EventUserChangeColor,
+    // This is not exposed to EventUserRequestColor,
     // but it's useful for !color.
     //
     // Old: !swap 3 7
@@ -9390,7 +9408,7 @@ bool CGame::GetCanStartGracefulCountDown() const
     }
 
     shared_ptr<CRealm> realm = user->GetRealm(false);
-    if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
+    if (realm && realm->GetUnverifiedCannotStartGame() && !user->GetIsRealmVerified()) {
       return false;
     }
   }
@@ -9449,7 +9467,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
       bool shouldKick = !user->GetMapReady();
       if (!shouldKick) {
         shared_ptr<CRealm> realm = user->GetRealm(false);
-        if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
+        if (realm && realm->GetUnverifiedCannotStartGame() && !user->GetIsRealmVerified()) {
           shouldKick = true;
         }
       }
@@ -9526,7 +9544,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
         if (m_UsesCustomReferees && !user->GetIsPowerObserver()) continue;
       }
       shared_ptr<CRealm> realm = user->GetRealm(false);
-      if (realm && realm->GetUnverifiedCannotStartGame() && !user->IsRealmVerified()) {
+      if (realm && realm->GetUnverifiedCannotStartGame() && !user->GetIsRealmVerified()) {
         unverifiedUsers.push_back(user);
       }
     }

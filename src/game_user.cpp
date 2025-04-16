@@ -118,9 +118,6 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_LeftMessageSent(false),
     m_StatusMessageSent(false),
     m_LatencySent(false),
-    m_UsedAnyCommands(false),
-    m_SentAutoCommandsHelp(false),
-    m_SmartCommand(SMART_COMMAND_NONE),
     m_CheckStatusByTicks(GetTicks() + CHECK_STATUS_LATENCY),
     m_MuteEndTicks(0),
 
@@ -128,11 +125,14 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_GProxyPort(0),
     m_GProxyCheckGameID(false),
     m_GProxyDisconnectNoticeSent(false),
-
     m_GProxyExtended(false),
     m_GProxyVersion(0),
     m_Disconnected(false),
     m_TotalDisconnectTicks(0),
+
+    m_UsedAnyCommands(false),
+    m_SentAutoCommandsHelp(false),
+    m_SmartCommand(SMART_COMMAND_NONE),
 
     m_TeamCaptain(0),
     m_ActionCounter(0),
@@ -521,7 +521,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             CIncomingChatMessage* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
             if (ChatPlayer) {
-              m_Game.get().EventUserChatToHost(this, ChatPlayer);
+              m_Game.get().EventUserChatOrPlayerSettings(this, ChatPlayer);
               delete ChatPlayer;
 
               if (m_Disconnected) {
@@ -1088,7 +1088,7 @@ bool CGameUser::GetIsOwner(optional<bool> assumeVerified) const
   if (assumeVerified.has_value()) {
     isVerified = assumeVerified.value();
   } else {
-    isVerified = IsRealmVerified();
+    isVerified = GetIsRealmVerified();
   }
   return m_Game.get().MatchOwnerName(m_Name) && m_RealmHostName == m_Game.get().GetOwnerRealm() && (
     isVerified || m_RealmHostName.empty()
