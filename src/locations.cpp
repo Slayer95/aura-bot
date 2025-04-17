@@ -48,23 +48,23 @@ ServiceUser::ServiceUser(const ServiceUser& otherService)
 {
 };
 
-ServiceUser::ServiceUser(uint8_t serviceType, string nUserName)
- : serviceType(SERVICE_TYPE_NONE),
+ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName)
+ : serviceType(nServiceType),
    api(nullptr),
    userName(nUserName)
 {
 };
 
-ServiceUser::ServiceUser(uint8_t serviceType, int64_t nUserIdentifier, string nUserName, void* nAPI)
- : serviceType(SERVICE_TYPE_NONE),
+ServiceUser::ServiceUser(uint8_t nServiceType, int64_t nUserIdentifier, string nUserName, void* nAPI)
+ : serviceType(nServiceType),
    api(nAPI),
    userIdentifier(nUserIdentifier),
    userName(nUserName)
 {
 };
 
-ServiceUser::ServiceUser(uint8_t serviceType, string nUserName, shared_ptr<void> nServicePtr)
- : serviceType(SERVICE_TYPE_NONE),
+ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName, shared_ptr<void> nServicePtr)
+ : serviceType(nServiceType),
    api(nullptr),
    servicePtr(nServicePtr),
    userName(nUserName)
