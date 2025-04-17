@@ -8039,7 +8039,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
             spectator->SetFrameRate(frameRate *  4 / 3);
             break;
           default:
-            spectator->SetFrameRate(2);
+            spectator->SetFrameRate(2 * frameRate);
         }
         spectator->SendProgressReport();
       }
