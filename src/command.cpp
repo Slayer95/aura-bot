@@ -1234,18 +1234,27 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     m_Aura->m_SudoAuthTarget = m_Aura->GetSudoAuthTarget(target);
     m_Aura->m_SudoExecCommand = target;
     SendReply("Sudo command requested. See Aura's console for further steps.");
-    Print("[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + cmdToken + target + "\"");
+
+    string notificationText = "[AURA] Sudoer " + GetUserAttribution() + " requests command \"" + cmdToken + target + "\"";
+    Print(notificationText);
+    m_Aura->LogPersistent(notificationText);
+
+    string confirmationText;
     if (baseSourceRealm && m_FromWhisper) {
-      Print("[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + baseSourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"");
+      confirmationText = "[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + baseSourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"";
     } else {
       switch (GetServiceSourceType()) {
         case SERVICE_TYPE_IRC:
         case SERVICE_TYPE_DISCORD:
-          Print("[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"");
+          confirmationText = "[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"";
           break;
         default:
-          Print("[AURA] Confirm from the game client with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"");
+          confirmationText = "[AURA] Confirm from the game client with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"";
       }
+    }
+    if (!confirmationText.empty()) {
+      Print(confirmationText);
+      m_Aura->LogPersistent(confirmationText);
     }
     return;
   }
