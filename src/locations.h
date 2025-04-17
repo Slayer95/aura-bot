@@ -222,8 +222,11 @@ struct GameSource
   inline bool GetIsReplay() const { return userType == COMMAND_SOURCE_GAME_REPLAY; }
   inline bool GetIsGameExpired() const { return game.expired(); }
 
+  /* In reality, these 3 functions are the same */
   inline GameUser::CGameUser* GetUser() const { return user; }
   inline CAsyncObserver* GetSpectator() const { return spectator; }
+  CConnection* GetUserOrSpectator() const;
+
   inline std::shared_ptr<CGame> GetGame() const { return game.lock(); }
 
   void Expire();

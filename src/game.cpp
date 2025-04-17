@@ -2169,6 +2169,11 @@ void CGame::SendChat(uint8_t toUID, const string& message, const uint8_t logLeve
   SendChat(GetHostUID(), toUID, message, logLevel);
 }
 
+void CGame::SendChat(CAsyncObserver* spectator, const string& message, const uint8_t /*logLevel*/) const
+{
+  spectator->SendChat(message);
+}
+
 bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
 {
   if (m_GameLoading && !m_Config.m_LoadInGame)
@@ -3613,7 +3618,7 @@ void CGame::SendCommandsHelp(const string& cmdToken, GameUser::CGameUser* user, 
   if (MatchOwnerName(user->GetName())) {
     SendOwnerCommandsHelp(cmdToken, user);
   }
-  user->SetSentAutoCommandsHelp(true);
+  user->GetCommandHistory()->SetSentAutoCommandsHelp(true);
 }
 
 void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
@@ -4597,7 +4602,7 @@ void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
 
 void CGame::OnRecoverableDisconnect(GameUser::CGameUser* user)
 {
-  user->SudoModeEnd();
+  user->GetCommandHistory()->SudoModeEnd(m_Aura, shared_from_this(), user->GetName());
 
   if (!user->GetIsLagging()) {
     SetLaggingPlayerAndUpdate(user);
@@ -6012,21 +6017,22 @@ void CGame::EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incom
 
   // handle bot commands
   {
+    CommandHistory* cmdHistory = user->GetCommandHistory();
     shared_ptr<CRealm> realm = user->GetRealm(false);
     CCommandConfig* commandCFG = realm ? realm->GetCommandConfig() : m_Aura->m_Config.m_LANCommandCFG;
     const bool commandsEnabled = commandCFG->m_Enabled && (
       !realm || !(commandCFG->m_RequireVerified && !user->GetIsRealmVerified())
     );
     bool isCommand = false;
-    const uint8_t activeSmartCommand = user->GetSmartCommand();
-    user->ClearSmartCommand();
+    const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
+    cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
       const string message = incomingChatMessage->GetMessage();
       string cmdToken, command, target;
       uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
       isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
       if (isCommand) {
-        user->SetUsedAnyCommands(true);
+        cmdHistory->SetUsedAnyCommands(true);
         // If we want users identities hidden, we must keep bot responses private.
         if (shouldRelay) {
           if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
@@ -6059,15 +6065,15 @@ void CGame::EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incom
           command = message.substr(1);
           ctx->Run(cmdToken, command, target);
         }
-      } else if (isLobbyChat && !user->GetUsedAnyCommands()) {
+      } else if (isLobbyChat && !cmdHistory->GetUsedAnyCommands()) {
         if (shouldRelay) {
           if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
           shouldRelay = false;
         }
-        if (!CheckSmartCommands(user, message, activeSmartCommand, commandCFG) && !user->GetSentAutoCommandsHelp()) {
+        if (!CheckSmartCommands(user, message, activeSmartCommand, commandCFG) && !cmdHistory->GetSentAutoCommandsHelp()) {
           bool anySentCommands = false;
           for (const auto& otherPlayer : m_Users) {
-            if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
+            if (otherPlayer->GetCommandHistory()->GetUsedAnyCommands()) anySentCommands = true;
           }
           if (!anySentCommands) {
             SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, true);
@@ -6076,7 +6082,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incom
       }
     }
     if (!isCommand) {
-      user->ClearLastCommand();
+      cmdHistory->ClearLastCommand();
     }
     if (shouldRelay) {
       SendChatMessage(user, incomingChatMessage);
@@ -6820,7 +6826,7 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
         string target;
         ctx->Run(cmdToken, command, target);
       } else {
-        user->SetSmartCommand(SMART_COMMAND_GO);
+        user->GetCommandHistory()->SetSmartCommand(SMART_COMMAND_GO);
         SendChat(user, "You may type [" + message + "] again to start the game.");
       }
       return true;

@@ -147,6 +147,9 @@
     <ClCompile Include="command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="command_history.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="locations.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -330,6 +333,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="command.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="command_history.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="locations.h">

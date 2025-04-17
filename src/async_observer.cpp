@@ -76,9 +76,6 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_LastPingTicks(APP_MIN_TICKS),
     m_LastProgressReportTime(APP_MIN_TICKS),
     m_LastProgressReportLog(0),
-    m_UsedAnyCommands(false),
-    m_SentAutoCommandsHelp(false),
-    m_SmartCommand(SMART_COMMAND_NONE),
     m_Name(nName)
 {
   m_Socket->SetLogErrors(true);
@@ -545,6 +542,8 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
     gameConfig = m_Aura->m_GameDefaultConfig;
   }
 
+  CommandHistory* cmdHistory = GetCommandHistory();
+
   // handle bot commands
   {
     shared_ptr<CRealm> realm = GetRealm();
@@ -553,15 +552,15 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
       !realm || !(commandCFG->m_RequireVerified && !GetIsRealmVerified())
     );
     bool isCommand = false;
-    const uint8_t activeSmartCommand = GetSmartCommand();
-    ClearSmartCommand();
+    const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
+    cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
       const string message = incomingChatMessage->GetMessage();
       string cmdToken, command, target;
       uint8_t tokenMatch = ExtractMessageTokensAny(message, gameConfig->m_PrivateCmdToken, gameConfig->m_BroadcastCmdToken, cmdToken, command, target);
       isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
       if (isCommand) {
-        SetUsedAnyCommands(true);
+        cmdHistory->SetUsedAnyCommands(true);
         // If we want users identities hidden, we must keep bot responses private.
         if (shouldRelay) {
           //SendChat(incomingChatMessage);
@@ -595,17 +594,17 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
           command = message.substr(1);
           ctx->Run(cmdToken, command, target);
         }
-      } else if (isLobbyChat && !GetUsedAnyCommands()) {
+      } else if (isLobbyChat && !cmdHistory->GetUsedAnyCommands()) {
         if (shouldRelay) {
           //SendChat(incomingChatMessage);
           shouldRelay = false;
         }
         /*
         // TODO: SmartCommands
-        if (!GetGame()->CheckSmartCommands(this, message, activeSmartCommand, commandCFG) && !GetSentAutoCommandsHelp()) {
+        if (!GetGame()->CheckSmartCommands(this, message, activeSmartCommand, commandCFG) && !GetCommandHistory()->GetSentAutoCommandsHelp()) {
           bool anySentCommands = false;
           for (const auto& otherPlayer : m_Users) {
-            if (otherPlayer->GetUsedAnyCommands()) anySentCommands = true;
+            if (otherPlayer->GetCommandHistory()->GetUsedAnyCommands()) anySentCommands = true;
           }
           if (!anySentCommands) {
             SendCommandsHelp(gameConfig->m_BroadcastCmdToken.empty() ? gameConfig->m_PrivateCmdToken : gameConfig->m_BroadcastCmdToken, this, true);
@@ -615,7 +614,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
       }
     }
     if (!isCommand) {
-      ClearLastCommand();
+      cmdHistory->ClearLastCommand();
       SendChat("You are in spectator mode. Chat is RESTRICTED.");
     }
     if (shouldRelay) {

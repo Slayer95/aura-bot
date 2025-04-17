@@ -130,10 +130,6 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_Disconnected(false),
     m_TotalDisconnectTicks(0),
 
-    m_UsedAnyCommands(false),
-    m_SentAutoCommandsHelp(false),
-    m_SmartCommand(SMART_COMMAND_NONE),
-
     m_TeamCaptain(0),
     m_ActionCounter(0),
     m_AntiAbuseCounter(0),
@@ -866,7 +862,7 @@ void CGameUser::CheckGProxyExtendedStartHandShake() const
 void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket)
 {
   // prevent potential session hijackers from stealing sudo access
-  SudoModeEnd();
+  GetCommandHistory()->SudoModeEnd(m_Game.get().m_Aura, GetGame(), GetName());
 
   // Runs from the CConnection iterator, so appending to CNet::m_IncomingConnections needs to wait
   // UnrefConnection(deferred = true) takes care of this
@@ -1013,43 +1009,6 @@ string CGameUser::GetSyncText() const
     }
   }
   return behindTimeText;
-}
-
-bool CGameUser::GetIsSudoMode() const
-{
-  if (!m_SudoMode.has_value()) return false;
-  return GetTime() < m_SudoMode.value();
-}
-
-bool CGameUser::CheckSudoMode()
-{
-  if (GetIsSudoMode()) return true;
-  if (m_SudoMode.has_value()) {
-    m_SudoMode = nullopt;
-    if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-      Print(m_Game.get().GetLogPrefix() + "sudo session expired for [" + m_Name + "]");
-    }
-  }
-  return false;
-}
-
-void CGameUser::SudoModeStart()
-{
-  if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-    Print(m_Game.get().GetLogPrefix() + "sudo session started by [" + m_Name + "]");
-  }
-  m_SudoMode = GetTime() + 600;
-}
-
-void CGameUser::SudoModeEnd()
-{
-  if (!GetIsSudoMode()) {
-    return;
-  }
-  if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
-    Print(m_Game.get().GetLogPrefix() + "sudo session ended by [" + m_Name + "]");
-  }
-  m_SudoMode = nullopt;
 }
 
 bool CGameUser::GetIsNativeReferee() const

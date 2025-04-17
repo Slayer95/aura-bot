@@ -104,6 +104,7 @@ struct CGameVirtualUserReference;
 struct AppAction;
 struct BannableUserSearchResult;
 struct CGameLogRecord;
+struct CommandHistory;
 struct FileChunkCached;
 struct FileChunkTransient;
 struct GameControllerSearchResult;

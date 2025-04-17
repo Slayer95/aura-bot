@@ -27,6 +27,7 @@
 #define AURA_ASYNC_OBSERVER_H_
 
 #include "includes.h"
+#include "command_history.h"
 #include "connection.h"
 #include "game_structs.h"
 #include "map.h"
@@ -42,6 +43,7 @@ class CAsyncObserver final : public CConnection
 public:
   std::weak_ptr<CGame>                                          m_Game;
   MapTransfer                                                   m_MapTransfer;
+  CommandHistory                                                m_CommandHistory;
   std::weak_ptr<CRealm>                                         m_FromRealm;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
   bool                                                          m_MapChecked;                   // if we received any W3GS_MAPSIZE packet from the client
@@ -81,12 +83,6 @@ public:
   int64_t                                                       m_LastProgressReportTime;
   uint8_t                                                       m_LastProgressReportLog;
 
-
-  bool                                                          m_UsedAnyCommands;              // if the playerleave message has been sent or not
-  bool                                                          m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
-  uint8_t                                                       m_SmartCommand;
-  std::string                                                   m_LastCommand;
-
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
 
@@ -104,6 +100,8 @@ public:
 
   [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
   [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
+  [[nodiscard]] inline CommandHistory*          GetCommandHistory() { return &m_CommandHistory; }
+  [[nodiscard]] inline const CommandHistory*    InspectCommandHistory() const { return &m_CommandHistory; }
   [[nodiscard]] inline std::shared_ptr<CRealm>  GetRealm() { return m_FromRealm.lock(); }
 
   [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
@@ -163,17 +161,6 @@ public:
   [[nodiscard]] inline bool static SortObserversByDownloadProgressAscending(const CAsyncObserver* a, const CAsyncObserver* b) {
     return a->InspectMapTransfer().GetLastSentOffsetEnd() < b->InspectMapTransfer().GetLastSentOffsetEnd();
   }  
-
-  [[nodiscard]] inline std::string GetLastCommand() const { return m_LastCommand; }
-  inline void ClearLastCommand() { m_LastCommand.clear(); }
-  inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
-  [[nodiscard]] inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
-  [[nodiscard]] inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
-  [[nodiscard]] inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
-  inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
-  inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
-  inline void SetSmartCommand(const uint8_t nValue) { m_SmartCommand = nValue; }
-  inline void ClearSmartCommand() { m_SmartCommand = SMART_COMMAND_NONE; }
 };
 
 #endif // AURA_ASYNC_OBSERVER_H_

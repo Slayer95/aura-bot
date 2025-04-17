@@ -120,6 +120,11 @@ GameSource::~GameSource()
 {
 }
 
+CConnection* GameSource::GetUserOrSpectator() const
+{
+  return static_cast<CConnection*>(user);
+}
+
 void GameSource::Expire()
 {
   switch (userType) {

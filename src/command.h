@@ -92,22 +92,31 @@ public:
   [[nodiscard]] std::ostream* GetOutputStream() { return m_Output; }  
 
   [[nodiscard]] inline bool GetIsWhisper() const { return m_FromWhisper; }
+
   [[nodiscard]] inline GameSource& GetGameSource() { return m_GameSource; }
   [[nodiscard]] inline const GameSource& InspectGameSource() const { return m_GameSource; }
   [[nodiscard]] inline uint8_t GetGameSourceUserType() const { return m_GameSource.GetType(); }
   inline void ResetGameSource() { m_GameSource.Reset(); }
   inline void ExpireGameSource() { m_GameSource.Expire(); }
+
+  [[nodiscard]] std::shared_ptr<CGame> GetSourceGame() const;
+  [[nodiscard]] inline bool GetIsGameUser() const { return m_GameSource.GetIsUser(); }
+  [[nodiscard]] GameUser::CGameUser* GetGameUser() const;
+  [[nodiscard]] CConnection* GetGameUserOrSpectator() const;
+
+  [[nodiscard]] inline bool GetHasCommandHistory() const { return !m_GameSource.GetIsEmpty(); }
+  [[nodiscard]] CommandHistory* GetCommandHistory() const;
+
   [[nodiscard]] inline ServiceUser& GetServiceSource() { return m_ServiceSource; }
   [[nodiscard]] inline const ServiceUser& InspectServiceSource() const { return m_ServiceSource; }
   [[nodiscard]] inline uint8_t GetServiceSourceType() const { return m_ServiceSource.GetServiceType(); }
   inline void ResetServiceSource() { m_ServiceSource.Reset(); }
   [[nodiscard]] inline bool GetIsAnonymous() const { return m_ServiceSource.GetIsAnonymous(); }
-  [[nodiscard]] inline bool GetIsGameUser() const { return m_GameSource.GetIsUser(); }
+
   [[nodiscard]] inline const std::string& GetSender() const { return m_ServiceSource.GetUser(); }
   [[nodiscard]] std::string GetChannelName() const;
   [[nodiscard]] std::shared_ptr<CRealm> GetSourceRealm() const;
-  [[nodiscard]] std::shared_ptr<CGame> GetSourceGame() const;
-  [[nodiscard]] GameUser::CGameUser* GetGameUser() const;
+
   [[nodiscard]] inline std::shared_ptr<CRealm> GetTargetRealm() const { return m_TargetRealm.lock(); }
   [[nodiscard]] inline std::shared_ptr<CGame> GetTargetGame() const { return m_TargetGame.lock(); }
   inline void ResetTargetRealm() { m_TargetRealm.reset(); }
@@ -143,7 +152,7 @@ public:
   [[nodiscard]] GameUser::CGameUser* GetTargetUser(const std::string& target);
   [[nodiscard]] GameUser::CGameUser* RunTargetUser(const std::string& target);
   [[nodiscard]] GameUser::CGameUser* GetTargetUserOrSelf(const std::string& target);
-  [[nodiscard]] GameUser::CGameUser* RunTargetPlayerOrSelf(const std::string& target);
+  [[nodiscard]] GameUser::CGameUser* RunTargetUserOrSelf(const std::string& target);
   [[nodiscard]] GameControllerSearchResult GetParseController(const std::string& target);
   [[nodiscard]] GameControllerSearchResult RunParseController(const std::string& target);
   [[nodiscard]] std::optional<uint8_t> GetParseNonPlayerSlot(const std::string& target);

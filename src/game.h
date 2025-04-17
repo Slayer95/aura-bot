@@ -459,6 +459,7 @@ public:
   void                                                   SendChat(uint8_t fromUID, GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                                                   SendChat(uint8_t fromUID, uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                                                   SendChat(GameUser::CGameUser* user, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
+  void                                                   SendChat(CAsyncObserver* spectator, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   void                                                   SendChat(uint8_t toUID, const std::string& message, const uint8_t logLevel = LOG_LEVEL_INFO) const;
   bool                                                   SendAllChat(uint8_t fromUID, const std::string& message) const;
   bool                                                   SendAllChat(const std::string& message) const;

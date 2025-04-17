@@ -47,6 +47,7 @@
 #define AURA_GAMEUSER_H_
 
 #include "includes.h"
+#include "command_history.h"
 #include "connection.h"
 #include "game_structs.h"
 #include "rate_limiter.h"
@@ -73,6 +74,7 @@ namespace GameUser
   public:
     std::reference_wrapper<CGame>    m_Game;
     MapTransfer                      m_MapTransfer;
+    CommandHistory                   m_CommandHistory;
     std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
     std::vector<uint32_t>            m_RTTValues;                    // store the last few (10) pings received so we can take an average
     OptionalTimedUint32              m_MeasuredRTT;
@@ -113,7 +115,6 @@ namespace GameUser
     bool                             m_Verified;                     // if the player has spoof checked or not
     bool                             m_Owner;                        // if the player has spoof checked or not
     bool                             m_Reserved;                     // if the player is reserved (VIP) or not
-    std::optional<int64_t>           m_SudoMode;                     // if the player has enabled sudo mode, its expiration time
     bool                             m_Observer;                     // if the player is an observer
     bool                             m_PowerObserver;                // if the player is a referee - referees can be demoted to full observers
     bool                             m_WhoisShouldBeSent;            // if a battle.net /whois should be sent for this player or not
@@ -149,11 +150,6 @@ namespace GameUser
     bool                             m_Disconnected;
     int64_t                          m_TotalDisconnectTicks;
     std::optional<int64_t>           m_LastDisconnectTicks;
-
-    bool                             m_UsedAnyCommands;              // if the playerleave message has been sent or not
-    bool                             m_SentAutoCommandsHelp;         // if the playerleave message has been sent or not
-    uint8_t                          m_SmartCommand;
-    std::string                      m_LastCommand;
 
     uint8_t                          m_TeamCaptain;
 
@@ -191,6 +187,8 @@ namespace GameUser
     [[nodiscard]] std::shared_ptr<CGame>          GetGame();
     [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
     [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
+    [[nodiscard]] inline CommandHistory*          GetCommandHistory() { return &m_CommandHistory; }
+    [[nodiscard]] inline const CommandHistory*    InspectCommandHistory() const { return &m_CommandHistory; }
     [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
     [[nodiscard]] inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
     [[nodiscard]] inline bool                     GetIsRTTMeasured() const { return m_MeasuredRTT.has_value() || !m_RTTValues.empty(); }
@@ -256,10 +254,6 @@ namespace GameUser
     [[nodiscard]] std::string                  GetSyncText() const;
     
     [[nodiscard]] inline bool                  GetIsReserved() const { return m_Reserved; }
-    [[nodiscard]] bool                         GetIsSudoMode() const;
-    [[nodiscard]] bool                         CheckSudoMode();
-    void                                       SudoModeStart();
-    void                                       SudoModeEnd();
     [[nodiscard]] inline bool                  GetIsObserver() const { return m_Observer; }
     [[nodiscard]] inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }
     [[nodiscard]] bool                         GetIsNativeReferee() const;
@@ -404,17 +398,6 @@ namespace GameUser
     inline void DropRemainingPauses() { --m_RemainingPauses; }
     inline void SetCannotPause() { m_RemainingPauses = 0; }
     void ClearStalePings();
-
-    [[nodiscard]] inline std::string GetLastCommand() const { return m_LastCommand; }
-    inline void ClearLastCommand() { m_LastCommand.clear(); }
-    inline void SetLastCommand(const std::string nLastCommand) { m_LastCommand = nLastCommand; }
-    [[nodiscard]] inline bool                  GetUsedAnyCommands() const { return m_UsedAnyCommands; }
-    [[nodiscard]] inline bool                  GetSentAutoCommandsHelp() const { return m_SentAutoCommandsHelp; }
-    [[nodiscard]] inline uint8_t               GetSmartCommand() const { return m_SmartCommand; }
-    inline void SetUsedAnyCommands(const bool nValue) { m_UsedAnyCommands = nValue; }
-    inline void SetSentAutoCommandsHelp(const bool nValue) { m_SentAutoCommandsHelp = nValue; }
-    inline void SetSmartCommand(const uint8_t nValue) { m_SmartCommand = nValue; }
-    inline void ClearSmartCommand() { m_SmartCommand = SMART_COMMAND_NONE; }
 
     [[nodiscard]] inline const std::string& GetPinnedMessage() { return  m_PinnedMessage; }
     [[nodiscard]] inline bool GetHasPinnedMessage() { return !m_PinnedMessage.empty(); }

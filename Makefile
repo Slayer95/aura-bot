@@ -109,6 +109,7 @@ OBJS = lib/csvparser/csvparser.o \
        src/aura.o \
        src/cli.o \
        src/command.o \
+       src/command_history.o \
        src/locations.o \
        src/rate_limiter.o \
        src/integration/discord.o \

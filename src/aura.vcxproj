@@ -466,6 +466,7 @@
     <ClCompile Include="aura.cpp" />
     <ClCompile Include="cli.cpp" />
     <ClCompile Include="command.cpp" />
+    <ClCompile Include="command_history.cpp" />
     <ClCompile Include="locations.cpp" />
     <ClCompile Include="rate_limiter.cpp" />
     <ClCompile Include="integration\discord.cpp" />
@@ -529,6 +530,7 @@
     <ClInclude Include="aura.h" />
     <ClInclude Include="cli.h" />
     <ClInclude Include="command.h" />
+    <ClInclude Include="command_history.h" />
     <ClInclude Include="locations.h" />
     <ClInclude Include="rate_limiter.h" />
     <ClInclude Include="integration\discord.h" />
