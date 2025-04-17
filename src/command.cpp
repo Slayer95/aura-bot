@@ -7005,8 +7005,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("Requires sudo permissions.");
         break;
       }
-      SendReply("Creation of new games has been disabled. (Active lobbies will not be unhosted.)");
+
+      m_Aura->ClearAutoRehost();
+      for (auto& game : m_Aura->m_Lobbies) {
+        if (game->GetIsLobbyStrict()) {
+          game->SetChatOnly();
+          if (game->GetCountDownStarted()) {
+            game->StopCountDown();
+          }
+        }
+      }
+
       m_Aura->m_Config.m_Enabled = false;
+      SendReply("Creation and start of games has been disabled.");
       break;
     }
 

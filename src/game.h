@@ -402,7 +402,7 @@ public:
 
   inline void                                            SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void                                            SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
-  inline void                                            SetChatOnly(bool nChatOnly) { m_ChatOnly = nChatOnly; }
+  inline void                                            SetChatOnly() { m_ChatOnly = true; }
   void                                                   SetUDPEnabled(bool nEnabled);
   bool                                                   GetHasDesyncHandler() const;
   bool                                                   GetAllowsDesync() const;
