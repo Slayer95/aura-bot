@@ -188,6 +188,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             case GameProtocol::Magic::OUTGOING_ACTION: {
               // Ignore all actions performed by observers,
               // and let's see how this turns out.
+              if (Data.size() >= 9 && Data[8] == ACTION_MINIMAPSIGNAL) {
+                break;
+              }
               Print(GetLogPrefix() + "got action <" + ByteArrayToDecString(Data) + ">");
               break;
             }
