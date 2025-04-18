@@ -321,7 +321,7 @@ public:
   uint8_t                                                CalcMaxEqualizerDelayFrames() const;
   int64_t                                                GetActiveLatency() const;
   int64_t                                                GetNextLatency(int64_t frameDrift = 0) const;
-  int64_t                                                GetLastActionLateBy() const;
+  int64_t                                                GetLastActionLateBy(int64_t oldLatency) const;
   uint32_t                                               GetSyncLimit() const;
   uint32_t                                               GetSyncLimitSafe() const;
   inline bool                                            GetIsLagging() const { return m_IsLagging; }

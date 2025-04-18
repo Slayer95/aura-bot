@@ -1886,8 +1886,8 @@ void CGame::CheckLobbyTimeouts()
 
 void CGame::RunActionsScheduler()
 {
-  const int64_t actionLateBy = GetLastActionLateBy();
   const int64_t oldLatency = GetActiveLatency();
+  const int64_t actionLateBy = GetLastActionLateBy(oldLatency);
   const int64_t newLatency = GetNextLatency(actionLateBy);
   if (newLatency != oldLatency) {
     m_LatencyTicks = newLatency;
@@ -10381,13 +10381,13 @@ int64_t CGame::GetActiveLatency() const
 
 int64_t CGame::GetNextLatency(int64_t frameDrift) const
 {
-  if (frameDrift <= m_Config.m_LatencyMaxDrift) return static_cast<int64_t>(m_Config.m_Latency);
+  if (frameDrift <= m_Config.m_LatencyDriftMax) return static_cast<int64_t>(m_Config.m_Latency);
   int64_t latency = static_cast<int64_t>(m_Config.m_Latency) + 2 * frameDrift;
   int64_t maxLatency = static_cast<int64_t>(m_Config.m_LatencyMax);
   return min(latency, maxLatency);
 }
 
-int64_t CGame::GetLastActionLateBy() const
+int64_t CGame::GetLastActionLateBy(int64_t oldLatency) const
 {
   if (m_LastActionSentTicks == 0) return 0;
   const int64_t actualSendInterval = GetTicks() - m_LastActionSentTicks;
