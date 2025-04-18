@@ -7498,7 +7498,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
         return user->GetUID();
       }
       for (CGameVirtualUser& fakeUser : m_FakeUsers) {
-        if (!fakeUser.GetCanMiniMapSignal()) continue;
+        if (!fakeUser.GetCanMiniMapSignal(user)) continue;
         if (!fakeUser.GetIsObserver()) {
           if ((actorMask & ACTION_SOURCE_PLAYER) > 0) {
             return fakeUser.GetUID();

@@ -77,9 +77,9 @@ struct CGameVirtualUser
   [[nodiscard]] bool                            GetCanPause() const;
   [[nodiscard]] bool                            GetCanResume() const;
   [[nodiscard]] bool                            GetCanSave() const;
-  [[nodiscard]] bool                            GetCanShare() const;
-  [[nodiscard]] bool                            GetCanTrade() const;
-  [[nodiscard]] bool                            GetCanMiniMapSignal() const;
+  [[nodiscard]] bool                            GetCanShare(const uint8_t SID) const;
+  [[nodiscard]] bool                            GetCanTrade(const uint8_t SID) const;
+  [[nodiscard]] bool                            GetCanMiniMapSignal(const GameUser::CGameUser* /*user*/) const;
 
   [[nodiscard]] inline uint32_t                 GetLeftCode() const { return m_LeftCode; }
   [[nodiscard]] inline bool                     HasLeftReason() const { return !m_LeftReason.empty(); }

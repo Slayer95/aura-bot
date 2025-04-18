@@ -97,19 +97,19 @@ bool CGameVirtualUser::GetCanSave() const
   return !m_Observer || m_Game.get().GetHasReferees();
 }
 
-bool CGameVirtualUser::GetCanShare() const
+bool CGameVirtualUser::GetCanShare(const uint8_t SID) const
 {
   if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
   return true;
 }
 
-bool CGameVirtualUser::GetCanTrade() const
+bool CGameVirtualUser::GetCanTrade(const uint8_t SID) const
 {
   if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_TRADE)) return false;
   return true;
 }
 
-bool CGameVirtualUser::GetCanMiniMapSignal() const
+bool CGameVirtualUser::GetCanMiniMapSignal(const GameUser::CGameUser* /*user*/) const
 {
   if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_MINIMAP_SIGNAL)) return false;
   return true;
