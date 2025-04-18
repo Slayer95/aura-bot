@@ -26,8 +26,8 @@
 #include <utility>
 
 #include "async_observer.h"
-
 #include "aura.h"
+#include "command.h"
 #include "config/config_bot.h"
 #include "game.h"
 #include "game_user.h"
@@ -89,6 +89,14 @@ CAsyncObserver::~CAsyncObserver()
     Print(GetLogPrefix() + "destroyed - " + GetLeftReason());
   } else {
     Print(GetLogPrefix() + "destroyed");
+  }
+
+  for (const auto& ptr : m_Aura->m_ActiveContexts) {
+    shared_ptr<CCommandContext> ctx = ptr.lock();
+    if (ctx && ctx->GetGameSource().GetIsSpectator() && ctx->GetGameSource().GetSpectator() == this) {
+      ctx->SetPartiallyDestroyed();
+      ctx->GetGameSource().Reset();
+    }
   }
 }
 

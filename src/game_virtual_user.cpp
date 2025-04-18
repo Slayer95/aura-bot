@@ -105,13 +105,13 @@ bool CGameVirtualUser::GetCanShare() const
 
 bool CGameVirtualUser::GetCanTrade() const
 {
-  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_TRADE)) return false;
   return true;
 }
 
 bool CGameVirtualUser::GetCanMiniMapSignal() const
 {
-  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_MINIMAP_SIGNAL)) return false;
   return true;
 }
 

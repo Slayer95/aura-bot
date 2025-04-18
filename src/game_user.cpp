@@ -49,6 +49,7 @@
 
 #include "config/config_bot.h"
 #include "aura.h"
+#include "command.h"
 #include "realm.h"
 #include "map.h"
 #include "protocol/game_protocol.h"
@@ -153,7 +154,7 @@ CGameUser::~CGameUser()
   }
 
   for (const auto& ptr : m_Game.get().m_Aura->m_ActiveContexts) {
-    auto ctx = ptr.lock();
+    shared_ptr<CCommandContext> ctx = ptr.lock();
     if (ctx && ctx->GetGameSource().GetIsUser() && ctx->GetGameSource().GetUser() == this) {
       ctx->SetPartiallyDestroyed();
       ctx->GetGameSource().Reset();

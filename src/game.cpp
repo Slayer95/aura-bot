@@ -7442,8 +7442,8 @@ uint8_t CGame::GetNewColor() const
 
 bool CGame::CheckActorRequirements(const GameUser::CGameUser* user, const uint8_t actorMask) const
 {
-  if (!user->GetIsObserver()) return actorMask & ACTION_SOURCE_PLAYER > 0;
-  if (m_Map->GetMapObservers() == MAPOBS_REFEREES) return actorMask & ACTION_SOURCE_REFEREE > 0;
+  if (!user->GetIsObserver()) return (actorMask & ACTION_SOURCE_PLAYER) > 0;
+  if (m_Map->GetMapObservers() == MAPOBS_REFEREES) return (actorMask & ACTION_SOURCE_REFEREE) > 0;
   return actorMask & ACTION_SOURCE_OBSERVER > 0;
 }
 
@@ -9880,7 +9880,7 @@ bool CGame::Trade(GameUser::CGameUser* fromUser, const uint8_t SID, const bool i
   return Trade(fromUser, SID, GetLastActionFrame(), isDisconnect, gold, lumber);
 }
 
-bool CGame::ShareUnits(const uint8_t fromUID, const const uint8_t SID, CQueuedActionsFrame& actionFrame)
+bool CGame::ShareUnits(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame& actionFrame)
 {
   vector<uint8_t> Action;
   Action.push_back(ACTION_ALLIANCE_SETTINGS);
