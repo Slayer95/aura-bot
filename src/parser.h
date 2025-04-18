@@ -82,19 +82,33 @@
   return result;
 }
 
-[[nodiscard]] inline std::optional<bool> ParseBoolean(const std::string& input)
+[[nodiscard]] inline std::optional<bool> ParseBoolean(const std::string& input, uint8_t parseFlags = PARSER_BOOLEAN_ALLOW_ALL)
 {
   std::optional<bool> result;
-  if (input.empty()) return result;
+  if (input.empty()) {
+    if (parseFlags & PARSER_BOOLEAN_EMPTY_USE_DEFAULT) {
+      result = (parseFlags & PARSER_BOOLEAN_DEFAULT_FALSE) == 0;
+    }
+    return result;
+  }
   std::string lowerInput = ToLowerCase(input);
   switch (HashCode(input)) {
     case HashCode("0"):
     case HashCode("no"):
     case HashCode("false"):
     case HashCode("off"):
-    case HashCode("never"):
     case HashCode("none"):
+      result = false;
+      break;
+    case HashCode("never"):
+      if (!(parseFlags & PARSER_BOOLEAN_ALLOW_TIME)) {
+        break;
+      }
+      result = false;
     case HashCode("disable"):
+    if (!(parseFlags & PARSER_BOOLEAN_ALLOW_ENABLE)) {
+        break;
+      }
       result = false;
       break;
 
@@ -102,8 +116,18 @@
     case HashCode("yes"):
     case HashCode("true"):
     case HashCode("on"):
+      result = true;
+      break;
     case HashCode("always"):
+      if (!(parseFlags & PARSER_BOOLEAN_ALLOW_TIME)) {
+        break;
+      }
+      result = true;
+      break;
     case HashCode("enable"):
+      if (!(parseFlags & PARSER_BOOLEAN_ALLOW_ENABLE)) {
+        break;
+      }
       result = true;
       break;
   }

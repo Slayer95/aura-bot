@@ -92,6 +92,14 @@ constexpr uint8_t LOG_P = 2u;
 constexpr uint8_t LOG_R = 4u;
 constexpr uint8_t LOG_ALL = LOG_C | LOG_P | LOG_R;
 
+// parser.h
+
+constexpr uint8_t PARSER_BOOLEAN_EMPTY_USE_DEFAULT = 1u;
+constexpr uint8_t PARSER_BOOLEAN_ALLOW_ENABLE = 2u;
+constexpr uint8_t PARSER_BOOLEAN_ALLOW_TIME = 4u;
+constexpr uint8_t PARSER_BOOLEAN_DEFAULT_FALSE = 8u;
+constexpr uint8_t PARSER_BOOLEAN_ALLOW_ALL = PARSER_BOOLEAN_ALLOW_ENABLE | PARSER_BOOLEAN_ALLOW_TIME;
+
 // fileutil.h
 
 constexpr size_t FILE_SEARCH_FUZZY_MAX_RESULTS = 5;
@@ -342,6 +350,13 @@ constexpr uint8_t GAME_RESULT_LOSER = 0u;
 constexpr uint8_t GAME_RESULT_DRAWER = 1u;
 constexpr uint8_t GAME_RESULT_WINNER = 2u;
 constexpr uint8_t GAME_RESULT_UNDECIDED = 3u;
+
+constexpr uint8_t ACTION_SOURCE_NONE = 0u;
+constexpr uint8_t ACTION_SOURCE_PLAYER = 1u;
+constexpr uint8_t ACTION_SOURCE_OBSERVER = 2u;
+constexpr uint8_t ACTION_SOURCE_REFEREE = 4u;
+constexpr uint8_t ACTION_SOURCE_OBSERVER_ANY = ACTION_SOURCE_OBSERVER | ACTION_SOURCE_REFEREE;
+constexpr uint8_t ACTION_SOURCE_ANY = ACTION_SOURCE_PLAYER | ACTION_SOURCE_OBSERVER_ANY;
 
 // game_slot.h
 

@@ -2965,7 +2965,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ALL | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (!targetToggle.has_value()) {
         ErrorReply("Unrecognized setting [" + target + "].");
         break;
@@ -3313,7 +3313,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ALL | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (!targetToggle.has_value()) {
         ErrorReply("Unrecognized setting [" + target + "].");
         break;
@@ -4481,7 +4481,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ALL | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (!targetToggle.has_value()) {
         ErrorReply("Unrecognized setting [" + target + "].");
         break;
@@ -5707,7 +5707,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       if (Args.size() == 1) {
-        optional<bool> targetToggle = ParseBoolean(target);
+        optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ENABLE | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
         if (!targetToggle.has_value()) {
           ErrorReply("Usage: " + cmdToken + "draft <ON|OFF>");
           ErrorReply("Usage: " + cmdToken + "draft <CAPTAIN1> , <CAPTAIN2>");
@@ -5788,7 +5788,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ENABLE | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (!targetToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "ffa <ON|OFF>");
         break;
@@ -5834,7 +5834,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ENABLE | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (targetToggle.has_value() && targetToggle.value() == false) {
         // Branching here means that you can't actually set a player named "Disable" against everyone else.
         targetGame->ResetLayout(true);
@@ -5886,7 +5886,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ENABLE | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (!targetToggle.has_value()) {
         vector<uint32_t> Args = SplitNumericArgs(target, 1u, 1u);
         // Special-case max slots so that if someone careless enough types !terminator 12, it just works.
@@ -5949,7 +5949,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
         break;
       }
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ALL | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (!targetToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "teams <ON|OFF>");
         break;
@@ -6012,7 +6012,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      const optional<bool> targetToggle = ParseBoolean(inputLower);
+      const optional<bool> targetToggle = ParseBoolean(inputLower, PARSER_BOOLEAN_ALLOW_ALL);
 
       if (!targetToggle.has_value() && !target.empty()) {
         ErrorReply("Usage: " + cmdToken + "fp");
@@ -6186,7 +6186,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<bool> targetToggle = ParseBoolean(target);
+      optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ALL);
       if (!targetToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "save");
         ErrorReply("Usage: " + cmdToken + "save <ON|OFF>");
@@ -7409,7 +7409,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     case HashCode("sumode"): {
       string inputLower = ToLowerCase(target);
 
-      const optional<bool> parsedToggle = ParseBoolean(target);
+      const optional<bool> parsedToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ALL | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
       if (!parsedToggle.has_value()) {
         ErrorReply("Usage: " + cmdToken + "sumode <ON|OFF>");
         break;

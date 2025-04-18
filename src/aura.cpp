@@ -379,7 +379,7 @@ int main(const int argc, char** argv)
   SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 #endif
 
-  if (htons(0xe017) == 0xe017) {
+  if (GetIsHostBigEndian()) {
     Print("[AURA] warning - big endian system support is experimental");
   }
 

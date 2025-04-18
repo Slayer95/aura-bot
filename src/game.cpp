@@ -7440,15 +7440,19 @@ uint8_t CGame::GetNewColor() const
   return m_Map->GetVersionMaxSlots(); // should never happen
 }
 
-uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect)
+bool CGame::CheckActorRequirements(const GameUser::CGameUser* user, const uint8_t actorMask) const
 {
-  // Full observers can never pause/resume/save the game.
-  const uint8_t userCanSendActions = user && isDisconnect && !user->GetLeftMessageSent() && !(user->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_ALLOWED);
+  if (!user->GetIsObserver()) return actorMask & ACTION_SOURCE_PLAYER > 0;
+  if (m_Map->GetMapObservers() == MAPOBS_REFEREES) return actorMask & ACTION_SOURCE_REFEREE > 0;
+  return actorMask & ACTION_SOURCE_OBSERVER > 0;
+}
 
+uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect, uint8_t actorMask)
+{
   // Note that the game client desyncs if the UID of an actual user is used.
   switch (actionType) {
     case ACTION_PAUSE: {
-      if (userCanSendActions && user->GetCanPause()) {
+      if (isDisconnect && CheckActorRequirements(user, actorMask) && user->GetCanPause()) {
         return user->GetUID();
       }
       
@@ -7462,7 +7466,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
       return 0xFF;
     }
     case ACTION_RESUME: {
-      if (userCanSendActions) {
+      if (isDisconnect && CheckActorRequirements(user, actorMask)) {
         return user->GetUID();
       }
 
@@ -7476,7 +7480,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
     }
 
     case ACTION_SAVE: {
-      if (userCanSendActions && user->GetCanSave()) {
+      if (isDisconnect && CheckActorRequirements(user, actorMask) && user->GetCanSave()) {
         return user->GetUID();
       }
       for (CGameVirtualUser& fakeUser : m_FakeUsers) {
@@ -7484,6 +7488,24 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
           // Referees could get unlimited saves, but that's abusable, so we limit them just like regular players.
           fakeUser.DropRemainingSaves();
           return fakeUser.GetUID();
+        }
+      }
+      return 0xFF;
+    }
+
+    case ACTION_MINIMAPSIGNAL: {
+      if (isDisconnect && CheckActorRequirements(user, actorMask)) {
+        return user->GetUID();
+      }
+      for (CGameVirtualUser& fakeUser : m_FakeUsers) {
+        if (!fakeUser.GetIsObserver()) {
+          if ((actorMask & ACTION_SOURCE_PLAYER) > 0) {
+            return fakeUser.GetUID();
+          }
+        } else {
+          if ((actorMask & (m_Map->GetMapObservers() == MAPOBS_REFEREES ? ACTION_SOURCE_REFEREE : ACTION_SOURCE_OBSERVER)) > 0) {
+            return fakeUser.GetUID();
+          }
         }
       }
       return 0xFF;
@@ -9742,7 +9764,7 @@ string CGame::GetSaveFileName(const uint8_t UID) const
 
 bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
-  const uint8_t UID = SimulateActionUID(ACTION_SAVE, user, isDisconnect);
+  const uint8_t UID = SimulateActionUID(ACTION_SAVE, user, isDisconnect, ACTION_SOURCE_ANY &~ ACTION_SOURCE_OBSERVER);
   if (UID == 0xFF) return false;
 
   string fileName = GetSaveFileName(UID);
@@ -9773,7 +9795,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
 
 bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
-  const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect);
+  const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect, ACTION_SOURCE_ANY &~ ACTION_SOURCE_OBSERVER);
   if (UID == 0xFF) return false;
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_PAUSE)));
@@ -9786,11 +9808,27 @@ bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, c
 
 bool CGame::Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
-  const uint8_t UID = SimulateActionUID(ACTION_RESUME, user, isDisconnect);
+  const uint8_t UID = SimulateActionUID(ACTION_RESUME, user, isDisconnect, ACTION_SOURCE_ANY &~ ACTION_SOURCE_OBSERVER);
   if (UID == 0xFF) return false;
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_RESUME)));
   actionFrame.callback = ON_SEND_ACTIONS_RESUME;
+  return true;
+}
+
+bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const double x, const double y)
+{
+  const uint8_t UID = SimulateActionUID(ACTION_MINIMAPSIGNAL, user, isDisconnect, ACTION_SOURCE_ANY);
+  if (UID == 0xFF) return false;
+
+  {
+    vector<uint8_t> Action;
+    Action.push_back(ACTION_MINIMAPSIGNAL);
+    AppendByteArray(Action, x, false);
+    AppendByteArray(Action, y, false);
+    actionFrame.AddAction(std::move(CIncomingAction(UID, Action)));
+  }
+
   return true;
 }
 
@@ -9812,6 +9850,11 @@ bool CGame::Pause(GameUser::CGameUser* user, const bool isDisconnect)
 bool CGame::Resume(GameUser::CGameUser* user, const bool isDisconnect)
 {
   return Resume(user, GetLastActionFrame(), isDisconnect);
+}
+
+bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect, const double x, const double y)
+{
+  return SendMiniMapSignal(user, GetLastActionFrame(), isDisconnect, x, y);
 }
 
 bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool /*isDisconnect*/)

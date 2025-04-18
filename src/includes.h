@@ -198,7 +198,8 @@ inline void Print(const char* message)
   return output;
 }
 
-[[nodiscard]] inline bool IsBase10NaturalOrZero(const std::string& s) {
+[[nodiscard]] inline bool IsBase10NaturalOrZero(const std::string& s)
+{
   if (s.empty()) return false;
   if (s[0] == '0') return s.length() == 1;
 
@@ -206,6 +207,13 @@ inline void Print(const char* message)
     if (!isdigit(ch)) return false;
   }
   return true;
+}
+
+[[nodiscard]] inline bool GetIsHostBigEndian()
+{
+  uint16_t value = 0x0102;
+  uint8_t* ptr = reinterpret_cast<uint8_t*>(&value);
+  return ptr[0] == 0x01;
 }
 
 #endif // AURA_INCLUDES_H_

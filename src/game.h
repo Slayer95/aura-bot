@@ -601,7 +601,8 @@ public:
   uint8_t                   GetNewTeam() const;
   uint8_t                   GetNewColor() const;
   uint8_t                   GetNewPseudonymUID() const;
-  uint8_t                   SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect);
+  bool                      CheckActorRequirements(const GameUser::CGameUser* user, const uint8_t reqs) const;
+  uint8_t                   SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect, const uint8_t actorMask);
   void                      ResolveVirtualUsers();
   void                      ResolveBuffering();
   bool                      GetHasAnyActiveTeam() const;
@@ -743,6 +744,7 @@ public:
   void SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame);
   bool Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
+  bool SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const double x, const double y);
   bool ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   bool ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, const bool isDisconnect);
   void TryActionsOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
@@ -752,6 +754,7 @@ public:
   void SaveEnded(const uint8_t exceptUID);
   bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, const bool isDisconnect);
+  bool SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect, const double x, const double y);
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstValue, const uint32_t secondValue);
   bool SendChatTriggerBytes(const uint8_t UID, const std::string& message, const std::array<uint8_t, 8>& triggerBytes);

@@ -288,6 +288,18 @@ inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, cons
     };
 }
 
+[[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const double i, bool bigEndian)
+{
+  std::vector<uint8_t> bytes(8, 0);
+  if (std::numeric_limits<double>::is_iec559) {
+    std::memcpy(bytes.data(), &i, sizeof(double));
+    if (bigEndian != GetIsHostBigEndian()) {
+      std::reverse(bytes.begin(), bytes.end());
+    }
+  }
+  return bytes;
+}
+
 [[nodiscard]] inline std::array<uint8_t, 1> CreateFixedByteArray(const uint8_t c)
 {
   return std::array<uint8_t, 1>{c};
@@ -337,6 +349,19 @@ inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, cons
     };
 }
 
+[[nodiscard]] inline std::array<uint8_t, 8> CreateFixedByteArray(const double i, bool bigEndian)
+{
+  std::array<uint8_t, 8> bytes;
+  bytes.fill(0);
+  if (std::numeric_limits<double>::is_iec559) {
+    std::memcpy(bytes.data(), &i, sizeof(double));
+    if (bigEndian != GetIsHostBigEndian()) {
+      std::reverse(bytes.begin(), bytes.end());
+    }
+  }
+  return bytes;
+}
+
 inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 1>>& optArray, const uint8_t c)
 {
   std::array<uint8_t, 1> val = CreateFixedByteArray(c);
@@ -361,6 +386,13 @@ inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray
 inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const int64_t i, bool bigEndian)
 {
   std::array<uint8_t, 4> val = CreateFixedByteArray(i, bigEndian);
+  optArray.emplace();
+  optArray->swap(val);
+}
+
+inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 8>>& optArray, const double i, bool bigEndian)
+{
+  std::array<uint8_t, 8> val = CreateFixedByteArray(i, bigEndian);
   optArray.emplace();
   optArray->swap(val);
 }
@@ -621,6 +653,11 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const uint32_t i, bool bigE
 }
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEndian)
+{
+  AppendByteArray(b, CreateByteArray(i, bigEndian));
+}
+
+inline void AppendByteArray(std::vector<uint8_t>& b, const double i, bool bigEndian)
 {
   AppendByteArray(b, CreateByteArray(i, bigEndian));
 }

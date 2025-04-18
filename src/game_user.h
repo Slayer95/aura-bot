@@ -286,10 +286,10 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
     [[nodiscard]] bool                         UpdateReady();
     [[nodiscard]] bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
-    [[nodiscard]] inline bool                  GetIsDraftCaptain() { return m_TeamCaptain != 0; }
-    [[nodiscard]] inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) { return m_TeamCaptain == nTeam + 1; }
-    [[nodiscard]] inline bool                  GetCanPause() { return m_RemainingPauses > 0; }
-    [[nodiscard]] inline bool                  GetCanSave() { return m_RemainingSaves > 0; }
+    [[nodiscard]] inline bool                  GetIsDraftCaptain() const { return m_TeamCaptain != 0; }
+    [[nodiscard]] inline bool                  GetIsDraftCaptainOf(const uint8_t nTeam) const { return m_TeamCaptain == nTeam + 1; }
+    [[nodiscard]] inline bool                  GetCanPause() const { return m_RemainingPauses > 0; }
+    [[nodiscard]] inline bool                  GetCanSave() const { return m_RemainingSaves > 0; }
 
     inline void SetSID(const uint8_t nSID) { m_SID = nSID; }
     inline void SetLeftReason(const std::string& nLeftReason) { m_LeftReason = nLeftReason; }
