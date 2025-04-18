@@ -1886,8 +1886,9 @@ void CGame::CheckLobbyTimeouts()
 
 void CGame::RunActionsScheduler()
 {
+  const int64_t actionLateBy = GetLastActionLateBy();
   const int64_t oldLatency = GetActiveLatency();
-  const int64_t newLatency = GetNextLatency();
+  const int64_t newLatency = GetNextLatency(actionLateBy);
   if (newLatency != oldLatency) {
     m_LatencyTicks = newLatency;
     if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
@@ -1901,22 +1902,17 @@ void CGame::RunActionsScheduler()
     m_MaxPingEqualizerDelayFrames = UpdatePingEqualizer();
   }
 
-  RunActionsSchedulerInner(newLatency, m_MaxPingEqualizerDelayFrames, oldLatency, maxOldEqualizerOffset);
+  RunActionsSchedulerInner(newLatency, m_MaxPingEqualizerDelayFrames, oldLatency, maxOldEqualizerOffset, actionLateBy);
 }
 
-void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset)
+void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset, const int64_t actionLateBy)
 {
   const int64_t Ticks = GetTicks();
   if (m_LastActionSentTicks != 0) {
-    const int64_t actualSendInterval = Ticks - m_LastActionSentTicks;
-    const int64_t expectedSendInterval = oldLatency - m_LastActionLateBy;
-    int64_t thisActionLateBy = actualSendInterval - expectedSendInterval;
-
-    if (thisActionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
-      m_Aura->LogPerformanceWarning(TASK_TYPE_GAME_FRAME, this, expectedSendInterval, actualSendInterval, m_LatencyTicks);
+    if (actionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
+      m_Aura->LogPerformanceWarning(TASK_TYPE_GAME_FRAME, this, actionLateBy, oldLatency, newLatency);
     }
-
-    m_LastActionLateBy = thisActionLateBy;
+    m_LastActionLateBy = actionLateBy;
   }
   m_LastActionSentTicks = Ticks;
 
@@ -10383,9 +10379,20 @@ int64_t CGame::GetActiveLatency() const
   return m_LatencyTicks;
 }
 
-int64_t CGame::GetNextLatency() const
+int64_t CGame::GetNextLatency(int64_t frameDrift) const
 {
-  return static_cast<int64_t>(m_Config.m_Latency);
+  if (frameDrift <= m_Config.m_LatencyMaxDrift) return static_cast<int64_t>(m_Config.m_Latency);
+  int64_t latency = static_cast<int64_t>(m_Config.m_Latency) + 2 * frameDrift;
+  int64_t maxLatency = static_cast<int64_t>(m_Config.m_LatencyMax);
+  return min(latency, maxLatency);
+}
+
+int64_t CGame::GetLastActionLateBy() const
+{
+  if (m_LastActionSentTicks == 0) return 0;
+  const int64_t actualSendInterval = GetTicks() - m_LastActionSentTicks;
+  const int64_t expectedSendInterval = oldLatency - m_LastActionLateBy;
+  return actualSendInterval - expectedSendInterval;
 }
 
 uint32_t CGame::GetSyncLimit() const

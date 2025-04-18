@@ -78,6 +78,7 @@ struct CGameConfig
 
   uint16_t                 m_LatencyMin;                   // the minimum configurable game refresh latency
   uint16_t                 m_LatencyMax;                   // the maximum configurable game refresh latency
+  uint16_t                 m_LatencyDriftMax;              // the maximum allowed frame drift in ms
   uint32_t                 m_SyncLimitMaxMilliSeconds;     // constraint for configurable parameters m_SyncLimit * m_Latency
   uint32_t                 m_SyncLimitSafeMinMilliSeconds; // constraint for configurable parameters m_SyncLimitSafe * m_Latency
 

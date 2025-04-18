@@ -2009,7 +2009,7 @@ void CAura::LogRemoteFile(const string& logText)
   writeStream.close();
 }
 
-void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t expectedInterval, const int64_t actualInterval, const int64_t averageInterval)
+void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t newInterval)
 {
   // something is going terribly wrong - Aura is probably starved of resources
   // print a message because even though this will take more resources it should provide some information to the administrator for future reference
@@ -2034,8 +2034,8 @@ void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, c
   int length = snprintf(
     buffer, 256,
 #endif
-    "%swarning - action should be sent after %lldms, but was sent after %lldms [latency is %lldms]",
-   prefix.c_str(), (long long int)expectedInterval, (long long int)actualInterval, (long long int)averageInterval
+    "%swarning - frame drift of %lldms (expected %lldms interval, rescheduling to %lldms)",
+   prefix.c_str(), (long long int)frameDrift, (long long int)oldInterval, (long long int)newInterval
   );
   buffer[length] = '\x00';
   Print(buffer);

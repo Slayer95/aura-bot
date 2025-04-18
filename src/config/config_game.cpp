@@ -98,6 +98,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_LatencyMin                             = CFG.GetUint16("hosting.latency.min", 10);
   m_LatencyMax                             = CFG.GetUint16("hosting.latency.max", 500);
+  m_LatencyDriftMax                        = CFG.GetUint16("hosting.latency.drift.max", 50);
 
   if (m_LatencyMin > m_LatencyMax) {
     Print("<hosting.latency.min> cannot be larger than <hosting.latency.max = 10>");
@@ -260,6 +261,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
 
   INHERIT(m_LatencyMin)
   INHERIT(m_LatencyMax)
+  INHERIT(m_LatencyDriftMax)
 
   INHERIT(m_SyncLimitMaxMilliSeconds)
   INHERIT(m_SyncLimitSafeMinMilliSeconds)

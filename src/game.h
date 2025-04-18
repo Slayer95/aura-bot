@@ -144,7 +144,7 @@ protected:
   int64_t                                                m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
   int64_t                                                m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                                                m_LastStatsUpdateTime;
-  int64_t                                                m_StartedFastPollingTicks;          // GetTicks when the game frames scheduler started blocking the main thread
+  int64_t                                                m_LastDynamicLatencyTicks;
   uint8_t                                                m_GameOver;
   std::optional<int64_t>                                 m_GameOverTime;                  // GetTime when the game was over
   std::optional<int64_t>                                 m_GameOverTolerance;
@@ -255,6 +255,7 @@ public:
   void                                                   ResetUserPingEqualizerDelays();
   bool                                                   CheckUpdatePingEqualizer();
   uint8_t                                                UpdatePingEqualizer();
+  void                                                   UpdateDynamicLatency();
   std::vector<std::pair<GameUser::CGameUser*, uint32_t>> GetDescendingSortedRTT() const;
   inline std::shared_ptr<CMap>                           GetMap() const { return m_Map; }
   inline uint32_t                                        GetEntryKey() const { return m_EntryKey; }
@@ -319,7 +320,8 @@ public:
   uint8_t                                                GetMaxEqualizerDelayFrames() const { return m_MaxPingEqualizerDelayFrames; }
   uint8_t                                                CalcMaxEqualizerDelayFrames() const;
   int64_t                                                GetActiveLatency() const;
-  int64_t                                                GetNextLatency() const;
+  int64_t                                                GetNextLatency(int64_t frameDrift = 0) const;
+  int64_t                                                GetLastActionLateBy() const;
   uint32_t                                               GetSyncLimit() const;
   uint32_t                                               GetSyncLimitSafe() const;
   inline bool                                            GetIsLagging() const { return m_IsLagging; }
@@ -431,7 +433,7 @@ public:
   void                                                   UpdatePost(fd_set* send_fd) const;
   void                                                   CheckLobbyTimeouts();
   void                                                   RunActionsScheduler();
-  void                                                   RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset);
+  void                                                   RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset, const int64_t actionLateBy);
 
   // logging
   void                                                   LogApp(const std::string& logText, const uint8_t logTargets) const;
