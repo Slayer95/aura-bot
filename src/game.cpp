@@ -2332,6 +2332,15 @@ vector<uint8_t> CGame::GetSlotInfo() const
   return GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers());
 }
 
+vector<uint8_t> CGame::GetHandicaps() const
+{
+  vector<uint8_t> handicaps;
+  for (const auto& slot : m_Slots) {
+    handicaps.push_back(slot.GetHandicap());
+  }
+  return handicaps;
+}
+
 void CGame::SendAllSlotInfo()
 {
   if (m_GameLoading || m_GameLoaded)
@@ -10794,7 +10803,8 @@ void CGame::RunHCLEncoding()
   // handicap = encodedHandicap - (value * K) - (virtual ? 6 : 0)
 
   m_SlotInfoChanged |= SLOTS_HCL_INJECTED;
-  LOG_APP_IF(LOG_LEVEL_DEBUG, "successfully encoded mode as HCL string [" + m_HCLCommandString + "]")
+  LOG_APP_IF(LOG_LEVEL_DEBUG, "using game mode [" + m_HCLCommandString + "]")
+  DLOG_APP_IF(LOG_LEVEL_TRACE, "mode [" + m_HCLCommandString + "] encoded as handicaps <" + ByteArrayToDecString(GetHandicaps()) + ">")
 }
 
 bool CGame::SendHMC(const string& message)
