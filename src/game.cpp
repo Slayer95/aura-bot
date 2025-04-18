@@ -7498,6 +7498,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
         return user->GetUID();
       }
       for (CGameVirtualUser& fakeUser : m_FakeUsers) {
+        if (!fakeUser.GetCanMiniMapSignal()) continue;
         if (!fakeUser.GetIsObserver()) {
           if ((actorMask & ACTION_SOURCE_PLAYER) > 0) {
             return fakeUser.GetUID();
@@ -9857,23 +9858,46 @@ bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect
   return SendMiniMapSignal(user, GetLastActionFrame(), isDisconnect, x, y);
 }
 
-bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool /*isDisconnect*/)
+bool CGame::Trade(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame& actionFrame, const uint32_t gold, const uint32_t lumber)
 {
-  const uint8_t fromUID = fromUser->GetUID();
-
-  {
-    vector<uint8_t> ActionStart;
-    ActionStart.push_back(ACTION_ALLIANCE_SETTINGS);
-    ActionStart.push_back(SID);
-    AppendByteArray(ActionStart, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY, false);
-    actionFrame.AddAction(std::move(CIncomingAction(fromUID, ActionStart)));
-  }
-
+  vector<uint8_t> Action;
+  Action.push_back(ACTION_TRANSFER_RESOURCES);
+  Action.push_back(SID);
+  AppendByteArray(Action, gold, false);
+  AppendByteArray(Action, lumber, false);
+  actionFrame.AddAction(std::move(CIncomingAction(fromUID, Action)));
   return true;
 }
 
-bool CGame::ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, const bool isDisconnect)
+bool CGame::Trade(GameUser::CGameUser* fromUser, const uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const uint32_t gold, const uint32_t lumber)
 {
+  if (!isDisconnect) return false;
+  return Trade(fromUser->GetUID(), SID, actionFrame, gold, lumber);
+}
+
+bool CGame::Trade(GameUser::CGameUser* fromUser, const uint8_t SID, const bool isDisconnect, const uint32_t gold, const uint32_t lumber)
+{
+  return Trade(fromUser, SID, GetLastActionFrame(), isDisconnect, gold, lumber);
+}
+
+bool CGame::ShareUnits(const uint8_t fromUID, const const uint8_t SID, CQueuedActionsFrame& actionFrame)
+{
+  vector<uint8_t> Action;
+  Action.push_back(ACTION_ALLIANCE_SETTINGS);
+  Action.push_back(SID);
+  AppendByteArray(Action, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY, false);
+  actionFrame.AddAction(std::move(CIncomingAction(fromUID, Action)));
+  return true;
+}
+
+bool CGame::ShareUnits(GameUser::CGameUser* fromUser, const uint8_t SID, CQueuedActionsFrame& actionFrame, const bool /*isDisconnect*/)
+{
+  return ShareUnits(fromUser->GetUID(), SID, actionFrame);
+}
+
+bool CGame::ShareUnits(GameUser::CGameUser* fromUser, const uint8_t SID, const bool isDisconnect)
+{
+  if (!isDisconnect) return false;
   return ShareUnits(fromUser, SID, GetLastActionFrame(), isDisconnect);
 }
 

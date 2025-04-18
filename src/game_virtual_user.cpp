@@ -97,6 +97,24 @@ bool CGameVirtualUser::GetCanSave() const
   return !m_Observer || m_Game.get().GetHasReferees();
 }
 
+bool CGameVirtualUser::GetCanShare() const
+{
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
+  return true;
+}
+
+bool CGameVirtualUser::GetCanTrade() const
+{
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
+  return true;
+}
+
+bool CGameVirtualUser::GetCanMiniMapSignal() const
+{
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
+  return true;
+}
+
 vector<uint8_t> CGameVirtualUser::GetPlayerInfoBytes(optional<bool> overrideLoaded) const
 {
   const array<uint8_t, 4> IP = {0, 0, 0, 0};

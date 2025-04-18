@@ -745,16 +745,24 @@ public:
   bool Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   bool SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const double x, const double y);
-  bool ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
-  bool ShareUnits(GameUser::CGameUser* fromUser, uint8_t SID, const bool isDisconnect);
+
+  bool Trade(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame& actionFrame, const uint32_t gold, const uint32_t lumber);
+  bool Trade(GameUser::CGameUser* user, const uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const uint32_t gold, const uint32_t lumber);
+  bool Trade(GameUser::CGameUser* user, const uint8_t SID, const bool isDisconnect, const uint32_t gold, const uint32_t lumber);
+  bool ShareUnits(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame& actionFrame);
+  bool ShareUnits(GameUser::CGameUser* fromUser, const uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
+  bool ShareUnits(GameUser::CGameUser* fromUser, const uint8_t SID, const bool isDisconnect);
+
   void TryActionsOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
   bool TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
   bool TryShareUnitsOnDisconnect(GameUser::CGameUser* user, const bool isVoluntary);
+
   bool Save(GameUser::CGameUser* user, const bool isDisconnect);
   void SaveEnded(const uint8_t exceptUID);
   bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, const bool isDisconnect);
   bool SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect, const double x, const double y);
+
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstValue, const uint32_t secondValue);
   bool SendChatTriggerBytes(const uint8_t UID, const std::string& message, const std::array<uint8_t, 8>& triggerBytes);
