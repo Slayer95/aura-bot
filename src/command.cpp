@@ -2597,13 +2597,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }*/
 
-<<<<<<< Updated upstream
-      if (!targetGame->GetMap()->GetHCLEnabled()) {
-        SendReply("Game mode feature (HCL) is disabled.");
-=======
       if (!targetGame->GetMap()->GetHCLEnabled() && !GetIsSudo()) {
         ErrorReply("Game mode feature (HCL) is disabled.");
->>>>>>> Stashed changes
         break;
       }
 
@@ -4985,6 +4980,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     // !COMP (computer slot)
     //
 
+    case HashCode("amai"):
     case HashCode("bot"):
     case HashCode("comp"): {
       UseImplicitHostedGame();
@@ -5003,6 +4999,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
+      if (cmdHash == HashCode("amai") && targetGame->GetMap()->GetMapAIType() != AI_TYPE_AMAI) {
+        ErrorReply("This map does not have AMAI installed.");
+        break;
+      }
       if (target.empty()) {
         // ignore layout, don't override computers
         if (!targetGame->ComputerNSlots(SLOTCOMP_HARD, targetGame->GetNumComputers() + 1, true, false)) {
