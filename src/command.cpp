@@ -2597,8 +2597,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }*/
 
+<<<<<<< Updated upstream
       if (!targetGame->GetMap()->GetHCLEnabled()) {
         SendReply("Game mode feature (HCL) is disabled.");
+=======
+      if (!targetGame->GetMap()->GetHCLEnabled() && !GetIsSudo()) {
+        ErrorReply("Game mode feature (HCL) is disabled.");
+>>>>>>> Stashed changes
         break;
       }
 
@@ -5093,7 +5098,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      auto searchResult = RunParseController(target);
+      auto searchResult = RunParseController(Args[0]);
       if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12");
         break;
@@ -5161,7 +5166,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      auto searchResult = RunParseController(target);
+      auto searchResult = RunParseController(Args[0]);
       if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100");
         break;
@@ -5242,7 +5247,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         Args[0] = GetSender();
       }
 
-      auto searchResult = RunParseController(target);
+      auto searchResult = RunParseController(Args[0]);
       if (!searchResult.GetSuccess()) {
         ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll");
         break;
@@ -5339,7 +5344,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      auto searchResult = RunParseController(target);
+      auto searchResult = RunParseController(Args[0]);
       if (!searchResult.GetSuccess()) {
         if (GetIsGameUser()) ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
