@@ -3692,7 +3692,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
     }
   }
 
-  if (actionType == ACTION_GAME_CACHE && actionEnd >= actionStart + 6u) {
+  if (actionType == ACTION_GAME_CACHE_INT && actionEnd >= actionStart + 6u) {
     EventGameCache(UID, actionStart, actionEnd);
   }
 }
@@ -3827,13 +3827,44 @@ void CGame::SendAllActions()
   RunActionsScheduler();
 }
 
-std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
+std::string CGame::GetCustomGameNameTemplate(shared_ptr<const CRealm> realm) const
 {
-  if (realm == nullptr) return m_GameName;
-  return realm->GetCustomGameName(m_GameName, m_GameLoading || m_GameLoaded);
+  const bool isSpectator = m_GameLoading || m_GameLoaded;
+  if (realm) {
+    if (isSpectator) {
+      return realm->GetWatchableNameTemplate();
+    } else {
+      return realm->GetLobbyNameTemplate();
+    }
+  } else {
+    if (isSpectator) {
+      return m_Aura->m_Config.m_LANWatchableNameTemplate;
+    } else {
+      return m_Aura->m_Config.m_LANLobbyNameTemplate;
+    }
+  }
 }
 
-std::string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
+std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
+{
+  string formatTemplate = GetCustomGameNameTemplate(realm);
+
+  const map<const int64_t, function<string()>> funcMap = {
+    {HashCode("MODE"), [this]() -> string {
+      return this->GetHCLCommandString();
+    }},
+  };
+  map<const int64_t, string> cache = {
+    {HashCode("NAME"), m_GameName},
+    // TODO: {COUNTER} Not implemented. To be used by --auto-rehost
+    {HashCode("COUNTER"), "1"}
+  };
+
+  string replaced = ReplaceTemplate(formatTemplate, funcMap, cache);
+  return TrimString(RemoveDuplicateWhiteSpace(replaced));
+}
+
+string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
 {
   Version version = GetVersion();
   if (realm) {
@@ -5809,7 +5840,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
       // Handled in CGame::SendAllActionsCallback
       break;
     }
-    case ACTION_GAME_CACHE: {
+    case ACTION_GAME_CACHE_INT: {
       // This is the W3MMD action type.
       // Handled in CGame::SendAllActionsCallback
       break;

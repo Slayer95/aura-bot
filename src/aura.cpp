@@ -483,7 +483,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_HostCounter(0u),
     m_ReplacingLobbiesCounter(0u),
     m_HistoryGameID(0u),
-    m_MaxGameNameSize(31u),
+    m_MaxGameNameSize(MAX_GAME_NAME_SIZE),
 
     m_RealmDefaultConfig(nullptr),
     m_GameDefaultConfig(nullptr),
@@ -651,7 +651,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
     if (ThisConfig->m_UserName.empty() || ThisConfig->m_PassWord.empty()) {
       ThisConfig->m_Enabled = false;
     }
-    if (!ThisConfig->m_Enabled) {
+    if (!ThisConfig->m_Enabled || !ThisConfig->m_Valid) {
       delete ThisConfig;
     } else if (uniqueNames.find(ThisConfig->m_UniqueName) != uniqueNames.end()) {
       Print("[CONFIG] <realm_" + to_string(uniqueNames.at(ThisConfig->m_UniqueName) + 1) + ".unique_name> must be different from <realm_" + to_string(i) + ".unique_name>");
@@ -712,6 +712,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
       );
       matchingRealm->SetConfig(realmConfig);
       matchingRealm->SetHostCounter(realmConfig->m_ServerIndex + 15);
+      matchingRealm->SetGameBroadcastWantsRename();
       matchingRealm->ResetLogin();
       if (DoResetConnection) matchingRealm->ResetConnection(false);
       if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
@@ -719,19 +720,17 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
       }
     }
 
-    size_t lobbyParticlesSize = realmConfig->m_LobbyPrefix.length() + realmConfig->m_LobbySuffix.length();
-    size_t watchableParticlesSize = realmConfig->m_WatchableDisplayMode == REALM_OBSERVER_DISPLAY_NONE ? 0 : (realmConfig->m_WatchablePrefix.length() + realmConfig->m_WatchablePrefix.length());
-    if (lobbyParticlesSize > longestGameParticlesSize)
-      longestGameParticlesSize = lobbyParticlesSize;
-    if (watchableParticlesSize > longestGameParticlesSize)
-      longestGameParticlesSize = watchableParticlesSize;
+    if (realmConfig->m_MaxGameNameFixedCharsSize > longestGameParticlesSize)
+      longestGameParticlesSize = realmConfig->m_MaxGameNameFixedCharsSize;
 
     m_RealmsByHostCounter[matchingRealm->GetHostCounterID()] = matchingRealm;
     realmConfig->Reset();
     delete realmConfig;
   }
 
-  m_MaxGameNameSize = 31 - longestGameParticlesSize;
+  if (MAX_GAME_NAME_SIZE - longestGameParticlesSize < m_MaxGameNameSize) {
+    m_MaxGameNameSize = MAX_GAME_NAME_SIZE - longestGameParticlesSize;
+  }
   return true;
 }
 
@@ -1742,6 +1741,8 @@ void CAura::OnLoadConfigs()
       m_GameDataVersion = AutoVersion.value();
     }
   }
+
+  m_MaxGameNameSize = MAX_GAME_NAME_SIZE - m_Config.m_MaxGameNameFixedCharsSize;
 
   // Hosting basics: autocomplete <hosting.game_versions.main>, and <hosting.game_versions.supported>
   if (!m_GameDefaultConfig->m_GameVersion.has_value()) {

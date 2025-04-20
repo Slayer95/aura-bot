@@ -397,6 +397,7 @@ public:
   void AcquireHost(const CCLI* nCLI, const std::optional<std::string>& mpName);
   void AcquireCLISimple(const CCLI* nCLI);
   void static DeleteTemporaryFromMap(CConfig* MapCFG);
+  std::string static NormalizeGameName(const std::string& gameName);
 
   void OnGameCreate();
   [[nodiscard]] bool Update();

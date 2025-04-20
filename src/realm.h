@@ -73,6 +73,8 @@ private:
   bool                             m_GameBroadcastInFlight;     // whether the last game broadcast packet has been replied to
   std::optional<int64_t>           m_GameBroadcastStartTicks;   // when did we start to broadcast the latest game
   std::optional<bool>              m_GameBroadcastStatus;       // whether the hosted lobby has been successfully broadcasted at least once or not, or it is pending its first callback
+  std::string                      m_GameBroadcastName;
+  bool                             m_GameBroadcastWantsRename;
 
   bool                             m_GameIsExpansion;
   Version                          m_GameVersion;
@@ -189,7 +191,6 @@ public:
   bool                 GetIsFloodImmune() const;
   bool                 GetIsDueReconnect() const;
   std::string          GetCommandToken() const;
-  std::string          GetCustomGameName(const std::string& gameName, bool isSpectator) const;
   bool                 GetAnnounceHostToChat() const;
   inline bool          GetIsChatQueuedGameAnnouncement() { return m_ChatQueuedGameAnnouncement; }  
   inline bool          GetIsGameBroadcastSettled() { return m_GameBroadcastStatus.has_value(); }
@@ -252,6 +253,7 @@ public:
   inline void SetGameBroadcastPending(std::shared_ptr<CGame> nGame) { m_GameBroadcastPending = nGame; }
   inline void SetGameBroadcastPendingChat(bool shouldAnnounce) { m_GameBroadcastPendingChat = shouldAnnounce; }
   inline void SetGameBroadcastInFlight() { m_GameBroadcastInFlight = true; }
+  inline void SetGameBroadcastWantsRename() { m_GameBroadcastWantsRename = true; }
   inline void ResetGameBroadcastPending() { m_GameBroadcastPending.reset(); }
   inline void ResetGameBroadcastPendingChat() { m_GameBroadcastPendingChat.reset(); }
   inline void ResetGameBroadcastInFlight() { m_GameBroadcastInFlight = false; }
@@ -273,6 +275,11 @@ public:
   void HoldClan(std::shared_ptr<CGame> game);
   void Disable();
   void ResetLogin();
+
+  std::string GetReHostCounterTemplate() const;
+  const std::string& GetLobbyNameTemplate() const;
+  const std::string& GetWatchableNameTemplate() const;
+
 
   void SetConfig(CRealmConfig* CFG);
 

@@ -77,6 +77,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_BNCSUtil(new CBNCSUtilInterface(nRealmConfig->m_UserName, nRealmConfig->m_PassWord)),
 
     m_GameBroadcastInFlight(false),
+    m_GameBroadcastWantsRename(false),
     m_GameIsExpansion(false),
     m_GameVersion(GAMEVER(0u, 0u)),
     m_AuthGameVersion(GAMEVER(0u, 0u)),
@@ -659,7 +660,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
           // handle spoof checking for current game
           // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
           // at all times you can still /w the bot with "spoofcheck" to manually spoof check
-          if (whoisInfo->GetIsInGame() && whoisInfo->location == GetCustomGameName(gameBroadcast->GetGameName(), false)) {
+          if (whoisInfo->GetIsInGame() && whoisInfo->location == m_GameBroadcastName) {
             gameBroadcast->AddToRealmVerified(m_HostName, aboutPlayer, true);
           } else {
             gameBroadcast->ReportSpoofed(m_HostName, aboutPlayer);
@@ -976,28 +977,6 @@ bool CRealm::GetIsDueReconnect() const
     return false;
   }
   return !m_Aura->m_Net.GetIsOutgoingThrottled(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
-}
-
-string CRealm::GetCustomGameName(const string& gameName, bool isSpectator) const
-{
-  // Check name sizes again just in case realm config was reloaded and prefix/suffix became prohibitively large.
-  string customGameName = gameName;
-  if (isSpectator) {
-    if (customGameName.length() + m_Config.m_WatchablePrefix.length() < 31) {
-      customGameName.append(m_Config.m_WatchablePrefix);
-    }
-    if (customGameName.length() + m_Config.m_WatchableSuffix.length() < 31) {
-      customGameName.append(m_Config.m_WatchableSuffix);
-    }
-  } else {
-    if (customGameName.length() + m_Config.m_LobbyPrefix.length() < 31) {
-      customGameName.append(m_Config.m_LobbyPrefix);
-    }
-    if (customGameName.length() + m_Config.m_LobbySuffix.length() < 31) {
-      customGameName.append(m_Config.m_LobbySuffix);
-    }
-  }
-  return customGameName;
 }
 
 bool CRealm::GetAnnounceHostToChat() const
@@ -1454,7 +1433,25 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
   // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
   // battle.net refreshes use IDs of 16-255
   const uint32_t hostCounter = game->GetHostCounter() | (game->GetIsMirror() ? 0 : (static_cast<uint32_t>(m_PublicServerID) << 24));
-  bool changedAny = m_LastGamePort != connectPort || m_LastGameHostCounter != hostCounter;
+
+  bool changedAny = (
+    m_LastGamePort != connectPort ||
+    m_LastGameHostCounter != hostCounter
+  );
+
+  if (m_GameBroadcastName.empty() || m_GameBroadcastWantsRename) {
+    string broadcastName = game->GetCustomGameName(shared_from_this());
+    // Never advertise games with names beyond 31 characters long.
+    // This could happen after a config reload. Ignore the reloaded name template in that case.
+    if (broadcastName.size() > MAX_GAME_NAME_SIZE) {
+      broadcastName = broadcastName.substr(0, MAX_GAME_NAME_SIZE);
+    }
+    if (m_GameBroadcastName != broadcastName) {
+      m_GameBroadcastName = broadcastName;
+      changedAny = true;
+    }
+    m_GameBroadcastWantsRename = false;
+  }
 
   if (m_LastGamePort != connectPort) {
     DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "updating net game port to " + to_string(connectPort))
@@ -1486,7 +1483,7 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
     game->GetGameFlags(),
     game->GetAnnounceWidth(),
     game->GetAnnounceHeight(),
-    game->GetCustomGameName(shared_from_this()),
+    m_GameBroadcastName,
     m_Config.m_UserName,
     game->GetUptime(),
     game->GetSourceFilePath(),
@@ -1511,6 +1508,7 @@ void CRealm::QueueGameUncreate()
 
 void CRealm::ResetGameBroadcastData()
 {
+  m_GameBroadcastName.clear();
   m_GameBroadcast.reset();
   ResetGameBroadcastStatus();
   QueueGameUncreate();
@@ -1628,6 +1626,22 @@ void CRealm::ResetLogin()
   m_FailedSignup = false;
 }
 
-void CRealm::SetConfig(CRealmConfig* realmConfig) {
+void CRealm::SetConfig(CRealmConfig* realmConfig)
+{
   m_Config = *realmConfig;
+}
+
+string CRealm::GetReHostCounterTemplate() const
+{
+  return m_Config.m_ReHostCounterTemplate;
+}
+
+const string& CRealm::GetLobbyNameTemplate() const
+{
+  return m_Config.m_LobbyNameTemplate;
+}
+
+const string& CRealm::GetWatchableNameTemplate() const
+{
+  return m_Config.m_WatchableNameTemplate;
 }

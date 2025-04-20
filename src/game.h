@@ -235,7 +235,7 @@ protected:
   std::queue<CGameLogRecord*>                            m_PendingLogs;
   
   std::optional<CGameVirtualUserReference>               m_HMCVirtualUser; // sends ACTION_CHAT_TRIGGER actions for HMC system
-  std::optional<CGameVirtualUserReference>               m_AHCLVirtualUser; // sends ACTION_GAME_CACHE actions for AHCL system
+  std::optional<CGameVirtualUserReference>               m_AHCLVirtualUser; // sends ACTION_GAME_CACHE_INT actions for AHCL system
   std::optional<CGameVirtualUserReference>               m_InertVirtualUser; // all interactions with this virtual user are forbidden, except maybe chat
   std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser; // must never send actions, otherwise CAsyncObserver desyncs
 
@@ -273,6 +273,7 @@ public:
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
+  std::string                                            GetCustomGameNameTemplate(std::shared_ptr<const CRealm> realm = nullptr) const;
   std::string                                            GetCustomGameName(std::shared_ptr<const CRealm> realm = nullptr) const;
   std::string                                            GetAnnounceText(std::shared_ptr<const CRealm> realm = nullptr) const;
   inline bool                                            GetFromAutoReHost() const { return m_FromAutoReHost; }
@@ -357,6 +358,7 @@ public:
   uint8_t                                                GetNumTeams() const;
   uint8_t                                                GetNumTeamControllersOrOpen(const uint8_t team) const;
   std::string                                            GetClientFileName() const;
+  std::string                                            GetHCLCommandString() const { return m_HCLCommandString; }
   std::string                                            GetMapSiteURL() const { return m_MapSiteURL; }
   inline long                                            GetMapGameStartTime() const { return m_MapGameStartTime; }
   inline int64_t                                         GetEffectiveTicks() const { return m_EffectiveTicks; }

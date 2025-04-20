@@ -80,6 +80,10 @@ struct CBotConfig
   uint8_t                                 m_CFGCacheRevalidateAlgorithm; // always, never, modified
 
   CCommandConfig*                         m_LANCommandCFG;
+  std::string                             m_LANReHostCounterTemplate;    // string in the form PREFIX {COUNT} SUFFIX
+  std::string                             m_LANLobbyNameTemplate;        // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended
+  std::string                             m_LANWatchableNameTemplate;    // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended
+  size_t                                  m_MaxGameNameFixedCharsSize;
 
   uint8_t                                 m_LogLevel;
   bool                                    m_ExitOnStandby;

@@ -119,6 +119,8 @@ public:
   [[nodiscard]] std::string GetString(const std::string& key);
   [[nodiscard]] std::string GetString(const std::string& key, const std::string& x);
   [[nodiscard]] std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
+  [[nodiscard]] std::string GetGameNameTemplate(const std::string& key, const std::string& x);
+  [[nodiscard]] std::string GetGameCounterTemplate(const std::string& key, const std::string& x);
 
   [[nodiscard]] bool GetBool(const std::string& key, bool x);
 

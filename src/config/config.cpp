@@ -282,6 +282,51 @@ string CConfig::GetString(const string& key, const uint32_t minLength, const uin
   SUCCESS(value)
 }
 
+string CConfig::GetGameCounterTemplate(const string& key, const string& defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  TRY_JSON_STRING(key, value, defaultValue, value)
+
+  size_t nonTokenSize = CountTemplateFixedChars(value).value_or(MAX_GAME_NAME_SIZE);
+  if (nonTokenSize >= MAX_GAME_NAME_SIZE) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+
+  multiset<string> tokens = GetTemplateTokens(value);
+  size_t countCount = tokens.count("COUNT");
+  if (countCount != 1 || tokens.size() != countCount) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+
+  SUCCESS(value)
+}
+
+string CConfig::GetGameNameTemplate(const string& key, const string& defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  TRY_JSON_STRING(key, value, defaultValue, value)
+
+  size_t nonTokenSize = CountTemplateFixedChars(value).value_or(MAX_GAME_NAME_SIZE);
+  if (nonTokenSize >= MAX_GAME_NAME_SIZE) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  multiset<string> tokens = GetTemplateTokens(value);
+  size_t nameCount = tokens.count("NAME");
+  size_t modeCount = tokens.count("MODE");
+  size_t counterCount = tokens.count("COUNTER");
+  if (nameCount > 1 || modeCount > 1 || counterCount > 1 || tokens.size() != (nameCount + modeCount + counterCount)) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  if (nameCount == 0) {
+    value.append("{NAME}");
+  }
+  if (counterCount == 0) {
+    value.append("{COUNTER}");
+  }
+
+  SUCCESS(value)
+}
+
 uint8_t CConfig::GetStringIndex(const string& key, const vector<string>& fromList, const uint8_t defaultValue)
 {
   GET_KEY(key, value, defaultValue)

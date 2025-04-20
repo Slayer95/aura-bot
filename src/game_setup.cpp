@@ -1617,6 +1617,13 @@ void CGameSetup::DeleteTemporaryFromMap(CConfig* mapCFG)
   mapCFG->Delete("map.cfg.hosting.game_versions.expansion.default");
 }
 
+string CGameSetup::NormalizeGameName(const string& baseGameName)
+{
+  string gameName = baseGameName;
+  gameName = TrimString(RemoveDuplicateWhiteSpace(gameName));
+  return gameName;
+}
+
 void CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
 {
   if (nCLI->m_GameSavedPath.has_value()) SetGameSavedFile(nCLI->m_GameSavedPath.value());

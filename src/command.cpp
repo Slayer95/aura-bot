@@ -3096,6 +3096,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
       }
 
+      string gameName = CGameSetup::NormalizeGameName(target);
+      if (gameName.empty()) {
+        ErrorReply("Usage: " + cmdToken + "pub <GAMENAME>");
+        ErrorReply("Usage: " + cmdToken + "priv <GAMENAME>");
+        break;
+      }
+
       if (target.length() > m_Aura->m_MaxGameNameSize) {
         ErrorReply("Unable to create game [" + target + "]. The game name is too long (the maximum is " + to_string(m_Aura->m_MaxGameNameSize) + " characters)");
         break;
@@ -7703,7 +7710,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
 
         if (Args.size() >= 2) {
-          gameName = Args[Args.size() - 1];
+          gameName = CGameSetup::NormalizeGameName(Args[Args.size() - 1]);
           Args.pop_back();
         } else {
           gameName = GetSender() + "'s " + Args[0];
@@ -7714,6 +7721,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
               break;
             }
           }
+        }
+        if (gameName.empty()) {
+          ErrorReply("Usage: " + cmdToken + "host <MAP NAME> , <GAME NAME>");
+          break;
         }
       }
 

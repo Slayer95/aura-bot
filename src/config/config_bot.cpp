@@ -136,6 +136,18 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_MapSearchShowSuggestions     = CFG.GetBool("bot.load_maps.show_suggestions", true);
   m_EnableCFGCache               = CFG.GetBool("bot.load_maps.cache.enabled", true);
   m_CFGCacheRevalidateAlgorithm  = CFG.GetStringIndex("bot.load_maps.cache.revalidation.algorithm", {"never", "always", "modified"}, CACHE_REVALIDATION_MODIFIED);
+  m_LANReHostCounterTemplate     = CFG.GetGameNameTemplate("lan_realm.rehost.name_template", "-{COUNT}");
+  m_LANLobbyNameTemplate         = CFG.GetGameNameTemplate("lan_realm.lobby.name_template", "{NAME}{COUNTER}");
+  m_LANWatchableNameTemplate     = CFG.GetGameNameTemplate("lan_realm.watchable.name_template", "{NAME}{COUNTER}");
+
+  m_MaxGameNameFixedCharsSize    = CountTemplateFixedChars(m_LANReHostCounterTemplate).value_or(MAX_GAME_NAME_SIZE) + max(
+    CountTemplateFixedChars(m_LANLobbyNameTemplate).value_or(MAX_GAME_NAME_SIZE),
+    CountTemplateFixedChars(m_LANWatchableNameTemplate).value_or(MAX_GAME_NAME_SIZE)
+  );
+  if (m_MaxGameNameFixedCharsSize >= MAX_GAME_NAME_SIZE) {
+    Print("[CONFIG] Game name templates are invalid or too long");
+    CFG.SetFailed();
+  }
 
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
 

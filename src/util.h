@@ -99,7 +99,8 @@
   return padded;
 }
 
-[[nodiscard]] inline std::string TrimString(const std::string& str) {
+[[nodiscard]] inline std::string TrimString(const std::string& str)
+{
   if (str.empty()) return std::string();
 
   size_t firstNonSpace = str.find_first_not_of(" ");
@@ -112,7 +113,8 @@
   }
 }
 
-[[nodiscard]] inline std::string TrimStringExtended(const std::string& str) {
+[[nodiscard]] inline std::string TrimStringExtended(const std::string& str)
+{
   if (str.empty()) return std::string();
 
   size_t firstNonSpace = str.find_first_not_of(" \r\n");
@@ -123,6 +125,23 @@
   } else {
     return std::string();
   }
+}
+
+[[nodiscard]] inline std::string RemoveDuplicateWhiteSpace(const std::string& str)
+{
+  std::string result;
+  result.reserve(str.size());
+
+  bool wasSpace = false;
+  for (char c : str) {
+    bool isSpace = c == ' ';
+    if (!(isSpace && wasSpace)) {
+      result += c;
+    }
+    wasSpace = isSpace;
+  }
+
+  return result;
 }
 
 inline void EllideEmptyElementsInPlace(std::vector<std::string>& list) {
@@ -1561,41 +1580,80 @@ inline bool ReplaceText(std::string& input, const std::string& fragment, const s
   return true;
 }
 
-[[nodiscard]] inline std::string ReplaceTemplate(const std::string& input, const std::map<int64_t, std::function<std::string()>>& funcMap) {
+[[nodiscard]] inline std::optional<size_t> CountTemplateFixedChars(const std::string& input)
+{
+  size_t size = 0;
+  size_t pos = 0;
+  size_t start = 0;
+
+  while ((start = input.find('{', pos)) != std::string::npos) {
+    size += start - pos;
+
+    size_t end = input.find('}', start);
+    if (end == std::string::npos || end == start + 1) {
+      return std::nullopt;
+    }
+    pos = end + 1;
+  }
+
+  size += input.size() - pos;
+  return size;
+}
+
+[[nodiscard]] inline std::multiset<std::string> GetTemplateTokens(const std::string& input)
+{
+  std::multiset<std::string> tokens;
+  size_t pos = 0;
+  size_t start = 0;
+
+  while ((start = input.find('{', pos)) != std::string::npos) {
+    size_t end = input.find('}', start);
+    if (end == std::string::npos || end == start + 1) {
+      return std::multiset<std::string>();
+    }
+    tokens.insert(input.substr(start + 1, end - start - 1));
+    pos = end + 1;
+  }
+
+  return tokens;
+}
+
+[[nodiscard]] inline std::string ReplaceTemplate(const std::string& input, const std::map<const int64_t, std::function<std::string()>>& funcMap, std::map<const int64_t, std::string>& cache, bool tolerant = false) {
   std::string result;
   size_t pos = 0;
   size_t start = 0;
 
   while ((start = input.find('{', pos)) != std::string::npos) {
-    // Append the part before the token
     result.append(input, pos, start - pos);
 
-    // Find the closing brace
     size_t end = input.find('}', start);
-    if (end == std::string::npos) {
-      // Unmatched opening brace
+    if (end == std::string::npos || end == start + 1) {
+      if (!tolerant) return std::string();
       result.append(input, start, input.size() - start);
       return result;
     }
 
-    // Extract the token inside the braces
     std::string token = input.substr(start + 1, end - start - 1);
+    int64_t cacheKey = HashCode(token);
 
-    // Check if the hash exists in the funcMap
-    auto it = funcMap.find(HashCode(token));
-    if (it != funcMap.end()) {
-      // Replace the token with the output of the corresponding function
-      result.append(it->second());
+    auto cacheMatch = cache.find(cacheKey);
+    if (cacheMatch != cache.end()) {
+      result.append(cacheMatch->second);
     } else {
-      // If no match is found, keep the original token (or you can choose to return false)
-      result.append("{").append(token).append("}");
+      auto lazyMatch = funcMap.find(cacheKey);
+      if (lazyMatch != funcMap.end()) {
+        std::string value = lazyMatch->second();
+        cache[cacheKey] = value;
+        result.append(value);
+      } else {
+        if (!tolerant) return std::string();
+        result.append("{").append(token).append("}");
+      }
     }
 
-    // Move the position forward
     pos = end + 1;
   }
 
-  // Append the rest of the string after the last token
   result.append(input, pos, std::string::npos);
   return result;
 }

@@ -45,6 +45,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
     // Inheritable
     m_Enabled(true),
+    m_Valid(true),
     m_LocaleShort({83, 69, 115, 101}), // esES, reversed
     m_Locale(PVPGN_LOCALE_ES_ES),
     m_AutoRegister(false),
@@ -53,6 +54,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_LicenseeName("Aura"),
 
     m_Admins({}),
+    m_MaxGameNameFixedCharsSize(0),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
     m_WatchableDisplayMode(REALM_OBSERVER_DISPLAY_NONE),
     m_FloodImmune(false),
@@ -167,10 +169,11 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, false, m_SudoUsers);
   m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
-  m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", m_LobbyPrefix);
-  m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", m_LobbySuffix);
-  m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", m_WatchablePrefix);
-  m_WatchableSuffix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_suffix", m_WatchableSuffix);
+
+  m_ReHostCounterTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.rehost.name_template", "-{COUNT}");
+  m_LobbyNameTemplate      = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.lobby.name_template", "{NAME}{COUNTER}");
+  m_WatchableNameTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.watchable.name_template", "{NAME}{COUNTER}");
+
   m_MaxUploadSize          = CFG.GetUint32(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
 
@@ -244,6 +247,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_CommandCFG(nullptr),
 
     m_Enabled(nRootConfig->m_Enabled),
+    m_Valid(nRootConfig->m_Valid),
     m_BindAddress(nRootConfig->m_BindAddress),
 
     m_CountryShort(nRootConfig->m_CountryShort),
@@ -296,10 +300,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_FirstChannel(nRootConfig->m_FirstChannel),
     m_SudoUsers(nRootConfig->m_SudoUsers),
     m_Admins(nRootConfig->m_Admins),
-    m_LobbyPrefix(nRootConfig->m_LobbyPrefix),
-    m_LobbySuffix(nRootConfig->m_LobbySuffix),
-    m_WatchablePrefix(nRootConfig->m_WatchablePrefix),
-    m_WatchableSuffix(nRootConfig->m_WatchableSuffix),
+    m_ReHostCounterTemplate(nRootConfig->m_ReHostCounterTemplate),
+    m_LobbyNameTemplate(nRootConfig->m_LobbyNameTemplate),
+    m_WatchableNameTemplate(nRootConfig->m_WatchableNameTemplate),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
     m_WatchableDisplayMode(nRootConfig->m_WatchableDisplayMode),
 
@@ -357,7 +360,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     }
     if (localeError) {
       Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "locale_short> - must provide a valid pair of ISO 639-1, ISO 3166 alpha-2 identifiers");
-      CFG.SetFailed();
+      m_Valid = false;
     }
   }
 
@@ -378,11 +381,11 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", m_PrivateCmdToken);
   if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
-    CFG.SetFailed();
+    m_Valid = false;
   }
   m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", m_BroadcastCmdToken);
   if (!m_BroadcastCmdToken.empty() && m_BroadcastCmdToken[0] == '/') {
-    CFG.SetFailed();
+    m_Valid = false;
   }
   m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", m_EnableBroadcast);
 
@@ -466,7 +469,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   if (m_ExeAuthVersionDetails.has_value() && m_ExeAuthVersion.has_value()) {
     if (m_ExeAuthVersion->first != m_ExeAuthVersionDetails.value()[3] || m_ExeAuthVersion->second != m_ExeAuthVersionDetails.value()[2]) {
       Print("[CONFIG] Error - mismatch between <" + m_CFGKeyPrefix + "exe_auth.version> and <" + m_CFGKeyPrefix + "exe_auth.version_details>");
-      CFG.SetFailed();
+      m_Valid = false;
     }
   }
 
@@ -477,10 +480,20 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, false, m_SudoUsers);
   m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
-  m_LobbyPrefix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_prefix", 0, 16, m_LobbyPrefix);
-  m_LobbySuffix            = CFG.GetString(m_CFGKeyPrefix + "game_list.lobby_suffix", 0, 16, m_LobbySuffix);
-  m_WatchablePrefix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_prefix", 0, 16, m_WatchablePrefix);
-  m_WatchableSuffix        = CFG.GetString(m_CFGKeyPrefix + "game_list.watchable_suffix", 0, 16, m_WatchableSuffix);
+
+  m_ReHostCounterTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.rehost.name_template", m_ReHostCounterTemplate);
+  m_LobbyNameTemplate      = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.lobby.name_template", m_LobbyNameTemplate);
+  m_WatchableNameTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.watchable.name_template", m_WatchableNameTemplate);
+
+  m_MaxGameNameFixedCharsSize = CountTemplateFixedChars(m_ReHostCounterTemplate).value_or(MAX_GAME_NAME_SIZE) + max(
+    CountTemplateFixedChars(m_LobbyNameTemplate).value_or(MAX_GAME_NAME_SIZE),
+    CountTemplateFixedChars(m_WatchableNameTemplate).value_or(MAX_GAME_NAME_SIZE)
+  );
+  if (m_MaxGameNameFixedCharsSize >= MAX_GAME_NAME_SIZE) {
+    Print("[CONFIG] Game name templates are invalid or too long");
+    m_Valid = false;
+  }
+
   m_MaxUploadSize          = CFG.GetUint32(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
   m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
 

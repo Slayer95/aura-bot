@@ -63,6 +63,7 @@ struct CRealmConfig
 
   // Not inheritable
 
+  bool m_Valid;
   std::string m_InputID;                         // for IRC commands
   std::string m_UniqueName;                      // displayed on the console
   std::string m_CanonicalName;                   // displayed on game rooms
@@ -123,10 +124,10 @@ struct CRealmConfig
   std::string m_FirstChannel;                    //
   std::set<std::string> m_SudoUsers;             //
   std::set<std::string> m_Admins;                //
-  std::string m_LobbyPrefix;                      // string prepended to game names
-  std::string m_LobbySuffix;
-  std::string m_WatchablePrefix;
-  std::string m_WatchableSuffix;
+  std::string m_ReHostCounterTemplate;           // string in the form PREFIX {COUNT} SUFFIX
+  std::string m_LobbyNameTemplate;               // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended
+  std::string m_WatchableNameTemplate;           // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended
+  size_t m_MaxGameNameFixedCharsSize;
   uint32_t m_MaxUploadSize;                      // in KB
   uint8_t m_WatchableDisplayMode;                // none, deprioritize, always
 
