@@ -2041,6 +2041,10 @@ void CAura::GracefulExit()
   }
   m_Discord.m_ExitingSoon = true;
 
+  for (auto& game : GetJoinableGames()) {
+    game->AnnounceDecreateToRealms();
+  }
+
   for (auto& game : m_StartedGames) {
     game->SendEveryoneElseLeftAndDisconnect("shutdown");
   }

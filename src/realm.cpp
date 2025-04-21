@@ -1398,11 +1398,13 @@ bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
   // Do not display external games in those realms.
     return false;
   }
-  if (m_GameVersion >= GAMEVER(1u, 0u) && !game->GetIsSupportedGameVersion(GetGameVersion())) {
-    return false;
-  }
-  if (game->GetIsExpansion() != GetGameIsExpansion()) {
-    return false;
+  if (m_GameVersion >= GAMEVER(1u, 0u)) {
+    if (!game->GetIsSupportedGameVersion(GetGameVersion())) {
+      return false;
+    }
+    if (game->GetIsExpansion() != GetGameIsExpansion()) {
+      return false;
+    }
   }
   if (game->GetIsRealmExcluded(GetServer())) {
     return false;
@@ -1415,7 +1417,9 @@ bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
 
 bool CRealm::TrySetGameBroadcastPending(shared_ptr<CGame> game)
 {
-  if (!GetCanSetGameBroadcastPending(game)) return false;
+  if (!GetCanSetGameBroadcastPending(game)) {
+    return false;
+  }
   SetGameBroadcastPending(game);
   return true;
 }

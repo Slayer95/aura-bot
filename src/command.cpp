@@ -500,7 +500,7 @@ void CCommandContext::UpdatePermissions()
   if (m_OverrideVerified.has_value()) {
     isRealmVerified = m_OverrideVerified.value();
   } else {
-    isRealmVerified = !GetGameSource().GetIsEmpty() ? (GetIsGameUser() && GetGameUser()->GetIsRealmVerified()) : (sourceRealm != nullptr);
+    isRealmVerified = GetGameSource().GetIsEmpty() ? (sourceRealm != nullptr) : (GetIsGameUser() && GetGameUser()->GetIsRealmVerified());
   }
 
   // Trust PvPGN servers on users identities for admin powers. Their impersonation is not a threat we worry about.
@@ -512,9 +512,9 @@ void CCommandContext::UpdatePermissions()
   } else if (targetGame) {
     IsOwner = isRealmVerified && targetGame->MatchOwnerName(GetSender()) && m_ServerName == targetGame->GetOwnerRealm();
   }
-  bool IsCreatorRealm = targetGame && sourceRealm && targetGame->MatchesCreatedFromRealm(sourceRealm);
-  bool IsRootAdmin = isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && sourceRealm->GetIsAdmin(GetSender());
-  bool IsAdmin = IsRootAdmin || (isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsCreatorRealm) && sourceRealm->GetIsModerator(GetSender()));
+  bool IsMainOrCreatorRealm = targetGame && sourceRealm && (sourceRealm->GetIsMain() || targetGame->MatchesCreatedFromRealm(sourceRealm));
+  bool IsRootAdmin = isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsMainOrCreatorRealm) && sourceRealm->GetIsAdmin(GetSender());
+  bool IsAdmin = IsRootAdmin || (isRealmVerified && sourceRealm != nullptr && (m_TargetGame.expired() || IsMainOrCreatorRealm) && sourceRealm->GetIsModerator(GetSender()));
   bool IsSudoSpoofable = isRealmVerified && sourceRealm != nullptr && sourceRealm->GetIsSudoer(GetSender());
 
   // GOTCHA: Owners are always treated as players if the game hasn't started yet. Even if they haven't joined.
@@ -1527,10 +1527,12 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
       shared_ptr<CRealm> targetPlayerRealm = targetPlayer->GetRealm(true);
-      bool GetIsRealmVerified = targetPlayerRealm != nullptr;
+      bool verifiedRealm = targetPlayerRealm != nullptr;
+      bool mainRealm = verifiedRealm && targetPlayerRealm->GetIsMain();
       bool IsOwner = targetPlayer->GetIsOwner(nullopt);
-      bool IsRootAdmin = GetIsRealmVerified && targetPlayerRealm->GetIsAdmin(targetPlayer->GetName());
-      bool IsAdmin = IsRootAdmin || (GetIsRealmVerified && targetPlayerRealm->GetIsModerator(targetPlayer->GetName()));
+      bool IsRootAdminSelf = verifiedRealm && targetPlayerRealm->GetIsAdmin(targetPlayer->GetName());
+      bool IsAdminSelf = IsRootAdminSelf || (verifiedRealm && targetPlayerRealm->GetIsModerator(targetPlayer->GetName()));
+      bool IsCreatorRealm = targetGame && verifiedRealm  && targetGame->MatchesCreatedFromRealm(targetPlayerRealm);
       string SyncStatus;
       if (targetGame->GetGameLoaded()) {
         if (targetGame->m_SyncPlayers[targetPlayer].size() + 1 == targetGame->m_Users.size()) {
@@ -1571,9 +1573,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         versionFragment = " (" + targetPlayer->GetGameVersionString() + ")";
       }
       SendReply("[" + targetPlayer->GetName() + "]. " + SlotFragment + ReadyFragment + "Ping: " + targetPlayer->GetDelayText(true) + IPVersionFragment + ", Reconnection: " + targetPlayer->GetReconnectionText() + FromFragment + (targetGame->GetGameLoaded() ? ", Sync: " + SyncStatus : ""));
-      SendReply("[" + targetPlayer->GetName() + "]. " + realmFragment + versionFragment + ", Verified: " + (GetIsRealmVerified ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
-      if (IsOwner || IsAdmin || IsRootAdmin) {
-        SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdmin ? "Yes" : "No") + ", Root Admin: " + (IsRootAdmin ? "Yes" : "No"));
+      SendReply("[" + targetPlayer->GetName() + "]. " + realmFragment + versionFragment + ", Verified: " + (verifiedRealm ? "Yes" : "No") + ", Reserved: " + (targetPlayer->GetIsReserved() ? "Yes" : "No"));
+      if (IsOwner || IsAdminSelf || IsRootAdminSelf) {
+        SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (IsOwner ? "Yes" : "No") + ", Admin: " + (IsAdminSelf ? (IsCreatorRealm ? "Yes" : (mainRealm ? "Main" : "Foreign")) : "No") + ", Root Admin: " + (IsRootAdminSelf ? (IsCreatorRealm ? "Yes" : (mainRealm ? "Main" : "Foreign")) : "No"));
       }
       break;
     }

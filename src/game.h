@@ -302,6 +302,8 @@ public:
   [[nodiscard]]                                          bool MatchesCreatedFromIRC() const;
   [[nodiscard]]                                          bool MatchesCreatedFromDiscord() const;
 
+  [[nodiscard]] inline std::shared_ptr<CRealm> GetSourceRealm() const { return MatchesCreatedFrom(SERVICE_TYPE_REALM) ? GetCreatedFrom<CRealm>() : nullptr; }
+
   inline uint32_t                                        GetHostCounter() const { return m_HostCounter; }
   inline int64_t                                         GetLastLagScreenTime() const { return m_LastLagScreenTime; }
   inline bool                                            GetIsReplaceable() const { return m_Replaceable;}
