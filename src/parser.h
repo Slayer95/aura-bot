@@ -105,6 +105,7 @@
         break;
       }
       result = false;
+      break;
     case HashCode("disable"):
     if (!(parseFlags & PARSER_BOOLEAN_ALLOW_ENABLE)) {
         break;
