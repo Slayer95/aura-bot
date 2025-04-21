@@ -2225,7 +2225,6 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     createdLobby->SendGameDiscoveryCreate();
   }
 
-  Print("Before TrySetGameBroadcastPending() @ CAura::CreateGame()");
   for (auto& realm : m_Realms) {
     if (!createdLobby->GetIsMirror() && !createdLobby->GetIsRestored()) {
       realm->HoldFriends(createdLobby);
@@ -2234,7 +2233,6 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 
     realm->TrySetGameBroadcastPending(createdLobby);
   }
-  Print("After TrySetGameBroadcastPending() @ CAura::CreateGame()");
 
   if (createdLobby->GetDisplayMode() != GAME_DISPLAY_PUBLIC ||
     gameSetup->GetCreatedFromType() != SERVICE_TYPE_REALM ||
