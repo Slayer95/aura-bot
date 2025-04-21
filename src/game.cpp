@@ -3820,20 +3820,14 @@ std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
 
   const FlatMap<int64_t, string> textCache;
 
-  const FlatMap<int64_t, function<string()>> textFuncMap = {
-    {HashCode("MODE"), [this]() -> string {
-      return this->GetHCLCommandString();
-    }},
-    {HashCode("NAME"), [this]() -> string {
-      return this->GetGameName();
-    }},
-    {HashCode("COUNTER"), [this, realm]() -> string {
-      return this->GetCreationCounterText(realm);
-    }}
-  };
-
+  vector<pair<int64_t, function<string()>>> textFuncs;
+  textFuncs.reserve(3);
+  textFuncs.emplace_back(HashCode("MODE"),    [this] () { return this->GetHCLCommandString(); });
+  textFuncs.emplace_back(HashCode("NAME"),    [this] () { return this->GetGameName(); });
+  textFuncs.emplace_back(HashCode("COUNTER"), [this, realm]() { return this->GetCreationCounterText(realm); });
   static_assert(HashCode("MODE") < HashCode("NAME"), "Hash for MODE is not before NAME");
   static_assert(HashCode("NAME") < HashCode("COUNTER"), "Hash for NAME is not before COUNTER");
+  const FlatMap<int64_t, function<string()>> textFuncMap(move(textFuncs));
 
   string replaced = ReplaceTemplate(nameTemplate, nullptr, &textCache, nullptr, &textFuncMap);
   return TrimString(RemoveDuplicateWhiteSpace(replaced));
@@ -10451,10 +10445,12 @@ string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
     counterTemplate = m_Aura->m_Config.m_LANReHostCounterTemplate;
   }
 
-  const FlatMap<int64_t, string> textCache = {
-    {HashCode("COUNT"), string(static_cast<string::size_type>(1u), counter)}
-  };
+  vector<pair<int64_t, string>> texts;
+  texts.reserve(1);
+  texts.emplace_back(HashCode("COUNT"), string(static_cast<string::size_type>(1u), counter));
+  const FlatMap<int64_t, string> textCache(move(texts));
   const FlatMap<int64_t, function<string()>> textFuncMap;
+
   return ReplaceTemplate(counterTemplate, nullptr, &textCache, nullptr, &textFuncMap);
 }
 

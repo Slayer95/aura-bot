@@ -48,24 +48,19 @@ public:
     data_.reserve(capacity);
   }
 
-  explicit FlatMap(std::vector<KVPair>& items)
+  explicit FlatMap(std::vector<KVPair>&& items)
   {
     if (!std::is_sorted(items.begin(), items.end(), &comp)) {
       std::sort(items.begin(), items.end(), &comp);
     }
-    data_.swap(items);
+    data_ = std::move(items);
   }
 
   template<size_t N>
   explicit FlatMap(const std::array<KVPair, N>& arr)
    : FlatMap(N)
   {
-    std::copy_n(arr.begin(), N, data_.begin());
-  }
-
-  FlatMap(std::initializer_list<KVPair> init)
-   : FlatMap(std::vector<KVPair>(init))
-  {
+    data_.insert(data_.end(), arr.begin(), arr.end());
   }
 
   void reserve(size_t n)
