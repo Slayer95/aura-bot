@@ -295,6 +295,7 @@ string CConfig::GetGameCounterTemplate(const string& key, const string& defaultV
   multiset<string> tokens = GetTemplateTokens(value);
   size_t countCount = tokens.count("COUNT");
   if (countCount != 1 || tokens.size() != countCount) {
+    Print("[CONFIG] <" + key + "> allows placeholder {COUNT} once.");
     CONFIG_ERROR(key, defaultValue)
   }
 
@@ -315,6 +316,7 @@ string CConfig::GetGameNameTemplate(const string& key, const string& defaultValu
   size_t modeCount = tokens.count("MODE");
   size_t counterCount = tokens.count("COUNTER");
   if (nameCount > 1 || modeCount > 1 || counterCount > 1 || tokens.size() != (nameCount + modeCount + counterCount)) {
+    Print("[CONFIG] <" + key + "> allows placeholders {NAME}, {MODE}, and {COUNTER} once each.");
     CONFIG_ERROR(key, defaultValue)
   }
   if (nameCount == 0) {

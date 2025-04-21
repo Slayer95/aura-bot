@@ -75,6 +75,9 @@ class CUDPServer;
 class CUDPSocket;
 class CW3MMD;
 
+template <typename K, typename V>
+class FlatMap;
+
 namespace GameUser
 {
   class CGameUser;

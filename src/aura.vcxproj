@@ -500,6 +500,7 @@
     <ClInclude Include="ms_stdint.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="util.h" />
+    <ClInclude Include="flat_map.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="file_util.h" />
     <ClInclude Include="os_util.h" />

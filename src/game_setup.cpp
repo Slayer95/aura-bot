@@ -1518,12 +1518,6 @@ void CGameSetup::OnGameCreate()
   // Transferred to CGame. Do not deallocate.
   m_RestoredGame = nullptr;
   if (m_LobbyAutoRehosted) {
-    // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
-    if (m_CreationCounter < 10) {
-      SetName(m_BaseName + "-" + string(static_cast<string::size_type>(1u), static_cast<uint8_t>(48u + m_CreationCounter)));
-    } else {
-      SetName(m_BaseName + "-" + string(static_cast<string::size_type>(1u), static_cast<uint8_t>(87u + m_CreationCounter)));
-    }
     m_CreationCounter = (m_CreationCounter + 1) % 36;
   }
 }

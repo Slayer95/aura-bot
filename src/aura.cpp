@@ -1328,16 +1328,16 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
   shared_ptr<CGame> game = errorRealm->GetGameBroadcast();
 
   if (game->GetHasAnyUser()) {
-    game->SendAllChat("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
+    game->SendAllChat("Cannot publish game on server [" + errorRealm->GetServer() + "]. Try another name");
   } else {
     switch (game->GetCreatedFromType()) {
       case SERVICE_TYPE_REALM:
         if (!game->GetCreatedFromIsExpired()) {
-          game->GetCreatedFrom<CRealm>()->QueueWhisper("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
+          game->GetCreatedFrom<CRealm>()->QueueWhisper("Cannot publish game on on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         }
         break;
       case SERVICE_TYPE_IRC:
-        m_IRC.SendUser("Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
+        m_IRC.SendUser("Cannot publish game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
       /*
       // FIXME: CAura::EventBNETGameRefreshError SendUser() - Discord case
@@ -1349,7 +1349,7 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
     }
   }
 
-  Print("[GAME: " + game->GetGameName() + "] Cannot register game on server [" + errorRealm->GetServer() + "]. Try another name");
+  Print(game->GetLogPrefix() + "cannot publish game on server [" + errorRealm->GetServer() + "]. Try another game name");
 
   bool earlyExit = false;
   switch (game->m_Config.m_BroadcastErrorHandler) {
@@ -1370,7 +1370,7 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
       break;
   }
   if (earlyExit) {
-    game->StopPlayers("failed to broadcast game");
+    game->StopPlayers("failed to publish game");
     game->SetExiting(true);
     return;
   }
@@ -1396,7 +1396,7 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
       }
     }
 
-    game->StopPlayers("failed to broadcast game");
+    game->StopPlayers("failed to publish game");
     game->SetExiting(true);
     return;
   }

@@ -259,7 +259,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
                 m_Aura->EventBNETGameRefreshSuccess(shared_from_this());
               } else {
-                PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish hosted game")
+                PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish game <<" + GetGameBroadcastName() + ">> Try another name")
                 m_Aura->EventBNETGameRefreshError(shared_from_this());
               }
             }

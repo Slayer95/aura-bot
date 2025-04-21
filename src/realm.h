@@ -151,6 +151,7 @@ public:
   inline std::shared_ptr<CGame>           GetGameBroadcastPending() const { return m_GameBroadcastPending.lock(); }
   inline bool                             GetIsGameBroadcastInFlight() const { return m_GameBroadcastInFlight; }
   inline std::shared_ptr<CGame>           GetGameBroadcast() const { return m_GameBroadcast.lock(); }
+  inline const std::string&               GetGameBroadcastName() const { return m_GameBroadcastName; }
   inline bool                             GetGameIsExpansion() const { return m_GameIsExpansion; }
   inline const Version&                   GetGameVersion() const { return m_GameVersion; }
   inline const Version&                   GetAuthGameVersion() const { return m_AuthGameVersion; }

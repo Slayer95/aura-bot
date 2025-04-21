@@ -107,6 +107,7 @@ protected:
   uint32_t                                               m_GameFlags;
   GameUser::CGameUser*                                   m_PauseUser;
   std::string                                            m_GameName;                      // game name
+  uint16_t                                               m_CreationCounter;
   uint64_t                                               m_PersistentId;
   std::string                                            m_LastOwner;                     // name of the player who was owner last time the owner was released
   bool                                                   m_FromAutoReHost;
@@ -269,6 +270,8 @@ public:
   inline uint8_t                                         GetDisplayMode() const { return m_DisplayMode; }
   inline uint8_t                                         GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string                                     GetGameName() const { return m_GameName; }
+  inline uint16_t                                        GetCreationCounter() const { return m_CreationCounter; }
+  std::string                                            GetCreationCounterText(std::shared_ptr<const CRealm> realm) const;
   inline uint64_t                                        GetGameID() const { return m_PersistentId; }
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;

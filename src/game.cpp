@@ -114,6 +114,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameFlags(0),
     m_PauseUser(nullptr),
     m_GameName(nGameSetup->m_Name),
+    m_CreationCounter(nGameSetup->m_CreationCounter),
     m_PersistentId(nAura->NextHistoryGameID()),
     m_FromAutoReHost(nGameSetup->m_LobbyAutoRehosted),
     m_OwnerLess(nGameSetup->m_OwnerLess),
@@ -3847,20 +3848,26 @@ std::string CGame::GetCustomGameNameTemplate(shared_ptr<const CRealm> realm) con
 
 std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
 {
-  string formatTemplate = GetCustomGameNameTemplate(realm);
+  string nameTemplate = GetCustomGameNameTemplate(realm);
 
-  const map<const int64_t, function<string()>> funcMap = {
+  const FlatMap<int64_t, string> textCache;
+
+  const FlatMap<int64_t, function<string()>> textFuncMap = {
     {HashCode("MODE"), [this]() -> string {
       return this->GetHCLCommandString();
     }},
-  };
-  map<const int64_t, string> cache = {
-    {HashCode("NAME"), m_GameName},
-    // TODO: {COUNTER} Not implemented. To be used by --auto-rehost
-    {HashCode("COUNTER"), "1"}
+    {HashCode("NAME"), [this]() -> string {
+      return this->GetGameName();
+    }},
+    {HashCode("COUNTER"), [this, realm]() -> string {
+      return this->GetCreationCounterText(realm);
+    }}
   };
 
-  string replaced = ReplaceTemplate(formatTemplate, funcMap, cache);
+  static_assert(HashCode("MODE") < HashCode("NAME"), "Hash for MODE is not before NAME");
+  static_assert(HashCode("NAME") < HashCode("COUNTER"), "Hash for NAME is not before COUNTER");
+
+  string replaced = ReplaceTemplate(nameTemplate, nullptr, &textCache, nullptr, &textFuncMap);
   return TrimString(RemoveDuplicateWhiteSpace(replaced));
 }
 
@@ -7484,7 +7491,7 @@ bool CGame::CheckActorRequirements(const GameUser::CGameUser* user, const uint8_
 {
   if (!user->GetIsObserver()) return (actorMask & ACTION_SOURCE_PLAYER) > 0;
   if (m_Map->GetMapObservers() == MAPOBS_REFEREES) return (actorMask & ACTION_SOURCE_REFEREE) > 0;
-  return actorMask & ACTION_SOURCE_OBSERVER > 0;
+  return (actorMask & ACTION_SOURCE_OBSERVER) > 0;
 }
 
 uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* user, const bool isDisconnect, uint8_t actorMask)
@@ -10457,6 +10464,32 @@ uint8_t CGame::GetIPFloodHandler() const
 bool CGame::GetAllowsIPFlood() const
 {
   return m_Config.m_IPFloodHandler != ON_IPFLOOD_DENY;
+}
+
+string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
+{
+  if (m_CreationCounter == 0) return string();
+
+  // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
+  char counter;
+  if (m_CreationCounter < 10) {
+    counter = static_cast<uint8_t>(48u + m_CreationCounter);
+  } else {
+    counter = static_cast<uint8_t>(87u + m_CreationCounter);
+  }
+
+  string counterTemplate;
+  if (realm) {
+    counterTemplate = realm->GetReHostCounterTemplate();
+  } else {
+    counterTemplate = m_Aura->m_Config.m_LANReHostCounterTemplate;
+  }
+
+  const FlatMap<int64_t, string> textCache = {
+    {HashCode("COUNT"), string(static_cast<string::size_type>(1u), counter)}
+  };
+  const FlatMap<int64_t, function<string()>> textFuncMap;
+  return ReplaceTemplate(counterTemplate, nullptr, &textCache, nullptr, &textFuncMap);
 }
 
 string CGame::GetIndexHostName() const

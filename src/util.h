@@ -47,6 +47,7 @@
 #define AURA_UTIL_H_
 
 #include "includes.h"
+#include "flat_map.h"
 #include "hash.h"
 #include "parser.h"
 
@@ -192,6 +193,7 @@ template <typename T>
   if (hh > 0) result.append(std::to_string(hh) + " h ");
   if (mm > 0) result.append(std::to_string(mm) + " min ");
   if (ss > 0) result.append(std::to_string(ss) + " s ");
+  if (result.empty()) return "Now";
   return TrimString(result);
 }
 
@@ -1618,10 +1620,15 @@ inline bool ReplaceText(std::string& input, const std::string& fragment, const s
   return tokens;
 }
 
-[[nodiscard]] inline std::string ReplaceTemplate(const std::string& input, const std::map<const int64_t, std::function<std::string()>>& funcMap, std::map<const int64_t, std::string>& cache, bool tolerant = false) {
+[[nodiscard]] inline std::string ReplaceTemplate(const std::string& input, const FlatMap<int64_t, bool>* boolCache, const FlatMap<int64_t, std::string>* textCache, const FlatMap<int64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<int64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false)
+{
   std::string result;
-  size_t pos = 0;
-  size_t start = 0;
+  std::string::size_type pos = 0;
+  std::string::size_type start = 0;
+  const bool* boolCacheMatch = nullptr;
+  const std::string* textCacheMatch = nullptr;
+  const std::function<bool()>* boolFuncMatch = nullptr;
+  const std::function<std::string()>* textFuncMatch = nullptr;
 
   while ((start = input.find('{', pos)) != std::string::npos) {
     result.append(input, pos, start - pos);
@@ -1634,24 +1641,107 @@ inline bool ReplaceText(std::string& input, const std::string& fragment, const s
     }
 
     std::string token = input.substr(start + 1, end - start - 1);
+    bool isCondition = token[0] == '?' || token[0] == '!';
+    if (isCondition) {
+      token = token.substr(1);
+    }
     int64_t cacheKey = HashCode(token);
 
-    auto cacheMatch = cache.find(cacheKey);
-    if (cacheMatch != cache.end()) {
-      result.append(cacheMatch->second);
+    if (isCondition) {
+      bool checkResult = false;
+      if (boolCache != nullptr && ((boolCacheMatch = boolCache->find(cacheKey)) != nullptr)) {
+        checkResult = *boolCacheMatch;
+      } else if (boolFuncsMap != nullptr && ((boolFuncMatch = boolFuncsMap->find(cacheKey)) != nullptr)) {
+        bool value = (*boolFuncMatch)();
+        checkResult = value;
+      } else {
+        if (!tolerant) return std::string();
+        result.append("{").append(token).append("}");
+      }
+      if (checkResult == (token[0] == '?')) {
+        pos = end + 1;
+      } else {
+        pos = input.find('\n', pos);
+      }
     } else {
-      auto lazyMatch = funcMap.find(cacheKey);
-      if (lazyMatch != funcMap.end()) {
-        std::string value = lazyMatch->second();
-        cache[cacheKey] = value;
+      if (textCache != nullptr && ((textCacheMatch = textCache->find(cacheKey)) != nullptr)) {
+        result.append(*textCacheMatch);
+      } else if (textFuncsMap != nullptr && ((textFuncMatch = textFuncsMap->find(cacheKey)) != nullptr)) {
+        std::string value = (*textFuncMatch)();
         result.append(value);
       } else {
         if (!tolerant) return std::string();
         result.append("{").append(token).append("}");
       }
+      pos = end + 1;
+    }
+  }
+
+  result.append(input, pos, std::string::npos);
+  return result;
+}
+
+[[nodiscard]] inline std::string ReplaceTemplate(const std::string& input, std::unordered_map<int64_t, bool>* boolCache, std::unordered_map<int64_t, std::string>* textCache, const FlatMap<int64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<int64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false)
+{
+  std::string result;
+  std::string::size_type pos = 0;
+  std::string::size_type start = 0;
+  std::unordered_map<int64_t, bool>::iterator boolCacheMatch;
+  std::unordered_map<int64_t, std::string>::iterator textCacheMatch;
+  const std::function<bool()>* boolFuncMatch = nullptr;
+  const std::function<std::string()>* textFuncMatch = nullptr;
+
+  while ((start = input.find('{', pos)) != std::string::npos) {
+    result.append(input, pos, start - pos);
+
+    size_t end = input.find('}', start);
+    if (end == std::string::npos || end == start + 1) {
+      if (!tolerant) return std::string();
+      result.append(input, start, input.size() - start);
+      return result;
     }
 
-    pos = end + 1;
+    std::string token = input.substr(start + 1, end - start - 1);
+    bool isCondition = token[0] == '?' || token[0] == '!';
+    if (isCondition) {
+      token = token.substr(1);
+    }
+    int64_t cacheKey = HashCode(token);
+
+    if (isCondition) {
+      bool checkResult = false;
+      if (boolCache != nullptr && ((boolCacheMatch = boolCache->find(cacheKey)) != boolCache->end())) {
+        checkResult = boolCacheMatch->second;
+      } else if (boolFuncsMap != nullptr && ((boolFuncMatch = boolFuncsMap->find(cacheKey)) != nullptr)) {
+        bool value = (*boolFuncMatch)();
+        if (boolCache != nullptr) {
+          (*boolCache)[cacheKey] = value;
+        }
+        checkResult = value;
+      } else {
+        if (!tolerant) return std::string();
+        result.append("{").append(token).append("}");
+      }
+      if (checkResult == (token[0] == '?')) {
+        pos = end + 1;
+      } else {
+        pos = input.find('\n', pos);
+      }
+    } else {
+      if (textCache != nullptr && ((textCacheMatch = textCache->find(cacheKey)) != textCache->end())) {
+        result.append(textCacheMatch->second);
+      } else if (textFuncsMap != nullptr && ((textFuncMatch = textFuncsMap->find(cacheKey)) != nullptr)) {
+        std::string value = (*textFuncMatch)();
+        if (textCache != nullptr) {
+          (*textCache)[cacheKey] = value;
+        }
+        result.append(value);
+      } else {
+        if (!tolerant) return std::string();
+        result.append("{").append(token).append("}");
+      }
+      pos = end + 1;
+    }
   }
 
   result.append(input, pos, std::string::npos);
