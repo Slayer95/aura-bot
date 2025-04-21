@@ -287,6 +287,7 @@ public:
   inline std::string                                     GetCreatorName() const { return m_Creator.GetUser(); }
   inline uint8_t                                         GetCreatedFromType() const { return m_Creator.GetServiceType(); }
   inline bool                                            GetCreatedFromIsExpired() const { return m_Creator.GetIsExpired(); }
+  inline bool                                            GetCanJoinInProgress() const { return m_JoinInProgressVirtualUser.has_value(); }
 
   template <typename T>
   [[nodiscard]] inline std::shared_ptr<T> GetCreatedFrom() const
@@ -509,7 +510,6 @@ public:
   std::vector<uint8_t>                                   GetFakeUsersLoadedInfo() const;
   std::vector<uint8_t>                                   GetJoinedPlayersInfo() const;
 
-  void                                                   AnnounceToRealm(std::shared_ptr<CRealm> realm);
   void                                                   AnnounceDecreateToRealms();
   void                                                   AnnounceToAddress(std::string& address, const std::optional<Version>& customGameVersion);
   void                                                   ReplySearch(sockaddr_storage* address, CSocket* socket, const std::optional<Version>& customGameVersion);

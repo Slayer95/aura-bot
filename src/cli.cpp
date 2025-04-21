@@ -399,14 +399,14 @@ uint8_t CCLI::GetGameReconnectionMode() const
 
 uint8_t CCLI::GetGameDisplayType() const
 {
-  uint8_t displayMode = GAME_PUBLIC;
+  uint8_t displayMode = GAME_DISPLAY_PUBLIC;
   if (m_GameDisplayMode.has_value()) {
     if (m_GameDisplayMode.value() == "public") {
-      displayMode = GAME_PUBLIC;
+      displayMode = GAME_DISPLAY_PUBLIC;
     } else if (m_GameDisplayMode.value() == "private") {
-      displayMode = GAME_PRIVATE;
+      displayMode = GAME_DISPLAY_PRIVATE;
     } else {
-      displayMode = GAME_NONE;
+      displayMode = GAME_DISPLAY_NONE;
     }
   }
   return displayMode;

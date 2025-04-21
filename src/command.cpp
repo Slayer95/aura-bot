@@ -1795,7 +1795,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetGame || targetGame->GetIsMirror())
         break;
 
-      if (targetGame->m_DisplayMode == GAME_PRIVATE && GetSourceGame() != GetTargetGame()) {
+      if (targetGame->m_DisplayMode == GAME_DISPLAY_PRIVATE && GetSourceGame() != GetTargetGame()) {
         if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
           ErrorReply("This game is private.");
           break;
@@ -3114,24 +3114,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       bool IsPrivate = cmdHash == HashCode("priv");
       if (targetGame) {
-        targetGame->m_DisplayMode  = IsPrivate ? GAME_PRIVATE : GAME_PUBLIC;
-        targetGame->m_GameName     = target;
-        targetGame->m_HostCounter  = m_Aura->NextHostCounter();
+        targetGame->m_DisplayMode = IsPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC;
+        targetGame->m_GameName = target;
+        targetGame->m_HostCounter = m_Aura->NextHostCounter();
         targetGame->UpdateGameDiscovery();
-
         for (auto& realm : m_Aura->m_Realms) {
-          if (targetGame->m_IsMirror && realm->GetIsMirror()) {
-            continue;
-          }
-          if (!realm->GetLoggedIn()) {
-            continue;
-          }
-          if (targetGame->m_RealmsExcluded.find(realm->GetServer()) != targetGame->m_RealmsExcluded.end()) {
-            continue;
-          }
-          realm->SetGameBroadcastPending(targetGame);
+          realm->TrySetGameBroadcastPending(targetGame);
         }
-
         targetGame->m_CreationTime = targetGame->m_LastRefreshTime = GetTime();
       } else {
         if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
@@ -3144,7 +3133,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
         m_Aura->m_GameSetup->SetContext(shared_from_this());
         m_Aura->m_GameSetup->SetBaseName(target);
-        m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
+        m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC);
         m_Aura->m_GameSetup->AcquireCreator();
         if (m_Aura->m_Config.m_AutomaticallySetGameOwner) {
           m_Aura->m_GameSetup->SetOwner(GetSender(), sourceRealm);
@@ -3198,7 +3187,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
       m_Aura->m_GameSetup->SetContext(shared_from_this());
       m_Aura->m_GameSetup->SetBaseName(gameName);
-      m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_PRIVATE : GAME_PUBLIC);
+      m_Aura->m_GameSetup->SetDisplayMode(IsPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC);
       m_Aura->m_GameSetup->AcquireCreator();
       m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : sourceRealm);
       m_Aura->m_GameSetup->RunHost();
@@ -4876,7 +4865,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetGame || !targetGame->GetIsLobbyStrict())
         break;
 
-      if (targetGame->m_DisplayMode == GAME_PRIVATE) {
+      if (targetGame->m_DisplayMode == GAME_DISPLAY_PRIVATE) {
         ErrorReply("This game is private.");
         break;
       }
@@ -4927,9 +4916,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           }
           break;
         }
+        if (!targetRealm->GetCanSetGameBroadcastPending(targetGame)) {
+          ErrorReply("The game cannot be published in " + targetRealm->GetServer());
+          break;
+        }
       }
 
-      targetGame->m_DisplayMode = GAME_PUBLIC;
+      targetGame->m_DisplayMode = GAME_DISPLAY_PUBLIC;
       if (Args.size() >= 2) {
         targetGame->m_GameName = renameTarget;
       }
@@ -4937,12 +4930,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       targetGame->UpdateGameDiscovery();
       string earlyFeedback = "Announcement sent.";
       if (toAllRealms) {
-        for (auto& bnet : m_Aura->m_Realms) {
-          if (!targetGame->GetIsSupportedGameVersion(bnet->GetGameVersion())) continue;
-          if (targetGame->GetIsExpansion() != bnet->GetGameIsExpansion()) continue;
-          bnet->ResetGameBroadcastData();
-          bnet->ResetGameBroadcastPending();
-          bnet->QueueGameChatAnnouncement(targetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
+        for (auto& realm : m_Aura->m_Realms) {
+          if (!realm->GetCanSetGameBroadcastPending(targetGame)) continue;
+          realm->ResetGameBroadcastData();
+          realm->ResetGameBroadcastPending();
+          realm->QueueGameChatAnnouncement(targetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
         }
       } else {
         targetRealm->ResetGameBroadcastData();
@@ -7745,7 +7737,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
       if (isHostCommand) {
-        gameSetup->SetDisplayMode(isHostPrivate ? GAME_PRIVATE : GAME_PUBLIC);
+        gameSetup->SetDisplayMode(isHostPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC);
         gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, gameName);
       }
       gameSetup->SetMapExtraOptions(options);

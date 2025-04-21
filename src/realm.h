@@ -87,9 +87,8 @@ private:
   uint8_t                          m_PublicServerID;            // for building host counters, which allows matching game join requests to a realm (or none)
   int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
   int64_t                          m_LastConnectionAttemptTime; // GetTime when we last attempted to connect to battle.net
-  int64_t                          m_LastGameListTime;          // GetTime when the last game list request was sent
-  int64_t                          m_LastAdminRefreshTime;      // GetTime when the admin list was last refreshed from the database
-  int64_t                          m_LastBanRefreshTime;        // GetTime when the ban list was last refreshed from the database
+  int64_t                          m_LastGameRefreshTime;       // GetTime when we last sent SEND_SID_STARTADVEX3 (game advertisement)
+  int64_t                          m_LastGameListTime;          // GetTime when we last sent SEND_SID_GETADVLISTEX (game list request)
   int64_t                          m_MinReconnectDelay;
   int64_t                          m_BaseReconnectDelay;        // interval between two consecutive connect attempts
   uint32_t                         m_SessionID;                 // reconnection counter
@@ -241,7 +240,9 @@ public:
   CQueuedChatMessage* QueueGameChatAnnouncement(std::shared_ptr<const CGame> game, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   void TryQueueChat(const std::string& chatCommand, const std::string& user, bool isPrivate, std::shared_ptr<CCommandContext> ctx = nullptr, const uint8_t ctxFlags = 0);
   void TryQueueGameChatAnnouncement(std::shared_ptr<const CGame> game);
-  void SendGameRefresh(const uint8_t displayMode, std::shared_ptr<CGame> game);
+  void RunMessageCallbackRefreshGame(CQueuedChatMessage* message);
+  bool TrySendGameRefresh(std::shared_ptr<CGame> game);
+  bool SendGameRefresh(std::shared_ptr<CGame> game);
   void QueueGameUncreate();
   void TrySendEnterChat();
   void TrySendGetGamesList();
@@ -251,6 +252,8 @@ public:
   void ResolveGameBroadcastStatus(bool nResult) { m_GameBroadcastStatus = nResult; }
   void ResetGameBroadcastData();
 
+  bool GetCanSetGameBroadcastPending(std::shared_ptr<CGame> game) const;
+  bool TrySetGameBroadcastPending(std::shared_ptr<CGame> nGame);
   inline void SetGameBroadcastPending(std::shared_ptr<CGame> nGame) { m_GameBroadcastPending = nGame; }
   inline void SetGameBroadcastPendingChat(bool shouldAnnounce) { m_GameBroadcastPendingChat = shouldAnnounce; }
   inline void SetGameBroadcastInFlight() { m_GameBroadcastInFlight = true; }
@@ -282,7 +285,7 @@ public:
   const std::string& GetWatchableNameTemplate() const;
 
 
-  void SetConfig(CRealmConfig* CFG);
+  void ReloadConfig(CRealmConfig* CFG);
 
   inline void SetHostCounter(const uint8_t nHostCounter) { m_PublicServerID = nHostCounter; }
 

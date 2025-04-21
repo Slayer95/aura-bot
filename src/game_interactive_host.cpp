@@ -210,7 +210,5 @@ string CGameInteractiveHost::GetLogPrefix() const
 long CGameInteractiveHost::GetMapTime()
 {
   auto now = chrono::system_clock::to_time_t(chrono::system_clock::now());
-  long t = (long)now;
-  Print("[W3HMC] Map time is " + to_string(t) + " | ref is " + to_string((long)time(0)) + "GetTime() is " + to_string(GetTime()) + " | GetTicks() is " + to_string(GetTicks()));
-  return t;
+  return (long)now;
 }

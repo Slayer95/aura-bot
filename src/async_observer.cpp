@@ -494,12 +494,6 @@ void CAsyncObserver::EventDesync()
 
   if (!m_GameHistory->GetSoftDesynchronized()) {
     m_GameHistory->SetSoftDesynchronized();
-    if (!m_Game.expired()) {
-      shared_ptr<CGame> game = m_Game.lock();
-      m_Aura->UntrackGameJoinInProgress(game);
-      game->AnnounceDecreateToRealms();
-      if (game->GetUDPEnabled()) game->SendGameDiscoveryDecreate();
-    }
   }
 
   if (!CloseConnection()) {

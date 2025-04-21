@@ -189,7 +189,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
 
     m_OwnerLess(false),
     m_IsMirror(false),    
-    m_RealmsDisplayMode(GAME_PUBLIC),
+    m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
 
@@ -234,7 +234,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
 
     m_OwnerLess(false),
     m_IsMirror(false),    
-    m_RealmsDisplayMode(GAME_PUBLIC),
+    m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
 

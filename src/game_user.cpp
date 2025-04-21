@@ -737,14 +737,14 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Ticks - m_JoinTicks >= AUTO_REALM_VERIFY_LATENCY) {
       shared_ptr<CRealm> Realm = GetRealm(false);
       if (Realm) {
-        if (m_Game.get().GetDisplayMode() == GAME_PUBLIC || Realm->GetPvPGN()) {
+        if (m_Game.get().GetDisplayMode() == GAME_DISPLAY_PUBLIC || Realm->GetPvPGN()) {
           if (m_Game.get().GetSentPriorityWhois()) {
             Realm->QueuePriorityWhois("/whois " + m_Name);
             m_Game.get().SetSentPriorityWhois(true);
           } else {
             Realm->QueueCommand("/whois " + m_Name);
           }
-        } else if (m_Game.get().GetDisplayMode() == GAME_PRIVATE) {
+        } else if (m_Game.get().GetDisplayMode() == GAME_DISPLAY_PRIVATE) {
           Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
         }
       }

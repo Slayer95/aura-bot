@@ -90,9 +90,8 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_PublicServerID(14 + 2 * nRealmConfig->m_ServerIndex), // First is 16
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
-    m_LastGameListTime(0),
-    m_LastAdminRefreshTime(GetTime()),
-    m_LastBanRefreshTime(GetTime()),
+    m_LastGameRefreshTime(APP_MIN_TICKS),
+    m_LastGameListTime(APP_MIN_TICKS),
     m_MinReconnectDelay(5),
     m_SessionID(0),
     m_NullPacketsSent(0),
@@ -432,7 +431,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "map is invalid")
               break;
             }
-            gameSetup->SetDisplayMode(hostedGameConfig->GetBool("rehost.game.private", false) ? GAME_PRIVATE : GAME_PUBLIC);
+            gameSetup->SetDisplayMode(hostedGameConfig->GetBool("rehost.game.private", false) ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC);
             gameSetup->SetMapReadyCallback(MAP_ONREADY_HOST, hostedGameConfig->GetString("rehost.game.name", 1, 31, "Rehosted Game"));
             gameSetup->SetActive();
             gameSetup->LoadMap();
@@ -474,8 +473,16 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
   TrySendPendingChats();
   CheckPendingGameBroadcast();
 
-  if (Time - m_LastGameListTime >= 90) {
+  if (m_LastGameRefreshTime + 3 <= Time) {
+    if (auto game = GetGameBroadcast()) {
+      TrySendGameRefresh(game);
+    }
+    m_LastGameRefreshTime = Time;
+  }
+
+  if (m_LastGameListTime + 90 <= Time) {
     TrySendGetGamesList();
+    m_LastGameListTime = GetTime();
   }
 
   m_Socket->DoSend(send_fd);
@@ -764,19 +771,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
 
   switch (message->GetCallback()) {
     case CHAT_CALLBACK_REFRESH_GAME: {
-      m_ChatQueuedGameAnnouncement = false;
-      shared_ptr<CGame> matchLobby = m_Aura->GetLobbyOrObservableByHostCounterExact(message->GetCallbackData());
-      if (!matchLobby) {
-        Print(GetLogPrefix() + " !! lobby not found !! host counter 0x" + ToHexString(message->GetCallbackData()));
-        if (message->GetIsStale()) {
-          Print(GetLogPrefix() + " !! lobby is stale !!");
-        } else {
-          Print(GetLogPrefix() + " !! lobby is not stale !!");
-        }
-      } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion()) && matchLobby->GetIsExpansion() == GetGameIsExpansion()) {
-        SetGameBroadcastPending(matchLobby);
-        SetGameBroadcastPendingChat(false);
-      }
+      RunMessageCallbackRefreshGame(message);
       break;
     }
 
@@ -1031,7 +1026,6 @@ void CRealm::SendGetClanList()
 void CRealm::SendGetGamesList()
 {
   Send(BNETProtocol::SEND_SID_GETADVLISTEX());
-  m_LastGameListTime = GetTime();
 }
 
 void CRealm::TrySendGetGamesList()
@@ -1277,7 +1271,7 @@ void CRealm::TryQueueGameChatAnnouncement(shared_ptr<const CGame> game)
     return;
   }
 
-  if (game->GetDisplayMode() == GAME_PUBLIC && GetAnnounceHostToChat()) {
+  if (game->GetDisplayMode() == GAME_DISPLAY_PUBLIC && GetAnnounceHostToChat()) {
     QueueGameChatAnnouncement(game);
     return;
   }
@@ -1379,6 +1373,53 @@ void CRealm::TrySendPendingChats()
   }
 }
 
+void CRealm::QueueGameUncreate()
+{
+  ResetGameChatAnnouncement();
+  Send(BNETProtocol::SEND_SID_STOPADV());
+}
+
+void CRealm::ResetGameBroadcastData()
+{
+  m_GameBroadcastName.clear();
+  m_GameBroadcast.reset();
+  ResetGameBroadcastStatus();
+  QueueGameUncreate();
+  SendEnterChat();
+}
+
+bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
+{
+  if (game->GetDisplayMode() == GAME_DISPLAY_NONE) {
+    return false;
+  }
+  if (game->GetIsMirror() && GetIsMirror()) {
+  // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+  // Do not display external games in those realms.
+    return false;
+  }
+  if (m_GameVersion >= GAMEVER(1u, 0u) && !game->GetIsSupportedGameVersion(GetGameVersion())) {
+    return false;
+  }
+  if (game->GetIsExpansion() != GetGameIsExpansion()) {
+    return false;
+  }
+  if (game->GetIsRealmExcluded(GetServer())) {
+    return false;
+  }
+  if (game->GetCanJoinInProgress() && GetWatchableGamesDisplayMode() != REALM_OBSERVER_DISPLAY_ALWAYS) {
+    return false;
+  }
+  return true;
+}
+
+bool CRealm::TrySetGameBroadcastPending(shared_ptr<CGame> game)
+{
+  if (!GetCanSetGameBroadcastPending(game)) return false;
+  SetGameBroadcastPending(game);
+  return true;
+}
+
 void CRealm::CheckPendingGameBroadcast()
 {
   if (!m_LoggedIn || !GetIsGameBroadcastPending() || GetIsGameBroadcastInFlight()) {
@@ -1394,31 +1435,80 @@ void CRealm::CheckPendingGameBroadcast()
     (pendingGame->GetIsExpansion() != GetGameIsExpansion()) ||
     !(pendingGame->GetIsSupportedGameVersion(GetGameVersion()))
   ) {
+    // GetCanSetGameBroadcastPending() cannot do a proper version check, so we must do it now.
     return;
   }
 
-  if (pendingGame->GetDisplayMode() == GAME_PUBLIC && pendingChat.value_or(GetAnnounceHostToChat())) {
+  ResetGameBroadcastData();
+
+  if (pendingGame->GetDisplayMode() == GAME_DISPLAY_PUBLIC && pendingChat.value_or(GetAnnounceHostToChat())) {
     QueueGameChatAnnouncement(pendingGame);
   } else {
     // Send STARTADVEX3
-    pendingGame->AnnounceToRealm(shared_from_this());
-
-    // if we're creating a private game we don't need to send any further game refresh messages so we can rejoin the chat immediately
-    // unfortunately, this doesn't work on PVPGN servers, because they consider an enterchat message to be a gameuncreate message when in a game
-    // so don't rejoin the chat if we're using PVPGN
-
-    if (pendingGame->GetDisplayMode() == GAME_PRIVATE && !GetPvPGN()) {
-      SendEnterChat();
-    }
+    m_GameBroadcast = pendingGame;
+    TrySendGameRefresh(pendingGame);
   }
 }
 
-void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
+void CRealm::RunMessageCallbackRefreshGame(CQueuedChatMessage* message)
 {
-  if (!m_LoggedIn || GetIsGameBroadcastErrored() || GetIsGameBroadcastInFlight() || GetIsGameBroadcastPending()) {
-    return;
+  m_ChatQueuedGameAnnouncement = false;
+  shared_ptr<CGame> matchLobby = m_Aura->GetLobbyOrObservableByHostCounterExact(message->GetCallbackData());
+  if (!matchLobby) {
+    Print(GetLogPrefix() + " !! lobby not found !! host counter 0x" + ToHexString(message->GetCallbackData()));
+    if (message->GetIsStale()) {
+      Print(GetLogPrefix() + " !! lobby is stale !!");
+    } else {
+      Print(GetLogPrefix() + " !! lobby is not stale !!");
+    }
+  } else if (matchLobby->GetIsSupportedGameVersion(GetGameVersion()) && matchLobby->GetIsExpansion() == GetGameIsExpansion()) {
+    // Queue the game as pending again. But this time use an override to prevent sending another chat announcement.
+    // Note that SetGameBroadcastPendingChat(false) is NOT the same as ResetGameBroadcastPendingChat()
+    SetGameBroadcastPending(matchLobby);
+    SetGameBroadcastPendingChat(false);
+  }
+}
+
+bool CRealm::TrySendGameRefresh(shared_ptr<CGame> game)
+{
+  if (!game->HasSlotsOpen() && !game->GetCanJoinInProgress()) {
+    return false;
+  }
+  if (!GetLoggedIn() || GetIsGameBroadcastErrored() || GetIsGameBroadcastInFlight() || GetIsGameBroadcastPending()) {
+    return false;
+  }
+  if (GetIsChatQueuedGameAnnouncement()) {
+    // Wait til we have sent a chat message first.
+    return false;
   }
 
+  /*
+  if (game->GetDisplayMode == GAME_DISPLAY_NONE) {
+    return false;
+  }
+  if (game->GetIsMirror() && GetIsMirror()) {
+  // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+  // Do not display external games in those realms.
+    return false;
+  }
+  if (!game->GetIsSupportedGameVersion(GetGameVersion())) {
+    return false;
+  }
+  if (game->GetIsExpansion() != GetGameIsExpansion()) {
+    return false;
+  }
+  if (game->GetIsRealmExcluded(GetServer())) {
+    return false;
+  }
+  if (game->GetCanJoinInProgress() && GetWatchableGamesDisplayMode() != REALM_OBSERVER_DISPLAY_ALWAYS) {
+    return false;
+  }
+  */
+  return SendGameRefresh(game);
+}
+
+bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
+{
   const uint16_t connectPort = (
     game->GetIsMirror() ? game->GetPublicHostPort() :
     (GetUsesCustomPort() ? GetPublicHostPort() :
@@ -1467,18 +1557,16 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
     if (!m_Config.m_IsHostOften && m_GameBroadcastStartTicks.has_value() && Ticks < m_GameBroadcastStartTicks.value() + static_cast<int64_t>(REALM_HOST_COOLDOWN_TICKS)) {
       // Still in cooldown
       DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "not registering game... still in cooldown")
-      return;
+      return false;
     }
     PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "registering game...")
     m_LastGameHostCounter = hostCounter;
     m_GameBroadcastStartTicks = Ticks;
   }
 
-  m_GameBroadcast = game;
-
   Version version = GetGameVersion();
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
-    displayMode,
+    game->GetDisplayMode(),
     game->GetGameType(),
     game->GetGameFlags(),
     game->GetAnnounceWidth(),
@@ -1498,21 +1586,8 @@ void CRealm::SendGameRefresh(const uint8_t displayMode, shared_ptr<CGame> game)
     m_AnchorChannel = m_CurrentChannel;
     m_CurrentChannel.clear();
   }
-}
 
-void CRealm::QueueGameUncreate()
-{
-  ResetGameChatAnnouncement();
-  Send(BNETProtocol::SEND_SID_STOPADV());
-}
-
-void CRealm::ResetGameBroadcastData()
-{
-  m_GameBroadcastName.clear();
-  m_GameBroadcast.reset();
-  ResetGameBroadcastStatus();
-  QueueGameUncreate();
-  SendEnterChat();
+  return true;
 }
 
 void CRealm::StopConnection(bool hadError)
@@ -1626,9 +1701,36 @@ void CRealm::ResetLogin()
   m_FailedSignup = false;
 }
 
-void CRealm::SetConfig(CRealmConfig* realmConfig)
+void CRealm::ReloadConfig(CRealmConfig* realmConfig)
 {
+  const bool needsResetConnection = (
+    GetServer() != realmConfig->m_HostName ||
+    GetServerPort() != realmConfig->m_ServerPort ||
+    GetLoginName() != realmConfig->m_UserName ||
+    (GetEnabled() && !realmConfig->m_Enabled) ||
+    !GetLoggedIn() ||
+    (realmConfig->m_ExeAuthVersion.has_value() && realmConfig->m_ExeAuthVersion.value() != GetAuthGameVersion()) ||
+    (!realmConfig->m_ExeAuthVersion.has_value() && realmConfig->m_GameVersion.has_value() && realmConfig->m_GameVersion.value() != GetAuthGameVersion()) ||
+    (realmConfig->m_GameIsExpansion.has_value() && realmConfig->m_GameIsExpansion.value() != GetGameIsExpansion())
+  );
+
   m_Config = *realmConfig;
+
+  SetHostCounter(m_Config.m_ServerIndex + 15);
+  ResetLogin();
+
+  if (auto game = GetGameBroadcast()) {
+    if (!GetCanSetGameBroadcastPending(game)) {
+      ResetGameBroadcastData();
+    }
+  }
+  SetGameBroadcastWantsRename();
+
+  if (needsResetConnection) ResetConnection(false);
+
+  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    Print(GetLogPrefix() + "config reloaded");
+  }
 }
 
 string CRealm::GetReHostCounterTemplate() const

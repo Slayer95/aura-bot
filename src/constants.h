@@ -506,10 +506,10 @@ constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
 constexpr int W3GS_UDP_MIN_PACKET_SIZE = 4;
 constexpr size_t W3GS_ACTION_MAX_PACKET_SIZE = 1024;
 
-constexpr uint8_t GAME_NONE = 0; // this case isn't part of the protocol, it's for internal use only
-constexpr uint8_t GAME_FULL = 2;
-constexpr uint8_t GAME_PUBLIC = 16;
-constexpr uint8_t GAME_PRIVATE = 17;
+constexpr uint8_t GAME_DISPLAY_NONE = 0; // this case isn't part of the protocol, it's for internal use only
+constexpr uint8_t GAME_DISPLAY_FULL = 2;
+constexpr uint8_t GAME_DISPLAY_PUBLIC = 16;
+constexpr uint8_t GAME_DISPLAY_PRIVATE = 17;
 
 constexpr uint8_t PLAYERLEAVE_DISCONNECT = 1u;
 constexpr uint8_t PLAYERLEAVE_LOST = 7u;

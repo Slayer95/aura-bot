@@ -702,22 +702,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
         Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
       }
     } else {
-      // TODO: Update CAura::LoadBNETs to check for new DoResetConnection conditions (versions, etc.?)
-      const bool DoResetConnection = (
-        matchingRealm->GetServer() != realmConfig->m_HostName ||
-        matchingRealm->GetServerPort() != realmConfig->m_ServerPort ||
-        matchingRealm->GetLoginName() != realmConfig->m_UserName ||
-        (matchingRealm->GetEnabled() && !realmConfig->m_Enabled) ||
-        !matchingRealm->GetLoggedIn()
-      );
-      matchingRealm->SetConfig(realmConfig);
-      matchingRealm->SetHostCounter(realmConfig->m_ServerIndex + 15);
-      matchingRealm->SetGameBroadcastWantsRename();
-      matchingRealm->ResetLogin();
-      if (DoResetConnection) matchingRealm->ResetConnection(false);
-      if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
-        Print("[AURA] server reloaded: " + matchingRealm->GetUniqueDisplayName());
-      }
+      matchingRealm->ReloadConfig(realmConfig);
     }
 
     if (realmConfig->m_MaxGameNameFixedCharsSize > longestGameParticlesSize)
@@ -2240,32 +2225,24 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     createdLobby->SendGameDiscoveryCreate();
   }
 
+  Print("Before TrySetGameBroadcastPending() @ CAura::CreateGame()");
   for (auto& realm : m_Realms) {
     if (!createdLobby->GetIsMirror() && !createdLobby->GetIsRestored()) {
       realm->HoldFriends(createdLobby);
       realm->HoldClan(createdLobby);
     }
 
-    if (createdLobby->GetIsMirror() && realm->GetIsMirror()) {
-      // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
-      // Do not display external games in those realms.
-      continue;
-    }
-
-    if (gameSetup->m_RealmsExcluded.find(realm->GetServer()) != gameSetup->m_RealmsExcluded.end()) {
-      continue;
-    }
-
-    realm->SetGameBroadcastPending(createdLobby);
+    realm->TrySetGameBroadcastPending(createdLobby);
   }
+  Print("After TrySetGameBroadcastPending() @ CAura::CreateGame()");
 
-  if (createdLobby->GetDisplayMode() != GAME_PUBLIC ||
+  if (createdLobby->GetDisplayMode() != GAME_DISPLAY_PUBLIC ||
     gameSetup->GetCreatedFromType() != SERVICE_TYPE_REALM ||
     gameSetup->m_Ctx->GetIsWhisper()) {
     gameSetup->m_Ctx->SendPrivateReply(createdLobby->GetAnnounceText());
   }
 
-  if (createdLobby->GetDisplayMode() == GAME_PUBLIC) {
+  if (createdLobby->GetDisplayMode() == GAME_DISPLAY_PUBLIC) {
     if (m_IRC.GetIsEnabled() && m_IRC.GetIsAnnounceGames()) {
      m_IRC.SendAllChannels(createdLobby->GetAnnounceText());
     }

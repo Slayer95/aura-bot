@@ -617,9 +617,8 @@ void CGame::StartGameOverTimer(bool isMMD)
       SendGameDiscoveryDecreate();
       SetUDPEnabled(false);
     }
-    if (m_DisplayMode != GAME_NONE) {
-      AnnounceDecreateToRealms();
-      m_DisplayMode = GAME_NONE;
+    if (m_DisplayMode != GAME_DISPLAY_NONE) {
+      AnnounceDecreateToRealms(); // ResetGameBroadcastData(), STOPADV
     }
     m_ChatOnly = true;
     StopCountDown();
@@ -1284,41 +1283,10 @@ void CGame::UpdateJoinable()
 {
   const int64_t Time = GetTime(), Ticks = GetTicks();
 
-  // refresh every 3 seconds
+  // refresh metadata every 10 seconds
 
-  if (m_LastRefreshTime + 3 <= Time) {
+  if (m_LastRefreshTime + 10 <= Time) {
     // send a game refresh packet to each battle.net connection
-
-    if (m_DisplayMode == GAME_PUBLIC && (HasSlotsOpen() || m_JoinInProgressVirtualUser.has_value())) {
-      for (auto& realm : m_Aura->m_Realms) {
-        if (!realm->GetLoggedIn() || realm->GetIsGameBroadcastPending()) {
-          continue;
-        }
-        if (m_IsMirror && realm->GetIsMirror()) {
-        // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
-        // Do not display external games in those realms.
-          continue;
-        }
-        if (realm->GetIsChatQueuedGameAnnouncement()) {
-          // Wait til we have sent a chat message first.
-          continue;
-        }
-        if (!GetIsSupportedGameVersion(realm->GetGameVersion())) {
-          continue;
-        }
-        if (GetIsExpansion() != realm->GetGameIsExpansion()) {
-          continue;
-        }
-        if (m_RealmsExcluded.find(realm->GetServer()) != m_RealmsExcluded.end()) {
-          continue;
-        }
-        if (m_JoinInProgressVirtualUser.has_value() && realm->GetWatchableGamesDisplayMode() != REALM_OBSERVER_DISPLAY_ALWAYS) {
-          continue;
-        }
-        // Send STARTADVEX3
-        AnnounceToRealm(realm);
-      }
-    }
 
     if (m_Aura->m_StartedGames.empty()) {
       // This is a lobby. Take the chance to update the detailed console title
@@ -3179,7 +3147,7 @@ void CGame::SendAllAutoStart() const
 uint32_t CGame::GetGameType() const
 {
   uint32_t mapGameType = 0;
-  if (m_DisplayMode == GAME_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
+  if (m_DisplayMode == GAME_DISPLAY_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
   if (m_RestoredGame) {
     mapGameType |= MAPGAMETYPE_SAVEDGAME;
   } else {
@@ -3873,6 +3841,7 @@ std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
 
 string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
 {
+  bool isSpectator = m_GameLoading || m_GameLoaded; // TODO: CGame::GetAnnounceText for spectator case
   Version version = GetVersion();
   if (realm) {
     version = realm->GetGameVersion();
@@ -3895,7 +3864,7 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
   string typeWord;
   if (m_RestoredGame) {
     typeWord = "Loaded game";
-  } else if (m_DisplayMode == GAME_PRIVATE) {
+  } else if (m_DisplayMode == GAME_DISPLAY_PRIVATE) {
     typeWord = "Private game";
   } else {
     typeWord = "Game";
@@ -4119,7 +4088,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
       GetGameFlags(),
       GetAnnounceWidth(),
       GetAnnounceHeight(),
-      m_GameName,
+      GetCustomGameName(nullptr),
       GetIndexHostName(),
       uptime,
       GetSourceFilePath(),
@@ -4165,7 +4134,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     GetGameFlags(),
     GetAnnounceWidth(),
     GetAnnounceHeight(),
-    m_GameName,
+    GetCustomGameName(nullptr),
     GetIndexHostName(),
     GetSourceFilePath(),
     GetSourceFileHashBlizz(GetVersion()),
@@ -4173,12 +4142,6 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     m_HostCounter,
     m_EntryKey
   );
-}
-
-void CGame::AnnounceToRealm(shared_ptr<CRealm> realm)
-{
-  if (m_DisplayMode == GAME_NONE) return;
-  realm->SendGameRefresh(m_DisplayMode, shared_from_this());
 }
 
 void CGame::AnnounceDecreateToRealms()
@@ -4189,7 +4152,7 @@ void CGame::AnnounceDecreateToRealms()
 
     if (realm->GetGameBroadcast() == shared_from_this()) {
       realm->ResetGameChatAnnouncement();
-      realm->ResetGameBroadcastData();
+      realm->ResetGameBroadcastData(); // STOPADV
     }
 
     if (realm->GetGameBroadcastPending() == shared_from_this()) {
@@ -6667,11 +6630,9 @@ void CGame::EventGameStartedLoading()
     SetEveryoneLagging();
   }
 
-  if (!m_Config.m_EnableJoinObserversInProgress && !m_Config.m_EnableJoinPlayersInProgress) {
-    m_VersionErrors.clear();
-    if (GetUDPEnabled()) {
-      SendGameDiscoveryDecreate();
-    }
+  m_VersionErrors.clear();
+  if (GetUDPEnabled()) {
+    SendGameDiscoveryDecreate();
   }
 
   // and finally reenter battle.net chat
@@ -7005,7 +6966,12 @@ void CGame::EventGameLoaded()
 
   // move the game to the games in progress vector
   if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
+    m_GameDiscoveryInfoChanged = true;
     m_Aura->TrackGameJoinInProgress(shared_from_this());
+
+    if (GetUDPEnabled()) {
+      SendGameDiscoveryCreate();
+    }
   }
 
   HandleGameLoadedStats();
