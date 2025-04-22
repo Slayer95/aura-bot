@@ -527,6 +527,22 @@ template <size_t SIZE>
   return result;
 }
 
+[[nodiscard]] inline std::string ByteArrayToHexString(const uint8_t* start, const size_t size)
+{
+  if (size == 0)
+    return std::string();
+
+  std::string result = ToHexString(start[0]);
+  for (size_t i = 1; i < size; ++i) {
+    if (start[i] < 0x10) 
+      result += " 0" + ToHexString(start[i]);
+    else
+      result += " " + ToHexString(start[i]);
+  }
+
+  return result;
+}
+
 template <size_t SIZE>
 [[nodiscard]] inline std::string ByteArrayToHexString(const std::array<uint8_t, SIZE>& b)
 {

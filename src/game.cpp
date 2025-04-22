@@ -271,7 +271,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     // start listening for connections
 
     uint16_t hostPort = nAura->m_Net.NextHostPort();
-    m_Socket = m_Aura->m_Net.GetOrCreateTCPServer(hostPort, "Game <<" + m_GameName + ">>");
+    m_Socket = m_Aura->m_Net.GetOrCreateTCPServer(hostPort, "Game <<" + GetShortNameLAN() + ">>");
 
     if (m_Socket) {
       m_HostPort = m_Socket->GetPort();
@@ -1147,10 +1147,10 @@ string CGame::GetClientFileName() const
 string CGame::GetStatusDescription() const
 {
   if (m_IsMirror)
-     return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + m_GameName + "\"";
+     return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + GetShortNameLAN() + "\"";
 
   string Description = (
-    "[" + GetMap()->GetMapTitle() + "] \"" + m_GameName + "\" - " + m_OwnerName + " - " +
+    "[" + GetMap()->GetMapTitle() + "] \"" + GetShortNameLAN() + "\" - " + m_OwnerName + " - " +
     ToDecString(GetNumJoinedPlayersOrFake()) + "/" + ToDecString(m_GameLoading || m_GameLoaded ? m_ControllersWithMap : static_cast<uint8_t>(m_Slots.size()))
   );
 
@@ -1162,10 +1162,10 @@ string CGame::GetStatusDescription() const
   return Description;
 }
 
-string CGame::GetEndDescription() const
+string CGame::GetEndDescription(shared_ptr<const CRealm> realm) const
 {
   if (m_IsMirror)
-     return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + m_GameName + "\"";
+     return "[" + GetMap()->GetMapTitle() + "] (Mirror) \"" + GetCustomGameName(realm, true) + "\"";
 
   string winnersFragment;
 
@@ -1181,7 +1181,7 @@ string CGame::GetEndDescription() const
   }
 
   string Description = (
-    "[" + GetMap()->GetMapTitle() + "] \"" + m_GameName + "\". " + (winnersFragment.empty() ? ("Players: " + m_PlayedBy) : winnersFragment)
+    "[" + GetMap()->GetMapTitle() + "] \"" + GetCustomGameName(realm, true) + "\". " + (winnersFragment.empty() ? ("Players: " + m_PlayedBy) : winnersFragment)
   );
 
   if (m_GameLoading || m_GameLoaded)
@@ -1212,9 +1212,9 @@ string CGame::GetLogPrefix() const
     SecString.insert(0, "0");
 
   if (m_GameLoaded && m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
-    return "[" + GetCategory() + ": " + GetGameName() + " | Frame " + to_string(m_SyncCounter) + "] ";
+    return "[" + GetCategory() + ": " + GetShortNameLAN() + " | Frame " + to_string(m_SyncCounter) + "] ";
   } else {
-    return "[" + GetCategory() + ": " + GetGameName() + "] ";
+    return "[" + GetCategory() + ": " + GetShortNameLAN() + "] ";
   }
 }
 
@@ -3796,9 +3796,9 @@ void CGame::SendAllActions()
   RunActionsScheduler();
 }
 
-std::string CGame::GetCustomGameNameTemplate(shared_ptr<const CRealm> realm) const
+std::string CGame::GetCustomGameNameTemplate(shared_ptr<const CRealm> realm, bool forceLobby) const
 {
-  const bool isSpectator = m_GameLoading || m_GameLoaded;
+  const bool isSpectator = !forceLobby && (m_GameLoading || m_GameLoaded);
   if (realm) {
     if (isSpectator) {
       return realm->GetWatchableNameTemplate();
@@ -3814,9 +3814,9 @@ std::string CGame::GetCustomGameNameTemplate(shared_ptr<const CRealm> realm) con
   }
 }
 
-std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
+std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm, bool forceLobby) const
 {
-  string nameTemplate = GetCustomGameNameTemplate(realm);
+  string nameTemplate = GetCustomGameNameTemplate(realm, forceLobby);
 
   const FlatMap<int64_t, string> textCache;
 
@@ -3831,6 +3831,16 @@ std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm) const
 
   string replaced = ReplaceTemplate(nameTemplate, nullptr, &textCache, nullptr, &textFuncMap);
   return TrimString(RemoveDuplicateWhiteSpace(replaced));
+}
+
+std::string CGame::GetDiscoveryNameLAN() const
+{
+  return GetCustomGameName(nullptr, false);
+}
+
+std::string CGame::GetShortNameLAN() const
+{
+  return GetCustomGameName(nullptr, true);
 }
 
 string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
@@ -4082,7 +4092,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
       GetGameFlags(),
       GetAnnounceWidth(),
       GetAnnounceHeight(),
-      GetCustomGameName(nullptr),
+      GetDiscoveryNameLAN(),
       GetIndexHostName(),
       uptime,
       GetSourceFilePath(),
@@ -4128,7 +4138,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     GetGameFlags(),
     GetAnnounceWidth(),
     GetAnnounceHeight(),
-    GetCustomGameName(nullptr),
+    GetDiscoveryNameLAN(),
     GetIndexHostName(),
     GetSourceFilePath(),
     GetSourceFileHashBlizz(GetVersion()),
@@ -4278,7 +4288,7 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       GetGameFlags(),
       GetAnnounceWidth(),
       GetAnnounceHeight(),
-      m_GameName,
+      GetDiscoveryNameLAN(),
       GetIndexHostName(),
       GetUptime(), // dynamic
       GetSourceFilePath(),
@@ -6966,6 +6976,8 @@ void CGame::EventGameLoaded()
     if (GetUDPEnabled()) {
       SendGameDiscoveryCreate();
     }
+
+    // TODO: Broadcast watchable game to PvPGN realms
   }
 
   HandleGameLoadedStats();
@@ -9304,7 +9316,7 @@ void CGame::ReleaseOwner()
   if (m_Exiting) {
     return;
   }
-  LOG_APP_IF(LOG_LEVEL_INFO, "[LOBBY: "  + m_GameName + "] Owner \"" + m_OwnerName + "@" + ToFormattedRealm(m_OwnerRealm) + "\" removed.")
+  LOG_APP_IF(LOG_LEVEL_INFO, "Owner \"" + m_OwnerName + "@" + ToFormattedRealm(m_OwnerRealm) + "\" removed.")
   m_LastOwner = m_OwnerName;
   m_OwnerName.clear();
   m_OwnerRealm.clear();
@@ -9779,11 +9791,14 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
   LOG_APP_IF(LOG_LEVEL_INFO, "saving as " + fileName)
 
   {
-    vector<uint8_t> ActionStart;
+    const uint32_t success = 1;
+    vector<uint8_t> ActionStart, ActionEnd;
     ActionStart.push_back(ACTION_SAVE);
     AppendByteArray(ActionStart, fileName);
+    ActionEnd.push_back(ACTION_SAVE_ENDED);
+    AppendByteArray(ActionEnd, success, false);
     actionFrame.AddAction(std::move(CIncomingAction(UID, ActionStart)));
-    actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_SAVE_ENDED)));
+    actionFrame.AddAction(std::move(CIncomingAction(UID, ActionEnd)));
   }
 
   // Add actions for everyone else saves finishing
@@ -9793,11 +9808,15 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
 
 void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
 {
+  const uint32_t success = 1;
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
     if (fakeUser.GetUID() == exceptUID) {
       continue;
     }
-    actionFrame.AddAction(std::move(CIncomingAction(fakeUser.GetUID(), ACTION_SAVE_ENDED)));
+    vector<uint8_t> Action;
+    Action.push_back(ACTION_SAVE_ENDED);
+    AppendByteArray(Action, success, false);
+    actionFrame.AddAction(std::move(CIncomingAction(fakeUser.GetUID(), Action)));
   }
 }
 
@@ -9824,7 +9843,7 @@ bool CGame::Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, 
   return true;
 }
 
-bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const double x, const double y)
+bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const float x, const float y, const uint32_t duration)
 {
   const uint8_t UID = SimulateActionUID(ACTION_MINIMAPSIGNAL, user, isDisconnect, ACTION_SOURCE_ANY);
   if (UID == 0xFF) return false;
@@ -9834,6 +9853,7 @@ bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& ac
     Action.push_back(ACTION_MINIMAPSIGNAL);
     AppendByteArray(Action, x, false);
     AppendByteArray(Action, y, false);
+    AppendByteArray(Action, duration, false);
     actionFrame.AddAction(std::move(CIncomingAction(UID, Action)));
   }
 
@@ -9860,9 +9880,9 @@ bool CGame::Resume(GameUser::CGameUser* user, const bool isDisconnect)
   return Resume(user, GetLastActionFrame(), isDisconnect);
 }
 
-bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect, const double x, const double y)
+bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect, const float x, const float y, const uint32_t duration)
 {
-  return SendMiniMapSignal(user, GetLastActionFrame(), isDisconnect, x, y);
+  return SendMiniMapSignal(user, GetLastActionFrame(), isDisconnect, x, y, duration);
 }
 
 bool CGame::Trade(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame& actionFrame, const uint32_t gold, const uint32_t lumber)

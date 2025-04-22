@@ -46,6 +46,7 @@ public:
 protected:
   GameSource                    m_GameSource;
   ServiceUser                   m_ServiceSource;
+  void*                         m_InteractionSource;
   bool                          m_FromWhisper;
   bool                          m_IsBroadcast;
   char                          m_Token;           // command token (e.g. !)
@@ -121,6 +122,11 @@ public:
   [[nodiscard]] inline std::shared_ptr<CGame> GetTargetGame() const { return m_TargetGame.lock(); }
   inline void ResetTargetRealm() { m_TargetRealm.reset(); }
   inline void ResetTargetGame() { m_TargetGame.reset(); }
+
+  inline void* GetInteraction() const { return m_InteractionSource; }
+#ifndef DISABLE_DPP
+  inline dpp::slashcommand_t* GetDiscordInteraction() const { return static_cast<dpp::slashcommand_t*>(m_InteractionSource); }
+#endif
 
   void SetIdentity(const std::string& userName);
   void SetAuthenticated(const bool& nAuthenticated);

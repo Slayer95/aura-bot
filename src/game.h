@@ -276,8 +276,10 @@ public:
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
-  std::string                                            GetCustomGameNameTemplate(std::shared_ptr<const CRealm> realm = nullptr) const;
-  std::string                                            GetCustomGameName(std::shared_ptr<const CRealm> realm = nullptr) const;
+  std::string                                            GetCustomGameNameTemplate(std::shared_ptr<const CRealm> realm = nullptr, bool forceLobby = false) const;
+  std::string                                            GetCustomGameName(std::shared_ptr<const CRealm> realm = nullptr, bool forceLobby = false) const;
+  std::string                                            GetDiscoveryNameLAN() const;
+  std::string                                            GetShortNameLAN() const;
   std::string                                            GetAnnounceText(std::shared_ptr<const CRealm> realm = nullptr) const;
   inline bool                                            GetFromAutoReHost() const { return m_FromAutoReHost; }
   inline bool                                            GetLockedOwnerLess() const { return m_OwnerLess; }
@@ -375,7 +377,7 @@ public:
   inline bool                                            GetChatOnly() const { return m_ChatOnly; }
   inline bool                                            GetAnyUsingGProxy() { return m_ReconnectProtocols > 0; }
   std::string                                            GetStatusDescription() const;
-  std::string                                            GetEndDescription() const;
+  std::string                                            GetEndDescription(std::shared_ptr<const CRealm> realm) const;
   std::string                                            GetCategory() const;
   uint32_t                                               GetGameType() const;
   inline uint32_t                                        GetGameFlags() const { return m_GameFlags; }
@@ -752,7 +754,7 @@ public:
   void SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame);
   bool Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect);
-  bool SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const double x, const double y);
+  bool SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const float x, const float y, const uint32_t duration);
 
   bool Trade(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame& actionFrame, const uint32_t gold, const uint32_t lumber);
   bool Trade(GameUser::CGameUser* user, const uint8_t SID, CQueuedActionsFrame& actionFrame, const bool isDisconnect, const uint32_t gold, const uint32_t lumber);
@@ -769,7 +771,7 @@ public:
   void SaveEnded(const uint8_t exceptUID);
   bool Pause(GameUser::CGameUser* user, const bool isDisconnect);
   bool Resume(GameUser::CGameUser* user, const bool isDisconnect);
-  bool SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect, const double x, const double y);
+  bool SendMiniMapSignal(GameUser::CGameUser* user, const bool isDisconnect, const float x, const float y, const uint32_t duration);
 
   inline bool GetIsVerbose() { return m_Verbose; }
   bool SendChatTrigger(const uint8_t UID, const std::string& message, const uint32_t firstValue, const uint32_t secondValue);

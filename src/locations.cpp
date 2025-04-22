@@ -35,29 +35,25 @@ using namespace std;
 //
 
 ServiceUser::ServiceUser()
- : serviceType(SERVICE_TYPE_NONE),
-   api(nullptr)
+ : serviceType(SERVICE_TYPE_NONE)
 {
 };
 
 ServiceUser::ServiceUser(const ServiceUser& otherService)
  : serviceType(otherService.serviceType),
    servicePtr(otherService.servicePtr.lock()),
-   api(otherService.api),
    userName(otherService.userName)
 {
 };
 
 ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName)
  : serviceType(nServiceType),
-   api(nullptr),
    userName(nUserName)
 {
 };
 
-ServiceUser::ServiceUser(uint8_t nServiceType, int64_t nUserIdentifier, string nUserName, void* nAPI)
+ServiceUser::ServiceUser(uint8_t nServiceType, int64_t nUserIdentifier, string nUserName)
  : serviceType(nServiceType),
-   api(nAPI),
    userIdentifier(nUserIdentifier),
    userName(nUserName)
 {
@@ -65,7 +61,6 @@ ServiceUser::ServiceUser(uint8_t nServiceType, int64_t nUserIdentifier, string n
 
 ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName, shared_ptr<void> nServicePtr)
  : serviceType(nServiceType),
-   api(nullptr),
    servicePtr(nServicePtr),
    userName(nUserName)
 {
@@ -74,7 +69,6 @@ ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName, shared_ptr<void
 void ServiceUser::Reset()
 {
   serviceType = SERVICE_TYPE_NONE;
-  api = nullptr;
   servicePtr.reset();
   userIdentifier.reset();
   userName.clear();
@@ -82,6 +76,17 @@ void ServiceUser::Reset()
 
 ServiceUser::~ServiceUser()
 {
+}
+
+bool ServiceUser::operator==(const ServiceUser& other) const {
+  return (
+    (serviceType == other.serviceType) &&
+    (servicePtr.lock() == other.servicePtr.lock()) &&
+    (userIdentifier.has_value() == other.userIdentifier.has_value()) &&
+    (!userIdentifier.has_value() || (*userIdentifier == *other.userIdentifier)) &&
+    (userName == other.userName) &&
+    (subLocation == other.subLocation)
+  );
 }
 
 //
@@ -146,4 +151,13 @@ void GameSource::Reset()
   userType = COMMAND_SOURCE_GAME_NONE;
   game.reset();
   user = nullptr;
+}
+
+bool GameSource::operator==(const GameSource& other) const
+{
+  return (
+    (userType == other.userType) &&
+    (game.lock() == other.game.lock()) &&
+    reinterpret_cast<const void*>(user) == reinterpret_cast<const void*>(other.user)
+  );
 }

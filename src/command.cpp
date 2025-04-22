@@ -72,6 +72,7 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_GameSource(GameSource(user)),
     m_ServiceSource(SERVICE_TYPE_LAN, user->GetName()), // may be changed to SERVICE_TYPE_REALM
+    m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
 
@@ -99,6 +100,7 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_GameSource(GameSource(spectator)),
     m_ServiceSource(SERVICE_TYPE_LAN, spectator->GetName()), // may be changed to SERVICE_TYPE_REALM
+    m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
 
@@ -126,6 +128,7 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_GameSource(GameSource()),
     m_ServiceSource(SERVICE_TYPE_REALM, fromName, fromRealm),
+    m_InteractionSource(nullptr),
     m_FromWhisper(isWhisper),
     m_IsBroadcast(nIsBroadcast),
 
@@ -152,6 +155,7 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_GameSource(GameSource()),
     m_ServiceSource(SERVICE_TYPE_IRC, userName),
+    m_InteractionSource(nullptr),
     m_FromWhisper(isWhisper),
     m_IsBroadcast(nIsBroadcast),
 
@@ -176,7 +180,8 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
     m_TargetGame(targetGame),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_DISCORD, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username, discordAPI),
+    m_ServiceSource(SERVICE_TYPE_DISCORD, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username),
+    m_InteractionSource(discordAPI),
     m_FromWhisper(false),
     m_IsBroadcast(true),
 
@@ -217,6 +222,7 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_GameSource(GameSource()),
     m_ServiceSource(SERVICE_TYPE_CLI, nFromName),
+    m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
 
@@ -238,7 +244,8 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_GameSource(GameSource()),
     m_ServiceSource(SERVICE_TYPE_REALM, fromName, fromRealm),
-    m_FromWhisper(isWhisper),
+    m_InteractionSource(nullptr),
+    m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
     m_Permissions(USER_PERMISSIONS_NONE),
 
@@ -262,7 +269,8 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
     m_GameSource(GameSource()),
     m_ServiceSource(SERVICE_TYPE_IRC, userName),
-    m_FromWhisper(isWhisper),
+    m_InteractionSource(nullptr),
+    m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
     m_Permissions(USER_PERMISSIONS_NONE),
 
@@ -284,7 +292,8 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
     m_Config(config),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_DISCORD, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username, discordAPI),
+    m_ServiceSource(SERVICE_TYPE_DISCORD, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username),
+    m_InteractionSource(discordAPI),
     m_FromWhisper(false),
     m_IsBroadcast(true),
     m_Permissions(USER_PERMISSIONS_NONE),
@@ -323,7 +332,7 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, const string
 
     m_GameSource(GameSource()),
     m_ServiceSource(SERVICE_TYPE_CLI, nFromName),
-
+    m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
     m_Permissions(USER_PERMISSIONS_NONE),
@@ -487,7 +496,7 @@ void CCommandContext::UpdatePermissions()
 #ifndef DISABLE_DPP
     if (m_Aura->m_Discord.GetIsSudoer(GetServiceSource().GetUserIdentifier())) {
       m_Permissions = SET_USER_PERMISSIONS_ALL &~ (USER_PERMISSIONS_BOT_SUDO_OK);
-    } else if (GetServiceSource().GetDiscordAPI()->command.get_issuing_user().is_verified()) {
+    } else if (GetDiscordInteraction()->command.get_issuing_user().is_verified()) { // FIXME: Discord user verification
       m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
     }
 #endif
@@ -635,28 +644,37 @@ bool CCommandContext::CheckConfirmation(const string& cmdToken, const string& cm
 
 optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
 {
-  optional<pair<string, string>> Result;
+  optional<pair<string, string>> result;
   // Allow !su for LAN connections
   if (!m_ServerName.empty() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
-    return Result;
+    return result;
   }
   if (!m_Aura->m_SudoContext) {
-    return Result;
+    return result;
   }
   if (m_Aura->m_SudoContext->GetPartiallyDestroyed()) {
     m_Aura->m_SudoContext.reset();
     m_Aura->m_SudoAuthTarget.clear();
     m_Aura->m_SudoExecCommand.clear();
-    return Result;
+    return result;
   }
+
+  vector<string> callerChecks;
+  callerChecks.push_back(GetSender() == m_Aura->m_SudoContext->GetSender()  ? "OK" : "ERR");
+  callerChecks.push_back(GetServiceSourceType() == m_Aura->m_SudoContext->GetServiceSourceType()  ? "OK" : "ERR");
+  callerChecks.push_back(m_TargetRealm.lock() == m_Aura->m_SudoContext->m_TargetRealm.lock()  ? "OK" : "ERR");
+  callerChecks.push_back(m_TargetGame.lock() == m_Aura->m_SudoContext->m_TargetGame.lock()  ? "OK" : "ERR");
+  callerChecks.push_back((memcmp(&GetServiceSource(), &m_Aura->m_SudoContext->GetServiceSource(), sizeof(ServiceUser)) == 0)  ? "OK" : "ERR");
+  callerChecks.push_back((memcmp(&GetGameSource(), &m_Aura->m_SudoContext->GetGameSource(), sizeof(GameSource)) == 0) ? "OK" : "ERR");
+
   bool isValidCaller = (
     GetSender() == m_Aura->m_SudoContext->GetSender() &&
-    GetServiceSourceType() == m_Aura->m_SudoContext->GetServiceSourceType() &&
+    GetServiceSource() == m_Aura->m_SudoContext->GetServiceSource() &&
+    GetGameSource() == m_Aura->m_SudoContext->GetGameSource() &&
     m_TargetRealm.lock() == m_Aura->m_SudoContext->m_TargetRealm.lock() &&
-    m_TargetGame.lock() == m_Aura->m_SudoContext->m_TargetGame.lock() &&
-    (memcmp(&GetServiceSource(), &m_Aura->m_SudoContext->GetServiceSource(), sizeof(ServiceUser)) == 0) &&
-    (memcmp(&GetGameSource(), &m_Aura->m_SudoContext->GetGameSource(), sizeof(GameSource)) == 0)
+    m_TargetGame.lock() == m_Aura->m_SudoContext->m_TargetGame.lock()
   );
+
   if (isValidCaller && message == m_Aura->m_SudoAuthTarget) {
     LogStream(*m_Output, "[AURA] Confirmed " + GetSender() + " command \"" + m_Aura->m_SudoExecCommand + "\"");
     size_t TargetStart = m_Aura->m_SudoExecCommand.find(' ');
@@ -667,14 +685,14 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     } else {
       cmd = m_Aura->m_SudoExecCommand;
     }
-    Result.emplace(ToLowerCase(cmd), target);
+    result.emplace(ToLowerCase(cmd), target);
     //m_Permissions |= USER_PERMISSIONS_BOT_SUDO_OK;
     m_Permissions = SET_USER_PERMISSIONS_ALL;
   }
   m_Aura->m_SudoContext.reset();
   m_Aura->m_SudoAuthTarget.clear();
   m_Aura->m_SudoExecCommand.clear();
-  return Result;
+  return result;
 }
 
 bool CCommandContext::GetIsSudo() const
@@ -824,7 +842,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
     }
 #ifndef DISABLE_DPP
     if (GetServiceSourceType() == SERVICE_TYPE_DISCORD) {
-      GetServiceSource().GetDiscordAPI()->edit_original_response(dpp::message(message));
+      GetDiscordInteraction()->edit_original_response(dpp::message(message));
       AllSourceSuccess = true;
     }
 #endif
@@ -1302,19 +1320,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
   }
 
   if (cmdHash == HashCode(m_Aura->m_Config.m_SudoKeyWord)) {
-    optional<pair<string, string>> runOverride = CheckSudo(target);
-    if (runOverride.has_value()) {
-      cmd = runOverride->first;
-      target = runOverride->second;
-      cmdHash = HashCode(cmd);
+    if (m_Aura->m_SudoExecCommand.empty()) {
+      Print("[AURA] " + GetUserAttribution() + " sent command [" + cmdToken + baseCommand + "] with target [" + baseTarget + "], but " + cmdToken + "su was not requested.");
     } else {
-      if (m_Aura->m_SudoExecCommand.empty()) {
-        Print("[AURA] " + GetUserAttribution() + " sent command [" + cmdToken + baseCommand + "] with target [" + baseTarget + "], but " + cmdToken + "su was not requested.");
+      optional<pair<string, string>> cmdOverrides = CheckSudo(target);
+      if (cmdOverrides.has_value()) {
+        cmd = cmdOverrides->first;
+        target = cmdOverrides->second;
+        cmdHash = HashCode(cmd);
       } else {
         Print("[AURA] " + GetUserAttribution() + " failed sudo authentication.");
+        ErrorReply("Sudo check failure.");
+        return;
       }
-      ErrorReply("Sudo check failure.");
-      return;
     }
   }
 
@@ -1381,7 +1399,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       SendReply(
-        "Name <<" + targetGame->GetGameName() + ">> | ID " +
+        "Name <<" + targetGame->GetCustomGameName(GetSourceRealm(), true) + ">> | ID " +
         to_string(targetGame->GetHostCounter()) + " (" + ToHexString(targetGame->GetHostCounter()) + ")" + " | Key " +
         to_string(targetGame->GetEntryKey()) + " (" + ToHexString(targetGame->GetEntryKey()) + ")"
       );
@@ -1504,7 +1522,56 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       SendReply("APM Trainer disabled.");
       break;
     }
-    
+
+    //
+    // !CHAT
+    //
+
+    case HashCode("tchat"):
+    case HashCode("tallchat"):
+    case HashCode("allchat"):
+    case HashCode("chat"): {
+      UseImplicitHostedGame();
+      shared_ptr<CGame> targetGame = GetTargetGame();
+
+      if (!targetGame || targetGame->GetIsMirror()) {
+        break;
+      }
+
+      bool isSpectator = GetGameSource().GetIsSpectator();
+      bool isTimed = cmdHash == HashCode("tchat") || cmdHash == HashCode("tallchat");
+      bool isAllChat = cmdHash == HashCode("allchat") || cmdHash == HashCode("tallchat");
+      if (isTimed && !isSpectator) {
+        ErrorReply("This command may only be used in spectator mode.");
+        break;
+      }
+
+      if (isTimed && !GetIsSudo()) {
+        ErrorReply("You cannot annotate the replay with a timed comment.");
+        ErrorReply("Usage: " + cmdToken + "chat <MESSAGE>");
+        break;
+      }
+
+      if (isAllChat && !GetIsSudo()) {
+        ErrorReply("You cannot annotate the game with all-chat messages.");
+        ErrorReply("Usage: " + cmdToken + "chat <MESSAGE>");
+        break;
+      }
+
+      string metaMessage = "[" + GetSender() + "]: " + target;
+      bool success = false;
+      if (isAllChat) {
+        success = targetGame->SendAllChat(metaMessage);
+      } else {
+        success = targetGame->SendObserverChat(metaMessage);
+      }
+      if (!success) {
+        ErrorReply("Failed to send chat message to [" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
+        break;
+      }
+      SendReply("Chat message sent.");
+      break;
+    }
 
     //
     // !CHECKME
@@ -1946,9 +2013,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
       if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
-        m_ActionMessage = targetName + ", " + GetSender() + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + targetGame->m_GameName + "\"";
+        m_ActionMessage = targetName + ", " + GetSender() + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + targetGame->GetCustomGameName(targetRealm) + "\"";
       } else {
-        m_ActionMessage = targetName + ", " + GetSender() + " invites you to join game \"" + targetGame->m_GameName + "\"";
+        m_ActionMessage = targetName + ", " + GetSender() + " invites you to join game \"" + targetGame->GetCustomGameName(targetRealm) + "\"";
       }
 
       targetRealm->QueueWhisper(m_ActionMessage, targetName, shared_from_this(), true);
@@ -3228,7 +3295,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("This game cannot be remade.");
         break;
       }
-      targetGame->SendAllChat("Please rejoin the remade game <<" + targetGame->GetGameName() + ">>.");
+      targetGame->SendAllChat("Please rejoin the remade game <<" + targetGame->GetCustomGameName(GetSourceRealm(), true) + ">>.");
       targetGame->SendEveryoneElseLeftAndDisconnect("was disconnected (admin remade game)");
       targetGame->RemakeStart();
       break;
@@ -6567,7 +6634,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
         auto searchResult = matchingGame->GetUserFromNamePartial(inputName);
         if (!searchResult.GetSuccess()) {
-          ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetGameName() + ">>.");
+          ErrorReply("Player [" + inputName + "] not found in <<" + matchingGame->GetCustomGameName(GetSourceRealm(), true) + ">>.");
           break;
         }
         if (m_ServerName.empty()) {
@@ -6786,7 +6853,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, GetChannelName(), GetSender(), m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
 #ifndef DISABLE_DPP
         } else if (serviceSourceType == SERVICE_TYPE_DISCORD) {
-          ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, GetServiceSource().GetDiscordAPI(), &std::cout);
+          ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, GetDiscordInteraction(), &std::cout);
 #endif
         } else if (serviceSourceType == SERVICE_TYPE_REALM) {
           if (sourceRealm) {
@@ -6992,11 +7059,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           break;
         }
         if (!targetGame->SendAllChat(Message)) {
-          ErrorReply("Failed to send chat message to [" + targetGame->GetGameName() + "]");
+          ErrorReply("Failed to send chat message to [" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
           break;
         }
         if (targetGame != sourceGame) {
-          SendReply("Sent chat message to [" + targetGame->GetGameName() + "]");
+          SendReply("Sent chat message to [" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
         }
       }
       break;

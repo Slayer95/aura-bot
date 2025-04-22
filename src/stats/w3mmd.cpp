@@ -749,7 +749,7 @@ optional<GameResults> CW3MMD::GetGameResults(const GameResultConstraints& constr
 
 string CW3MMD::GetLogPrefix() const
 {
-  return "[W3MMD: " + m_Game.get().GetGameName() + "] ";
+  return "[W3MMD: " + m_Game.get().GetShortNameLAN() + "] ";
 }
 
 void CW3MMD::LogMetaData(int64_t gameTicks, const string& text) const

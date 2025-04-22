@@ -145,7 +145,6 @@ struct SimpleNestedLocation
 struct ServiceUser
 {
   uint8_t serviceType;
-  void* api;
   std::weak_ptr<void> servicePtr;
   std::optional<int64_t> userIdentifier;
   std::string userName;
@@ -154,7 +153,7 @@ struct ServiceUser
   ServiceUser();
   ServiceUser(const ServiceUser& otherService);
   ServiceUser(uint8_t serviceType, std::string nUserName);
-  ServiceUser(uint8_t serviceType, int64_t nUserIdentifier, std::string nUserName, void* nAPI = nullptr);
+  ServiceUser(uint8_t serviceType, int64_t nUserIdentifier, std::string nUserName);
   ServiceUser(uint8_t serviceType, std::string nUserName, std::shared_ptr<void> nServicePtr);
   ~ServiceUser();
 
@@ -167,10 +166,6 @@ struct ServiceUser
   inline bool GetIsAnonymous() const { return userName.empty(); }
   inline bool GetIsExpired() const { return servicePtr.expired(); }
   inline uint8_t GetServiceType() const { return serviceType; }
-  inline void* GetAPI() const { return api; }
-#ifndef DISABLE_DPP
-  inline dpp::slashcommand_t* GetDiscordAPI() const { return static_cast<dpp::slashcommand_t*>(api); }
-#endif
   inline int64_t GetUserIdentifier() const { return userIdentifier.value(); }
   inline const std::string& GetUser() const { return userName; }
   inline std::string GetUserOrAnon() const { return userName.empty() ? "[Anonymous]" : userName; }
@@ -194,6 +189,8 @@ struct ServiceUser
     subLocation = new SimpleNestedLocation(1, locationName, locationIdentifier);
     return subLocation;
   }
+
+  bool operator==(const ServiceUser& other) const;
 };
 
 //
@@ -231,6 +228,8 @@ struct GameSource
 
   void Expire();
   void Reset();
+
+  bool operator==(const GameSource& other) const;
 };
 
 #endif

@@ -1440,9 +1440,9 @@ void CAura::EventGameDeleted(shared_ptr<CGame> game)
     for (auto& realm : m_Realms) {
       if (!realm->GetAnnounceHostToChat()) continue;
       if (game->GetGameLoaded()) {
-        realm->QueueChatChannel("Game ended: " + game->GetEndDescription());
+        realm->QueueChatChannel("Game ended: " + game->GetEndDescription(realm));
         if (game->MatchesCreatedFromRealm(realm)) {
-          realm->QueueWhisper("Game ended: " + game->GetEndDescription(), game->GetCreatorName());
+          realm->QueueWhisper("Game ended: " + game->GetEndDescription(realm), game->GetCreatorName());
         }
       }
     }
