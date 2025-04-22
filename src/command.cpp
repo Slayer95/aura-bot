@@ -659,14 +659,6 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
     return result;
   }
 
-  vector<string> callerChecks;
-  callerChecks.push_back(GetSender() == m_Aura->m_SudoContext->GetSender()  ? "OK" : "ERR");
-  callerChecks.push_back(GetServiceSourceType() == m_Aura->m_SudoContext->GetServiceSourceType()  ? "OK" : "ERR");
-  callerChecks.push_back(m_TargetRealm.lock() == m_Aura->m_SudoContext->m_TargetRealm.lock()  ? "OK" : "ERR");
-  callerChecks.push_back(m_TargetGame.lock() == m_Aura->m_SudoContext->m_TargetGame.lock()  ? "OK" : "ERR");
-  callerChecks.push_back((memcmp(&GetServiceSource(), &m_Aura->m_SudoContext->GetServiceSource(), sizeof(ServiceUser)) == 0)  ? "OK" : "ERR");
-  callerChecks.push_back((memcmp(&GetGameSource(), &m_Aura->m_SudoContext->GetGameSource(), sizeof(GameSource)) == 0) ? "OK" : "ERR");
-
   bool isValidCaller = (
     GetSender() == m_Aura->m_SudoContext->GetSender() &&
     GetServiceSource() == m_Aura->m_SudoContext->GetServiceSource() &&
