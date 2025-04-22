@@ -1744,7 +1744,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
 
       vector<string> output;
-      output.push_back("Game#" + to_string(targetGame->GetGameID()));
+      output.push_back("Game#" + to_string(targetGame->GetGameID()) " - " + targetGame->GetMap()->GetMapTitle());
 
       // GOTCHA: /game - Leavers info is omitted. This affects games with name obfuscation.
       vector<const GameUser::CGameUser*> players = targetGame->GetPlayers();
