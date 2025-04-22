@@ -196,10 +196,28 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             case GameProtocol::Magic::OUTGOING_ACTION: {
               // Ignore all actions performed by observers,
               // and let's see how this turns out.
-              if (Data.size() >= 9 && Data[8] == ACTION_MINIMAPSIGNAL) {
+              if (Length < 9) {
+                EventProtocolError();
+                Abort = true;
                 break;
               }
-              Print(GetLogPrefix() + "got action <" + ByteArrayToDecString(Data) + ">");
+              bool skipActions = false;
+              switch (Data[9]) {
+                case ACTION_MINIMAPSIGNAL:
+                case ACTION_MODAL_BTN_CLICK:
+                case ACTION_MODAL_BTN:
+                case ACTION_PAUSE:
+                case ACTION_RESUME:
+                case ACTION_SAVE:
+                  skipActions = (Length == 8 + GameProtocol::GetActionSize(Data[9]));
+                  break;
+                case ACTION_SAVE_ENDED:
+                  skipActions = true;
+                  break;
+              }
+              if (!skipActions) {
+                Print(GetLogPrefix() + "got action <" + ByteArrayToHexString(Data.data() + 4, Length - 4) + ">");
+              }
               break;
             }
 

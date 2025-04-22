@@ -133,6 +133,8 @@ namespace GameProtocol
   [[nodiscard]] std::bitset<256> InitActionCountables();
   [[nodiscard]] bool GetActionIsCountable(uint8_t actionType);
   [[nodiscard]] const std::array<uint8_t, 256>& GetActionSizes();
+  [[nodiscard]] size_t GetActionSize(uint8_t actionType);
+  [[nodiscard]] size_t GetNextActionPosCacheUnitInner(const std::vector<uint8_t>& action, size_t actionStartPos, size_t cacheUnitStartPos);
   [[nodiscard]] size_t GetNextActionPos(const std::vector<uint8_t>& action, size_t pos);
 
   // receive functions
