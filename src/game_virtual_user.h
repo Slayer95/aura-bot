@@ -77,6 +77,7 @@ struct CGameVirtualUser
   [[nodiscard]] bool                            GetCanPause() const;
   [[nodiscard]] bool                            GetCanResume() const;
   [[nodiscard]] bool                            GetCanSave() const;
+  [[nodiscard]] bool                            GetCanSaveEnded() const;
   [[nodiscard]] bool                            GetCanShare(const uint8_t SID) const;
   [[nodiscard]] bool                            GetCanTrade(const uint8_t SID) const;
   [[nodiscard]] bool                            GetCanMiniMapSignal(const GameUser::CGameUser* /*user*/) const;

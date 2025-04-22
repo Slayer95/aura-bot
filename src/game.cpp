@@ -9810,7 +9810,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
 {
   const uint32_t success = 1;
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-    if (fakeUser.GetUID() == exceptUID) {
+    if (fakeUser.GetUID() == exceptUID || !fakeUser.GetCanSaveEnded()) {
       continue;
     }
     vector<uint8_t> Action;

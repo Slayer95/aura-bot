@@ -97,6 +97,12 @@ bool CGameVirtualUser::GetCanSave() const
   return !m_Observer || m_Game.get().GetHasReferees();
 }
 
+bool CGameVirtualUser::GetCanSaveEnded() const
+{
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SAVE)) return false;
+  return true;
+}
+
 bool CGameVirtualUser::GetCanShare(const uint8_t SID) const
 {
   if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
