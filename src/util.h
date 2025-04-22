@@ -309,6 +309,18 @@ inline void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, cons
     };
 }
 
+[[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const float i, bool bigEndian)
+{
+  std::vector<uint8_t> bytes(4, 0);
+  if (std::numeric_limits<float>::is_iec559) {
+    std::memcpy(bytes.data(), &i, sizeof(float));
+    if (bigEndian != GetIsHostBigEndian()) {
+      std::reverse(bytes.begin(), bytes.end());
+    }
+  }
+  return bytes;
+}
+
 [[nodiscard]] inline std::vector<uint8_t> CreateByteArray(const double i, bool bigEndian)
 {
   std::vector<uint8_t> bytes(8, 0);
@@ -690,6 +702,11 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const uint32_t i, bool bigE
 }
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEndian)
+{
+  AppendByteArray(b, CreateByteArray(i, bigEndian));
+}
+
+inline void AppendByteArray(std::vector<uint8_t>& b, const float i, bool bigEndian)
 {
   AppendByteArray(b, CreateByteArray(i, bigEndian));
 }
