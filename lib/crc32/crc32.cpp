@@ -1,4 +1,5 @@
-// Implementation of a fast CRC algorithm taken from (with modifications)
+// Modified by Leonardo Julca for inclusion in Aura
+// Implementation of a fast CRC algorithm taken from
 // http://create.stephan-brumme.com/crc32/ on 27.11.2016
 // Copyright (c) 2011-2015 Stephan Brumme. All rights reserved.
 

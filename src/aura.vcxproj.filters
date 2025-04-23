@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\lib\base64\base64.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\lib\crc32\crc32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -170,6 +173,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\lib\base64\base64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\lib\crc32\crc32.h">
       <Filter>Header Files</Filter>
     </ClInclude>

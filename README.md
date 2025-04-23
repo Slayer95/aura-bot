@@ -200,7 +200,40 @@ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
-#### [CRC32][16]
+#### [Base64][17]
+
+This library has been modified by Leonardo Julca for inclusion in Aura.
+
+base64.cpp and base64.h
+
+base64 encoding and decoding with C++.
+More information at
+ https://renenyffenegger.ch/notes/development/Base64/Encoding-and-decoding-base-64-with-cpp
+
+Version: 2.rc.09 (release candidate)
+
+Copyright (C) 2004-2017, 2020-2022 René Nyffenegger
+
+This source code is provided 'as-is', without any express or implied
+warranty. In no event will the author be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this source code must not be misrepresented; you must not
+  claim that you wrote the original source code. If you use this source code
+  in a product, an acknowledgment in the product documentation would be
+  appreciated but is not required.
+
+2. Altered source versions must be plainly marked as such, and must not be
+  misrepresented as being the original source code.
+
+3. This notice may not be removed or altered from any source distribution.
+
+
+#### [CRC32][18]
 
 This library has been modified for inclusion in Aura.
 
@@ -215,7 +248,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 
-#### [CSVParser][17]
+#### [CSVParser][19]
 
 Copyright (c) 2001, Mayukh Bose
 All rights reserved.
@@ -247,7 +280,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#### [StormLib][18]
+#### [StormLib][20]
 
 The MIT License (MIT)
 
@@ -271,7 +304,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-#### [BNCSutil][19]
+#### [BNCSutil][21]
 
 Battle.Net Utility Library
 
@@ -292,7 +325,7 @@ distribution in the file COPYING.  If you did not receive this copy,
 write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 Boston, MA  02111-1307  USA
 
-#### [pjass][20]
+#### [pjass][22]
 
 BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
 
@@ -319,7 +352,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#### [MiniUPnP Project][21]
+#### [MiniUPnP Project][23]
 
 Copyright (c) 2005-2017, Thomas BERNARD
 All rights reserved.
@@ -347,7 +380,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-#### [C++ Requests][22]
+#### [C++ Requests][24]
 
 This license applies to everything except the contents of the "test"
 directory and its subdirectories.
@@ -375,7 +408,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-#### [cURL][23]
+#### [cURL][25]
 
 Copyright (C) Daniel Stenberg, <daniel@haxx.se>, and many
 contributors, see the THANKS file.
@@ -394,7 +427,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 OR OTHER DEALINGS IN THE SOFTWARE.
 
-#### [zlib][24]
+#### [zlib][26]
 
 version 1.3, August 18th, 2023
 
@@ -428,7 +461,7 @@ Except as contained in this notice, the name of a copyright holder shall not
 be used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization of the copyright holder.
 
-#### [D++][25]
+#### [D++][27]
 
  D++, A Lightweight C++ library for Discord
  
@@ -448,7 +481,7 @@ in this Software without prior written authorization of the copyright holder.
  See the License for the specific language governing permissions and
  limitations under the License.
 
-#### [JSON for Modern C++][26]
+#### [JSON for Modern C++][28]
 
 MIT License 
 
@@ -487,14 +520,15 @@ SOFTWARE.
 [13]: https://github.com/MrJag/ghost
 [14]: https://github.com/CLIUtils/CLI11
 [15]: https://github.com/nemtrif/utfcpp
-[16]: https://github.com/stbrumme/crc32
-[17]: https://gitlab.com/ivojulca/aura-bot/-/blob/master/src/csvparser.cpp
-[18]: https://github.com/ladislav-zezula/StormLib
-[19]: https://github.com/BNETDocs/bncsutil
-[20]: https://github.com/lep/pjass
-[21]: https://github.com/miniupnp/miniupnp
-[22]: https://github.com/libcpr/cpr
-[23]: https://github.com/curl/curl
-[24]: https://github.com/madler/zlib
-[25]: https://github.com/brainboxdotcc/DPP
-[26]: https://github.com/nlohmann/json/
+[17]: https://github.com/ReneNyffenegger/cpp-base64
+[18]: https://github.com/stbrumme/crc32
+[19]: https://gitlab.com/ivojulca/aura-bot/-/blob/master/src/csvparser.cpp
+[20]: https://github.com/ladislav-zezula/StormLib
+[21]: https://github.com/BNETDocs/bncsutil
+[22]: https://github.com/lep/pjass
+[23]: https://github.com/miniupnp/miniupnp
+[24]: https://github.com/libcpr/cpr
+[25]: https://github.com/curl/curl
+[26]: https://github.com/madler/zlib
+[27]: https://github.com/brainboxdotcc/DPP
+[28]: https://github.com/nlohmann/json/

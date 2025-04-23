@@ -66,7 +66,8 @@ endif
 CCFLAGS += $(OFLAGS) -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -I.
 CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
 
-OBJS = lib/csvparser/csvparser.o \
+OBJS = lib/base64/base64.o \
+       lib/csvparser/csvparser.o \
        lib/crc32/crc32.o \
        lib/sha1/sha1.o \
        src/protocol/bnet_protocol.o \
