@@ -61,7 +61,7 @@ CDiscord::~CDiscord()
 {
   for (const auto& ptr : m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
-    if (ctx && ctx->GetServiceSourceType() == SERVICE_TYPE_DISCORD) {
+    if (ctx && ctx->GetServiceSourceType() == ServiceType::kDiscord) {
       ctx->ResetServiceSource();
       ctx->SetPartiallyDestroyed();
     }
@@ -216,7 +216,7 @@ void CDiscord::Update()
     }
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(SERVICE_TYPE_DISCORD, m_Aura, m_Config.m_CommandCFG, event, &std::cout);
+      ctx = make_shared<CCommandContext>(ServiceType::kDiscord, m_Aura, m_Config.m_CommandCFG, event, &std::cout);
     } catch (...) {
       delete event;
       m_CommandQueue.pop();

@@ -696,7 +696,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     optional<string> userName = GetUserMultiPlayerName();
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(SERVICE_TYPE_CLI, nAura, userName.value_or(string()), false, &cout);
+      ctx = make_shared<CCommandContext>(ServiceType::kCLI, nAura, userName.value_or(string()), false, &cout);
     } catch (...) {
       return false;
     }

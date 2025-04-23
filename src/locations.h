@@ -144,7 +144,7 @@ struct SimpleNestedLocation
 
 struct ServiceUser
 {
-  uint8_t serviceType;
+  ServiceType serviceType;
   std::weak_ptr<void> servicePtr;
   std::optional<int64_t> userIdentifier;
   std::string userName;
@@ -152,9 +152,9 @@ struct ServiceUser
 
   ServiceUser();
   ServiceUser(const ServiceUser& otherService);
-  ServiceUser(uint8_t serviceType, std::string nUserName);
-  ServiceUser(uint8_t serviceType, int64_t nUserIdentifier, std::string nUserName);
-  ServiceUser(uint8_t serviceType, std::string nUserName, std::shared_ptr<void> nServicePtr);
+  ServiceUser(ServiceType serviceType, std::string nUserName);
+  ServiceUser(ServiceType serviceType, int64_t nUserIdentifier, std::string nUserName);
+  ServiceUser(ServiceType serviceType, std::string nUserName, std::shared_ptr<void> nServicePtr);
   ~ServiceUser();
 
   template <typename T>
@@ -162,16 +162,16 @@ struct ServiceUser
   {
     return std::static_pointer_cast<T>(servicePtr.lock());
   }
-  inline bool GetIsEmpty() const { return serviceType == SERVICE_TYPE_NONE; }
+  inline bool GetIsEmpty() const { return serviceType == ServiceType::kNone; }
   inline bool GetIsAnonymous() const { return userName.empty(); }
   inline bool GetIsExpired() const { return servicePtr.expired(); }
-  inline uint8_t GetServiceType() const { return serviceType; }
+  inline ServiceType GetServiceType() const { return serviceType; }
   inline int64_t GetUserIdentifier() const { return userIdentifier.value(); }
   inline const std::string& GetUser() const { return userName; }
   inline std::string GetUserOrAnon() const { return userName.empty() ? "[Anonymous]" : userName; }
   void Reset();
 
-  inline void SetServiceType(uint8_t nServiceType) { serviceType = nServiceType; }
+  inline void SetServiceType(ServiceType nServiceType) { serviceType = nServiceType; }
   inline void SetName(const std::string& nUserName) { userName = nUserName; }
 
   inline uint8_t GetOrder() const { return 0; }
@@ -199,7 +199,7 @@ struct ServiceUser
 
 struct GameSource
 {
-  uint8_t userType;
+  GameCommandSource userType;
   std::weak_ptr<CGame> game;
   union {
     GameUser::CGameUser* user;
@@ -212,11 +212,11 @@ struct GameSource
   GameSource(CAsyncObserver* spectator);
   ~GameSource();
 
-  inline uint8_t GetType() const { return userType; }
-  inline bool GetIsEmpty() const { return userType == COMMAND_SOURCE_GAME_NONE; }
-  inline bool GetIsUser() const { return userType == COMMAND_SOURCE_GAME_USER; }
-  inline bool GetIsSpectator() const { return userType == COMMAND_SOURCE_GAME_ASYNC_OBSERVER || userType == COMMAND_SOURCE_GAME_REPLAY; }
-  inline bool GetIsReplay() const { return userType == COMMAND_SOURCE_GAME_REPLAY; }
+  inline GameCommandSource GetType() const { return userType; }
+  inline bool GetIsEmpty() const { return userType == GameCommandSource::kNone; }
+  inline bool GetIsUser() const { return userType == GameCommandSource::kUser; }
+  inline bool GetIsSpectator() const { return userType == GameCommandSource::kSpectator || userType == GameCommandSource::kReplay; }
+  inline bool GetIsReplay() const { return userType == GameCommandSource::kReplay; }
   inline bool GetIsGameExpired() const { return game.expired(); }
 
   /* In reality, these 3 functions are the same */

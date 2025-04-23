@@ -83,7 +83,7 @@ CIRC::~CIRC()
 
   for (const auto& ptr : m_Aura->m_ActiveContexts) {
     auto ctx = ptr.lock();
-    if (ctx && ctx->GetServiceSourceType() == SERVICE_TYPE_IRC) {
+    if (ctx && ctx->GetServiceSourceType() == ServiceType::kIRC) {
       ctx->ResetServiceSource();
       ctx->SetPartiallyDestroyed();
     }
@@ -335,7 +335,7 @@ void CIRC::ExtractPackets()
         const bool isWhisper = channel[0] != '#';
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(SERVICE_TYPE_IRC, m_Aura, m_Config.m_CommandCFG, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+          ctx = make_shared<CCommandContext>(ServiceType::kIRC, m_Aura, m_Config.m_CommandCFG, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
         } catch (...) {
         }
         if (ctx) {

@@ -64,14 +64,14 @@ using namespace std;
 //
 
 /* In-game command */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
     m_TargetGame(game),
 
     m_GameSource(GameSource(user)),
-    m_ServiceSource(SERVICE_TYPE_LAN, user->GetName()), // may be changed to SERVICE_TYPE_REALM
+    m_ServiceSource(ServiceType::kLAN, user->GetName()), // may be changed to ServiceType::kRealm
     m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
@@ -86,20 +86,20 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
   CHECK_SERVICE_TYPE(serviceType);
   shared_ptr<CRealm> sourceRealm = user->GetRealm(false);
   if (sourceRealm) {
-    m_ServiceSource = ServiceUser(SERVICE_TYPE_REALM, m_ServiceSource.GetUser(), sourceRealm);
+    m_ServiceSource = ServiceUser(ServiceType::kRealm, m_ServiceSource.GetUser(), sourceRealm);
   }
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 /* Spectator command */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> game, CAsyncObserver* spectator, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> game, CAsyncObserver* spectator, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
     m_TargetGame(game),
 
     m_GameSource(GameSource(spectator)),
-    m_ServiceSource(SERVICE_TYPE_LAN, spectator->GetName()), // may be changed to SERVICE_TYPE_REALM
+    m_ServiceSource(ServiceType::kLAN, spectator->GetName()), // may be changed to ServiceType::kRealm
     m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
@@ -114,20 +114,20 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
   CHECK_SERVICE_TYPE(serviceType);
   shared_ptr<CRealm> sourceRealm = spectator->GetRealm();
   if (sourceRealm) {
-    m_ServiceSource = ServiceUser(SERVICE_TYPE_REALM, m_ServiceSource.GetUser(), sourceRealm);
+    m_ServiceSource = ServiceUser(ServiceType::kRealm, m_ServiceSource.GetUser(), sourceRealm);
     m_ServerName = sourceRealm->GetServer();
   }
   m_Aura->m_ActiveContexts.push_back(weak_from_this());
 }
 
 /* Command received from BNET but targetting a game */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_TargetGame(targetGame),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_REALM, fromName, fromRealm),
+    m_ServiceSource(ServiceType::kRealm, fromName, fromRealm),
     m_InteractionSource(nullptr),
     m_FromWhisper(isWhisper),
     m_IsBroadcast(nIsBroadcast),
@@ -148,13 +148,13 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 }
 
 /* Command received from IRC but targetting a game */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_TargetGame(targetGame),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_IRC, userName),
+    m_ServiceSource(ServiceType::kIRC, userName),
     m_InteractionSource(nullptr),
     m_FromWhisper(isWhisper),
     m_IsBroadcast(nIsBroadcast),
@@ -174,13 +174,13 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
 #ifndef DISABLE_DPP
 /* Command received from Discord but targetting a game */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_TargetGame(targetGame),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_DISCORD, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username),
+    m_ServiceSource(ServiceType::kDiscord, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username),
     m_InteractionSource(discordAPI),
     m_FromWhisper(false),
     m_IsBroadcast(true),
@@ -215,13 +215,13 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 #endif
 
 /* Command received from elsewhere but targetting a game */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_TargetGame(targetGame),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_CLI, nFromName),
+    m_ServiceSource(ServiceType::kCLI, nFromName),
     m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
@@ -238,12 +238,12 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 }
 
 /* BNET command */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_REALM, fromName, fromRealm),
+    m_ServiceSource(ServiceType::kRealm, fromName, fromRealm),
     m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
@@ -263,12 +263,12 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 }
 
 /* IRC command */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_IRC, userName),
+    m_ServiceSource(ServiceType::kIRC, userName),
     m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
@@ -287,12 +287,12 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 
 #ifndef DISABLE_DPP
 /* Discord command */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_DISCORD, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username),
+    m_ServiceSource(ServiceType::kDiscord, discordAPI->command.get_issuing_user().id, discordAPI->command.get_issuing_user().username),
     m_InteractionSource(discordAPI),
     m_FromWhisper(false),
     m_IsBroadcast(true),
@@ -326,12 +326,12 @@ CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConf
 #endif
 
 /* Generic command */
-CCommandContext::CCommandContext(uint8_t serviceType, CAura* nAura, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(nAura->m_CommandDefaultConfig),
 
     m_GameSource(GameSource()),
-    m_ServiceSource(SERVICE_TYPE_CLI, nFromName),
+    m_ServiceSource(ServiceType::kCLI, nFromName),
     m_InteractionSource(nullptr),
     m_FromWhisper(false),
     m_IsBroadcast(nIsBroadcast),
@@ -356,9 +356,9 @@ void CCommandContext::SetIdentity(const string& userName)
 string CCommandContext::GetUserAttribution()
 {
   switch (GetServiceSourceType()) {
-    case SERVICE_TYPE_IRC:
+    case ServiceType::kIRC:
       return GetSender() + "@" + m_ServerName;
-    case SERVICE_TYPE_DISCORD:
+    case ServiceType::kDiscord:
       return GetSender() + "@[" + m_ServerName + "].discord.com";
     default: {
       if (auto sourceRealm = GetSourceRealm()) {
@@ -374,23 +374,38 @@ string CCommandContext::GetUserAttribution()
 
 string CCommandContext::GetUserAttributionPreffix()
 {
+  string modeFragment = " (Mode " + ToHexString(m_Permissions) + ") ";
   switch (GetServiceSourceType()) {
-    case SERVICE_TYPE_IRC:
-      return "[IRC] User [" + GetSender() + "] (Mode " + ToHexString(m_Permissions) + ") ";
-    case SERVICE_TYPE_DISCORD:
-      return "[DISCORD] User [" + GetSender() + "]@[" + m_ServerName + "].discord.com (Mode " + ToHexString(m_Permissions) + ") ";
+    case ServiceType::kIRC:
+      return "[IRC] User [" + GetSender() + "]" + modeFragment;
+    case ServiceType::kDiscord:
+      return "[DISCORD] User [" + GetSender() + "]@[" + m_ServerName + "].discord.com" + modeFragment;
     default: {
       if (auto sourceRealm = GetSourceRealm()) {
-        return sourceRealm->GetLogPrefix() + "User [" + GetSender() + "] (Mode " + ToHexString(m_Permissions) + ") ";
+        return sourceRealm->GetLogPrefix() + "User [" + GetSender() + "]" + modeFragment;
       }
+      if (GetIsAnonymous()) {
+        return "[ANONYMOUS]" + modeFragment;
+      }
+      string userFragment = "User [" + GetSender() + "@" + ToFormattedRealm(m_ServerName) + "]";
       auto gameSource = GetGameSource();
-      if (!gameSource.GetIsEmpty()) {
-        return gameSource.GetGame()->GetLogPrefix() + "Player [" + GetSender() + "@" + ToFormattedRealm(m_ServerName) + "] (Mode " + ToHexString(m_Permissions) + ") ";
+      switch (gameSource.GetType()) {
+        case GameCommandSource::kNone:
+          return "[SYSTEM] User [" + GetSender() + "]" + userFragment + modeFragment;
+        case GameCommandSource::kReplay:
+          return "[REPLAY] " + userFragment + modeFragment;
+        case GameCommandSource::kUser:
+        case GameCommandSource::kSpectator: {
+          string gameName = gameSource.GetGame()->GetShortNameLAN();
+          if (gameSource.GetIsSpectator()) {
+            return "[SPECTATOR: " + gameName + "] " + userFragment + modeFragment;
+          } else if (gameSource.GetUser()->GetIsObserver()) {
+            return "[OBSERVER: " + gameName + "] " + userFragment + modeFragment;
+          } else {
+            return "[PLAYER: " + gameName + "] " + userFragment + modeFragment;
+          }
+        }
       }
-      if (!GetIsAnonymous()) {
-        return "[SYSTEM] User [" + GetSender() + "] (Mode " + ToHexString(m_Permissions) + ") ";
-      }
-      return "[ANONYMOUS] (Mode " + ToHexString(m_Permissions) + ") ";
     }
   }
 }
@@ -413,12 +428,12 @@ string CCommandContext::GetChannelName() const
 {
   const SimpleNestedLocation* subLoc = nullptr;
   switch (GetServiceSourceType()) {
-    case SERVICE_TYPE_IRC:
-    case SERVICE_TYPE_REALM:
+    case ServiceType::kIRC:
+    case ServiceType::kRealm:
       subLoc = InspectServiceSource().InspectSubLocation();
       if (subLoc) return subLoc->GetName();
       break;
-    case SERVICE_TYPE_DISCORD:
+    case ServiceType::kDiscord:
       subLoc = InspectServiceSource().InspectSubLocation();
       if (subLoc) {
         subLoc = subLoc->InspectSubLocation();
@@ -433,7 +448,7 @@ string CCommandContext::GetChannelName() const
 
 shared_ptr<CRealm> CCommandContext::GetSourceRealm() const
 {
-  if (m_ServiceSource.GetServiceType() != SERVICE_TYPE_REALM) {
+  if (m_ServiceSource.GetServiceType() != ServiceType::kRealm) {
     return nullptr;
   }
   return m_ServiceSource.GetService<CRealm>();
@@ -476,7 +491,7 @@ void CCommandContext::UpdatePermissions()
 
   m_Permissions = USER_PERMISSIONS_NONE;
 
-  if (GetServiceSourceType() == SERVICE_TYPE_IRC) {
+  if (GetServiceSourceType() == ServiceType::kIRC) {
     string::size_type suffixSize = m_Aura->m_IRC.m_Config.m_VerifiedDomain.length();
     if (suffixSize > 0) {
       if (m_ReverseHostName.length() > suffixSize &&
@@ -485,14 +500,14 @@ void CCommandContext::UpdatePermissions()
         m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
       }
       const bool IsCreatorIRC = (
-        !m_TargetGame.expired() && m_TargetGame.lock()->GetCreatedFromType() == SERVICE_TYPE_IRC
+        !m_TargetGame.expired() && m_TargetGame.lock()->GetCreatedFromType() == ServiceType::kIRC
       );
       if ((m_TargetGame.expired() || IsCreatorIRC) && m_Aura->m_IRC.GetIsModerator(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_CHANNEL_ADMIN;
       if (m_Aura->m_IRC.GetIsSudoer(m_ReverseHostName)) m_Permissions |= USER_PERMISSIONS_BOT_SUDO_SPOOFABLE;
     }
     return;
   }
-  if (GetServiceSourceType() == SERVICE_TYPE_DISCORD) {
+  if (GetServiceSourceType() == ServiceType::kDiscord) {
 #ifndef DISABLE_DPP
     if (m_Aura->m_Discord.GetIsSudoer(GetServiceSource().GetUserIdentifier())) {
       m_Permissions = SET_USER_PERMISSIONS_ALL &~ (USER_PERMISSIONS_BOT_SUDO_OK);
@@ -548,11 +563,12 @@ void CCommandContext::UpdatePermissions()
   }
 }
 
-void CCommandContext::CheckServiceType(uint8_t serviceType)
+void CCommandContext::CheckServiceType(ServiceType serviceType)
 {
   // Runtime check that I didn't mess function signatures
   if (GetServiceSourceType() != serviceType) {
-    Print("[COMMAND] error - command instantiated with type [" + ToDecString(serviceType) + "] but used signature for type [" + ToDecString(GetServiceSourceType()) + "]");
+
+    Print("[COMMAND] error - command instantiated with type [" + ToDecString((uint8_t)serviceType) + "] but used signature for type [" + ToDecString((uint8_t)GetServiceSourceType()) + "]");
   }
 }
 
@@ -776,16 +792,16 @@ void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxF
   }
 
   switch (GetServiceSourceType()) {
-    case SERVICE_TYPE_REALM:
+    case ServiceType::kRealm:
       if (sourceRealm) {
         sourceRealm->TryQueueChat(message, GetSender(), true, shared_from_this(), ctxFlags);
       }
       break;
-    case SERVICE_TYPE_IRC:
+    case ServiceType::kIRC:
       m_Aura->m_IRC.SendUser(message, GetSender());
       break;
 #ifndef DISABLE_DPP
-    case SERVICE_TYPE_DISCORD:
+    case ServiceType::kDiscord:
       m_Aura->m_Discord.SendUser(message, GetServiceSource().GetUserIdentifier());
       break;
 #endif
@@ -828,12 +844,12 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       sourceRealm->TryQueueChat(message, GetSender(), false, shared_from_this(), ctxFlags);
       AllSourceSuccess = true;
     }
-    if (GetServiceSourceType() == SERVICE_TYPE_IRC) {
+    if (GetServiceSourceType() == ServiceType::kIRC) {
       m_Aura->m_IRC.SendChannel(message, GetChannelName());
       AllSourceSuccess = true;
     }
 #ifndef DISABLE_DPP
-    if (GetServiceSourceType() == SERVICE_TYPE_DISCORD) {
+    if (GetServiceSourceType() == ServiceType::kDiscord) {
       GetDiscordInteraction()->edit_original_response(dpp::message(message));
       AllSourceSuccess = true;
     }
@@ -844,14 +860,14 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
   }
 
   // Write to console if CHAT_LOG_INCIDENT, but only if we haven't written to it in SendPrivateReply
-  if (GetServiceSourceType() != SERVICE_TYPE_CLI && (ctxFlags & CHAT_LOG_INCIDENT)) {
+  if (GetServiceSourceType() != ServiceType::kCLI && (ctxFlags & CHAT_LOG_INCIDENT)) {
     if (!m_TargetGame.expired()) {
       LogStream(*m_Output, m_TargetGame.lock()->GetLogPrefix() + message);
     } else if (sourceRealm) {
       LogStream(*m_Output, sourceRealm->GetLogPrefix() + message);
-    } else if (GetServiceSourceType() == SERVICE_TYPE_IRC) {
+    } else if (GetServiceSourceType() == ServiceType::kIRC) {
       LogStream(*m_Output, "[IRC] " + message);
-    } else if (GetServiceSourceType() == SERVICE_TYPE_DISCORD) {
+    } else if (GetServiceSourceType() == ServiceType::kDiscord) {
       LogStream(*m_Output, "[DISCORD] " + message);
     } else {
       LogStream(*m_Output, "[AURA] " + message);
@@ -1181,7 +1197,7 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
     }
   }
 
-  if (GetServiceSourceType() == SERVICE_TYPE_REALM) {
+  if (GetServiceSourceType() == ServiceType::kRealm) {
     realmFragment = m_ServerName;
     nameFragment = TrimString(target);
   } else {
@@ -1204,23 +1220,23 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
   }
 }
 
-uint8_t CCommandContext::GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location)
+ServiceType CCommandContext::GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location)
 {
   RealmUserSearchResult realmSearchResult = GetParseTargetRealmUser(target);
   if (realmSearchResult.GetSuccess()) {
     nameFragment = realmSearchResult.userName;
     locationFragment = realmSearchResult.hostName;
     location = realmSearchResult.GetRealm().get();
-    return SERVICE_TYPE_REALM;
+    return ServiceType::kRealm;
   }
   shared_ptr<CGame> matchingGame = GetTargetGame(locationFragment);
   if (matchingGame) {
     if (nameFragment.size() > MAX_PLAYER_NAME_SIZE) {
       location = reinterpret_cast<CGame*>(matchingGame.get());
-      return SERVICE_TYPE_GAME;
+      return ServiceType::kGame;
     }
   }
-  return SERVICE_TYPE_NONE;
+  return ServiceType::kNone;
 }
 
 shared_ptr<CGame> CCommandContext::GetTargetGame(const string& rawInput)
@@ -1296,8 +1312,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       confirmationText = "[AURA] Confirm from [" + m_ServerName + "] with: \"/w " + baseSourceRealm->GetLoginName() + " " + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"";
     } else {
       switch (GetServiceSourceType()) {
-        case SERVICE_TYPE_IRC:
-        case SERVICE_TYPE_DISCORD:
+        case ServiceType::kIRC:
+        case ServiceType::kDiscord:
           confirmationText = "[AURA] Confirm from [" + m_ServerName + "] with: \"" + cmdToken + m_Aura->m_Config.m_SudoKeyWord + " " + m_Aura->m_SudoAuthTarget + "\"";
           break;
         default:
@@ -1744,7 +1760,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
 
       vector<string> output;
-      output.push_back("Game#" + to_string(targetGame->GetGameID()) " - " + targetGame->GetMap()->GetMapTitle());
+      output.push_back("Game#" + to_string(targetGame->GetGameID()) + " - " + targetGame->GetMap()->GetMapTitle());
 
       // GOTCHA: /game - Leavers info is omitted. This affects games with name obfuscation.
       vector<const GameUser::CGameUser*> players = targetGame->GetPlayers();
@@ -6597,8 +6613,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       string nameFragment, locationFragment;
       void* location = nullptr;
-      uint8_t targetType = GetParseTargetServiceUser(inputName, nameFragment, locationFragment, location);
-      if (targetType == SERVICE_TYPE_REALM) {
+      ServiceType targetType = GetParseTargetServiceUser(inputName, nameFragment, locationFragment, location);
+      if (targetType == ServiceType::kRealm) {
         CRealm* matchingRealm = reinterpret_cast<CRealm*>(location);
         if (inputName == matchingRealm->GetLoginName()) {
           ErrorReply("Cannot PM myself.");
@@ -6614,7 +6630,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           m_ActionMessage = inputName + ", " + GetSender() + " at " + m_ServerName + " tells you: <<" + subMessage + ">>";
         }
         matchingRealm->QueueWhisper(m_ActionMessage, inputName, shared_from_this(), true);
-      } else if (targetType == SERVICE_TYPE_GAME) {
+      } else if (targetType == ServiceType::kGame) {
         CGame* matchingGame = reinterpret_cast<CGame*>(location);
         if (matchingGame->GetGameLoaded() && !GetIsSudo()) {
           ErrorReply("Cannot send messages to a game that has already started.");
@@ -6838,21 +6854,21 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       size_t TargetStart = ExecString.find(' ');
       const string SubCmd = TargetStart == string::npos ? ExecString : ExecString.substr(0, TargetStart);
       const string SubTarget = TargetStart == string::npos ? string() : ExecString.substr(TargetStart + 1);
-      uint8_t serviceSourceType = GetServiceSourceType();
+      ServiceType serviceSourceType = GetServiceSourceType();
       shared_ptr<CCommandContext> ctx = nullptr;
       try {
-        if (serviceSourceType == SERVICE_TYPE_IRC) {
+        if (serviceSourceType == ServiceType::kIRC) {
           ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, GetChannelName(), GetSender(), m_FromWhisper, m_ServerName, m_IsBroadcast, &std::cout);
 #ifndef DISABLE_DPP
-        } else if (serviceSourceType == SERVICE_TYPE_DISCORD) {
+        } else if (serviceSourceType == ServiceType::kDiscord) {
           ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, GetDiscordInteraction(), &std::cout);
 #endif
-        } else if (serviceSourceType == SERVICE_TYPE_REALM) {
+        } else if (serviceSourceType == ServiceType::kRealm) {
           if (sourceRealm) {
             ctx = make_shared<CCommandContext>(serviceSourceType, m_Aura, m_Config, targetGame, sourceRealm, GetSender(), m_FromWhisper, m_IsBroadcast, &std::cout);
           }
         } else {
-          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN, m_Aura, m_Config, targetGame, GetSender(), m_IsBroadcast, &std::cout);
+          ctx = make_shared<CCommandContext>(ServiceType::kLAN, m_Aura, m_Config, targetGame, GetSender(), m_IsBroadcast, &std::cout);
         }
       } catch (...) {
       }
@@ -7036,7 +7052,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("No games found.");
           break;
         }
-        if (InspectGameSource().GetIsEmpty()) {
+        if (InspectGameSource().GetIsGameExpired()) {
           SendReply("Sent chat message to all games.");
         }
       } else {
@@ -7884,7 +7900,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("You are not allowed to change my nickname.");
         break;
       }
-      if (GetServiceSourceType() != SERVICE_TYPE_IRC && !GetIsSudo()) {
+      if (GetServiceSourceType() != ServiceType::kIRC && !GetIsSudo()) {
         ErrorReply("This is an IRC-exclusive command.");
         break;
       }
@@ -8162,8 +8178,8 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
   }
 
   void* servicePtr = nullptr;
-  uint8_t serviceType = nAura->FindServiceFromHostName(lazyCtx.identityLoc, servicePtr);
-  if (serviceType == SERVICE_TYPE_NONE) {
+  ServiceType serviceType = nAura->FindServiceFromHostName(lazyCtx.identityLoc, servicePtr);
+  if (serviceType == ServiceType::kNone) {
     Print("[AURA] --exec parsed user at service invalid.");
     return APP_ACTION_ERROR;
   }
@@ -8176,11 +8192,11 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
   }
 
   switch (serviceType) {
-    case SERVICE_TYPE_GAME:
-    case SERVICE_TYPE_DISCORD:
+    case ServiceType::kGame:
+    case ServiceType::kDiscord:
       Print("[AURA] --exec-as: @service not supported [" + lazyCtx.identityLoc + "]");
       return APP_ACTION_ERROR;
-    case SERVICE_TYPE_CLI:
+    case ServiceType::kCLI:
       try {
         if (targetGame) {
           ctx = make_shared<CCommandContext>(
@@ -8194,7 +8210,7 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       } catch (...) {
       }
       break;
-    case SERVICE_TYPE_IRC:
+    case ServiceType::kIRC:
       if (!nAura->m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
       if (nAura->m_IRC.m_Config.m_Channels.empty()) return APP_ACTION_ERROR;
       if (!nAura->m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
@@ -8218,7 +8234,7 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       } catch (...) {
       }
       break;
-    case SERVICE_TYPE_REALM:
+    case ServiceType::kRealm:
       Print("[AURA] --exec parsed user at service is realm.");
       CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
       Print("[AURA] --exec parsed user at service is realm " + sourceRealm->GetCanonicalDisplayName() + ".");

@@ -280,9 +280,9 @@ public:
   // Game creator stuff
   void RemoveCreator();
 
-  void SetCreator(const uint8_t serviceType, const std::string& nCreator);
+  void SetCreator(const ServiceType serviceType, const std::string& nCreator);
   /*
-  void SetCreator(const uint8_t serviceType, const std::string& nCreator, std::weak_ptr<void> servicePtr);
+  void SetCreator(const ServiceType serviceType, const std::string& nCreator, std::weak_ptr<void> servicePtr);
   void SetCreatorGameUser(const std::string& nCreator, std::shared_ptr<CGame> nGame);
   void SetCreatorRealmUser(const std::string& nCreator, std::shared_ptr<CRealm> nRealm);
   void SetCreatorIRCUser(const std::string& nCreator);
@@ -291,7 +291,7 @@ public:
 
   void AcquireCreator();
 
-  inline uint8_t GetCreatedFromType() const { return m_Creator.GetServiceType(); }
+  inline ServiceType GetCreatedFromType() const { return m_Creator.GetServiceType(); }
   inline bool GetCreatedFromIsExpired() const { return m_Creator.GetIsExpired(); }
   template <typename T>
   [[nodiscard]] inline std::shared_ptr<T> GetCreatedFrom() const
@@ -299,8 +299,8 @@ public:
     return m_Creator.GetService<T>();
   }
 
-  [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType) const;
-  [[nodiscard]] bool MatchesCreatedFrom(const uint8_t fromType, std::shared_ptr<const void> fromThing) const;
+  [[nodiscard]] bool MatchesCreatedFrom(const ServiceType fromType) const;
+  [[nodiscard]] bool MatchesCreatedFrom(const ServiceType fromType, std::shared_ptr<const void> fromThing) const;
   [[nodiscard]] bool MatchesCreatedFromGame(std::shared_ptr<const CGame> nGame) const;
   [[nodiscard]] bool MatchesCreatedFromRealm(std::shared_ptr<const CRealm> nRealm) const;
   [[nodiscard]] bool MatchesCreatedFromIRC() const;

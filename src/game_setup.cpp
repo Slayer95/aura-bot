@@ -1437,35 +1437,35 @@ void CGameSetup::RemoveCreator()
   m_Creator.Reset();
 }
 
-void CGameSetup::SetCreator(const uint8_t serviceType, const string& creatorName)
+void CGameSetup::SetCreator(const ServiceType serviceType, const string& creatorName)
 {
   m_Creator = ServiceUser(serviceType, creatorName);
 }
 
 /*
-void CGameSetup::SetCreator(const uint8_t serviceType, const string& creatorName, weak_ptr<void> servicePtr)
+void CGameSetup::SetCreator(const ServiceType serviceType, const string& creatorName, weak_ptr<void> servicePtr)
 {
   m_Creator = ServiceUser(serviceType, creatorName, servicePtr.lock());
 }
 
 void CGameSetup::SetCreatorGameUser(const string& creatorName, shared_ptr<CGame> nGame)
 {
-  SetCreator(SERVICE_TYPE_GAME, creatorName, static_pointer_cast<void>(nGame));
+  SetCreator(ServiceType::kGame, creatorName, static_pointer_cast<void>(nGame));
 }
 
 void CGameSetup::SetCreatorRealmUser(const string& creatorName, shared_ptr<CRealm> nRealm)
 {
-  SetCreator(SERVICE_TYPE_REALM, creatorName, static_pointer_cast<void>(nRealm));
+  SetCreator(ServiceType::kRealm, creatorName, static_pointer_cast<void>(nRealm));
 }
 
 void CGameSetup::SetCreatorIRCUser(const string& creatorName)
 {
-  SetCreator(SERVICE_TYPE_IRC, creatorName);
+  SetCreator(ServiceType::kIRC, creatorName);
 }
 
 void CGameSetup::SetCreatorDiscordUser(const string& creatorName)
 {
-  SetCreator(SERVICE_TYPE_DISCORD, creatorName);
+  SetCreator(ServiceType::kDiscord, creatorName);
 }
 */
 
@@ -1475,18 +1475,18 @@ void CGameSetup::AcquireCreator()
   m_Creator = m_Ctx->GetServiceSource();
 }
 
-bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType) const
+bool CGameSetup::MatchesCreatedFrom(const ServiceType fromType) const
 {
   return m_Creator.GetServiceType() == fromType;
 }
 
-bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
+bool CGameSetup::MatchesCreatedFrom(const ServiceType fromType, shared_ptr<const void> fromThing) const
 {
   if (m_Creator.GetServiceType() != fromType) return false;
   switch (fromType) {
-    case SERVICE_TYPE_GAME:
+    case ServiceType::kGame:
       return static_pointer_cast<const CGame>(fromThing) == GetCreatedFrom<const CGame>();
-    case SERVICE_TYPE_REALM:
+    case ServiceType::kRealm:
       return static_pointer_cast<const CRealm>(fromThing) == GetCreatedFrom<const CRealm>();
     default:
       return true;
@@ -1495,22 +1495,22 @@ bool CGameSetup::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const voi
 
 bool CGameSetup::MatchesCreatedFromGame(shared_ptr<const CGame> nGame) const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_GAME, static_pointer_cast<const void>(nGame));
+  return MatchesCreatedFrom(ServiceType::kGame, static_pointer_cast<const void>(nGame));
 }
 
 bool CGameSetup::MatchesCreatedFromRealm(shared_ptr<const CRealm> nRealm) const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_REALM, static_pointer_cast<const void>(nRealm));
+  return MatchesCreatedFrom(ServiceType::kRealm, static_pointer_cast<const void>(nRealm));
 }
 
 bool CGameSetup::MatchesCreatedFromIRC() const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_IRC);
+  return MatchesCreatedFrom(ServiceType::kIRC);
 }
 
 bool CGameSetup::MatchesCreatedFromDiscord() const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_DISCORD);
+  return MatchesCreatedFrom(ServiceType::kDiscord);
 }
 
 void CGameSetup::OnGameCreate()
@@ -1644,7 +1644,7 @@ void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
     }
   }
   if (mpName.has_value()) {
-    SetCreator(SERVICE_TYPE_CLI, mpName.value());
+    SetCreator(ServiceType::kCLI, mpName.value());
   }
   if (nCLI->m_GameOwner.has_value()) {
     pair<string, string> owner = SplitAddress(nCLI->m_GameOwner.value());

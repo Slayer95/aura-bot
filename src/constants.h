@@ -67,18 +67,24 @@ constexpr uint8_t APP_ACTION_TYPE_HOST = 1u;
 constexpr uint8_t APP_ACTION_MODE_TCP = 0u;
 constexpr uint8_t APP_ACTION_MODE_UDP = 1u;
 
-constexpr uint8_t SERVICE_TYPE_NONE = 0;
-constexpr uint8_t SERVICE_TYPE_CLI = 1;
-constexpr uint8_t SERVICE_TYPE_LAN = 2;
-constexpr uint8_t SERVICE_TYPE_REALM = 3;
-constexpr uint8_t SERVICE_TYPE_IRC = 4;
-constexpr uint8_t SERVICE_TYPE_DISCORD = 5;
-constexpr uint8_t SERVICE_TYPE_GAME = 6; // avoided in most places, in favor of CLI/LAN/REALM
+enum class ServiceType : uint8_t
+{
+  kNone = 0u,
+  kCLI = 1u,
+  kLAN = 2u,
+  kRealm = 3u,
+  kIRC = 4u,
+  kDiscord = 5u,
+  kGame = 6u, // avoided in most places, in favor of kCLI/kLAN/kRealm
+};
 
-constexpr uint8_t COMMAND_SOURCE_GAME_NONE = 0;
-constexpr uint8_t COMMAND_SOURCE_GAME_USER = 1;
-constexpr uint8_t COMMAND_SOURCE_GAME_ASYNC_OBSERVER = 2;
-constexpr uint8_t COMMAND_SOURCE_GAME_REPLAY = 3;
+enum class GameCommandSource : uint8_t
+{
+  kNone = 0u,
+  kUser = 1u,
+  kSpectator = 2u,
+  kReplay = 3u,
+};
 
 constexpr uint8_t TASK_TYPE_GAME_FRAME = 0;
 constexpr uint8_t TASK_TYPE_CHECK_JOINABLE = 1;

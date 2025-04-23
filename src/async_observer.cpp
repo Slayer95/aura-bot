@@ -559,7 +559,8 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
   }
 
   CGameConfig* gameConfig;
-  if (auto game = GetGame()) {
+  shared_ptr<CGame> game = GetGame();
+  if (game) {
     gameConfig = &game->m_Config;
   } else {
     gameConfig = m_Aura->m_GameDefaultConfig;
@@ -591,7 +592,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
         }
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, GetGame(), this, false, &std::cout);
+          ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, game, this, false, &std::cout);
         } catch (...) {}
         if (ctx) ctx->Run(cmdToken, command, target);
       } else if (message == "?trigger") {
@@ -600,7 +601,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
           shouldRelay = false;
         }
         //TODO:SendCommandsHelp()
-        //GetGame()->SendCommandsHelp(gameConfig->m_BroadcastCmdToken.empty() ? gameConfig->m_PrivateCmdToken : gameConfig->m_BroadcastCmdToken, this, false);
+        //game->SendCommandsHelp(gameConfig->m_BroadcastCmdToken.empty() ? gameConfig->m_PrivateCmdToken : gameConfig->m_BroadcastCmdToken, this, false);
       } else if (message == "/p" || message == "/ping" || message == "/game") {
         // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
         // Therefore, these commands are only effective over LAN.
@@ -610,7 +611,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
         }
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, GetGame(), this, false, &std::cout);
+          ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, game, this, false, &std::cout);
         } catch (...) {}
         if (ctx) {
           cmdToken = gameConfig->m_PrivateCmdToken;
@@ -624,7 +625,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
         }
         /*
         // TODO: SmartCommands
-        if (!GetGame()->CheckSmartCommands(this, message, activeSmartCommand, commandCFG) && !GetCommandHistory()->GetSentAutoCommandsHelp()) {
+        if (!game->CheckSmartCommands(this, message, activeSmartCommand, commandCFG) && !GetCommandHistory()->GetSentAutoCommandsHelp()) {
           bool anySentCommands = false;
           for (const auto& otherPlayer : m_Users) {
             if (otherPlayer->GetCommandHistory()->GetUsedAnyCommands()) anySentCommands = true;
@@ -773,6 +774,6 @@ void CAsyncObserver::SendProgressReport()
 
 string CAsyncObserver::GetLogPrefix() const
 {
-  if (!m_Game.expired()) return m_Game.lock()->GetLogPrefix() + "[OBSERVER] [" + m_Name + "] ";
-  return "[OBSERVER] [" + m_Name + "] ";
+  if (!m_Game.expired()) return m_Game.lock()->GetLogPrefix() + "[SPECTATOR] [" + m_Name + "] ";
+  return "[SPECTATOR] [" + m_Name + "] ";
 }

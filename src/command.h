@@ -65,28 +65,28 @@ protected:
 
 public:
   // Game
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, CAsyncObserver* spectator, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, GameUser::CGameUser* user, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, CAsyncObserver* spectator, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // IRC, IRC->Game
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
 
 #ifndef DISABLE_DPP
   // Discord, Discord->Game
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, dpp::slashcommand_t* discordAPI, std::ostream* outputStream);
 #endif
 
   // Arbitrary, Arbitrary->Game
-  CCommandContext(uint8_t serviceType, CAura* nAura, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(uint8_t serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
 
-  [[nodiscard]] inline bool GetWritesToStdout() const { return m_ServiceSource.GetServiceType() == SERVICE_TYPE_CLI; }
+  [[nodiscard]] inline bool GetWritesToStdout() const { return m_ServiceSource.GetServiceType() == ServiceType::kCLI; }
 
   [[nodiscard]] std::string GetUserAttribution();
   [[nodiscard]] std::string GetUserAttributionPreffix();
@@ -96,7 +96,7 @@ public:
 
   [[nodiscard]] inline GameSource& GetGameSource() { return m_GameSource; }
   [[nodiscard]] inline const GameSource& InspectGameSource() const { return m_GameSource; }
-  [[nodiscard]] inline uint8_t GetGameSourceUserType() const { return m_GameSource.GetType(); }
+  [[nodiscard]] inline GameCommandSource GetGameSourceUserType() const { return m_GameSource.GetType(); }
   inline void ResetGameSource() { m_GameSource.Reset(); }
   inline void ExpireGameSource() { m_GameSource.Expire(); }
 
@@ -110,7 +110,7 @@ public:
 
   [[nodiscard]] inline ServiceUser& GetServiceSource() { return m_ServiceSource; }
   [[nodiscard]] inline const ServiceUser& InspectServiceSource() const { return m_ServiceSource; }
-  [[nodiscard]] inline uint8_t GetServiceSourceType() const { return m_ServiceSource.GetServiceType(); }
+  [[nodiscard]] inline ServiceType GetServiceSourceType() const { return m_ServiceSource.GetServiceType(); }
   inline void ResetServiceSource() { m_ServiceSource.Reset(); }
   [[nodiscard]] inline bool GetIsAnonymous() const { return m_ServiceSource.GetIsAnonymous(); }
 
@@ -134,7 +134,7 @@ public:
   void UpdatePermissions();
   void ClearActionMessage() { m_ActionMessage.clear(); }
 
-  void CheckServiceType(uint8_t serviceType);
+  void CheckServiceType(ServiceType serviceType);
   [[nodiscard]] std::optional<bool> CheckPermissions(const uint8_t nPermissionsRequired) const;
   [[nodiscard]] bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
   [[nodiscard]] std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
@@ -165,7 +165,7 @@ public:
   [[nodiscard]] std::optional<uint8_t> RunParseNonPlayerSlot(const std::string& target);
   [[nodiscard]] std::shared_ptr<CRealm> GetTargetRealmOrCurrent(const std::string& target);
   [[nodiscard]] RealmUserSearchResult GetParseTargetRealmUser(const std::string& target, bool allowNoRealm = false, bool searchHistory = false);
-  [[nodiscard]] uint8_t GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
+  [[nodiscard]] ServiceType GetParseTargetServiceUser(const std::string& target, std::string& nameFragment, std::string& locationFragment, void*& location);
   [[nodiscard]] std::shared_ptr<CGame> GetTargetGame(const std::string& target);
   void UseImplicitReplaceable();
   void UseImplicitHostedGame();

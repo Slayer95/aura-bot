@@ -164,7 +164,7 @@ public:
   [[nodiscard]] std::shared_ptr<CRealm> GetRealmByInputId(const std::string& inputId) const;
   [[nodiscard]] std::shared_ptr<CRealm> GetRealmByHostCounter(const uint8_t hostCounter) const;
   [[nodiscard]] std::shared_ptr<CRealm> GetRealmByHostName(const std::string& hostName) const;
-  [[nodiscard]] uint8_t FindServiceFromHostName(const std::string& hostName, void*& location) const;
+  [[nodiscard]] ServiceType FindServiceFromHostName(const std::string& hostName, void*& location) const;
 
   [[nodiscard]] std::vector<std::shared_ptr<CGame>> GetAllGames() const;
   [[nodiscard]] std::vector<std::shared_ptr<CGame>> GetJoinableGames() const;

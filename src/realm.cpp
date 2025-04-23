@@ -421,7 +421,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             shared_ptr<CCommandContext> ctx = nullptr;
             shared_ptr<CGameSetup> gameSetup = nullptr;
             try {
-              ctx = make_shared<CCommandContext>(SERVICE_TYPE_REALM, m_Aura, string(), false, &cout);
+              ctx = make_shared<CCommandContext>(ServiceType::kRealm, m_Aura, string(), false, &cout);
               gameSetup = make_shared<CGameSetup>(m_Aura, ctx, &(hostedGameConfig.value()));
             } catch (...) {
               PRINT_IF(LOG_LEVEL_WARNING, GetLogPrefix() + "hostgame memory allocation failure")
@@ -626,7 +626,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     }
     shared_ptr<CCommandContext> ctx = nullptr;
     try {
-      ctx = make_shared<CCommandContext>(SERVICE_TYPE_REALM, m_Aura, m_Config.m_CommandCFG, shared_from_this(), fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+      ctx = make_shared<CCommandContext>(ServiceType::kRealm, m_Aura, m_Config.m_CommandCFG, shared_from_this(), fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
     } catch (...) {
     }
     if (ctx) {

@@ -1595,7 +1595,7 @@ void CNet::CheckJoinableLobbies()
       }
       shared_ptr<CCommandContext> ctx = nullptr;
       try {
-        ctx = make_shared<CCommandContext>(SERVICE_TYPE_CLI /* using CLI for CNet::CheckJoinableLobbies() so that it outputs to console only */, m_Aura, string(), false, &cout);
+        ctx = make_shared<CCommandContext>(ServiceType::kCLI /* using CLI for CNet::CheckJoinableLobbies() so that it outputs to console only */, m_Aura, string(), false, &cout);
       } catch (...) {
       }
       if (ctx) {

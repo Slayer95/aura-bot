@@ -956,21 +956,21 @@ shared_ptr<CRealm> CAura::GetRealmByHostName(const string& hostName) const
   return nullptr;
 }
 
-uint8_t CAura::FindServiceFromHostName(const string& hostName, void*& location) const
+ServiceType CAura::FindServiceFromHostName(const string& hostName, void*& location) const
 {
   // TODO: CAura::FindServiceFromHostName() location ptr
   if (m_IRC.MatchHostName(hostName)) {
-    return SERVICE_TYPE_IRC;
+    return ServiceType::kIRC;
   }
   if (m_Discord.MatchHostName(hostName)) {
-    return SERVICE_TYPE_DISCORD;
+    return ServiceType::kDiscord;
   }
   for (const auto& realm : m_Realms) {
     if (realm->GetServer() == hostName) {
-      return SERVICE_TYPE_REALM;
+      return ServiceType::kRealm;
     }
   }
-  return SERVICE_TYPE_NONE;
+  return ServiceType::kNone;
 }
 
 vector<shared_ptr<CGame>> CAura::GetAllGames() const
@@ -1316,17 +1316,17 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
     game->SendAllChat("Cannot publish game on server [" + errorRealm->GetServer() + "]. Try another name");
   } else {
     switch (game->GetCreatedFromType()) {
-      case SERVICE_TYPE_REALM:
+      case ServiceType::kRealm:
         if (!game->GetCreatedFromIsExpired()) {
           game->GetCreatedFrom<CRealm>()->QueueWhisper("Cannot publish game on on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         }
         break;
-      case SERVICE_TYPE_IRC:
+      case ServiceType::kIRC:
         m_IRC.SendUser("Cannot publish game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;
       /*
       // FIXME: CAura::EventBNETGameRefreshError SendUser() - Discord case
-      case SERVICE_TYPE_DISCORD:
+      case ServiceType::kDiscord:
         m_Discord.SendUser("Unable to create game on server [" + errorRealm->GetServer() + "]. Try another name", game->GetCreatorName());
         break;*/
       default:
@@ -2239,7 +2239,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   }
 
   if (createdLobby->GetDisplayMode() != GAME_DISPLAY_PUBLIC ||
-    gameSetup->GetCreatedFromType() != SERVICE_TYPE_REALM ||
+    gameSetup->GetCreatedFromType() != ServiceType::kRealm ||
     gameSetup->m_Ctx->GetIsWhisper()) {
     gameSetup->m_Ctx->SendPrivateReply(createdLobby->GetAnnounceText());
   }

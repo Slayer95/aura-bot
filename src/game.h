@@ -287,7 +287,7 @@ public:
   inline std::string                                     GetOwnerRealm() const { return m_OwnerRealm; }
 
   inline std::string                                     GetCreatorName() const { return m_Creator.GetUser(); }
-  inline uint8_t                                         GetCreatedFromType() const { return m_Creator.GetServiceType(); }
+  inline ServiceType                                     GetCreatedFromType() const { return m_Creator.GetServiceType(); }
   inline bool                                            GetCreatedFromIsExpired() const { return m_Creator.GetIsExpired(); }
   inline bool                                            GetCanJoinInProgress() const { return m_JoinInProgressVirtualUser.has_value(); }
 
@@ -297,14 +297,14 @@ public:
     return m_Creator.GetService<T>();
   }
 
-  [[nodiscard]]                                          bool MatchesCreatedFrom(const uint8_t fromType) const;
-  [[nodiscard]]                                          bool MatchesCreatedFrom(const uint8_t fromType, std::shared_ptr<const void> fromThing) const;
+  [[nodiscard]]                                          bool MatchesCreatedFrom(const ServiceType fromType) const;
+  [[nodiscard]]                                          bool MatchesCreatedFrom(const ServiceType fromType, std::shared_ptr<const void> fromThing) const;
   [[nodiscard]]                                          bool MatchesCreatedFromGame(std::shared_ptr<const CGame> nGame) const;
   [[nodiscard]]                                          bool MatchesCreatedFromRealm(std::shared_ptr<const CRealm> nRealm) const;
   [[nodiscard]]                                          bool MatchesCreatedFromIRC() const;
   [[nodiscard]]                                          bool MatchesCreatedFromDiscord() const;
 
-  [[nodiscard]] inline std::shared_ptr<CRealm> GetSourceRealm() const { return MatchesCreatedFrom(SERVICE_TYPE_REALM) ? GetCreatedFrom<CRealm>() : nullptr; }
+  [[nodiscard]] inline std::shared_ptr<CRealm> GetSourceRealm() const { return MatchesCreatedFrom(ServiceType::kRealm) ? GetCreatedFrom<CRealm>() : nullptr; }
 
   inline uint32_t                                        GetHostCounter() const { return m_HostCounter; }
   inline int64_t                                         GetLastLagScreenTime() const { return m_LastLagScreenTime; }

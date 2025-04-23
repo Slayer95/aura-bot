@@ -811,18 +811,18 @@ void CGame::InitSlots()
   }
 }
 
-bool CGame::MatchesCreatedFrom(const uint8_t fromType) const
+bool CGame::MatchesCreatedFrom(const ServiceType fromType) const
 {
   return m_Creator.GetServiceType() == fromType;
 }
 
-bool CGame::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fromThing) const
+bool CGame::MatchesCreatedFrom(const ServiceType fromType, shared_ptr<const void> fromThing) const
 {
   if (m_Creator.GetServiceType() != fromType) return false;
   switch (fromType) {
-    case SERVICE_TYPE_GAME:
+    case ServiceType::kGame:
       return static_pointer_cast<const CGame>(fromThing) == GetCreatedFrom<const CGame>();
-    case SERVICE_TYPE_REALM:
+    case ServiceType::kRealm:
       return static_pointer_cast<const CRealm>(fromThing) == GetCreatedFrom<const CRealm>();
     default:
       return true;
@@ -831,22 +831,22 @@ bool CGame::MatchesCreatedFrom(const uint8_t fromType, shared_ptr<const void> fr
 
 bool CGame::MatchesCreatedFromGame(shared_ptr<const CGame> nGame) const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_GAME, static_pointer_cast<const void>(nGame));
+  return MatchesCreatedFrom(ServiceType::kGame, static_pointer_cast<const void>(nGame));
 }
 
 bool CGame::MatchesCreatedFromRealm(shared_ptr<const CRealm> nRealm) const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_REALM, static_pointer_cast<const void>(nRealm));
+  return MatchesCreatedFrom(ServiceType::kRealm, static_pointer_cast<const void>(nRealm));
 }
 
 bool CGame::MatchesCreatedFromIRC() const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_IRC);
+  return MatchesCreatedFrom(ServiceType::kIRC);
 }
 
 bool CGame::MatchesCreatedFromDiscord() const
 {
-  return MatchesCreatedFrom(SERVICE_TYPE_DISCORD);
+  return MatchesCreatedFrom(ServiceType::kDiscord);
 }
 
 uint8_t CGame::GetLayout() const
@@ -3503,12 +3503,13 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       }
       Line = Line.substr(6);
     }
+    // TODO: Name censored warning
     while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
       Line.replace(matchIndex, 9, m_CreatorText);
     }
     while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
       switch (m_Creator.GetServiceType()) {
-        case SERVICE_TYPE_REALM: {
+        case ServiceType::kRealm: {
           if (m_Creator.GetIsExpired()) {
             Line.replace(matchIndex, 11, "@unknown.battle.net");
           } else {
@@ -3516,10 +3517,10 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
           }
           break;
         }
-        case SERVICE_TYPE_IRC:
+        case ServiceType::kIRC:
           Line.replace(matchIndex, 11, "@" + m_Aura->m_IRC.m_Config.m_HostName);
           break;
-        case SERVICE_TYPE_DISCORD:
+        case ServiceType::kDiscord:
           // FIXME: {HOSTREALM} may need to display the Discord guild
           Line.replace(matchIndex, 11, "@users.discord.com");
           break;
@@ -5527,11 +5528,11 @@ bool CGame::CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinR
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedPlayer(joinRequest->GetName(), hostName);
   bool isBanned = isSelfServerBanned;
   // check if the user name is banned in the game creator's realm
-  if (!isBanned && m_Creator.GetServiceType() == SERVICE_TYPE_REALM && !m_Creator.GetIsExpired() && !MatchesCreatedFromRealm(matchingRealm)) {
+  if (!isBanned && m_Creator.GetServiceType() == ServiceType::kRealm && !m_Creator.GetIsExpired() && !MatchesCreatedFromRealm(matchingRealm)) {
     isBanned = GetCreatedFrom<const CRealm>()->IsBannedPlayer(joinRequest->GetName(), hostName);
   }
   // check if the user name is banned in whatever alternate service the game creator comes from
-  if (!isBanned && m_Creator.GetServiceType() != SERVICE_TYPE_REALM) {
+  if (!isBanned && m_Creator.GetServiceType() != ServiceType::kRealm) {
     isBanned = m_Aura->m_DB->GetIsUserBanned(joinRequest->GetName(), hostName, string());
   }
   if (isBanned) {
@@ -5565,11 +5566,11 @@ bool CGame::CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinReq
   bool isSelfServerBanned = matchingRealm && matchingRealm->IsBannedIP(connection->GetIPStringStrict());
   bool isBanned = isSelfServerBanned;
   // check if the user IP is banned in the game creator's realm
-  if (!isBanned && m_Creator.GetServiceType() == SERVICE_TYPE_REALM && !m_Creator.GetIsExpired() && !MatchesCreatedFromRealm(matchingRealm)) {
+  if (!isBanned && m_Creator.GetServiceType() == ServiceType::kRealm && !m_Creator.GetIsExpired() && !MatchesCreatedFromRealm(matchingRealm)) {
     isBanned = GetCreatedFrom<const CRealm>()->IsBannedIP(connection->GetIPStringStrict());
   }
   // check if the user IP is banned in whatever alternate service the game creator comes from
-  if (!isBanned && m_Creator.GetServiceType() != SERVICE_TYPE_REALM) {
+  if (!isBanned && m_Creator.GetServiceType() != ServiceType::kRealm) {
     isBanned = m_Aura->m_DB->GetIsIPBanned(connection->GetIPStringStrict(), string());
   }
   if (isBanned) {
@@ -6050,7 +6051,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incom
         }
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+          ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
         } catch (...) {}
         if (ctx) ctx->Run(cmdToken, command, target);
       } else if (message == "?trigger") {
@@ -6068,7 +6069,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incom
         }
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
+          ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
         } catch (...) {}
         if (ctx) {
           cmdToken = m_Config.m_PrivateCmdToken;
@@ -6825,7 +6826,7 @@ bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& mes
       if (activeCmd == SMART_COMMAND_GO) {
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(SERVICE_TYPE_LAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
+          ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
         } catch (...) {
           return true;
         }

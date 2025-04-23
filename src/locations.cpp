@@ -35,7 +35,7 @@ using namespace std;
 //
 
 ServiceUser::ServiceUser()
- : serviceType(SERVICE_TYPE_NONE)
+ : serviceType(ServiceType::kNone)
 {
 };
 
@@ -46,20 +46,20 @@ ServiceUser::ServiceUser(const ServiceUser& otherService)
 {
 };
 
-ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName)
+ServiceUser::ServiceUser(ServiceType nServiceType, string nUserName)
  : serviceType(nServiceType),
    userName(nUserName)
 {
 };
 
-ServiceUser::ServiceUser(uint8_t nServiceType, int64_t nUserIdentifier, string nUserName)
+ServiceUser::ServiceUser(ServiceType nServiceType, int64_t nUserIdentifier, string nUserName)
  : serviceType(nServiceType),
    userIdentifier(nUserIdentifier),
    userName(nUserName)
 {
 };
 
-ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName, shared_ptr<void> nServicePtr)
+ServiceUser::ServiceUser(ServiceType nServiceType, string nUserName, shared_ptr<void> nServicePtr)
  : serviceType(nServiceType),
    servicePtr(nServicePtr),
    userName(nUserName)
@@ -68,7 +68,7 @@ ServiceUser::ServiceUser(uint8_t nServiceType, string nUserName, shared_ptr<void
 
 void ServiceUser::Reset()
 {
-  serviceType = SERVICE_TYPE_NONE;
+  serviceType = ServiceType::kNone;
   servicePtr.reset();
   userIdentifier.reset();
   userName.clear();
@@ -95,7 +95,7 @@ bool ServiceUser::operator==(const ServiceUser& other) const {
 
 
 GameSource::GameSource()
- : userType(COMMAND_SOURCE_GAME_NONE),
+ : userType(GameCommandSource::kNone),
    user(nullptr)
 {
 }
@@ -108,14 +108,14 @@ GameSource::GameSource(const GameSource& otherSource)
 }
 
 GameSource::GameSource(GameUser::CGameUser* nUser)
- : userType(COMMAND_SOURCE_GAME_USER),
+ : userType(GameCommandSource::kUser),
    game(nUser->GetGame()),
    user(nUser)
 {
 }
 
 GameSource::GameSource(CAsyncObserver* nSpectator)
- : userType(COMMAND_SOURCE_GAME_ASYNC_OBSERVER),
+ : userType(GameCommandSource::kSpectator),
    game(nSpectator->GetGame()),
    spectator(nSpectator)
 {
@@ -133,22 +133,22 @@ CConnection* GameSource::GetUserOrSpectator() const
 void GameSource::Expire()
 {
   switch (userType) {
-    case COMMAND_SOURCE_GAME_USER:
+    case GameCommandSource::kUser:
       Reset();
       break;
-    case COMMAND_SOURCE_GAME_ASYNC_OBSERVER:
-      userType = COMMAND_SOURCE_GAME_REPLAY;
+    case GameCommandSource::kSpectator:
+      userType = GameCommandSource::kReplay;
       game.reset();
       break;
-    case COMMAND_SOURCE_GAME_REPLAY:
-    case COMMAND_SOURCE_GAME_NONE:
+    case GameCommandSource::kReplay:
+    case GameCommandSource::kNone:
       break;
   }
 }
 
 void GameSource::Reset()
 {
-  userType = COMMAND_SOURCE_GAME_NONE;
+  userType = GameCommandSource::kNone;
   game.reset();
   user = nullptr;
 }
