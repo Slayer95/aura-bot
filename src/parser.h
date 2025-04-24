@@ -288,8 +288,8 @@
     if (parseEnd != input.size() || std::isnan(userValue) || !std::isfinite(userValue)) {
       return result;
     }
-    if (userValue == 0.0) {
-      result = 0.0;
+    if (userValue == 0.f) {
+      result = 0.f;
     } else {
       result = userValue;
     }
