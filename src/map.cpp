@@ -1732,7 +1732,8 @@ bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint3
     return false;
   }
 
-  fileSize = m_MapFileContents->size();
+  static_assert(MAX_READ_FILE_SIZE <= 0xFFFFFFFF, "Deprecated method CMap::TryLoadMapFilePersistent() expects MAX_READ_FILE_SIZE to fit in uint32_t");
+  fileSize = (uint32_t)m_MapFileContents->size();
 #ifdef DEBUG
   array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(fileSize.value(), false);
   DPRINT_IF(LOG_LEVEL_TRACE, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
@@ -1759,7 +1760,7 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
 
   m_Aura->m_SHA.Reset();
   uint32_t rollingCRC32 = 0;
-  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [this, &rollingCRC32](FileChunkTransient cachedChunk, size_t cursor, size_t size) {
+  pair<bool, size_t> result = ProcessMapChunked(resolvedPath, [this, &rollingCRC32](FileChunkTransient cachedChunk, size_t cursor, size_t size) {
     rollingCRC32 = CRC32::CalculateCRC(cachedChunk.GetDataAtCursor(cursor), size, rollingCRC32);
     m_Aura->m_SHA.Update(cachedChunk.GetDataAtCursor(cursor), size);
   });
@@ -1840,7 +1841,7 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
   }
 }
 
-pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t, size_t)> processChunk)
+pair<bool, size_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t, size_t)> processChunk)
 {
   uintmax_t fileSize = FileSize(filePath);
   size_t cursor = 0;

@@ -155,7 +155,8 @@ template <typename Container>
     return false;
   }
   IS.read(reinterpret_cast<char*>(container.data()), fileSize);
-  if (IS.gcount() < fileSize) {
+  std::streamsize gCount = IS.gcount();
+  if (gCount < 0 || static_cast<size_t>(gCount) < fileSize) {
     container.clear();
     try {
       container.shrink_to_fit();
@@ -203,7 +204,12 @@ template <typename Container>
     return false;
   }
   IS.read(reinterpret_cast<char*>(container.data()), maxReadSize);
-  *actualReadSize = static_cast<size_t>(IS.gcount());
+  std::streamsize gCount = IS.gcount();
+  if (gCount < 0 ) {
+    Print("[FILE] error - read stream internal error");
+    return false;
+  }
+  *actualReadSize = static_cast<size_t>(gCount);
   if (*actualReadSize < maxReadSize) {
     container.clear();
     try {

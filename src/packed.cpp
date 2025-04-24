@@ -311,13 +311,19 @@ void CPacked::Compress(const bool TFT)
 	delete[] CompressedData;
 
 	// build header
+  uint32_t HeaderVersion = 1;
 	uint32_t HeaderSize = 68;
-	uint32_t HeaderCompressedSize = HeaderSize + CompressedSize + CompressedBlocks.size() * 8;
-	uint32_t HeaderVersion = 1;
+	size_t HeaderCompressedSize = HeaderSize + CompressedSize + CompressedBlocks.size() * 8;
+
+  if (HeaderCompressedSize > std::numeric_limits<uint32_t>::max()) {
+    m_Valid = false;
+    return;
+  }
+
 	vector<uint8_t> Header;
 	AppendByteArray(Header, "Warcraft III recorded game\x01A");
 	AppendByteArray(Header, HeaderSize, false);
-	AppendByteArray(Header, HeaderCompressedSize, false);
+	AppendByteArray(Header, (uint32_t)HeaderCompressedSize, false);
 	AppendByteArray(Header, HeaderVersion, false);
 	AppendByteArray(Header, (uint32_t)m_Decompressed.size(), false);
 	AppendByteArray(Header, (uint32_t)CompressedBlocks.size(), false);

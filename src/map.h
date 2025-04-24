@@ -534,7 +534,7 @@ public:
   [[nodiscard]] bool                              CheckMapFileIntegrity();
   void                                            InvalidateMapFile() { m_MapFileIsValid = false; }
   [[nodiscard]] FileChunkTransient                GetMapFileChunk(size_t start);
-  [[nodiscard]] std::pair<bool, uint32_t>         ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient, size_t, size_t)> processChunk);
+  [[nodiscard]] std::pair<bool, size_t>           ProcessMapChunked(const std::filesystem::path& filePath, std::function<void(FileChunkTransient, size_t, size_t)> processChunk);
   bool                                            UnlinkFile();
   [[nodiscard]] std::string                       CheckProblems();
 

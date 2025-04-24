@@ -167,7 +167,7 @@ bool CQueuedActionsFrame::GetIsEmpty() const
 size_t CQueuedActionsFrame::GetActionCount() const
 {
   if (actions.empty()) return 0;
-  uint32_t count = 0;
+  size_t count = 0;
   for (const ActionQueue& actionQueue : actions) {
     count += actionQueue.size();
   }

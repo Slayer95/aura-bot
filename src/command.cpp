@@ -5708,7 +5708,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         maxAPM = APM_RATE_LIMITER_MAX;
       }
 
-      targetPlayer->RestrictAPM(maxAPM.value(), (double)targetGame->m_Config.m_MaxBurstAPM.value_or(APM_RATE_LIMITER_BURST_ACTIONS));
+      targetPlayer->RestrictAPM((double)maxAPM.value(), (double)targetGame->m_Config.m_MaxBurstAPM.value_or(APM_RATE_LIMITER_BURST_ACTIONS));
       targetPlayer->GetAPMQuota().PauseRefillUntil(targetPlayer->GetHandicapTicks());
 
       string limitText = to_string(maxAPM.value()) + " actions per minute (APM)";
