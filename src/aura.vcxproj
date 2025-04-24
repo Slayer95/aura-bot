@@ -9,6 +9,14 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-mDNS|Win32">
+      <Configuration>Release-mDNS</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-mDNS|x64">
+      <Configuration>Release-mDNS</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="ReleaseLite|Win32">
       <Configuration>ReleaseLite</Configuration>
       <Platform>Win32</Platform>
@@ -39,6 +47,12 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
@@ -53,6 +67,12 @@
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -76,6 +96,9 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -83,6 +106,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|x64'" Label="PropertySheets">
@@ -95,34 +121,47 @@
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir).msvc\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'">$(SolutionDir).msvc\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|Win32'">$(SolutionDir).msvc\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir).msvc\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir).msvc\$(Configuration)-x64\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'">$(SolutionDir).msvc\$(Configuration)-x64\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|x64'">$(SolutionDir).msvc\$(Configuration)-x64\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir).msvc\$(Configuration)-x64\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.msvc.tmp\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'">.msvc.tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|Win32'">.msvc.tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.msvc.tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.msvc.tmp\$(Configuration)-x64\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'">.msvc.tmp\$(Configuration)-x64\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|x64'">.msvc.tmp\$(Configuration)-x64\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.msvc.tmp\$(Configuration)-x64\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|Win32'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|x64'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|Win32'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|x64'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(UniversalCRT_IncludePath);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'">$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|x64'">$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LibraryPath>$(UniversalCRT_LibraryPath_x86)$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(VC_LibraryPath_x86)</LibraryPath>
+    <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'">
     <LibraryPath>$(UniversalCRT_LibraryPath_x86)$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(VC_LibraryPath_x86)</LibraryPath>
     <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
@@ -142,10 +181,17 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'">
+    <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLite|x64'">
     <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <VcpkgUseStatic>true</VcpkgUseStatic>
+    <VcpkgTriplet>x86-windows</VcpkgTriplet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'" Label="Vcpkg">
     <VcpkgUseStatic>true</VcpkgUseStatic>
     <VcpkgTriplet>x86-windows</VcpkgTriplet>
   </PropertyGroup>
@@ -168,11 +214,55 @@
     <VcpkgUseStatic>true</VcpkgUseStatic>
     <VcpkgTriplet>x64-windows</VcpkgTriplet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'" Label="Vcpkg">
+    <VcpkgUseStatic>true</VcpkgUseStatic>
+    <VcpkgTriplet>x64-windows</VcpkgTriplet>
+  </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgUseStatic>true</VcpkgUseStatic>
     <VcpkgTriplet>x64-windows</VcpkgTriplet>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <CompileAsManaged>false</CompileAsManaged>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <MinimalRebuild>false</MinimalRebuild>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\Release;..\deps\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\zlib\vcpkg\bin\Release;..\dpp\official\bin\Release;..\nodist\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
+      <SetChecksum>true</SetChecksum>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|Win32'">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -199,7 +289,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\Release;..\deps\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\zlib\vcpkg\bin\Release;..\dpp\official\bin\Release;..\nodist\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\Release;..\deps\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\zlib\vcpkg\bin\Release;..\dpp\official\bin\Release;$(BONJOUR_SDK_HOME)Lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -257,7 +347,7 @@
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -283,7 +373,7 @@
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\Release;..\deps\miniupnpc\msvc\Debug;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\dpp\official\bin\Release;..\nodist\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -296,6 +386,47 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <CompileAsManaged>false</CompileAsManaged>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <MinimalRebuild>false</MinimalRebuild>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <OmitFramePointers>false</OmitFramePointers>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\msvc\Release-x64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;..\nodist\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX64</TargetMachine>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
+      <SetChecksum>true</SetChecksum>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-mDNS|x64'">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -323,7 +454,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\msvc\Release-x64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;..\nodist\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\msvc\Release-x64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;..\nodist\Release-x64;$(BONJOUR_SDK_HOME)Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -382,7 +513,7 @@
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -409,7 +540,7 @@
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\x64\ReleaseUS;..\deps\pjass\msvc\Release-x64;..\deps\miniupnpc\msvc\Release-x64;..\cpr\vcpkg\bin\Release-x64;..\curl\vcpkg\bin\Release-x64;..\dpp\official\bin\Release-x64;..\nodist\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>

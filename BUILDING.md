@@ -18,10 +18,13 @@ Windows users must use VS2019 or later. Visual Studio 2019 Community edition wor
 (depending on your OS version), and, if running with VS2019 or newer, also the `MSVC v142 - VS 2019 C++ x64/x86 build tools (v14.29)`.
 
 **Note**: If you have trouble getting some components to build, you may use the ``ReleaseLite`` configuration instead. Alternatively, 
-you may manually disable troublesome components in the project ``"Configuration Properties"``. Find instructions below. [3] 
+you may manually disable troublesome components in the project ``"Configuration Properties"``. Find instructions below. [4] 
+
+**Note**: Support for game versions v1.30 onwards requires manual installation of the [Bonjour SDK for Windows][2]. Make sure that your 
+`%BONJOUR_SDK_HOME%` environment variable is correctly setup, then build aura with the ``Release-mDNS`` configuration.
 
 **Note**: For the optional component D++, version 10.0.31 is the latest version supporting Windows 7. 
-By default, the MSVC solution provided uses DPP 10.1. For an Aura version supporting Windows 7, see the ``w7`` branch. [4]
+By default, the MSVC solution provided uses DPP 10.1. For an Aura version supporting Windows 7, see the ``w7`` branch. [5]
 
 ### Linux
 
@@ -57,7 +60,7 @@ Continue building miniupnpc
 
   (Or disable it by setting an environment variable: ``export AURALINKMINIUPNP=0``)
   
-Afterwards, [C++ Requests][2]
+Afterwards, [C++ Requests][3]
 
 	cd ../..
 	git clone https://github.com/libcpr/cpr.git cpr-src
@@ -138,6 +141,7 @@ When using MSVC, follow these steps to disable components.
   Windows: dpp.lib
 
 [1]: https://gitlab.com/ivojulca/aura-bot
-[2]: https://github.com/libcpr/cpr
-[3]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components
-[4]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7
+[2]: https://developer.apple.com/bonjour
+[3]: https://github.com/libcpr/cpr
+[4]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components
+[5]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7
