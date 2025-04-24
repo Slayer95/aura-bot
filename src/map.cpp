@@ -1760,7 +1760,7 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
 
   m_Aura->m_SHA.Reset();
   uint32_t rollingCRC32 = 0;
-  pair<bool, size_t> result = ProcessMapChunked(resolvedPath, [this, &rollingCRC32](FileChunkTransient cachedChunk, size_t cursor, size_t size) {
+  pair<bool, uint32_t> result = ProcessMapChunked(resolvedPath, [this, &rollingCRC32](FileChunkTransient cachedChunk, size_t cursor, size_t size) {
     rollingCRC32 = CRC32::CalculateCRC(cachedChunk.GetDataAtCursor(cursor), size, rollingCRC32);
     m_Aura->m_SHA.Update(cachedChunk.GetDataAtCursor(cursor), size);
   });
@@ -1841,15 +1841,15 @@ FileChunkTransient CMap::GetMapFileChunk(size_t start)
   }
 }
 
-pair<bool, size_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t, size_t)> processChunk)
+pair<bool, uint32_t> CMap::ProcessMapChunked(const filesystem::path& filePath, function<void(FileChunkTransient, size_t, size_t)> processChunk)
 {
   uintmax_t fileSize = FileSize(filePath);
   size_t cursor = 0;
-  if (fileSize == 0 || fileSize > 0xFFFFFFFF) return make_pair(false, cursor);
+  if (fileSize == 0 || fileSize > 0xFFFFFFFF) return make_pair(false, (uint32_t)cursor);
   while (cursor < fileSize) {
     FileChunkTransient cachedChunk = GetMapFileChunk(cursor);
     if (!cachedChunk.bytes) {
-      return make_pair(false, cursor);
+      return make_pair(false, (uint32_t)cursor);
     }
     size_t availableBytes = cachedChunk.GetSizeFromCursor(cursor);
     size_t stepBytes = MAP_FILE_PROCESSING_CHUNK_SIZE;
@@ -1859,7 +1859,7 @@ pair<bool, size_t> CMap::ProcessMapChunked(const filesystem::path& filePath, fun
     processChunk(cachedChunk, cursor, stepBytes);
     cursor += stepBytes;
   }
-  return make_pair(fileSize == cursor, cursor);
+  return make_pair(fileSize == cursor, (uint32_t)cursor);
 }
 
 bool CMap::UnlinkFile()
