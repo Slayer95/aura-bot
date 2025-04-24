@@ -395,7 +395,8 @@ string CCommandContext::GetUserAttributionPreffix()
         case GameCommandSource::kReplay:
           return "[REPLAY] " + userFragment + modeFragment;
         case GameCommandSource::kUser:
-        case GameCommandSource::kSpectator: {
+        case GameCommandSource::kSpectator:
+        default: { // MSVC can't figure out that no other cases exist
           string gameName = gameSource.GetGame()->GetShortNameLAN();
           if (gameSource.GetIsSpectator()) {
             return "[SPECTATOR: " + gameName + "] " + userFragment + modeFragment;

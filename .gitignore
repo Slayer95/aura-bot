@@ -64,6 +64,7 @@ build/
 
 config*.ini
 !config-example.ini
+lib/nodist/
 jass/
 mapcache/
 mapcfgs/

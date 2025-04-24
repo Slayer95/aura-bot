@@ -90,6 +90,9 @@
     <ClCompile Include="bncsutil_interface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bonjour.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="json.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -174,6 +177,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\base64\base64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\bonjour\dns_sd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\lib\crc32\crc32.h">
@@ -284,6 +290,9 @@
     <ClInclude Include="bncsutil_interface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="bonjour.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="json.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -350,9 +359,6 @@
     <ClInclude Include="locations.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClCompile Include="rate_limiter.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClInclude Include="integration\discord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -363,6 +369,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stats\w3mmd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rate_limiter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

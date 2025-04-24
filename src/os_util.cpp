@@ -244,3 +244,24 @@ void SetWindowTitle(PLATFORM_STRING_TYPE nWindowTitle)
   cout << "\033]0;" << nWindowTitle.c_str() << "\007";
 #endif
 }
+
+bool CheckDynamicLibrary(PLATFORM_STRING_TYPE nName)
+{
+#ifdef _WIN32
+  HMODULE h = LoadLibraryW(nName.c_str());
+  if (h) {
+    FreeLibrary(h);
+    return true;
+  } else {
+    Print("Bonjour (dnssd.dll) not found. Install Bonjour to enable LAN support for v1.30 onwards.");
+    return false;
+  }
+#else
+  void* handle = dlopen(nName.c_str(), RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND);
+  if (handle == nullptr) {
+    Print("Bonjour (dnssd.so) not found. Install Bonjour to enable LAN support for v1.30 onwards.");
+    return false;
+  }
+  return true;
+#endif
+}
