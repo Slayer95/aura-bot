@@ -42,38 +42,46 @@
     <ClCompile Include="..\main.c">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\misc.h">
-      <Filter>Archivos de encabezado</Filter>
+    <ClCompile Include="..\token.yy.c">
+      <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\hashtable.h">
-      <Filter>Archivos de encabezado</Filter>
+    <ClCompile Include="..\grammar.tab.c">
+      <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\paramlist.h">
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\misc.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\funcdecl.h">
+    </ClInclude>
+    <ClInclude Include="..\hashtable.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\typeandname.h">
+    </ClInclude>
+    <ClInclude Include="..\paramlist.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\blocks.h">
+    </ClInclude>
+    <ClInclude Include="..\funcdecl.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\tree.h">
+    </ClInclude>
+    <ClInclude Include="..\typeandname.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sstrhash.h">
+    </ClInclude>
+    <ClInclude Include="..\blocks.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\main.h">
+    </ClInclude>
+    <ClInclude Include="..\tree.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\token.yy.h">
+    </ClInclude>
+    <ClInclude Include="..\sstrhash.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
-    <ClCompile Include="..\grammar.tab.h">
+    </ClInclude>
+    <ClInclude Include="..\main.h">
       <Filter>Archivos de encabezado</Filter>
-    </ClCompile>
+    </ClInclude>
+    <ClInclude Include="..\token.yy.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\grammar.tab.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
