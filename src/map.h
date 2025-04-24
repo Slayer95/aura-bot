@@ -649,7 +649,7 @@ public:
   return ToVersionString(version);
 }
 
-[[nodiscard]] inline uint32_t XORRotateLeft(const uint8_t* data, const uint32_t length)
+[[nodiscard]] inline uint32_t XORRotateLeft(const uint8_t* data, const size_t length)
 {
   // a big thank you to Strilanc for figuring this out
 
@@ -671,10 +671,10 @@ public:
   return Val;
 }
 
-[[nodiscard]] inline uint32_t ChunkedChecksum(const uint8_t* data, const int32_t length, uint32_t checksum)
+[[nodiscard]] inline uint32_t ChunkedChecksum(const uint8_t* data, const size_t length, uint32_t checksum)
 {
-  int32_t cursor = 0;
-  int32_t t = length - 0x400;
+  size_t cursor = 0;
+  size_t t = length - 0x400;
   while (cursor <= t) {
     checksum = ROTL(checksum ^ XORRotateLeft(data + cursor, 0x400), 3);
     cursor += 0x400;

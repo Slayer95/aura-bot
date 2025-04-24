@@ -897,10 +897,10 @@ namespace GameProtocol
 
     // calculate end position (don't send more than 1442 map bytes in one packet)
 
-    uint32_t end = start + 1442;
+    size_t end = start + 1442;
 
-    if (end > static_cast<uint32_t>(mapFileContents->size()) || end < start)
-      end = static_cast<uint32_t>(mapFileContents->size());
+    if (end > mapFileContents->size() || end < start)
+      end = mapFileContents->size();
 
     // calculate crc
 

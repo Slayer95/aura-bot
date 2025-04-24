@@ -243,7 +243,7 @@ template <typename T>
   }
 }
 
-inline void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const uint32_t offset, bool bigEndian = false)
+inline void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const size_t offset, bool bigEndian = false)
 {
   if (!bigEndian) {
     buffer[offset] = static_cast<uint8_t>(value);
@@ -430,7 +430,7 @@ inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 8>>& optArray
   optArray->swap(val);
 }
 
-[[nodiscard]] inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
+[[nodiscard]] inline uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian, const size_t start = 0)
 {
   if (b.size() < start + 2)
     return 0;
@@ -441,7 +441,7 @@ inline void EnsureFixedByteArray(std::optional<std::array<uint8_t, 8>>& optArray
     return static_cast<uint16_t>(b[start] << 8 | b[start + 1]);
 }
 
-[[nodiscard]] inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian, const uint32_t start = 0)
+[[nodiscard]] inline uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian, const size_t start = 0)
 {
   if (b.size() < start + 4)
     return 0;
@@ -785,7 +785,7 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const double i, bool bigEnd
   return std::vector<uint8_t>();
 }
 
-[[nodiscard]] inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const uint32_t start, bool bigEndian)
+[[nodiscard]] inline uint8_t ExtractHex(const std::vector<uint8_t>& b, const size_t start, bool bigEndian)
 {
   // consider the byte array to contain a 2 character ASCII encoded hex value at b[start] and b[start + 1] e.g. "FF"
   // extract it as a single decoded byte

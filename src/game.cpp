@@ -9104,7 +9104,7 @@ vector<uint32_t> CGame::GetPlayersFramesBehind() const
     if (m_SyncCounter <= m_Users[i]->GetNormalSyncCounter()) {
       continue;
     }
-    framesBehind[i] = m_SyncCounter - m_Users[i]->GetNormalSyncCounter();
+    framesBehind[i] = static_cast<uint32_t>(m_SyncCounter - m_Users[i]->GetNormalSyncCounter());
   }
   return framesBehind;
 }
@@ -9249,7 +9249,7 @@ void CGame::NormalizeSyncCounters() const
 {
   for (auto& user : m_Users) {
     if (user->GetIsObserver()) continue;
-    uint32_t normalSyncCounter = user->GetNormalSyncCounter();
+    size_t normalSyncCounter = user->GetNormalSyncCounter();
     if (m_SyncCounter <= normalSyncCounter) {
       continue;
     }

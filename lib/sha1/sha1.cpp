@@ -152,9 +152,9 @@ void CSHA1::Transform(uint32_t state[5], const uint8_t buffer[64])
 
 // Use this function to hash in binary data and strings
 
-void CSHA1::Update(const uint8_t* data, uint32_t len)
+void CSHA1::Update(const uint8_t* data, size_t len)
 {
-  uint32_t i = 0, j = 0;
+  size_t i = 0, j = 0;
 
   j = (m_count[0] >> 3) & 63;
 

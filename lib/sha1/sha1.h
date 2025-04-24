@@ -95,7 +95,7 @@ public:
   void Reset();
 
   // Update the hash value
-  void Update(const uint8_t* data, uint32_t len);
+  void Update(const uint8_t* data, size_t len);
 
   // Finalize hash and report
   void Final();

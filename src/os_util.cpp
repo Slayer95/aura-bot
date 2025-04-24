@@ -74,8 +74,9 @@ bool SetUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const w
 {
   HKEY hKey;
   LONG result = RegCreateKeyEx(HKEY_CURRENT_USER, subKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL);
-  if (result == ERROR_SUCCESS) {
-    result = RegSetValueEx(hKey, valueName, 0, REG_SZ, (BYTE*)value, (wcslen(value) + 1) * sizeof(wchar_t));
+  size_t cbDataSize = (wcslen(value) + 1) * sizeof(wchar_t);
+  if (cbDataSize > 0xFFFF || result == ERROR_SUCCESS) {
+    result = RegSetValueEx(hKey, valueName, 0, REG_SZ, (BYTE*)value, (DWORD)cbDataSize);
     RegCloseKey(hKey);
     return true;
   }
