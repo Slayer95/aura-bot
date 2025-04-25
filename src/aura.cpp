@@ -514,7 +514,11 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   m_IRC.m_Aura = this;
   m_Net.m_Aura = this;
 
-  Print("[AURA] Aura version " + m_Version);
+  if constexpr (sizeof(void*) == 4) {
+    Print("[AURA] Aura version " + m_Version + " - 32 bits");
+  } else {
+    Print("[AURA] Aura version " + m_Version + " - 64 bits");
+  }
 
   if (m_DB->HasError()) {
     Print("[CONFIG] Error: Critical errors found in [" + PathToString(m_DB->GetFile()) + "]: " + m_DB->GetError());
