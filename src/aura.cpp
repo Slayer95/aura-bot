@@ -2097,6 +2097,11 @@ bool CAura::CheckDependencies()
     } else {
       success = false;
       m_FoundDeps &= ~APP_FOUND_DEPS_BONJOUR;
+#ifdef _WIN32
+      Print("[AURA] error - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards: https://support.apple.com/en-us/106380");
+#else
+      Print("[AURA] error - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards.");
+#endif
     }
   }
   if (m_DPPDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_DPP)) {
@@ -2107,7 +2112,7 @@ bool CAura::CheckDependencies()
       success = false;
       m_FoundDeps &= ~APP_FOUND_DEPS_DPP;
       m_Discord.m_Config.m_Enabled = false;
-      Print("[DISCORD] error - service disabled because some required files are missing.");
+      Print("[AURA] error - Discord service disabled because some required files are missing.");
     }
   }
   return success;

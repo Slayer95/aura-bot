@@ -246,23 +246,25 @@ void SetWindowTitle(PLATFORM_STRING_TYPE nWindowTitle)
 #endif
 }
 
-bool CheckDynamicLibrary(PLATFORM_STRING_TYPE nName)
+bool CheckDynamicLibrary(PLATFORM_STRING_TYPE libName, PLATFORM_STRING_TYPE serviceName)
 {
 #ifdef _WIN32
-  HMODULE h = LoadLibraryW(nName.c_str());
-  if (h) {
-    FreeLibrary(h);
-    return true;
-  } else {
-    Print("Bonjour (dnssd.dll) not found. Install Bonjour to enable LAN support for v1.30 onwards.");
+  HMODULE h = LoadLibraryW(libName.c_str());
+  if (!h) {
+    string serviceNameUTF8, libNameUTF8;
+    utf8::utf16to8(serviceName.begin(), serviceName.end(), back_inserter(serviceNameUTF8));
+    utf8::utf16to8(libName.begin(), libName.end(), back_inserter(libNameUTF8));
+    Print("[AURA] Service " + serviceNameUTF8 + " requires shared library [" + libNameUTF8 + "] - not found.");
     return false;
   }
+  FreeLibrary(h);
 #else
-  void* handle = dlopen(nName.c_str(), RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND);
+  void* handle = dlopen(libName.c_str(), RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND);
   if (handle == nullptr) {
-    Print("Bonjour (dnssd.so) not found. Install Bonjour to enable LAN support for v1.30 onwards.");
+    Print("[AURA] Service " + serviceName + " requires shared library [" + libName + "] - not found.");
     return false;
   }
-  return true;
+  dlclose(handle);
 #endif
+  return true;
 }

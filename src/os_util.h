@@ -65,6 +65,6 @@ void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath);
 void AddDirectoryToUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);
 void EnsureDirectoryInUserPath(const std::filesystem::path& nDirectory);
 void SetWindowTitle(PLATFORM_STRING_TYPE nWindowTitle);
-bool CheckDynamicLibrary(PLATFORM_STRING_TYPE nName);
+bool CheckDynamicLibrary(PLATFORM_STRING_TYPE nName, PLATFORM_STRING_TYPE nServiceName);
 
 #endif // AURA_FILEUTIL_H_
