@@ -35,9 +35,9 @@ public:
 	void BroadcastGame(std::shared_ptr<CGame> nGame, const Version& gameVersion);
   void BroadcastGameInner(std::shared_ptr<CGame> nGame, const std::string& gameName, const Version& gameVersion, DNSServiceRef service, DNSRecordRef record, bool isNew);
   void StopBroadcastGame(std::shared_ptr<CGame> nGame);
+#endif
 
   bool static CheckLibrary();
-#endif
 };
 
 #endif // AURA_BONJOUR_H

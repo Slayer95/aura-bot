@@ -176,6 +176,8 @@ void CBonjour::StopBroadcastGame(shared_ptr<CGame> game)
   }
 }
 
+#endif
+
 bool CBonjour::CheckLibrary()
 {
 #ifdef _WIN32
@@ -185,4 +187,3 @@ bool CBonjour::CheckLibrary()
 #endif
 }
 
-#endif

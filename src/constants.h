@@ -67,6 +67,14 @@ constexpr uint8_t APP_ACTION_TYPE_HOST = 1u;
 constexpr uint8_t APP_ACTION_MODE_TCP = 0u;
 constexpr uint8_t APP_ACTION_MODE_UDP = 1u;
 
+enum class OptionalDependencyMode : uint8_t
+{
+  kUnknown = 0u,
+  kNotUseful = 1u,
+  kOptEnhancement = 2u,
+  kRequired = 3u,
+};
+
 enum class ServiceType : uint8_t
 {
   kNone = 0u,
@@ -99,6 +107,10 @@ constexpr uint8_t LOG_R = 4u;
 constexpr uint8_t LOG_ALL = LOG_C | LOG_P | LOG_R;
 
 constexpr size_t MAX_GAME_NAME_SIZE = 31u;
+
+constexpr uint8_t APP_FOUND_DEPS_NONE = 0u;
+constexpr uint8_t APP_FOUND_DEPS_DPP = (1 << 0);
+constexpr uint8_t APP_FOUND_DEPS_BONJOUR = (1 << 1);
 
 // parser.h
 

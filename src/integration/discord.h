@@ -92,6 +92,7 @@ public:
   [[nodiscard]] bool GetIsConnected() const;
 
   void Disable() { m_Config.m_Enabled = false; }  
+  bool static CheckLibraries();
 };
 
 #endif // AURA_DISCORD_H_

@@ -27,6 +27,7 @@
 #include "../command.h"
 #include "../aura.h"
 #include "../socket.h"
+#include "../os_util.h"
 #include "../util.h"
 #include "../protocol/bnet_protocol.h"
 #include "../realm.h"
@@ -374,4 +375,31 @@ bool CDiscord::MatchHostName(const string& hostName) const
   }
 #endif
   return false;
+}
+
+bool CDiscord::CheckLibraries()
+{
+#ifdef _WIN32
+#ifdef _WIN64
+  return (
+    CheckDynamicLibrary(PLATFORM_STRING("dpp.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1.1-x64.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libssl-1.1-x64.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("opus.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("zlib1.dll"))
+  );
+#else
+  return (
+    CheckDynamicLibrary(PLATFORM_STRING("dpp.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1.1.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libssl-1.1.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("opus.dll")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("zlib1.dll"))
+  );
+#endif
+#else
+  return (
+    CheckDynamicLibrary(PLATFORM_STRING("libdpp.so"))
+  );
+#endif
 }

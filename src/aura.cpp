@@ -51,6 +51,7 @@
 #include <crc32/crc32.h>
 #include <sha1/sha1.h>
 #include "auradb.h"
+#include "bonjour.h"
 #include <csvparser/csvparser.h>
 #include "config/config.h"
 #include "config/config_bot.h"
@@ -478,6 +479,9 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
     m_StartedFastPollingTicks(APP_MIN_TICKS),
     m_SupportsModernSlots(false),
+    m_BonjourDependency(OptionalDependencyMode::kUnknown),
+    m_DPPDependency(OptionalDependencyMode::kUnknown),
+    m_FoundDeps(APP_FOUND_DEPS_NONE),
 
     m_LastServerID(0xFu),
     m_HostCounter(0u),
@@ -618,8 +622,10 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     Print("[AURA] notice - no enabled battle.net connections configured");
   if (!m_IRC.GetIsEnabled())
     Print("[AURA] notice - no irc connection configured");
+#ifndef DISABLE_DPP
   if (!m_Discord.GetIsEnabled())
     Print("[AURA] notice - no discord connection configured");
+#endif
 
   if (m_Realms.empty() && !m_IRC.GetIsEnabled() && !m_Discord.GetIsEnabled() && m_PendingActions.empty()) {
     Print("[AURA] error - no inputs connected");
@@ -1743,12 +1749,29 @@ void CAura::OnLoadConfigs()
   }
 
   m_SupportsModernSlots = false;
+
   for (const auto& version : m_Config.m_SupportedGameVersions) {
+    if (version >= GAMEVER(1u, 30u) && m_BonjourDependency != OptionalDependencyMode::kRequired) {
+      m_BonjourDependency = OptionalDependencyMode::kOptEnhancement;
+    }
     if (version >= GAMEVER(1u, 29u)) {
       m_SupportsModernSlots = true;
-      break;
     }
   }
+
+  if (m_BonjourDependency == OptionalDependencyMode::kUnknown) {
+    m_BonjourDependency = OptionalDependencyMode::kNotUseful;
+  }
+  m_DPPDependency = m_Discord.m_Config.m_Enabled ? OptionalDependencyMode::kOptEnhancement : OptionalDependencyMode::kNotUseful;
+
+  if (!CheckDependencies()) {
+#ifdef _WIN32
+    Print("[AURA] error - some features are disabled because one or more DLL files are missing.");
+#else
+    Print("[AURA] error - some features are disabled because one or more shared library files are missing.");
+#endif
+  }
+
   m_Lobbies.reserve(m_Config.m_MaxLobbies);
   m_StartedGames.reserve(m_Config.m_MaxStartedGames);
 }
@@ -2062,6 +2085,32 @@ void CAura::GracefulExit()
 
   m_IRC.Disable();
   m_Discord.Disable();
+}
+
+bool CAura::CheckDependencies()
+{
+  bool success = true;
+  if (m_BonjourDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_BONJOUR)) {
+    bool foundBonjour = CBonjour::CheckLibrary();
+    if (foundBonjour) {
+      m_FoundDeps |= APP_FOUND_DEPS_BONJOUR;
+    } else {
+      success = false;
+      m_FoundDeps &= ~APP_FOUND_DEPS_BONJOUR;
+    }
+  }
+  if (m_DPPDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_DPP)) {
+    bool foundDPP = CDiscord::CheckLibraries();
+    if (foundDPP) {
+      m_FoundDeps |= APP_FOUND_DEPS_DPP;
+    } else {
+      success = false;
+      m_FoundDeps &= ~APP_FOUND_DEPS_DPP;
+      m_Discord.m_Config.m_Enabled = false;
+      Print("[DISCORD] error - service disabled because some required files are missing.");
+    }
+  }
+  return success;
 }
 
 bool CAura::CheckGracefulExit()

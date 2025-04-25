@@ -94,6 +94,10 @@ public:
   std::optional<Version>                             m_GameDataVersion;
   bool                                               m_SupportsModernSlots;
 
+  OptionalDependencyMode                             m_BonjourDependency;
+  OptionalDependencyMode                             m_DPPDependency;
+  uint8_t                                            m_FoundDeps;
+
   uint32_t                                           m_LastServerID;
   uint32_t                                           m_HostCounter;                // the current host counter (a unique number to identify a game, incremented each time a game is created)
   uint32_t                                           m_ReplacingLobbiesCounter;
@@ -248,6 +252,7 @@ public:
   void LogRemoteFile(const std::string& logText);
   void LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t adjustedInterval);
   void GracefulExit();
+  bool CheckDependencies();
   bool CheckGracefulExit();
 };
 
