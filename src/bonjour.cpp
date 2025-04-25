@@ -96,6 +96,7 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
 
   string game_data = Base64::Encode(reinterpret_cast<unsigned char*>(game_data_d.data()), game_data_d.size(), false);
 
+<<<<<<< Updated upstream
   string w66;
   if (gameVersion.second != 30) {
     w66  = string("\x0A") + ((char)gameName.size()) + gameName + string("\x10\0", 2) +
@@ -119,6 +120,32 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
     "\x1A" + (char)(15 + players_num.size()) + "\x0A\x0Bplayers_num\x12" + (char)players_num.size() + players_num +
     "\x1A" + (char)(20 + time.size()) + "\x0A\x10game_create_time\x12" + (char)time.size() + time +
     "\x1A" + (char)(14 + game_data.size()) + "\x01\x0A\x09game_data\x12" + (char)game_data.size() + "\x01" + game_data;
+=======
+  // https://github.com/protocolbuffers/protobuf/blob/main/src/README.md
+	string w66;
+	if (gameVersion.second != 30) {
+		w66	= string("\x0A") + ((char)gameName.size()) + gameName + string("\x10\0", 2) +
+		"\x1A" + (char)(15 + players_num.size()) + "\x0A\x0Bplayers_num\x12" + (char)players_num.size() + players_num +
+		"\x1A" + (char)(9 + gameName.size()) + "\x0A\x05_name\x12" + (char)gameName.size() + gameName +
+		"\x1A" + (char)(15 + players_max.size()) + "\x0A\x0Bplayers_max\x12" + (char)players_max.size() + players_max + 
+		"\x1A" + (char)(20 + time.size()) + "\x0A\x10game_create_time\x12" + (char)time.size() + time +
+		"\x1A\x0A\x0A\x05_type\x12\x01\x31" + "\x1A\x0D\x0A\x08_subtype\x12\x01\x30" +
+		"\x1A" + (char)(15 + secret.size()) + "\x0A\x0Bgame_secret\x12" + (char)secret.size() + secret +
+		"\x1A" + (char)(14 + game_data.size()) + "\x01\x0A\x09game_data\x12" + (char)game_data.size() + "\x01" + game_data +
+		"\x1A\x0C\x0A\x07game_id\x12\x01" + ((gameVersion.second >= 32) ? "1": "2") +
+		"\x1A\x0B\x0A\x06_flags\x12\x01\x30";
+	} else {
+		w66 = string("\x0A") + ((char)gameName.size()) + gameName + string("\x10\0", 2) +
+		"\x1A" + (char)(15 + secret.size()) + "\x0A\x0Bgame_secret\x12" + (char)secret.size() + secret +
+		"\x1A\x0A\x0A\x05_type\x12\x01\x31" + "\x1A\x0D\x0A\x08_subtype\x12\x01\x30" +
+		"\x1A\x0C\x0A\x07game_id\x12\x01" + "1" +
+		"\x1A" + (char)(9 + gameName.size()) + "\x0A\x05_name\x12" + (char)gameName.size() + gameName +
+		"\x1A" + (char)(15 + players_max.size()) + "\x0A\x0Bplayers_max\x12" + (char)players_max.size() + players_max +
+		"\x1A\x0B\x0A\x06_flags\x12\x01\x30" +
+		"\x1A" + (char)(15 + players_num.size()) + "\x0A\x0Bplayers_num\x12" + (char)players_num.size() + players_num +
+		"\x1A" + (char)(20 + time.size()) + "\x0A\x10game_create_time\x12" + (char)time.size() + time +
+		"\x1A" + (char)(14 + game_data.size()) + "\x01\x0A\x09game_data\x12" + (char)game_data.size() + "\x01" + game_data;
+>>>>>>> Stashed changes
   }
 
   {
