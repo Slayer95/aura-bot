@@ -2091,6 +2091,7 @@ bool CAura::CheckDependencies()
 {
   bool success = true;
   if (m_BonjourDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_BONJOUR)) {
+#ifndef DISABLE_BONJOUR
     bool foundBonjour = CBonjour::CheckLibrary();
     if (foundBonjour) {
       m_FoundDeps |= APP_FOUND_DEPS_BONJOUR;
@@ -2098,11 +2099,14 @@ bool CAura::CheckDependencies()
       success = false;
       m_FoundDeps &= ~APP_FOUND_DEPS_BONJOUR;
 #ifdef _WIN32
-      Print("[AURA] error - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards: https://support.apple.com/en-us/106380");
+      Print("[AURA] warning - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards: https://support.apple.com/en-us/106380");
 #else
-      Print("[AURA] error - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards.");
+      Print("[AURA] warning - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards.");
 #endif
     }
+#else
+    Print("[AURA] warning - LAN for v1.30 onwards is not supported in this Aura distribution.");
+#endif
   }
   if (m_DPPDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_DPP)) {
     bool foundDPP = CDiscord::CheckLibraries();
