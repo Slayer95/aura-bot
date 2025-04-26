@@ -246,8 +246,22 @@ void SetWindowTitle(PLATFORM_STRING_TYPE nWindowTitle)
 #endif
 }
 
+PLATFORM_STRING_TYPE GetDynamicLibraryName(PLATFORM_STRING_TYPE nName)
+{
+#ifdef _WIN32
+  return nName + PLATFORM_STRING(".dll");
+#else
+#ifdef __APPLE__
+  return nName + PLATFORM_STRING(".dylib");
+#else
+  return nName + PLATFORM_STRING(".so");
+#endif
+#endif
+}
+
 bool CheckDynamicLibrary(PLATFORM_STRING_TYPE libName, PLATFORM_STRING_TYPE serviceName)
 {
+  libName = GetDynamicLibraryName(libName);
 #ifdef _WIN32
   HMODULE h = LoadLibraryW(libName.c_str());
   if (!h) {
@@ -259,7 +273,7 @@ bool CheckDynamicLibrary(PLATFORM_STRING_TYPE libName, PLATFORM_STRING_TYPE serv
   }
   FreeLibrary(h);
 #else
-  void* handle = dlopen(libName.c_str(), RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND);
+  void* handle = dlopen(libName.c_str(), dlopen_flags);
   if (handle == nullptr) {
     Print("[AURA] Service " + serviceName + " requires shared library [" + libName + "] - not found.");
     return false;

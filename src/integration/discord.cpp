@@ -382,24 +382,24 @@ bool CDiscord::CheckLibraries()
 #ifdef _WIN32
 #ifdef _WIN64
   return (
-    CheckDynamicLibrary(PLATFORM_STRING("dpp.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1-x64.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1-x64.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("opus.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("zlib1.dll"), PLATFORM_STRING("Discord"))
+    CheckDynamicLibrary(PLATFORM_STRING("dpp"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1-x64"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1-x64"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("opus"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("zlib1"), PLATFORM_STRING("Discord"))
   );
 #else
   return (
-    CheckDynamicLibrary(PLATFORM_STRING("dpp.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("opus.dll"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("zlib1.dll"), PLATFORM_STRING("Discord"))
+    CheckDynamicLibrary(PLATFORM_STRING("dpp"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("opus"), PLATFORM_STRING("Discord")) &&
+    CheckDynamicLibrary(PLATFORM_STRING("zlib1"), PLATFORM_STRING("Discord"))
   );
 #endif
 #else
   return (
-    CheckDynamicLibrary(PLATFORM_STRING("libdpp.so"), PLATFORM_STRING("Discord"))
+    CheckDynamicLibrary(PLATFORM_STRING("libdpp"), PLATFORM_STRING("Discord"))
   );
 #endif
 }

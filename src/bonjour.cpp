@@ -180,9 +180,5 @@ void CBonjour::StopBroadcastGame(shared_ptr<CGame> game)
 
 bool CBonjour::CheckLibrary()
 {
-#ifdef _WIN32
-  return CheckDynamicLibrary(PLATFORM_STRING("dnssd.dll"), PLATFORM_STRING("Bonjour"));
-#else
-  return CheckDynamicLibrary(PLATFORM_STRING("dnssd.so"), PLATFORM_STRING("Bonjour"));
-#endif
+  return CheckDynamicLibrary(PLATFORM_STRING("dnssd"), PLATFORM_STRING("Bonjour"));
 }

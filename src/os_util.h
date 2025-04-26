@@ -50,6 +50,14 @@
 #define PATH_ENVVAR_SEPARATOR ":"
 #endif
 
+#ifndef _WIN32
+#ifdef __linux__
+constexpr int dlopen_flags = RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND;
+#else
+constexpr int dlopen_flags = RTLD_NOW | RTLD_LOCAL;
+#endif
+#endif
+
 #ifdef _WIN32
 [[nodiscard]] std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
 [[nodiscard]] std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
@@ -66,6 +74,7 @@ void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath);
 void AddDirectoryToUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);
 void EnsureDirectoryInUserPath(const std::filesystem::path& nDirectory);
 void SetWindowTitle(PLATFORM_STRING_TYPE nWindowTitle);
+PLATFORM_STRING_TYPE GetDynamicLibraryName(PLATFORM_STRING_TYPE nName);
 bool CheckDynamicLibrary(PLATFORM_STRING_TYPE nName, PLATFORM_STRING_TYPE nServiceName);
 
 #endif // AURA_FILEUTIL_H_
