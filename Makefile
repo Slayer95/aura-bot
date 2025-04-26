@@ -63,6 +63,8 @@ ifeq ($(SYSTEM),SunOS)
   LFLAGS += -lresolv -lsocket -lnsl
 endif
 
+LFLAGS += -ldl
+
 CCFLAGS += $(OFLAGS) -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -I.
 CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
 

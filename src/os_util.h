@@ -35,6 +35,7 @@
 #define stat _stat
 #else
 #include <sys/stat.h>
+#include <dlfcn.h>
 #include <dirent.h>
 #include <cstring>
 #include <unistd.h>
