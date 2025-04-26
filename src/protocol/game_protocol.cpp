@@ -422,7 +422,7 @@ namespace GameProtocol
     packet.push_back(UID);                                     // UID
     packet.push_back(2);                                       // AF_INET
     packet.push_back(0);                                       // AF_INET continued...
-    AppendByteArray(packet, port);                             // port
+    AppendByteArrayFast(packet, port);                             // port
     AppendByteArrayFast(packet, externalIP);                   // external IP
     AppendByteArray(packet, Zeros, 4);                         // ???
     AppendByteArray(packet, Zeros, 4);                         // ???
@@ -991,16 +991,18 @@ namespace GameProtocol
 
   std::vector<uint8_t> EncodeSlotInfo(const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
   {
-    std::vector<uint8_t> SlotInfo;
-    SlotInfo.push_back(static_cast<uint8_t>(slots.size())); // number of slots
+    std::vector<uint8_t> slotInfo;
+    slotInfo.reserve(7 + 9 * slots.size());
+    slotInfo.push_back(static_cast<uint8_t>(slots.size())); // number of slots
 
-    for (auto& slot : slots)
-      AppendByteArray(SlotInfo, slot.GetProtocolArray());
+    for (auto& slot : slots) {
+      AppendByteArrayFast(slotInfo, slot.GetProtocolArray());
+    }
 
-    AppendByteArray(SlotInfo, randomSeed, false); // random seed
-    SlotInfo.push_back(layoutStyle);              // LayoutStyle (0 = melee, 1 = custom forces, 3 = custom forces + fixed player settings)
-    SlotInfo.push_back(playerSlots);              // number of player slots (non observer)
-    return SlotInfo;
+    AppendByteArray(slotInfo, randomSeed, false); // random seed
+    slotInfo.push_back(layoutStyle);              // LayoutStyle (0 = melee, 1 = custom forces, 3 = custom forces + fixed player settings)
+    slotInfo.push_back(playerSlots);              // number of player slots (non observer)
+    return slotInfo;
   }
 
   vector<uint8_t> EmptyAction = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION, 6, 0, 0, 0};

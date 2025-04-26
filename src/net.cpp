@@ -305,7 +305,7 @@ bool CIPAddressAPIConnection::QueryIPAddress()
 
   vector<uint8_t> query;
   AppendByteArrayFast(query, method);
-  AppendByteArray(query, m_EndPoint, false);
+  AppendByteArrayString(query, m_EndPoint, false);
   AppendByteArrayFast(query, httpVersion);
   AppendByteArrayFast(query, hostHeader);
   AppendByteArrayString(query, m_HostName, false);
@@ -1043,7 +1043,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
 void CNet::RelayUDPPacket(const UDPPkt* pkt, const string& fromAddress, const uint16_t fromPort) const
 {
   vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
-  AppendByteArray(relayPacket, fromAddress, true);
+  AppendByteArrayString(relayPacket, fromAddress, true);
   size_t portOffset = relayPacket.size();
   relayPacket.resize(portOffset + 6 + pkt->length);
   relayPacket[portOffset] = static_cast<uint8_t>(fromPort >> 8); // Network-byte-order (Big-endian)

@@ -213,11 +213,10 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           case BNETProtocol::Magic::GETADVLISTEX:
             if (m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
-              std::vector<uint8_t> War3Version = {m_AuthGameVersion.second, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
-              AppendByteArray(relayPacket, ipString, true);
+              AppendByteArrayString(relayPacket, ipString, true);
               AppendByteArray(relayPacket, static_cast<uint16_t>(6112u), true);
-              AppendByteArray(relayPacket, War3Version);
+              AppendByteArray(relayPacket, (uint32_t)m_AuthGameVersion.second, false);
               AppendByteArrayFast(relayPacket, Data);
               AssignLength(relayPacket);
               DPRINT_IF(LOG_LEVEL_TRACE2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net.m_Config.m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)")

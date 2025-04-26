@@ -60,8 +60,8 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
   AppendByteArrayFast(statInfo, game->GetAnnounceWidth());
   AppendByteArrayFast(statInfo, game->GetAnnounceHeight());
   AppendByteArrayFast(statInfo, game->GetSourceFileHashBlizz(gameVersion));
-  AppendByteArray(statInfo, game->GetSourceFilePath(), true);
-  AppendByteArray(statInfo, game->GetIndexHostName(), true);
+  AppendByteArrayString(statInfo, game->GetSourceFilePath(), true);
+  AppendByteArrayString(statInfo, game->GetIndexHostName(), true);
   statInfo.push_back(0);
   AppendByteArrayFast(statInfo, game->GetMap()->GetMapSHA1());
 
@@ -75,7 +75,7 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
   if (gameVersion.second >= 32) {
     // try this for games with short names on pre32?
     const std::array<uint8_t, 4> magicNumber = {0x01, 0x20, 0x43, 0x00}; // 1.32.6700 ??
-    AppendByteArray(game_data_d, gameName, true);
+    AppendByteArrayString(game_data_d, gameName, true);
     game_data_d.push_back(0);
     AppendByteArrayFast(game_data_d, encodedStatString);
     game_data_d.push_back(0);
@@ -85,11 +85,11 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
   } else {
     const uint32_t One = 1;
     AppendByteArray(game_data_d, One, false);
-    AppendByteArray(game_data_d, gameName, true);
+    AppendByteArrayString(game_data_d, gameName, true);
     AppendByteArrayFast(game_data_d, encodedStatString);
     game_data_d.push_back(0);
     AppendByteArray(game_data_d, (uint32_t)slotsTotal, false);
-    AppendByteArray(game_data_d, gameName, true);
+    AppendByteArrayString(game_data_d, gameName, true);
     game_data_d.push_back(0);
     AppendByteArray(game_data_d, hostPort, false);
   }

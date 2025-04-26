@@ -321,7 +321,7 @@ void CPacked::Compress(const bool TFT)
   }
 
 	vector<uint8_t> Header;
-	AppendByteArray(Header, "Warcraft III recorded game\x01A");
+	AppendByteArrayString(Header, "Warcraft III recorded game\x01A", true);
 	AppendByteArray(Header, HeaderSize, false);
 	AppendByteArray(Header, (uint32_t)HeaderCompressedSize, false);
 	AppendByteArray(Header, HeaderVersion, false);

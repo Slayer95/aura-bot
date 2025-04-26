@@ -120,8 +120,8 @@ namespace VLANProtocol
     vector<uint8_t> StatString;
     AppendByteArray(StatString, mapFlags, false);
     StatString.push_back(0);
-    AppendByteArray(StatString, mapWidth);
-    AppendByteArray(StatString, mapHeight);
+    AppendByteArrayFast(StatString, mapWidth);
+    AppendByteArrayFast(StatString, mapHeight);
     AppendByteArrayFast(StatString, mapCRC);
     AppendByteArrayString(StatString, mapPath, true);
     AppendByteArrayString(StatString, hostName, true);

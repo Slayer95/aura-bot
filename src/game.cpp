@@ -6585,7 +6585,7 @@ void CGame::EventGameStartedLoading()
   if (m_Config.m_LoadInGame) {
     for (const auto& user : m_Users) {
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
-      AppendByteArray(m_GameHistory->m_LoadingRealBuffer, packet);
+      AppendByteArrayFast(m_GameHistory->m_LoadingRealBuffer, packet);
     }
 
     // Only when load-in-game is enabled, initialize everyone's m_IsLagging flag to true
@@ -9753,7 +9753,7 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
     const uint32_t success = 1;
     vector<uint8_t> ActionStart, ActionEnd;
     ActionStart.push_back(ACTION_SAVE);
-    AppendByteArray(ActionStart, fileName);
+    AppendByteArrayString(ActionStart, fileName, true);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
     AppendByteArray(ActionEnd, success, false);
     actionFrame.AddAction(std::move(CIncomingAction(UID, ActionStart)));

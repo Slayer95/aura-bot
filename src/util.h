@@ -644,17 +644,6 @@ template <size_t SIZE>
   return result;
 }
 
-inline void AppendByteArray(std::vector<uint8_t>& b, const std::vector<uint8_t>& append)
-{
-  b.insert(end(b), begin(append), end(append));
-}
-
-template <size_t SIZE>
-inline void AppendByteArray(std::vector<uint8_t>& b, const std::array<uint8_t, SIZE>& append)
-{
-  b.insert(end(b), begin(append), end(append));
-}
-
 inline void AppendByteArrayFast(std::vector<uint8_t>& b, const std::vector<uint8_t>& append)
 {
   b.insert(end(b), begin(append), end(append));
@@ -668,27 +657,9 @@ inline void AppendByteArrayFast(std::vector<uint8_t>& b, const std::array<uint8_
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const uint8_t* a, const int32_t size)
 {
-  AppendByteArray(b, CreateByteArray(a, size));
-}
-
-inline void AppendByteArray(std::vector<uint8_t>& b, const std::string& append, bool terminator = true)
-{
-  // append the std::string plus a null terminator
-
-  b.insert(end(b), begin(append), end(append));
-
-  if (terminator)
-    b.push_back(0);
-}
-
-inline void AppendByteArrayString(std::vector<uint8_t>& b, const std::string& append, bool terminator = true)
-{
-  // append the std::string plus a null terminator
-
-  b.insert(end(b), begin(append), end(append));
-
-  if (terminator)
-    b.push_back(0);
+  size_t cursor = b.size();
+  b.resize(cursor + size);
+  std::copy_n(a, size, b.data() + cursor);
 }
 
 inline void AppendByteArrayString(std::vector<uint8_t>& b, std::string_view append, bool terminator = true)
@@ -703,27 +674,66 @@ inline void AppendByteArrayString(std::vector<uint8_t>& b, std::string_view appe
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const uint16_t i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, bigEndian));
+  size_t offset = b.size();
+  b.resize(offset + 2);
+  uint8_t* cursor = b.data() + offset;
+  if (bigEndian) {
+    cursor[0] = static_cast<uint8_t>(i >> 8);
+    cursor[1] = static_cast<uint8_t>(i);
+  } else {
+    cursor[0] = static_cast<uint8_t>(i);
+    cursor[1] = static_cast<uint8_t>(i >> 8);
+  }
 }
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const uint32_t i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, bigEndian));
+  size_t offset = b.size();
+  b.resize(offset + 4);
+  uint8_t* cursor = b.data() + offset;
+  if (bigEndian) {
+    cursor[0] = static_cast<uint8_t>(i >> 24);
+    cursor[1] = static_cast<uint8_t>(i >> 16);
+    cursor[2] = static_cast<uint8_t>(i >> 8);
+    cursor[3] = static_cast<uint8_t>(i);
+  } else {
+    cursor[0] = static_cast<uint8_t>(i);
+    cursor[1] = static_cast<uint8_t>(i >> 8);
+    cursor[2] = static_cast<uint8_t>(i >> 16);
+    cursor[3] = static_cast<uint8_t>(i >> 24);
+  }
 }
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, bigEndian));
+  AppendByteArrayFast(b, CreateByteArray(i, bigEndian));
 }
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const float i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, bigEndian));
+  size_t offset = b.size();
+  b.resize(offset + 4);
+  if constexpr (std::numeric_limits<float>::is_iec559 && sizeof(float) == 4) {
+    uint8_t* cursor = b.data() + offset;
+    std::memcpy(cursor, &i, 4);
+    if (bigEndian != GetIsHostBigEndian()) {
+      std::reverse(cursor, cursor + 4);
+    }
+  } else {
+  }
 }
 
 inline void AppendByteArray(std::vector<uint8_t>& b, const double i, bool bigEndian)
 {
-  AppendByteArray(b, CreateByteArray(i, bigEndian));
+  size_t offset = b.size();
+  b.resize(offset + 8);
+  if constexpr (std::numeric_limits<double>::is_iec559 && sizeof(double) == 8) {
+    uint8_t* cursor = b.data() + offset;
+    std::memcpy(cursor, &i, 8);
+    if (bigEndian != GetIsHostBigEndian()) {
+      std::reverse(cursor, cursor + 8);
+    }
+  }
 }
 
 [[nodiscard]] inline size_t FindNullDelimiterOrStart(const std::vector<uint8_t>& b, const size_t start)

@@ -361,14 +361,14 @@ std::vector<uint8_t> CBNCSUtilInterface::CreateKeyInfo(const string& key, uint32
   if (Decoder.isKeyValid())
   {
     const uint8_t Zeros[] = {0, 0, 0, 0};
-    AppendByteArray(KeyInfo, CreateByteArray(static_cast<uint32_t>(key.size()), false));
-    AppendByteArray(KeyInfo, CreateByteArray(Decoder.getProduct(), false));
-    AppendByteArray(KeyInfo, CreateByteArray(Decoder.getVal1(), false));
-    AppendByteArray(KeyInfo, CreateByteArray(Zeros, 4));
+    AppendByteArray(KeyInfo, (uint32_t)key.size(), false);
+    AppendByteArrayFast(KeyInfo, CreateByteArray(Decoder.getProduct(), false));
+    AppendByteArrayFast(KeyInfo, CreateByteArray(Decoder.getVal1(), false));
+    AppendByteArray(KeyInfo, Zeros, 4);
     size_t Length = Decoder.calculateHash(clientToken, serverToken);
     auto   buf    = new char[Length];
     Length        = Decoder.getHash(buf);
-    AppendByteArray(KeyInfo, CreateByteArray(reinterpret_cast<uint8_t*>(buf), Length));
+    AppendByteArray(KeyInfo, reinterpret_cast<uint8_t*>(buf), Length);
     delete[] buf;
   }
 
