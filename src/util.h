@@ -746,7 +746,7 @@ inline void AppendProtoBufferFromLengthDelimitedS2S(std::vector<uint8_t>& b, con
   b.push_back((uint8_t)key.size());
   AppendByteArrayString(b, key, false);
   b.push_back(0x12);
-  b.push_back(uint8_t)value.size());
+  b.push_back((uint8_t)value.size());
   AppendByteArrayString(b, value, false);
 }
 
@@ -757,7 +757,7 @@ inline void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, con
   b.push_back(0x1A);
   b.push_back((uint8_t)thisSize);
   b.push_back(0x0A);
-  b.push_back(uint8_t)key.size());
+  b.push_back((uint8_t)key.size());
   AppendByteArrayString(b, key, false);
   b.push_back(0x12);
   b.push_back(1);
