@@ -45,7 +45,7 @@ using namespace std;
 // CAsyncObserver
 //
 
-CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, shared_ptr<CRealm> nFromRealm, const string& nName)
+CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, shared_ptr<CRealm> nFromRealm, string nName)
   : CConnection(*nConnection),
     m_Game(nGame),
     m_GameHistory(nGame->GetGameHistory()),
@@ -76,7 +76,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_LastPingTicks(APP_MIN_TICKS),
     m_LastProgressReportTime(APP_MIN_TICKS),
     m_LastProgressReportLog(0),
-    m_Name(nName)
+    m_Name(std::move(nName))
 {
   m_Socket->SetLogErrors(true);
 }
