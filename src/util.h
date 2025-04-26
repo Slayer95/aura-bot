@@ -655,7 +655,7 @@ inline void AppendByteArrayFast(std::vector<uint8_t>& b, const std::array<uint8_
   b.insert(end(b), begin(append), end(append));
 }
 
-inline void AppendByteArray(std::vector<uint8_t>& b, const uint8_t* a, const int32_t size)
+inline void AppendByteArray(std::vector<uint8_t>& b, const uint8_t* a, const size_t size)
 {
   size_t cursor = b.size();
   b.resize(cursor + size);
