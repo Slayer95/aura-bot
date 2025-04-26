@@ -129,23 +129,21 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
             break;
           }
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
-            CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
-            if (!joinRequest) {
+            CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
+            if (!joinRequest.GetIsValid()) {
               Abort = true;
               break;
             }
-            shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
+            shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest.GetHostCounter());
             if (!targetLobby || targetLobby->GetIsMirror() || targetLobby->GetLobbyLoading() || (targetLobby->GetIsLobbyStrict() && targetLobby->GetExiting())) {
-              delete joinRequest;
               break;
             }
-            joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
+            joinRequest.UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
               result = GameSeekerStatus::kPromoted;
               m_Type = INCON_TYPE_PLAYER;
               m_Socket = nullptr;
             }
-            delete joinRequest;
           } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
             if (Length > 1024) {
               Abort = true;

@@ -395,8 +395,8 @@ public:
   ImmutableUserList                                      GetUnreadyPlayers() const;
   ImmutableUserList                                      GetWaitingReconnectPlayers() const;
   std::optional<Version>                                 GetOverrideLANVersion(const std::string& playerName, const sockaddr_storage* address) const;
-  std::optional<Version>                                 GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
-  Version                                                GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest* joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
+  std::optional<Version>                                 GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest& joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
+  Version                                                GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest& joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
   bool                                                   GetIsAutoStartDue() const;
   std::string                                            GetAutoStartText() const;
   std::string                                            GetReadyStatusText() const;
@@ -487,7 +487,7 @@ public:
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
   void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
   void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
-  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage* chatMessage) const;
+  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage& chatMessage) const;
 
   void                                                   CheckActions();
   void                                                   PauseAPMTrainer();
@@ -537,8 +537,8 @@ public:
   std::pair<int64_t, int64_t> GetReconnectWaitTicks() const;
   void                      ReportRecoverableDisconnect(GameUser::CGameUser* user);
   void                      OnRecoverableDisconnect(GameUser::CGameUser* user);
-  bool                      CheckUserBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, std::shared_ptr<CRealm> matchingRealm, std::string& hostName);
-  bool                      CheckIPBanned(CConnection* connection, CIncomingJoinRequest* joinRequest, std::shared_ptr<CRealm> matchingRealm, std::string& hostName);
+  bool                      CheckUserBanned(CConnection* connection, const CIncomingJoinRequest& joinRequest, std::shared_ptr<CRealm> matchingRealm, std::string& hostName);
+  bool                      CheckIPBanned(CConnection* connection, const CIncomingJoinRequest& joinRequest, std::shared_ptr<CRealm> matchingRealm, std::string& hostName);
   void                      EventUserDisconnectTimedOut(GameUser::CGameUser* user);
   void                      EventUserDisconnectSocketError(GameUser::CGameUser* user);
   void                      EventUserDisconnectConnectionClosed(GameUser::CGameUser* user);
@@ -549,21 +549,21 @@ public:
   void                      EventUserKickHandleQueued(GameUser::CGameUser* user);
   void                      EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen);
   void                      EventUserCheckStatus(GameUser::CGameUser* user);
-  uint8_t                   EventRequestJoin(CConnection* connection, CIncomingJoinRequest* joinRequest);
+  uint8_t                   EventRequestJoin(CConnection* connection, const CIncomingJoinRequest& joinRequest);
   void                      EventBeforeJoin(CConnection* connection);
   void                      EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason);
   void                      EventUserLoaded(GameUser::CGameUser* user);
   bool                      EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
   void                      EventChatTrigger(GameUser::CGameUser* user, const std::string& message, const uint32_t first, const uint32_t second);
-  void                      EventUserChatOrPlayerSettings(GameUser::CGameUser* user, CIncomingChatMessage* incomingChatMessage);
-  void                      EventUserChat(GameUser::CGameUser* user, CIncomingChatMessage* incomingChatMessage);
+  void                      EventUserChatOrPlayerSettings(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage);
+  void                      EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage);
   void                      EventUserRequestTeam(GameUser::CGameUser* user, uint8_t team);
   void                      EventUserRequestColor(GameUser::CGameUser* user, uint8_t colour);
   void                      EventUserRequestRace(GameUser::CGameUser* user, uint8_t race);
   void                      EventUserRequestHandicap(GameUser::CGameUser* user, uint8_t handicap);
   void                      EventUserDropRequest(GameUser::CGameUser* user);
-  void                      EventUserMapSize(GameUser::CGameUser* user, CIncomingMapFileSize* mapSize);
+  void                      EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSize& mapSize);
   void                      EventUserPongToHost(GameUser::CGameUser* user);
   void                      EventUserMapReady(GameUser::CGameUser* user);
 
@@ -637,7 +637,7 @@ public:
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
   uint8_t                   NextSendMap(CConnection* connection, const uint8_t UID, MapTransfer& mapTransfer);
-  GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest* joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest& joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;
@@ -646,9 +646,9 @@ public:
 
   // Observer features
   inline std::shared_ptr<GameHistory> GetGameHistory() { return m_GameHistory; }
-  void                                JoinObserver(CConnection* connection, const CIncomingJoinRequest* joinRequest, std::shared_ptr<CRealm> fromRealm);
+  void                                JoinObserver(CConnection* connection, const CIncomingJoinRequest& joinRequest, std::shared_ptr<CRealm> fromRealm);
   void                                EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason);
-  void                                EventObserverMapSize(CAsyncObserver* connection, CIncomingMapFileSize* mapSize);
+  void                                EventObserverMapSize(CAsyncObserver* connection, const CIncomingMapFileSize& mapSize);
   void                                EventObserverDisconnectProtocolError(CAsyncObserver* user);
 
   // Map transfer

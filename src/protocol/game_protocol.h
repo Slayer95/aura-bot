@@ -139,13 +139,13 @@ namespace GameProtocol
 
   // receive functions
 
-  [[nodiscard]] CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingJoinRequest RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
   [[nodiscard]] uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data);
   [[nodiscard]] bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
   [[nodiscard]] CIncomingAction RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
   [[nodiscard]] uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingChatMessage* RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingMapFileSize* RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingChatMessage RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingMapFileSize RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data);
   [[nodiscard]] uint32_t RECEIVE_W3GS_PONG_TO_HOST(const std::vector<uint8_t>& data);
 
   // send functions
@@ -234,6 +234,7 @@ namespace GameProtocol
 class CIncomingJoinRequest
 {
 private:
+  bool                      m_Valid;
   bool                      m_Censored;
   std::string               m_Name;
   std::string               m_OriginalName;
@@ -242,9 +243,11 @@ private:
   uint32_t                  m_EntryKey;
 
 public:
+  CIncomingJoinRequest();
   CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::array<uint8_t, 4> nIPv4Internal);
   ~CIncomingJoinRequest();
 
+  [[nodiscard]] inline bool                   GetIsValid() const { return m_Valid; }
   [[nodiscard]] inline bool                   GetIsCensored() const { return m_Censored; }
   [[nodiscard]] inline uint32_t               GetHostCounter() const { return m_HostCounter; }
   [[nodiscard]] inline uint32_t               GetEntryKey() const { return m_EntryKey; }
@@ -318,6 +321,7 @@ class CIncomingChatMessage
 {
 public:
 private:
+  bool                                m_Valid;
   std::string                         m_Message;
   GameProtocol::ChatToHostType        m_Type;
   uint8_t                             m_Byte;
@@ -327,11 +331,13 @@ private:
   std::vector<uint8_t>                m_ToUIDs;
 
 public:
+  CIncomingChatMessage();
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage);
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage, uint32_t nExtraFlags);
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
   ~CIncomingChatMessage();
 
+  [[nodiscard]] inline bool                               GetIsValid() const { return m_Valid; }
   [[nodiscard]] inline GameProtocol::ChatToHostType       GetType() const { return m_Type; }
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
   [[nodiscard]] inline const std::vector<uint8_t>&        GetToUIDs() const { return m_ToUIDs; }
@@ -344,13 +350,16 @@ public:
 class CIncomingMapFileSize
 {
 private:
+  bool     m_Valid;
   uint32_t m_FileSize;
   uint8_t  m_Flag;
 
 public:
+  CIncomingMapFileSize();
   CIncomingMapFileSize(uint8_t nSizeFlag, uint32_t nMapSize);
   ~CIncomingMapFileSize();
 
+  [[nodiscard]] inline bool  GetIsValid() const { return m_Valid; }
   [[nodiscard]] inline uint8_t  GetFlag() const { return m_Flag; }
   [[nodiscard]] inline uint32_t GetFileSize() const { return m_FileSize; }
 };

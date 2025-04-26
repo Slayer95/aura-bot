@@ -2733,6 +2733,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
+      if (target.empty()) {
+        target = GetSender();
+      }
+
       vector<string> Args = SplitArgs(target, 1u, targetGame->GetMap()->GetVersionMaxSlots());
 
       if (Args.empty()) {

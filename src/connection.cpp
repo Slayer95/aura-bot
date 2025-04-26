@@ -124,25 +124,23 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       switch (Bytes[0]) {
         case GameProtocol::Magic::W3GS_HEADER:
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
-            CIncomingJoinRequest* joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
-            if (!joinRequest) {
+            CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
+            if (!joinRequest.GetIsValid()) {
               DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got invalid REQJOIN " + ByteArrayToDecString(Bytes))
               Abort = true;
               break;
             }
             DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
-            shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest->GetHostCounter());
+            shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest.GetHostCounter());
             if (!targetLobby) {
-              delete joinRequest;
               break;
             }
             if (targetLobby->GetIsMirror() || targetLobby->GetHostPort() != m_Port) {
               DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
               Abort = true;
-              delete joinRequest;
               break;
             }
-            joinRequest->UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
+            joinRequest.UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             const uint8_t joinResult = targetLobby->EventRequestJoin(this, joinRequest);
             if (joinResult == JOIN_RESULT_PLAYER) {
               result = INCON_UPDATE_PROMOTED;
@@ -153,7 +151,6 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               m_Type = INCON_TYPE_OBSERVER;
             }
             Abort = true;
-            delete joinRequest;
           } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
             if (Length > 1024) {
               Abort = true;

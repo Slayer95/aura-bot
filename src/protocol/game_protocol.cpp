@@ -182,7 +182,7 @@ namespace GameProtocol
   // RECEIVE FUNCTIONS //
   ///////////////////////
 
-  CIncomingJoinRequest* RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data)
+  CIncomingJoinRequest RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data)
   {
     // DEBUG_Print( "RECEIVED W3GS_REQJOIN" );
     // DEBUG_Print( data );
@@ -207,12 +207,11 @@ namespace GameProtocol
       if (!RawName.empty() && data.size() >= RawName.size() + 30) {
         std::array<uint8_t, 4> InternalIP = {0, 0, 0, 0};
         copy_n(data.begin() + RawName.size() + 26, 4, InternalIP.begin());
-        CIncomingJoinRequest* joinRequest = new CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP);
-        return joinRequest;
+        return CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP);
       }
     }
 
-    return nullptr;
+    return CIncomingJoinRequest();
   }
 
   uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data)
@@ -276,7 +275,7 @@ namespace GameProtocol
     return 0;
   }
 
-  CIncomingChatMessage* RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data)
+  CIncomingChatMessage RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data)
   {
     // DEBUG_Print( "RECEIVED W3GS_CHAT_TO_HOST" );
     // DEBUG_Print( data );
@@ -319,26 +318,26 @@ namespace GameProtocol
           // chat message
 
           const std::vector<uint8_t> Message = ExtractCString(data, i);
-          return new CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)));
+          return CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)));
         } else if ((Flag >= GameProtocol::Magic::ChatType::REQUEST_TEAM && Flag <= GameProtocol::Magic::ChatType::REQUEST_HANDICAP) && data.size() >= i + 1) { // 17-20
           // team/colour/race/handicap change request 
 
           const uint8_t Byte = data[i];
-          return new CIncomingChatMessage(FromUID, ToUIDs, Flag, Byte);
+          return CIncomingChatMessage(FromUID, ToUIDs, Flag, Byte);
         } else if (Flag == GameProtocol::Magic::ChatType::CHAT_IN_GAME && data.size() >= i + 5) { // 32
           // chat message with extra flags
 
           const uint32_t ExtraFlags = ByteArrayToUInt32(data, false, i);
           const std::vector<uint8_t> Message = ExtractCString(data, i + 4);
-          return new CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)), ExtraFlags);
+          return CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)), ExtraFlags);
         }
       }
     }
 
-    return nullptr;
+    return CIncomingChatMessage();
   }
 
-  CIncomingMapFileSize* RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data)
+  CIncomingMapFileSize RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data)
   {
     // DEBUG_Print( "RECEIVED W3GS_MAPSIZE" );
     // DEBUG_Print( data );
@@ -350,9 +349,9 @@ namespace GameProtocol
     // 4 bytes					-> MapSize
 
     if (ValidateLength(data) && data.size() >= 13)
-      return new CIncomingMapFileSize(data[8], ByteArrayToUInt32(data, false, 9));
+      return CIncomingMapFileSize(data[8], ByteArrayToUInt32(data, false, 9));
 
-    return nullptr;
+    return CIncomingMapFileSize();
   }
 
   uint32_t RECEIVE_W3GS_PONG_TO_HOST(const std::vector<uint8_t>& data)
@@ -616,8 +615,8 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const string& message)
   {
-    if (!toUIDs.empty() && !message.empty() && message.size() < 255)
-    {
+    if (!toUIDs.empty() && !message.empty() && message.size() < 255) {
+      Print("SEND_W3GS_CHAT_FROM_HOST(): <<" + message + ">>");
       std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CHAT_FROM_HOST, 0, 0, static_cast<uint8_t>(toUIDs.size())};
       AppendByteArrayFast(packet, toUIDs);    // receivers
       packet.push_back(fromUID);              // sender
@@ -1053,8 +1052,19 @@ namespace GameProtocol
 // CIncomingJoinRequest
 //
 
+CIncomingJoinRequest::CIncomingJoinRequest()
+  : m_Valid(false),
+    m_Censored(false),
+    m_HostCounter(0),
+    m_EntryKey(0)
+{
+  m_IPv4Internal.fill(0);
+  m_Name = m_OriginalName;
+}
+
 CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::array<uint8_t, 4> nIPv4Internal)
-  : m_Censored(false),
+  : m_Valid(true),
+    m_Censored(false),
     m_OriginalName(std::move(nName)),
     m_IPv4Internal(std::move(nIPv4Internal)),
     m_HostCounter(nHostCounter),
@@ -1327,8 +1337,18 @@ vector<const uint8_t*> CIncomingAction::SplitAtomic() const
 // CIncomingChatMessage
 //
 
+CIncomingChatMessage::CIncomingChatMessage()
+  : m_Valid(false),
+    m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
+    m_Byte(255),
+    m_FromUID(0xFF),
+    m_Flag(0)
+{
+}
+
 CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage)
-  : m_Message(std::move(nMessage)),
+  : m_Valid(true),
+    m_Message(std::move(nMessage)),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
     m_Byte(255),
     m_FromUID(nFromUID),
@@ -1338,7 +1358,8 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
 }
 
 CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage, uint32_t nExtraFlags)
-  : m_Message(std::move(nMessage)),
+  : m_Valid(true),
+    m_Message(std::move(nMessage)),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME),
     m_Byte(255),
     m_FromUID(nFromUID),
@@ -1349,7 +1370,8 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
 }
 
 CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte)
-  : m_Type(GameProtocol::ChatToHostType::CTH_TEAMCHANGE),
+  : m_Valid(true),
+    m_Type(GameProtocol::ChatToHostType::CTH_TEAMCHANGE),
     m_Byte(nByte),
     m_FromUID(nFromUID),
     m_Flag(nFlag),
@@ -1377,8 +1399,16 @@ CIncomingChatMessage::~CIncomingChatMessage() = default;
 // CIncomingMapFileSize
 //
 
+CIncomingMapFileSize::CIncomingMapFileSize()
+  : m_Valid(false),
+    m_FileSize(0),
+    m_Flag(0)
+{
+}
+
 CIncomingMapFileSize::CIncomingMapFileSize(uint8_t nSizeFlag, uint32_t nMapSize)
-  : m_FileSize(nMapSize),
+  : m_Valid(true),
+    m_FileSize(nMapSize),
     m_Flag(nSizeFlag)
 {
 }

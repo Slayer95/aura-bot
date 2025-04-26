@@ -231,11 +231,10 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
 
             case GameProtocol::Magic::CHAT_TO_HOST: {
-              CIncomingChatMessage* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
+              CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
-              if (ChatPlayer) {
-                EventChatOrPlayerSettings(ChatPlayer);
-                delete ChatPlayer;
+              if (incomingChatMessage.GetIsValid()) {
+                EventChatOrPlayerSettings(incomingChatMessage);
               }
               break;
             }
@@ -251,13 +250,11 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
                 break;
               }
 
-              CIncomingMapFileSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
+              CIncomingMapFileSize incomingMapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
 
-              if (MapSize) {
-                game->EventObserverMapSize(this, MapSize);
+              if (incomingMapSize.GetIsValid()) {
+                game->EventObserverMapSize(this, incomingMapSize);
               }
-
-              delete MapSize;
 
               if (!m_Socket->GetConnected()) {
                 Abort = true;
@@ -544,9 +541,9 @@ void CAsyncObserver::EventGameLoaded()
   Send(m_GameHistory->m_LoadingVirtualBuffer);
 }
 
-void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
+void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
 {
-  const bool isLobbyChat = incomingChatMessage->GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
+  const bool isLobbyChat = incomingChatMessage.GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
   if (isLobbyChat == m_StartedLoading) {
     // Racing condition
     return;
@@ -555,7 +552,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
   bool shouldRelay = !isLobbyChat && false; // relay the chat message to other users
 
   if (!isLobbyChat && m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
-    Print(GetLogPrefix() + "[" + GetName() + "] " + incomingChatMessage->GetMessage());
+    Print(GetLogPrefix() + "[" + GetName() + "] " + incomingChatMessage.GetMessage());
   }
 
   CGameConfig* gameConfig;
@@ -579,7 +576,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
     const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
     cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
-      const string message = incomingChatMessage->GetMessage();
+      const string message = incomingChatMessage.GetMessage();
       string cmdToken, command, target;
       uint8_t tokenMatch = ExtractMessageTokensAny(message, gameConfig->m_PrivateCmdToken, gameConfig->m_BroadcastCmdToken, cmdToken, command, target);
       isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
@@ -648,13 +645,13 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage* incomingChatMessage)
   }
 }
 
-void CAsyncObserver::EventChatOrPlayerSettings(const CIncomingChatMessage* incomingChatMessage)
+void CAsyncObserver::EventChatOrPlayerSettings(const CIncomingChatMessage& incomingChatMessage)
 {
-  if (incomingChatMessage->GetFromUID() != GetUID()) {
+  if (incomingChatMessage.GetFromUID() != GetUID()) {
     return;
   }
 
-  switch (incomingChatMessage->GetType()) {
+  switch (incomingChatMessage.GetType()) {
     case GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY:
     case GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME:
       EventChat(incomingChatMessage);

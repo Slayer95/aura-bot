@@ -143,8 +143,8 @@ public:
   void EventMapReady();
   void StartLoading();
   void EventGameLoaded();
-  void EventChatOrPlayerSettings(const CIncomingChatMessage* chatPlayer);
-  void EventChat(const CIncomingChatMessage* chatPlayer);
+  void EventChatOrPlayerSettings(const CIncomingChatMessage& chatPlayer);
+  void EventChat(const CIncomingChatMessage& chatPlayer);
   void EventLeft(const uint32_t clientReason);
   void EventProtocolError();
 

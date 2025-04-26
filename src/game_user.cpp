@@ -495,9 +495,6 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                 Abort = true;
               }
             }
-
-            // don't delete Action here because the game is going to store it in a queue and delete it later
-
             break;
           }
 
@@ -515,11 +512,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {
-            CIncomingChatMessage* ChatPlayer = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
+            CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
 
-            if (ChatPlayer) {
-              m_Game.get().EventUserChatOrPlayerSettings(this, ChatPlayer);
-              delete ChatPlayer;
+            if (incomingChatMessage.GetIsValid()) {
+              m_Game.get().EventUserChatOrPlayerSettings(this, incomingChatMessage);
 
               if (m_Disconnected) {
                 Abort = true;
@@ -542,11 +538,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               break;
             }
 
-            CIncomingMapFileSize* MapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
-            if (MapSize) {
-              m_Game.get().EventUserMapSize(this, MapSize);
+            CIncomingMapFileSize incomingMapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
+            if (incomingMapSize.GetIsValid()) {
+              m_Game.get().EventUserMapSize(this, incomingMapSize);
             }
-            delete MapSize;
             break;
           }
 
