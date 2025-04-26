@@ -5,14 +5,29 @@ AURABUILD_MDNS ?= 0
 AURABUILD_MINIUPNP ?= 1
 AURABUILD_PJASS ?= 0
 
-# Requires Make 3.80+
-define VALIDATE_BOOL
-ifneq ($(filter $($(1)),0 1),$($(1)))
-$(error $(1) must be 0 or 1, but got '$($(1))')
+ifneq ($(filter $(AURABUILD_STATIC),0 1),$(AURABUILD_STATIC))
+$(error AURABUILD_STATIC must be 0 or 1, but got '$(AURABUILD_STATIC)')
 endif
-endef
 
-$(foreach flag,AURABUILD_STATIC AURABUILD_CPR AURABUILD_DPP AURABUILD_MDNS AURABUILD_MINIUPNP AURABUILD_PJASS,$(eval $(call VALIDATE_BOOL,$(flag))))
+ifneq ($(filter $(AURABUILD_CPR),0 1),$(AURABUILD_CPR))
+$(error AURABUILD_CPR must be 0 or 1, but got '$(AURABUILD_CPR)')
+endif
+
+ifneq ($(filter $(AURABUILD_DPP),0 1),$(AURABUILD_DPP))
+$(error AURABUILD_DPP must be 0 or 1, but got '$(AURABUILD_DPP)')
+endif
+
+ifneq ($(filter $(AURABUILD_MDNS),0 1),$(AURABUILD_MDNS))
+$(error AURABUILD_MDNS must be 0 or 1, but got '$(AURABUILD_MDNS)')
+endif
+
+ifneq ($(filter $(AURABUILD_MINIUPNP),0 1),$(AURABUILD_MINIUPNP))
+$(error AURABUILD_MINIUPNP must be 0 or 1, but got '$(AURABUILD_MINIUPNP)')
+endif
+
+ifneq ($(filter $(AURABUILD_PJASS),0 1),$(AURABUILD_PJASS))
+$(error AURABUILD_PJASS must be 0 or 1, but got '$(AURABUILD_PJASS)')
+endif
 
 SHELL = /bin/sh
 SYSTEM = $(shell uname)
@@ -24,37 +39,32 @@ CCFLAGS += -fno-builtin
 CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti
 DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
-
-LDLIBS_CORE = -lstorm -lbncsutil -lgmp -lbz2 -lz
-LDLIBS_SYS = 
-LDLIBS_OPT = 
-LDFLAGS_SYS = -pthread
-LDFLAGS_PATHS = -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/
+LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
 
 ifeq ($(AURABUILD_STATIC),1)
-  LDFLAGS_SYS += -static
+  LFLAGS += -static
 endif
 
 ifeq ($(AURABUILD_CPR),1)
-  LDLIBS_OPT += -lcpr
+  LFLAGS += -lcpr
 else
-  CPPFLAGS += -DDISABLE_CPR
+  CXXFLAGS += -DDISABLE_CPR
 endif
 
 ifeq ($(AURABUILD_DPP),1)
-  LDLIBS_OPT += -ldpp
+  LFLAGS += -ldpp
 else
-  CPPFLAGS += -DDISABLE_DPP
+  CXXFLAGS += -DDISABLE_DPP
 endif
 
 ifeq ($(AURABUILD_MINIUPNP),1)
-  LDLIBS_OPT += -lminiupnpc
+  LFLAGS += -lminiupnpc
 else
-  CPPFLAGS += -DDISABLE_MINIUPNP
+  CXXFLAGS += -DDISABLE_MINIUPNP
 endif
 
-CPPFLAGS += -DDISABLE_PJASS
-CPPFLAGS += -DDISABLE_BONJOUR
+CXXFLAGS += -DDISABLE_PJASS
+CXXFLAGS += -DDISABLE_BONJOUR
 
 ifeq ($(AURABUILD_PJASS),1)
 $(error AURABUILD_PJASS is not yet supported. Please set AURABUILD_PJASS=0)
@@ -74,29 +84,22 @@ ifeq ($(SYSTEM),Darwin)
   CXXFLAGS += -stdlib=libc++
   CC = clang
   CXX = clang++
-  CPPFLAGS += -D__APPLE__
+  DFLAGS += -D__APPLE__
 else
-  LDLIBS_SYS += -lrt
+  LFLAGS += -lrt
 endif
 
 ifeq ($(SYSTEM),FreeBSD)
-  CPPFLAGS += -D__FREEBSD__
+  DFLAGS += -D__FREEBSD__
 endif
 
 ifeq ($(SYSTEM),SunOS)
-  CPPFLAGS += -D__SOLARIS__
-  LDLIBS_SYS += -lresolv -lsocket -lnsl
+  DFLAGS += -D__SOLARIS__
+  LFLAGS += -lresolv -lsocket -lnsl
 endif
 
-CPPFLAGS += -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION
-CPPFLAGS += $(DFLAGS)
-CPPFLAGS += -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
-
-CCFLAGS += $(OFLAGS)
-CXXFLAGS += $(OFLAGS)
-
-LDFLAGS = $(LDFLAGS_SYS) $(LDFLAGS_PATHS)
-LDLIBS = $(LDLIBS_CORE) $(LDLIBS_OPT) $(LDLIBS_SYS)
+CCFLAGS += $(OFLAGS) -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -I.
+CXXFLAGS += $(OFLAGS) $(DFLAGS) -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
 
 OBJS = lib/base64/base64.o \
        lib/csvparser/csvparser.o \
@@ -156,11 +159,11 @@ COBJS = lib/sqlite3/sqlite3.o
 PROG = aura
 
 all: $(OBJS) $(COBJS) $(PROG)
-	@echo "Used CCFLAGS: $(CPPFLAGS) $(CCFLAGS)"
-	@echo "Used CXXFLAGS: $(CPPFLAGS) $(CXXFLAGS)"
+	@echo "Used CCFLAGS: $(CCFLAGS)"
+	@echo "Used CXXFLAGS: $(CXXFLAGS)"
 
 $(PROG): $(OBJS) $(COBJS)
-	@$(CXX) -o aura $(OBJS) $(COBJS) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+	@$(CXX) -o aura $(OBJS) $(COBJS) $(CXXFLAGS) $(LFLAGS)
 	@echo "[BIN] $@ created."
 	@strip "$(PROG)"
 	@echo "[BIN] Stripping the binary."
@@ -175,14 +178,14 @@ install:
 	@echo "Binary $(PROG) installed to $(DESTDIR)$(INSTALL_DIR)/bin"
 
 $(OBJS): %.o: %.cpp
-	@$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) -c $<
+	@$(CXX) -o $@ $(CXXFLAGS) -c $<
 	@echo "[$(CXX)] $@"
 
 $(COBJS): %.o: %.c
-	@$(CC) -o $@ $(CPPFLAGS) $(CCFLAGS) -c $<
+	@$(CC) -o $@ $(CCFLAGS) -c $<
 	@echo "[$(CC)] $@"
 
 clang-tidy:
 	@for file in $(OBJS); do \
-		clang-tidy "src/$$(basename $$file .o).cpp" -fix -checks=* -header-filter=src/* -- $(CPPFLAGS) $(CXXFLAGS); \
+		clang-tidy "src/$$(basename $$file .o).cpp" -fix -checks=* -header-filter=src/* -- $(CXXFLAGS) $(DFLAGS); \
 	done;
