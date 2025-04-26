@@ -247,8 +247,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_CommandCFG(nullptr),
 
     m_Enabled(nRootConfig->m_Enabled),
-    m_Valid(nRootConfig->m_Valid),
     m_BindAddress(nRootConfig->m_BindAddress),
+    m_Valid(nRootConfig->m_Valid),
 
     m_CountryShort(nRootConfig->m_CountryShort),
     m_Country(nRootConfig->m_Country),
