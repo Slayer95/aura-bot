@@ -736,6 +736,34 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const double i, bool bigEnd
   }
 }
 
+inline void AppendProtoBufferFromLengthDelimitedS2S(std::vector<uint8_t>& b, const std::string& key, const std::string& value)
+{
+  size_t thisSize = key.size() + value.size() + 4;
+  b.reserve(b.size() + thisSize + 2);
+  b.push_back(0x1A);
+  b.push_back((uint8_t)thisSize);
+  b.push_back(0x0A);
+  b.push_back((uint8_t)key.size());
+  AppendByteArrayString(b, key, false);
+  b.push_back(0x12);
+  b.push_back(uint8_t)value.size());
+  AppendByteArrayString(b, value, false);
+}
+
+inline void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, const std::string& key, const uint8_t value)
+{
+  size_t thisSize = key.size() + 5;
+  b.reserve(b.size() + thisSize + 2);
+  b.push_back(0x1A);
+  b.push_back((uint8_t)thisSize);
+  b.push_back(0x0A);
+  b.push_back(uint8_t)key.size());
+  AppendByteArrayString(b, key, false);
+  b.push_back(0x12);
+  b.push_back(1);
+  b.push_back(value);
+}
+
 [[nodiscard]] inline size_t FindNullDelimiterOrStart(const std::vector<uint8_t>& b, const size_t start)
 {
   // start searching the byte array at position 'start' for the first null value

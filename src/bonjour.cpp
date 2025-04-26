@@ -49,10 +49,8 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
   uint32_t slotsTotal = game->GetNumSlots();
   uint16_t hostPort = game->GetHostPortForDiscoveryInfo(AF_INET);
 
-  string players_num = ToDecString(slotsOff); // slots taken ???
-  string players_max = to_string(slotsTotal);
+  //string players_num = ToDecString(slotsOff); // slots taken ???
   string secret = to_string(game->GetEntryKey());
-  string time = to_string(game->GetUptime()); // creation time uint32_t ???
 
   vector<uint8_t> statInfo;
   AppendByteArray(statInfo, game->GetGameFlags(), false);
@@ -96,37 +94,69 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
 
   string game_data = Base64::Encode(reinterpret_cast<unsigned char*>(game_data_d.data()), game_data_d.size(), false);
 
-  string w66;
+  vector<uint8_t> w66;
+  w66.reserve(512);
+
+  // Game name
+  w66.push_back(0x0A);
+  w66.push_back((uint8_t)gameName.size());
+  AppendByteArrayString(w66, gameName, false);
+  w66.push_back(0x10);
+  w66.push_back(0);
+
   if (gameVersion.second != 30) {
-    w66  = string("\x0A") + ((char)gameName.size()) + gameName + string("\x10\0", 2) +
-    "\x1A" + (char)(15 + players_num.size()) + "\x0A\x0Bplayers_num\x12" + (char)players_num.size() + players_num +
-    "\x1A" + (char)(9 + gameName.size()) + "\x0A\x05_name\x12" + (char)gameName.size() + gameName +
-    "\x1A" + (char)(15 + players_max.size()) + "\x0A\x0Bplayers_max\x12" + (char)players_max.size() + players_max + 
-    "\x1A" + (char)(20 + time.size()) + "\x0A\x10game_create_time\x12" + (char)time.size() + time +
-    "\x1A\x0A\x0A\x05_type\x12\x01\x31" + "\x1A\x0D\x0A\x08_subtype\x12\x01\x30" +
-    "\x1A" + (char)(15 + secret.size()) + "\x0A\x0Bgame_secret\x12" + (char)secret.size() + secret +
-    "\x1A" + (char)(14 + game_data.size()) + "\x01\x0A\x09game_data\x12" + (char)game_data.size() + "\x01" + game_data +
-    "\x1A\x0C\x0A\x07game_id\x12\x01" + ((gameVersion.second >= 32) ? "1": "2") +
-    "\x1A\x0B\x0A\x06_flags\x12\x01\x30";
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "players_num", ToDecString(slotsOff)); // slots taken??
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "_name", gameName);
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "players_max", to_string(slotsTotal));
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "game_create_time", to_string(game->GetUptime())); // creation time uint32_t ???
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "_type", 0x31);
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "_subtype", 0x30);
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "game_secret", secret);
+
+    // game_data
+    w66.push_back(0x1A);
+    w66.push_back((uint8_t)(14 + game_data.size()));
+    w66.push_back(0x01); // Extra 0x01 ?!
+    w66.push_back(0x0A);
+    w66.push_back(0x09);
+    AppendByteArrayString(w66, "game_data", false);
+    w66.push_back(0x12);
+    w66.push_back((uint8_t)game_data.size());
+    w66.push_back(0x01); // Extra 0x01 ?!
+    AppendByteArrayString(w66, game_data, false);
+
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "game_id", ((gameVersion.second >= 32) ? 0x31: 0x32));
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "_flags", 0x30);
   } else {
-    w66 = string("\x0A") + ((char)gameName.size()) + gameName + string("\x10\0", 2) +
-    "\x1A" + (char)(15 + secret.size()) + "\x0A\x0Bgame_secret\x12" + (char)secret.size() + secret +
-    "\x1A\x0A\x0A\x05_type\x12\x01\x31" + "\x1A\x0D\x0A\x08_subtype\x12\x01\x30" +
-    "\x1A\x0C\x0A\x07game_id\x12\x01" + "1" +
-    "\x1A" + (char)(9 + gameName.size()) + "\x0A\x05_name\x12" + (char)gameName.size() + gameName +
-    "\x1A" + (char)(15 + players_max.size()) + "\x0A\x0Bplayers_max\x12" + (char)players_max.size() + players_max +
-    "\x1A\x0B\x0A\x06_flags\x12\x01\x30" +
-    "\x1A" + (char)(15 + players_num.size()) + "\x0A\x0Bplayers_num\x12" + (char)players_num.size() + players_num +
-    "\x1A" + (char)(20 + time.size()) + "\x0A\x10game_create_time\x12" + (char)time.size() + time +
-    "\x1A" + (char)(14 + game_data.size()) + "\x01\x0A\x09game_data\x12" + (char)game_data.size() + "\x01" + game_data;
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "game_secret", secret);
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "_type", 0x31);
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "_subtype", 0x30);
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "game_id", 0x31);
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "_name", gameName);
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "players_max", to_string(slotsTotal));
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "_flags", 0x30);
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "players_num", ToDecString(slotsOff)); // slots taken??
+    AppendProtoBufferFromLengthDelimitedS2S(w66, "game_create_time", to_string(game->GetUptime())); // creation time uint32_t ???
+
+    // game_data
+    w66.push_back(0x1A);
+    w66.push_back((uint8_t)(14 + game_data.size()));
+    w66.push_back(0x01); // Extra 0x01 ?!
+    w66.push_back(0x0A);
+    w66.push_back(0x09);
+    AppendByteArrayString(w66, "game_data", false);
+    w66.push_back(0x12);
+    w66.push_back((uint8_t)game_data.size());
+    w66.push_back(0x01); // Extra 0x01 ?!
+    AppendByteArrayString(w66, game_data, false);
   }
 
   {
     int err = 0;
     if (isNew) {
-      err = DNSServiceAddRecord(service, &record, 0, 66, (uint16_t)w66.size(), w66.c_str(), 0);
+      err = DNSServiceAddRecord(service, &record, 0, 66, (uint16_t)w66.size(), reinterpret_cast<const char*>(w66.data()), 0);
     } else {
-      err = DNSServiceUpdateRecord(service, record, kDNSServiceFlagsForce, (uint16_t)w66.size(), w66.c_str(), 0);
+      err = DNSServiceUpdateRecord(service, record, kDNSServiceFlagsForce, (uint16_t)w66.size(), reinterpret_cast<const char*>(w66.data()), 0);
     }
     if (err) {
       Print("[MDNS] DNSServiceAddRecord failed: " + to_string(err) + "\n");
