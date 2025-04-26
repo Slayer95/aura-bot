@@ -180,5 +180,6 @@ void CBonjour::StopBroadcastGame(shared_ptr<CGame> game)
 
 bool CBonjour::CheckLibrary()
 {
-  return CheckDynamicLibrary(PLATFORM_STRING("dnssd"), PLATFORM_STRING("Bonjour"));
+  PLATFORM_STRING_TYPE serviceName = PLATFORM_STRING("Bonjour");
+  return CheckDynamicLibrary(PLATFORM_STRING("dnssd"), serviceName);
 }

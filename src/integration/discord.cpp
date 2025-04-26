@@ -379,27 +379,28 @@ bool CDiscord::MatchHostName(const string& hostName) const
 
 bool CDiscord::CheckLibraries()
 {
+  PLATFORM_STRING_TYPE serviceName = PLATFORM_STRING("Discord");
 #ifdef _WIN32
 #ifdef _WIN64
   return (
-    CheckDynamicLibrary(PLATFORM_STRING("dpp"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1-x64"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1-x64"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("opus"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("zlib1"), PLATFORM_STRING("Discord"))
+    CheckDynamicLibrary(PLATFORM_STRING("dpp"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1-x64"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1-x64"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("opus"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("zlib1"), serviceName)
   );
 #else
   return (
-    CheckDynamicLibrary(PLATFORM_STRING("dpp"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("opus"), PLATFORM_STRING("Discord")) &&
-    CheckDynamicLibrary(PLATFORM_STRING("zlib1"), PLATFORM_STRING("Discord"))
+    CheckDynamicLibrary(PLATFORM_STRING("dpp"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libcrypto-1_1"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("libssl-1_1"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("opus"), serviceName) &&
+    CheckDynamicLibrary(PLATFORM_STRING("zlib1"), serviceName)
   );
 #endif
 #else
   return (
-    CheckDynamicLibrary(PLATFORM_STRING("libdpp"), PLATFORM_STRING("Discord"))
+    CheckDynamicLibrary(PLATFORM_STRING("libdpp"), serviceName)
   );
 #endif
 }
