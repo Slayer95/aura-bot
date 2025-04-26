@@ -308,7 +308,7 @@ bool CIPAddressAPIConnection::QueryIPAddress()
   AppendByteArray(query, m_EndPoint, false);
   AppendByteArrayFast(query, httpVersion);
   AppendByteArrayFast(query, hostHeader);
-  AppendByteArray(query, m_HostName, false);
+  AppendByteArrayString(query, m_HostName, false);
   AppendByteArrayFast(query, end);
   m_Socket->PutBytes(query);
   m_SentQuery = true;

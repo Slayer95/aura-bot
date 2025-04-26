@@ -9892,7 +9892,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
   vector<uint8_t> action = {ACTION_CHAT_TRIGGER};
   AppendByteArray(action, firstValue, false);
   AppendByteArray(action, secondValue, false);
-  AppendByteArrayFast(action, message);
+  AppendByteArrayString(action, message, true);
   GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;
 }
@@ -9901,7 +9901,7 @@ bool CGame::SendChatTriggerBytes(const uint8_t UID, const string& message, const
 {
   vector<uint8_t> action = {ACTION_CHAT_TRIGGER};
   AppendByteArrayFast(action, triggerBytes);
-  AppendByteArrayFast(action, message);
+  AppendByteArrayString(action, message, true);
   GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;
 }

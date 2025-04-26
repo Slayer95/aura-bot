@@ -681,7 +681,17 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const std::string& append, 
     b.push_back(0);
 }
 
-inline void AppendByteArrayFast(std::vector<uint8_t>& b, const std::string& append, bool terminator = true)
+inline void AppendByteArrayString(std::vector<uint8_t>& b, const std::string& append, bool terminator = true)
+{
+  // append the std::string plus a null terminator
+
+  b.insert(end(b), begin(append), end(append));
+
+  if (terminator)
+    b.push_back(0);
+}
+
+inline void AppendByteArrayString(std::vector<uint8_t>& b, std::string_view append, bool terminator = true)
 {
   // append the std::string plus a null terminator
 

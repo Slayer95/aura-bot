@@ -948,7 +948,7 @@ namespace BNETProtocol
       AppendByteArray(packet, FirstJoin, 4); // flags for first join
     }
 
-    AppendByteArrayFast(packet, channel);
+    AppendByteArrayString(packet, channel, true);
     AssignLength(packet);
 
     return packet;
@@ -957,7 +957,7 @@ namespace BNETProtocol
   vector<uint8_t> SEND_SID_CHAT_PUBLIC(const string& message)
   {
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::CHATMESSAGE, 0, 0};
-    AppendByteArrayFast(packet, message, true); // null-terminator
+    AppendByteArrayString(packet, message, true); // null-terminator
     AssignLength(packet);
     return packet;
   }
@@ -975,9 +975,9 @@ namespace BNETProtocol
   {
     // /w USER MESSAGE
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
-    AppendByteArrayFast(packet, user, false);
+    AppendByteArrayString(packet, user, false);
     packet.push_back(0x20);
-    AppendByteArrayFast(packet, message, true); // With null terminator
+    AppendByteArrayString(packet, message, true); // With null terminator
     AssignLength(packet);
     return packet;
   }
@@ -1040,8 +1040,8 @@ namespace BNETProtocol
     AppendByteArrayFast(StatString, mapWidth);
     AppendByteArrayFast(StatString, mapHeight);
     AppendByteArrayFast(StatString, mapCRC);
-    AppendByteArrayFast(StatString, mapPath);
-    AppendByteArrayFast(StatString, hostName);
+    AppendByteArrayString(StatString, mapPath, true);
+    AppendByteArrayString(StatString, hostName, true);
     StatString.push_back(0);
     AppendByteArrayFast(StatString, mapSHA1);
     StatString = EncodeStatString(StatString);
@@ -1065,10 +1065,10 @@ namespace BNETProtocol
       AppendByteArray(packet, mapGameType, false);           // Game Type, Parameter
       AppendByteArray(packet, Unknown, 4);                   // ???
       AppendByteArray(packet, CustomGame, 4);                // Custom Game
-      AppendByteArrayFast(packet, gameName);                 // Game Name
+      AppendByteArrayString(packet, gameName, true);         // Game Name
       packet.push_back(0);                                   // Game Password is NULL
       packet.push_back(86 + maxSupportedSlots);              // Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of UID's Warcraft III will allocate
-      AppendByteArrayFast(packet, HostCounterString, false); // Host Counter - exclude null terminator
+      AppendByteArrayString(packet, HostCounterString, false); // Host Counter - exclude null terminator
       AppendByteArrayFast(packet, StatString);               // Stat String
       packet.push_back(0);                                   // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
       AssignLength(packet);
@@ -1082,7 +1082,7 @@ namespace BNETProtocol
   vector<uint8_t> SEND_SID_NOTIFYJOIN(const string& gameName)
   {
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::NOTIFYJOIN, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0};
-    AppendByteArrayFast(packet, gameName);                    // Game Name
+    AppendByteArrayString(packet, gameName, true);            // Game Name
     packet.push_back(0);                                      // Game Password is NULL
     AssignLength(packet);
 
@@ -1107,7 +1107,7 @@ namespace BNETProtocol
     AppendByteArrayFast(packet, clientToken);                     // Client Token
     AppendByteArrayFast(packet, serverToken);                     // Server Token
     AppendByteArrayFast(packet, passwordHash);                    // Password Hash
-    AppendByteArrayFast(packet, accountName);                     // Account Name
+    AppendByteArrayString(packet, accountName, true);             // Account Name
     AssignLength(packet);
 
     return packet;
@@ -1152,8 +1152,8 @@ namespace BNETProtocol
     AppendByteArray(packet, TimeZoneBias, 4);                      // Time Zone Bias
     AppendByteArray(packet, localeID, false);                      // Locale ID
     AppendByteArray(packet, languageID, false);                    // Language ID
-    AppendByteArrayFast(packet, countryShort);                     // Country Abbreviation - PvPGN accepts up to 64 characters, including null terminator
-    AppendByteArrayFast(packet, country);                          // Country - PvPGN accepts up to 128 characters, including null terminator
+    AppendByteArrayString(packet, countryShort, true);             // Country Abbreviation - PvPGN accepts up to 64 characters, including null terminator
+    AppendByteArrayString(packet, country, true);                  // Country - PvPGN accepts up to 128 characters, including null terminator
     AssignLength(packet);
 
     return packet;
@@ -1175,8 +1175,8 @@ namespace BNETProtocol
     AppendByteArray(packet, static_cast<uint32_t>(0), false);       // boolean Using Spawn (32 bit)
     AppendByteArrayFast(packet, keyInfoROC);                        // ROC Key Info
     if (isExpansion) AppendByteArrayFast(packet, keyInfoTFT);       // TFT Key Info
-    AppendByteArrayFast(packet, exeInfo);                           // EXE Info
-    AppendByteArrayFast(packet, keyOwnerName);                      // CD Key Owner Name
+    AppendByteArrayString(packet, exeInfo, true);                   // EXE Info
+    AppendByteArrayString(packet, keyOwnerName, true);              // CD Key Owner Name
     AssignLength(packet);
     return packet;
   }
@@ -1184,12 +1184,12 @@ namespace BNETProtocol
   vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const array<uint8_t, 32>& clientPublicKey, const string& accountName)
   {
     vector<uint8_t> packet;
-    packet.push_back(BNETProtocol::Magic::BNET_HEADER);                          // BNET header constant
-    packet.push_back(BNETProtocol::Magic::AUTH_ACCOUNTLOGON);   // SID_AUTH_ACCOUNTLOGON
+    packet.push_back(BNETProtocol::Magic::BNET_HEADER);              // BNET header constant
+    packet.push_back(BNETProtocol::Magic::AUTH_ACCOUNTLOGON);        // SID_AUTH_ACCOUNTLOGON
     packet.push_back(0);                                             // packet length will be assigned later
     packet.push_back(0);                                             // packet length will be assigned later
     AppendByteArrayFast(packet, clientPublicKey);                    // Client Key
-    AppendByteArrayFast(packet, accountName);                        // Account Name
+    AppendByteArrayString(packet, accountName, true);                // Account Name
     AssignLength(packet);
     return packet;
   }
@@ -1214,7 +1214,7 @@ namespace BNETProtocol
     packet.push_back(0);                                                 // packet length will be assigned later
     packet.push_back(0);                                                 // packet length will be assigned later
     AppendByteArrayFast(packet, clientPasswordProof);                    // Client Password Proof
-    AppendByteArrayFast(packet, userName);
+    AppendByteArrayString(packet, userName, true);
     AssignLength(packet);
     return packet;
   }

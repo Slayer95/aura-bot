@@ -123,8 +123,8 @@ namespace VLANProtocol
     AppendByteArray(StatString, mapWidth);
     AppendByteArray(StatString, mapHeight);
     AppendByteArrayFast(StatString, mapCRC);
-    AppendByteArrayFast(StatString, mapPath);
-    AppendByteArrayFast(StatString, hostName);
+    AppendByteArrayString(StatString, mapPath, true);
+    AppendByteArrayString(StatString, hostName, true);
     StatString.push_back(0);
     StatString = EncodeStatString(StatString);
 
@@ -143,7 +143,7 @@ namespace VLANProtocol
     AppendByteArray(packet, static_cast<uint32_t>(war3Version.second), false);          // Version
     AppendByteArray(packet, hostCounter, false);          // Host Counter
     AppendByteArray(packet, entryKey, false);             // Entry Key
-    AppendByteArrayFast(packet, gameName);                // Game Name
+    AppendByteArrayString(packet, gameName, true);                // Game Name
     packet.push_back(0);                                  // ??? (maybe game password)
     AppendByteArrayFast(packet, StatString);              // Stat String
     packet.push_back(0);                                  // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
