@@ -4782,8 +4782,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
     if (overrideObserverUIDs.empty()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening to [" + user->GetName() + "] --")
     } else {
-      vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideObserverUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
-      SendMulti(overrideObserverUIDs, packet);
+      SendMulti(overrideObserverUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideObserverUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage()));
     }
   } else if (forcePrivateChat) {
     if (m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags != CHAT_RECV_OBS) {
@@ -4794,8 +4793,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
           if (extraFlags != CHAT_RECV_ALL) {
             LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All]")
           }
-          vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
-          SendMulti(overrideTargetUIDs, packet);
+          SendMulti(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage()));
         }
       } else if (extraFlags != CHAT_RECV_ALL) { 
         LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All], but muteAll is active (message from [" + user->GetName() + "] discarded)")
@@ -4805,13 +4803,14 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
       vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatMessage.GetFromUID()); // filters users in loading screen out
       uint32_t overrideExtraFlags = CHAT_RECV_OBS;
       if (!overrideTargetUIDs.empty()) {
-        vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
-        SendMulti(overrideTargetUIDs, packet);
+        SendMulti(overrideTargetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage()));
         if (extraFlags != CHAT_RECV_OBS) {
           LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] enforced server-side")
         }
       }
     }
+  } else if (!m_GameLoading && !m_GameLoaded) {
+    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetFlag(), chatMessage.GetMessage()));
   } else {
     SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetFlag(), chatMessage.GetExtraFlags(), chatMessage.GetMessage()));
   }
@@ -5996,9 +5995,9 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
     const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
     cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
-      const string message = incomingChatMessage.GetMessage();
+      const string textContent = incomingChatMessage.GetMessage();
       string cmdToken, command, target;
-      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
+      uint8_t tokenMatch = ExtractMessageTokensAny(textContent, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
       isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
       if (isCommand) {
         cmdHistory->SetUsedAnyCommands(true);
@@ -6012,13 +6011,13 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
           ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, !m_MuteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
         } catch (...) {}
         if (ctx) ctx->Run(cmdToken, command, target);
-      } else if (message == "?trigger") {
+      } else if (textContent == "?trigger") {
         if (shouldRelay) {
           if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
           shouldRelay = false;
         }
         SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, false);
-      } else if (message == "/p" || message == "/ping" || message == "/game") {
+      } else if (textContent == "/p" || textContent == "/ping" || textContent == "/game") {
         // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
         // Therefore, these commands are only effective over LAN.
         if (shouldRelay) {
@@ -6031,7 +6030,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
         } catch (...) {}
         if (ctx) {
           cmdToken = m_Config.m_PrivateCmdToken;
-          command = message.substr(1);
+          command = textContent.substr(1);
           ctx->Run(cmdToken, command, target);
         }
       } else if (isLobbyChat && !cmdHistory->GetUsedAnyCommands()) {
@@ -6039,7 +6038,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
           if (!GetIsHiddenPlayerNames()) SendChatMessage(user, incomingChatMessage);
           shouldRelay = false;
         }
-        if (!CheckSmartCommands(user, message, activeSmartCommand, commandCFG) && !cmdHistory->GetSentAutoCommandsHelp()) {
+        if (!CheckSmartCommands(user, textContent, activeSmartCommand, commandCFG) && !cmdHistory->GetSentAutoCommandsHelp()) {
           bool anySentCommands = false;
           for (const auto& otherPlayer : m_Users) {
             if (otherPlayer->GetCommandHistory()->GetUsedAnyCommands()) anySentCommands = true;
@@ -6059,14 +6058,15 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
     }
     if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
       bool logMessage = false;
+      string textContent = incomingChatMessage.GetMessage();
       for (const auto& word : m_Config.m_LoggedWords) {
-        if (incomingChatMessage.GetMessage().find(word) != string::npos) {
+        if (textContent.find(word) != string::npos) {
           logMessage = true;
           break;
         }
       }
       if (logMessage) {
-        m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetExtendedName() + "] " + incomingChatMessage.GetMessage());
+        m_Aura->LogPersistent(GetLogPrefix() + chatTypeFragment + "["+ user->GetExtendedName() + "] " + textContent);
       }
     }
   }

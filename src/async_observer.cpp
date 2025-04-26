@@ -510,7 +510,11 @@ void CAsyncObserver::EventDesync()
   if (!m_GameHistory->GetSoftDesynchronized()) {
     m_GameHistory->SetSoftDesynchronized();
   }
-
+  if (m_Game.expired() || m_Game.lock()->GetAllowsDesync()) {
+    SendChat("Desync detected!! Your game client failed to replicate the game state.");
+    SendChat("You may continue to watch the game, but it may be corrupted.");
+    return;
+  }
   if (!CloseConnection()) {
     return;
   }
