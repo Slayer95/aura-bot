@@ -58,7 +58,7 @@ Continue building miniupnpc
 	make
 	sudo make install
 
-  (Or disable it by setting an environment variable: ``export AURALINKMINIUPNP=0``)
+  (Or disable it by setting an environment variable: ``export AURABUILD_MINIUPNP=0``)
   
 Afterwards, [C++ Requests][3]
 
@@ -71,7 +71,7 @@ Afterwards, [C++ Requests][3]
 	cmake --build . --parallel
 	cmake --install .
 
-  (Or disable it by setting an environment variable: ``export AURALINKCPR=0``)
+  (Or disable it by setting an environment variable: ``export AURABUILD_CPR=0``)
 
 Optionally, D++ for Discord integration. Note that this step can take around half an hour.
 
@@ -84,7 +84,7 @@ Optionally, D++ for Discord integration. Note that this step can take around hal
 	cmake --build . -j4
 	make install
 
-  (Or disable it by setting an environment variable: ``export AURALINKDPP=0``)
+  (Or disable it by setting an environment variable: ``export AURABUILD_DPP=0``)
 
 Then, proceed to build Aura:
 
