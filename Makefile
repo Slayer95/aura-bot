@@ -12,7 +12,7 @@ ifndef CXX
 endif
 
 CCFLAGS += -fno-builtin
-CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti -DDISABLE_PJASS
+CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti -DDISABLE_PJASS -DDISABLE_BONJOUR
 DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
@@ -84,6 +84,7 @@ OBJS = lib/base64/base64.o \
        src/config/config_net.o \
        src/auradb.o \
        src/bncsutil_interface.o \
+       src/bonjour.o \
        src/file_util.o \
        src/json.o \
        src/os_util.o \
