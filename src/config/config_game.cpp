@@ -101,7 +101,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LatencyDriftMax                        = CFG.GetUint16("hosting.latency.drift.max", 50);
 
   if (m_LatencyMin > m_LatencyMax) {
-    Print("<hosting.latency.min> cannot be larger than <hosting.latency.max = 10>");
+    Print("[CONFIG] Error - <hosting.latency.min> cannot be larger than <hosting.latency.max = 10>");
     CFG.SetFailed();
   }
 
@@ -109,19 +109,19 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_SyncLimitSafeMinMilliSeconds           = CFG.GetUint32("net.stop_lag.sync_limit.min_ms", 100);
 
   if (m_SyncLimitSafeMinMilliSeconds > m_SyncLimitMaxMilliSeconds) {
-    Print("<net.stop_lag.sync_limit.min_ms> cannot be larger than <net.start_lag.sync_limit.max_ms>");
+    Print("[CONFIG] Error - <net.stop_lag.sync_limit.min_ms> cannot be larger than <net.start_lag.sync_limit.max_ms>");
     CFG.SetFailed();
   }
 
   m_Latency                                = CFG.GetUint16("hosting.latency.default", 100);
 
   if (m_Latency < m_LatencyMin) {
-    Print("<hosting.latency.default> must be larger than <hosting.latency.min = 10>");
+    Print("[CONFIG] Error - <hosting.latency.default> must be larger than <hosting.latency.min = 10>");
     CFG.SetFailed();
   }
 
   if (m_Latency > m_LatencyMax) {
-    Print("<hosting.latency.default> must be smaller than <hosting.latency.max = 500>");
+    Print("[CONFIG] Error - <hosting.latency.default> must be smaller than <hosting.latency.max = 500>");
     CFG.SetFailed();
   }
 
@@ -133,17 +133,17 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_SyncLimit                              = CFG.GetUint32("net.start_lag.sync_limit.default", 32);
   m_SyncLimitSafe                          = CFG.GetUint32("net.stop_lag.sync_limit.default", 8);
   if (m_SyncLimit <= m_SyncLimitSafe) {
-    Print("<net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
+    Print("[CONFIG] Error - <net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
     CFG.SetFailed();
   }
 
   if (m_SyncLimitMaxMilliSeconds < m_Latency * m_SyncLimit) {
-    Print("<net.start_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimit) + " ms, which is larger than <net.start_lag.sync_limit.max_ms = " + to_string(m_SyncLimitMaxMilliSeconds) + ">");
+    Print("[CONFIG] Error - <net.start_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimit) + " ms, which is larger than <net.start_lag.sync_limit.max_ms = " + to_string(m_SyncLimitMaxMilliSeconds) + ">");
     CFG.SetFailed();
   }
 
   if (m_Latency * m_SyncLimitSafe < m_SyncLimitSafeMinMilliSeconds) {
-    Print("<net.stop_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimitSafe) + " ms, which is smaller than <net.stop_lag.sync_limit.min_ms = " + to_string(m_SyncLimitSafeMinMilliSeconds) + ">");
+    Print("[CONFIG] Error - <net.stop_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimitSafe) + " ms, which is smaller than <net.stop_lag.sync_limit.min_ms = " + to_string(m_SyncLimitSafeMinMilliSeconds) + ">");
     CFG.SetFailed();
   }
 
