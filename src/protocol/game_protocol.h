@@ -253,8 +253,8 @@ public:
   [[nodiscard]] inline bool                   GetIsCensored() const { return m_Censored; }
   [[nodiscard]] inline uint32_t               GetHostCounter() const { return m_HostCounter; }
   [[nodiscard]] inline uint32_t               GetEntryKey() const { return m_EntryKey; }
-  [[nodiscard]] inline std::string            GetName() const { return m_Name; }
-  [[nodiscard]] inline std::string            GetOriginalName() const { return m_OriginalName; }
+  [[nodiscard]] inline const std::string&     GetName() const { return m_Name; }
+  [[nodiscard]] inline const std::string&     GetOriginalName() const { return m_OriginalName; }
   [[nodiscard]] inline std::array<uint8_t, 4> GetIPv4Internal() const { return m_IPv4Internal; }
 
   void                                        UpdateCensored(uint8_t unsafeNameHandler, const bool pipeConsideredHarmful);
