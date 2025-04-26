@@ -613,40 +613,80 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const string& message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const string& message)
   {
-    if (!toUIDs.empty() && !message.empty() && message.size() < 255) {
-      Print("SEND_W3GS_CHAT_FROM_HOST(): <<" + message + ">>");
-      std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CHAT_FROM_HOST, 0, 0, static_cast<uint8_t>(toUIDs.size())};
-      AppendByteArrayFast(packet, toUIDs);    // receivers
-      packet.push_back(fromUID);              // sender
-      packet.push_back(flag);                 // flag
-      AppendByteArray(packet, flagExtra, false); // extra flag
-      AppendByteArrayFast(packet, message);   // message
-      AssignLength(packet);
-      return packet;
-    }
-
-    Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST: \"" + message + "\"");
-    return std::vector<uint8_t>();
+    vector<uint8_t> packet;
+    uint16_t length = static_cast<uint16_t>(12 + toUIDs.size() + message.size());
+    packet.reserve(length);
+    packet.push_back(GameProtocol::Magic::W3GS_HEADER);
+    packet.push_back(GameProtocol::Magic::CHAT_FROM_HOST);
+    AppendByteArray(packet, length, false);
+    packet.push_back(static_cast<uint8_t>(toUIDs.size()));
+    AppendByteArrayFast(packet, toUIDs);    // receivers
+    packet.push_back(fromUID);              // sender
+    packet.push_back(flag);                 // flag
+    AppendByteArray(packet, flagExtra, false); // extra flag
+    AppendByteArrayFast(packet, message, true);   // message
+    AssignLength(packet);
+    return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const string& message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const string& message)
   {
-    if (!toUIDs.empty() && !message.empty() && message.size() < 255)
-    {
-      std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::CHAT_FROM_HOST, 0, 0, static_cast<uint8_t>(toUIDs.size())};
-      AppendByteArrayFast(packet, toUIDs);    // receivers
-      packet.push_back(fromUID);              // sender
-      packet.push_back(flag);                 // flag
-      AppendByteArrayFast(packet, message);   // message
-      AssignLength(packet);
-      return packet;
+    vector<uint8_t> packet;
+    uint16_t length = static_cast<uint16_t>(8 + toUIDs.size() + message.size());
+    packet.reserve(length);
+    packet.push_back(GameProtocol::Magic::W3GS_HEADER);
+    packet.push_back(GameProtocol::Magic::CHAT_FROM_HOST);
+    AppendByteArray(packet, length, false);
+    packet.push_back(static_cast<uint8_t>(toUIDs.size()));
+    AppendByteArrayFast(packet, toUIDs);    // receivers
+    packet.push_back(fromUID);              // sender
+    packet.push_back(flag);                 // flag
+    AppendByteArrayFast(packet, message, true);   // message
+    AssignLength(packet);
+    return packet;
+  }
+
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const string& message)
+  {
+    if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size()) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_IN_GAME");
+      return vector<uint8_t>();
     }
 
-    Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST: \"" + message + "\"");
-    return std::vector<uint8_t>();
+    vector<uint8_t> packet;
+    packet.reserve(((message.size() + (MAX_IN_GAME_CHAT_SIZE - 1)) / MAX_IN_GAME_CHAT_SIZE) * (12 + toUIDs.size()) + message.size());
+    string leftMessage = message;
+    while (leftMessage.size() > MAX_IN_GAME_CHAT_SIZE) {
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, leftMessage.substr(0, MAX_IN_GAME_CHAT_SIZE)));
+      leftMessage = leftMessage.substr(MAX_IN_GAME_CHAT_SIZE);
+    }
+    if (!leftMessage.empty()) {
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, leftMessage));
+    }
+    return packet;
   }  
+
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const string& message)
+  {
+    if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size()) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_LOBBY");
+      return vector<uint8_t>();
+    }
+
+    vector<uint8_t> packet;
+    packet.reserve(((message.size() + (MAX_LOBBY_CHAT_SIZE - 1)) / MAX_LOBBY_CHAT_SIZE) * (8 + toUIDs.size()) + message.size());
+    string leftMessage = message;
+    while (leftMessage.size() > MAX_LOBBY_CHAT_SIZE) {
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, leftMessage.substr(0, MAX_LOBBY_CHAT_SIZE)));
+      leftMessage = leftMessage.substr(MAX_LOBBY_CHAT_SIZE);
+    }
+    if (!leftMessage.empty()) {
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, leftMessage));
+    }
+    return packet;
+  }
 
   std::vector<uint8_t> SEND_W3GS_START_LAG(vector<GameUser::CGameUser*> users)
   {

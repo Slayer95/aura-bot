@@ -2097,26 +2097,19 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
   }
 #endif
 
+  vector<uint8_t> packet;
   if (!m_GameLoading && !m_GameLoaded) {
-    if (message.size() > 254)
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message.substr(0, 254)));
-    else
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
+    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message);
   } else {
-    uint32_t targetCode = 3;
-
     // based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
-
     uint8_t SID = GetSIDFromUID(user->GetUID());
-
-    if (SID < m_Slots.size())
+    uint32_t targetCode = 3;
+    if (SID < m_Slots.size()) {
       targetCode += m_Slots[SID].GetColor();
-
-    if (message.size() > 127)
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message.substr(0, 127)));
-    else
-      SendAsChat(user, GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message));
+    }
+    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message);
   }
+  SendAsChat(user, packet);
 }
 
 void CGame::SendChat(uint8_t fromUID, uint8_t toUID, const string& message, const uint8_t logLevel) const
@@ -2167,34 +2160,13 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
 
   // send a public message to all users - it'll be marked [All] in Warcraft 3
 
-  uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
-  bool success = false;
-  if (message.size() < maxSize) {
-    if (!m_GameLoading && !m_GameLoaded) {
-      success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
-    } else {
-      success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, message));
-    }
+  vector<uint8_t> packet;
+  if (!m_GameLoading && !m_GameLoaded) {
+    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, message);
   } else {
-    string leftMessage = message;
-    while (leftMessage.size() > maxSize) {
-      if (!m_GameLoading && !m_GameLoaded) {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, leftMessage.substr(0, maxSize))) || success;
-      } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, leftMessage.substr(0, maxSize))) || success;
-      }
-      leftMessage = leftMessage.substr(maxSize);
-    }
-
-    if (!leftMessage.empty()) {
-      if (!m_GameLoading && !m_GameLoaded) {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, leftMessage)) || success;
-      } else {
-        success = SendAllAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, leftMessage)) || success;
-      }
-    }
+    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, message);
   }
-  return success;
+  return SendAllAsChat(packet);
 }
 
 bool CGame::SendAllChat(const string& message) const
@@ -2230,22 +2202,8 @@ bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
 
   // send a public message to all observers - it'll be marked [Observers] or [Referees] in Warcraft 3
 
-  uint8_t maxSize = !m_GameLoading && !m_GameLoaded ? 254 : 127;
-  bool success = false;
-  if (message.size() < maxSize) {
-    success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, message));
-  } else {
-    string leftMessage = message;
-    while (leftMessage.size() > maxSize) {
-      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, leftMessage.substr(0, maxSize))) || success;
-      leftMessage = leftMessage.substr(maxSize);
-    }
-
-    if (!leftMessage.empty()) {
-      success = SendObserversAsChat(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, leftMessage)) || success;
-    }
-  }
-  return success;
+  vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, message);
+  return SendObserversAsChat(packet);
 }
 
 bool CGame::SendObserverChat(const string& message) const
@@ -4824,7 +4782,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
     if (overrideObserverUIDs.empty()) {
       LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] --nobody listening to [" + user->GetName() + "] --")
     } else {
-      vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage.GetFromUID(), overrideObserverUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
+      vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideObserverUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
       SendMulti(overrideObserverUIDs, packet);
     }
   } else if (forcePrivateChat) {
@@ -4836,7 +4794,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
           if (extraFlags != CHAT_RECV_ALL) {
             LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] overriden into [All]")
           }
-          vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
+          vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
           SendMulti(overrideTargetUIDs, packet);
         }
       } else if (extraFlags != CHAT_RECV_ALL) { 
@@ -4847,7 +4805,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
       vector<uint8_t> overrideTargetUIDs = GetChatObserverUIDs(chatMessage.GetFromUID()); // filters users in loading screen out
       uint32_t overrideExtraFlags = CHAT_RECV_OBS;
       if (!overrideTargetUIDs.empty()) {
-        vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
+        vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), overrideTargetUIDs, chatMessage.GetFlag(), overrideExtraFlags, chatMessage.GetMessage());
         SendMulti(overrideTargetUIDs, packet);
         if (extraFlags != CHAT_RECV_OBS) {
           LOG_APP_IF(LOG_LEVEL_INFO, "[Obs/Ref] enforced server-side")
@@ -4855,7 +4813,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
       }
     }
   } else {
-    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetFlag(), chatMessage.GetExtraFlags(), chatMessage.GetMessage()));
+    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetFlag(), chatMessage.GetExtraFlags(), chatMessage.GetMessage()));
   }
 }
 

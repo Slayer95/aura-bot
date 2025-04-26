@@ -618,6 +618,9 @@ constexpr uint8_t CHAT_RECV_ALL = 0;
 constexpr uint8_t CHAT_RECV_ALLY = 1;
 constexpr uint8_t CHAT_RECV_OBS = 2;
 
+constexpr std::string::size_type MAX_LOBBY_CHAT_SIZE = 220;
+constexpr std::string::size_type MAX_IN_GAME_CHAT_SIZE = 120;
+
 // game_virtual_user.h
 
 constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_NONE = 0u;

@@ -164,8 +164,10 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_EMPTY_ACTIONS(uint32_t count);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(const ActionQueue& actions, uint16_t sendInterval);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(const ActionQueue& actions);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const std::string& message);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::string& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const std::string& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::string& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, const std::string& message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const std::string& message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<GameUser::CGameUser*> users);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
@@ -342,7 +344,7 @@ public:
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
   [[nodiscard]] inline const std::vector<uint8_t>&        GetToUIDs() const { return m_ToUIDs; }
   [[nodiscard]] inline uint8_t                            GetFlag() const { return m_Flag; }
-  [[nodiscard]] inline std::string                        GetMessage() const { return m_Message; }
+  [[nodiscard]] inline const std::string&                 GetMessage() const { return m_Message; }
   [[nodiscard]] inline uint8_t                            GetByte() const { return m_Byte; }
   [[nodiscard]] inline uint32_t                           GetExtraFlags() const { return m_ExtraFlags; }
 };

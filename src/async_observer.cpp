@@ -713,16 +713,10 @@ void CAsyncObserver::SendChat(const string& message)
     return;
   }
   if (!m_StartedLoading) {
-    if (message.size() > 254)
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_LOBBY, message.substr(0, 254)));
-    else
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
+    Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
   } else {
     uint32_t targetCode = static_cast<uint32_t>(3u + m_Color);
-    if (message.size() > 127)
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message.substr(0, 127)));
-    else
-      Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message));
+    Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message));
   }
 }
 
