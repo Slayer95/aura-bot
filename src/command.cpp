@@ -1568,14 +1568,16 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       string metaMessage = "[" + GetSender() + "]: " + target;
+      string filterFragment;
       bool success = false;
       if (isAllChat) {
         success = targetGame->SendAllChat(metaMessage);
       } else {
         success = targetGame->SendObserverChat(metaMessage);
+        filterFragment = "observers in ";
       }
       if (!success) {
-        ErrorReply("Failed to send chat message to [" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
+        ErrorReply("Failed to send chat message to " + filterFragment + "[" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
         break;
       }
       SendReply("Chat message sent.");

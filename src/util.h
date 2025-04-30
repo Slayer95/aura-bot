@@ -228,6 +228,11 @@ template <typename T>
   return ToDecString(version.first) + "." + ToDecString(version.second);
 }
 
+[[nodiscard]] inline uint32_t ToVersionFlattened(const Version& version)
+{
+  return 10000u + 100u * (uint32_t)(version.first - 1) + (uint32_t)(version.second);
+}
+
 [[nodiscard]] inline uint8_t ToVersionOrdinal(const Version& version)
 {
   return (version.first - 1) * 37 + version.second;

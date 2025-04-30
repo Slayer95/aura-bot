@@ -1,3 +1,4 @@
+
 #ifndef AURA_BONJOUR_H
 #define AURA_BONJOUR_H
 
@@ -33,11 +34,13 @@ public:
 #ifndef DISABLE_BONJOUR
   std::optional<std::pair<DNSServiceRef, DNSRecordRef>> FindGame(std::shared_ptr<CGame> nGame);
   void BroadcastGame(std::shared_ptr<CGame> nGame, const Version& gameVersion);
-  void BroadcastGameInner(std::shared_ptr<CGame> nGame, const std::string& gameName, const Version& gameVersion, DNSServiceRef service, DNSRecordRef record, bool isNew);
+  std::vector<uint8_t> GetGameBroadcastData(std::shared_ptr<CGame> nGame, const std::string& gameName, const Version& gameVersion);
   void StopBroadcastGame(std::shared_ptr<CGame> nGame);
 #endif
 
   bool static CheckLibrary();
+  std::string static GetRegisterType(std::shared_ptr<CGame> game, const Version& gameVersion);
+  std::string static ErrorCodeToString(DNSServiceErrorType errCode); // DNSServiceErrorType is simply int32_t
 };
 
 #endif // AURA_BONJOUR_H

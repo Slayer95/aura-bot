@@ -13,10 +13,10 @@ CBonjour::CBonjour(string interfs)
   //DNSServiceRegister(&m_Client, 0, kDNSServiceInterfaceIndexAny, "_blizzard", "_udp.local", "", NULL, (uint16_t)6112, 0, "", nullptr, NULL);
   interf = interfs;
 #ifndef DISABLE_BONJOUR  
-  int err = DNSServiceCreateConnection(&m_Admin);
-  if (err) Print("[MDNS] DNSServiceCreateConnection 1 failed: " + to_string(err) + "\n");
-  err = DNSServiceCreateConnection(&m_Client);
-  if (err) Print("[MDNS] DNSServiceCreateConnection 0 failed: " + to_string(err) + "\n");
+  DNSServiceErrorType err = DNSServiceCreateConnection(&m_Admin);
+  if (err) Print("[MDNS] DNSServiceCreateConnection (admin) failed: " + CBonjour::ErrorCodeToString(err) + "\n");
+  DNSServiceErrorType = DNSServiceCreateConnection(&m_Client);
+  if (err) Print("[MDNS] DNSServiceCreateConnection (client) failed: " + CBonjour::ErrorCodeToString(err) + "\n");
 
   Print("[MDNS] DNS registration finished");
 #endif
@@ -24,6 +24,11 @@ CBonjour::CBonjour(string interfs)
 
 CBonjour::~CBonjour()
 {
+  for (auto it = games.begin(); it != games.end(); it++) {
+    DNSServiceRefDeallocate(get<0>(*it));
+  }
+  games.clear();
+
 #ifndef DISABLE_BONJOUR
   if (m_Client) DNSServiceRefDeallocate(m_Client);
   if (m_Admin) DNSServiceRefDeallocate(m_Admin);
@@ -43,7 +48,7 @@ optional<pair<DNSServiceRef, DNSRecordRef>> CBonjour::FindGame(shared_ptr<CGame>
   return result;
 }
 
-void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName, const Version& gameVersion, DNSServiceRef service, DNSRecordRef record, bool isNew)
+vector<uint8_t> CBonjour::GetGameBroadcastData(shared_ptr<CGame> game, const string& gameName, const Version& gameVersion)
 {
   uint8_t slotsOff = static_cast<uint32_t>(game->GetNumSlots() == game->GetSlotsOpen() ? game->GetNumSlots() : game->GetSlotsOpen() + 1);
   uint32_t slotsTotal = game->GetNumSlots();
@@ -64,13 +69,13 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
   AppendByteArrayFast(statInfo, game->GetMap()->GetMapSHA1());
 
   if (statInfo.size() >= 0xFFFF) {
-    return;
+    return {};
   }
 
   vector<uint8_t> encodedStatString = EncodeStatString(statInfo);
 
   vector<uint8_t> game_data_d;
-  if (gameVersion.second >= 32) {
+  if (gameVersion >= GAMEVER(1u, 32u)) {
     // try this for games with short names on pre32?
     const std::array<uint8_t, 4> magicNumber = {0x01, 0x20, 0x43, 0x00}; // 1.32.6700 ??
     AppendByteArrayString(game_data_d, gameName, true);
@@ -104,7 +109,7 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
   w66.push_back(0x10);
   w66.push_back(0);
 
-  if (gameVersion.second != 30) {
+  if (gameVersion >= GAMEVER(1u, 31u)) {
     AppendProtoBufferFromLengthDelimitedS2S(w66, "players_num", ToDecString(slotsOff)); // slots taken??
     AppendProtoBufferFromLengthDelimitedS2S(w66, "_name", gameName);
     AppendProtoBufferFromLengthDelimitedS2S(w66, "players_max", to_string(slotsTotal));
@@ -151,49 +156,53 @@ void CBonjour::BroadcastGameInner(shared_ptr<CGame> game, const string& gameName
     AppendByteArrayString(w66, game_data, false);
   }
 
-  {
-    int err = 0;
-    if (isNew) {
-      err = DNSServiceAddRecord(service, &record, 0, 66, (uint16_t)w66.size(), reinterpret_cast<const char*>(w66.data()), 0);
-    } else {
-      err = DNSServiceUpdateRecord(service, record, kDNSServiceFlagsForce, (uint16_t)w66.size(), reinterpret_cast<const char*>(w66.data()), 0);
-    }
-    if (err) {
-      Print("[MDNS] DNSServiceAddRecord failed: " + to_string(err) + "\n");
-      return;
-    }
-    games.emplace_back(service, game, GetTime(), record);
-  }
+  return w66;
 }
 
 void CBonjour::BroadcastGame(shared_ptr<CGame> game, const Version& gameVersion)
 {
   optional<pair<DNSServiceRef, DNSRecordRef>> storedGame = FindGame(game);
 
-  DNSServiceRef service1 = nullptr;
+  DNSServiceRef service = nullptr;
   DNSRecordRef record = nullptr;
   string gameName = game->GetDiscoveryNameLAN();
+  DNSServiceErrorType err = 0;
 
   bool isNew = !storedGame.has_value();
   if (!isNew) {
-    service1 = storedGame->first;
+    service = storedGame->first;
     record = storedGame->second;
   } else {
-    string tmp = string("_blizzard._udp") + (game->GetIsExpansion() ? ",_w3xp" : ",_war3") + ToHexString(gameVersion.second + 10000);
-    const char* temp = tmp.c_str();
-    
-    service1 = m_Client;
-    int err = DNSServiceRegister(
+    string regType = CBonjour::GetRegisterType(game, gameVersion);
+    service = m_Client;
+    DNSServiceErrorType = DNSServiceRegister(
       &(storedGame->first), kDNSServiceFlagsShareConnection, kDNSServiceInterfaceIndexAny, gameName.c_str(),
-      temp, "local", NULL, ntohs(8152), 0, NULL, nullptr, NULL
+      regType.c_str(), "local", nullptr, htons(8152), 0, nullptr, nullptr, nullptr
     );
     if (err) {
-      Print("[MDNS] DNSServiceRegister 1 failed: " + to_string(err) + "\n");
+      Print("[MDNS] DNSServiceRegister failed: " + CBonjour::ErrorCodeToString(err) + "\n");
       return;
     }
   }
 
-  BroadcastGameInner(game, gameName, gameVersion, service1, record, isNew);
+  vector<uint8_t> broadcastData = GetGameBroadcastData(game, gameName, gameVersion);
+
+  if (isNew) {
+    err = DNSServiceAddRecord(service, &record, 0, 66, (uint16_t)broadcastData.size(), reinterpret_cast<const char*>(broadcastData.data()), 0);
+  } else {
+    err = DNSServiceUpdateRecord(service, record, kDNSServiceFlagsForce, (uint16_t)broadcastData.size(), reinterpret_cast<const char*>(broadcastData.data()), 0);
+  }
+  if (err) {
+    if (isNew) {
+      Print("[MDNS] DNSServiceAddRecord failed: " + CBonjour::ErrorCodeToString(err) + "\n");
+    } else {
+      Print("[MDNS] DNSServiceUpdateRecord failed: " + CBonjour::ErrorCodeToString(err) + "\n");
+    }
+    return;
+  }
+  if (isNew) {
+    games.emplace_back(service, game, GetTime(), record);
+  }
 }
 
 void CBonjour::StopBroadcastGame(shared_ptr<CGame> game)
@@ -212,4 +221,88 @@ bool CBonjour::CheckLibrary()
 {
   PLATFORM_STRING_TYPE serviceName = PLATFORM_STRING("Bonjour");
   return CheckDynamicLibrary(PLATFORM_STRING("dnssd"), serviceName);
+}
+
+string CBonjour::GetRegisterType(shared_ptr<CGame> game, const Version& gameVersion)
+{
+  string regType;
+  regType.reserve(24);
+  regType.append("_blizzard._udp"); // 14 chars
+  if (game->GetIsExpansion()) {
+    regType.append(",_w3xp"); // 6 chars
+  } else {
+    regType.append(",_war3");
+  }
+  regType.append(ToHexString(ToVersionFlattened(gameVersion))); // 4 chars
+  return regType;
+}
+
+string CBonjour::ErrorCodeToString(DNSServiceErrorType errCode)
+{
+  switch (errCode) {
+    case kDNSServiceErr_NoError:
+      return "ok";
+    case kDNSServiceErr_Unknown:
+      return "unknown";
+    case kDNSServiceErr_NoSuchName:
+      return "no such name";
+    case kDNSServiceErr_NoMemory:
+      return "no memory";
+    case kDNSServiceErr_BadParam:
+      return "bad param";
+    case kDNSServiceErr_BadReference:
+      return "bad reference";
+    case kDNSServiceErr_BadState:
+      return "bad state";
+    case kDNSServiceErr_BadFlags:
+      return "bad flags";
+    case kDNSServiceErr_Unsupported:
+      return "unsupported";
+    case kDNSServiceErr_NotInitialized:
+      return "not initialized";
+    case kDNSServiceErr_AlreadyRegistered:
+      return "already registered";
+    case kDNSServiceErr_NameConflict:
+      return "name conflict";
+    case kDNSServiceErr_Invalid:
+      return "invalid";
+    case kDNSServiceErr_Firewall:
+      return "firewall";
+    case kDNSServiceErr_Incompatible:
+      return "incompatible";
+    case kDNSServiceErr_BadInterfaceIndex:
+      return "bad interface index";
+    case kDNSServiceErr_Refused:
+      return "refused";
+    case kDNSServiceErr_NoSuchRecord:
+      return "no such record";
+    case kDNSServiceErr_NoAuth:
+      return "no auth";
+    case kDNSServiceErr_NoSuchKey:
+      return "no such key";
+    case kDNSServiceErr_NATTraversal:
+      return "NAT traversal";
+    case kDNSServiceErr_DoubleNAT:
+      return "double NAT";
+    case kDNSServiceErr_BadTime:
+      return "bad time";
+    case kDNSServiceErr_BadSig:
+      return "bad signature";
+    case kDNSServiceErr_BadKey:
+      return "bad key";
+    case kDNSServiceErr_Transient:
+      return "transient";
+    case kDNSServiceErr_ServiceNotRunning:
+      return "service not running";
+    case kDNSServiceErr_NATPortMappingUnsupported:
+      return "NAT port mapping unsupported";
+    case kDNSServiceErr_NATPortMappingDisabled:
+      return "NAT port mapping disabled";
+    case kDNSServiceErr_NoRouter:
+      return "no router";
+    case kDNSServiceErr_PollingMode:
+      return "polling mode";
+    case kDNSServiceErr_Timeout:
+      return "timeout";
+  }
 }

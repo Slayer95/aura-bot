@@ -859,7 +859,7 @@ optional<Version> CConfig::GetMaybeVersion(const string& key)
     CONFIG_ERROR(key, result);
   }
 
-  if (userValue->second >= 100) {
+  if (userValue->second >= 100) { // Values >= 100 break ToVersionFlattened
     Print("[CONFIG] Bad version. It must be 1.x or 2.x");
     CONFIG_ERROR(key, result);
   }
