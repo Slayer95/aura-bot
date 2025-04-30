@@ -15,7 +15,7 @@ CBonjour::CBonjour(string interfs)
 #ifndef DISABLE_BONJOUR  
   DNSServiceErrorType err = DNSServiceCreateConnection(&m_Admin);
   if (err) Print("[MDNS] DNSServiceCreateConnection (admin) failed: " + CBonjour::ErrorCodeToString(err) + "\n");
-  DNSServiceErrorType = DNSServiceCreateConnection(&m_Client);
+  err = DNSServiceCreateConnection(&m_Client);
   if (err) Print("[MDNS] DNSServiceCreateConnection (client) failed: " + CBonjour::ErrorCodeToString(err) + "\n");
 
   Print("[MDNS] DNS registration finished");
@@ -175,7 +175,7 @@ void CBonjour::BroadcastGame(shared_ptr<CGame> game, const Version& gameVersion)
   } else {
     string regType = CBonjour::GetRegisterType(game, gameVersion);
     service = m_Client;
-    DNSServiceErrorType = DNSServiceRegister(
+    DNSServiceErrorType err = DNSServiceRegister(
       &(storedGame->first), kDNSServiceFlagsShareConnection, kDNSServiceInterfaceIndexAny, gameName.c_str(),
       regType.c_str(), "local", nullptr, htons(8152), 0, nullptr, nullptr, nullptr
     );
