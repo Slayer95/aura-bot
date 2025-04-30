@@ -130,7 +130,7 @@ vector<uint8_t> CBonjour::GetGameBroadcastData(shared_ptr<CGame> game, const str
     w66.push_back(0x01); // Extra 0x01 ?!
     AppendByteArrayString(w66, game_data, false);
 
-    AppendProtoBufferFromLengthDelimitedS2C(w66, "game_id", ((gameVersion.second >= 32) ? 0x31: 0x32));
+    AppendProtoBufferFromLengthDelimitedS2C(w66, "game_id", ((gameVersion >= GAMEVER(1u, 32u) ? 0x31: 0x32)));
     AppendProtoBufferFromLengthDelimitedS2C(w66, "_flags", 0x30);
   } else {
     AppendProtoBufferFromLengthDelimitedS2S(w66, "game_secret", secret);
