@@ -275,6 +275,20 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
 
     if (m_Socket) {
       m_HostPort = m_Socket->GetPort();
+      vector<pair<uint8_t, GameDiscoveryInterface>> interfaces;
+      interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_LOOPBACK, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_LOOPBACK, CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_LOOPBACK)));
+      interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV4, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV4, CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4)));
+      interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV6, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV6, CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV6)));
+
+      Version version = std::max(m_SupportedGameVersionsMin, GAMEVER(1u, 30u));
+      while (version <= m_SupportedGameVersionsMax) {
+        for (auto& entry : interfaces) {
+          entry.second.InstallBonjour(m_Aura, shared_from_this(), version);
+        }
+        version = GetNextVersion(version);
+      }
+
+      m_NetInterfaces = FlatMap<uint8_t, GameDiscoveryInterface>(move(interfaces));
     } else {
       m_Exiting = true;
     }
@@ -632,6 +646,7 @@ CGame::~CGame()
   Reset();
   ReleaseMapBusyTimedLock();
 
+  m_Socket.reset();
   for (auto& user : m_Users) {
     delete user;
   }
@@ -3840,17 +3855,48 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
   }
 }
 
-uint16_t CGame::GetHostPortForDiscoveryInfo(const uint8_t protocol) const
+uint16_t CGame::CalcHostPortFromType(const uint8_t type) const
 {
-  // Uses <net.game_discovery.udp.tcp4_custom_port.value>
-  if (protocol == AF_INET)
-    return m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_HostPort;
+  switch (type) {
+    case GAME_DISCOVERY_INTERFACE_IPV4:
+      // Uses <net.game_discovery.udp.tcp4_custom_port.value>
+      if (m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4) {
+        return m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4;
+      }
+      return m_HostPort;
+    case GAME_DISCOVERY_INTERFACE_IPV6:
+      // Uses <net.game_discovery.udp.tcp6_custom_port.value>
+      if (m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP6) {
+        return m_Aura->m_Net.m_Config.m_UDPCustomPortTCP6;
+      }
+      return m_HostPort;
+    case GAME_DISCOVERY_INTERFACE_LOOPBACK:
+      return m_HostPort;
+    default:
+      return 0;
+  }
+}
 
-  // Uses <net.game_discovery.udp.tcp6_custom_port.value>
-  if (protocol == AF_INET6)
-    return m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP6 ? m_Aura->m_Net.m_Config.m_UDPCustomPortTCP6 : m_HostPort;
+uint16_t CGame::GetHostPortFromType(const uint8_t type) const
+{
+  const GameDiscoveryInterface* match = m_NetInterfaces.find(type);
+  if (!match) return 0;
+  return match->port;
+}
 
-  return m_HostPort;
+uint16_t CGame::GetHostPortFromTargetAddress(const sockaddr_storage* address) const
+{
+  if (isLoopbackAddress(address)) {
+    return GetHostPortFromType(GAME_DISCOVERY_INTERFACE_LOOPBACK);
+  }
+  switch (GetInnerIPVersion(address)) {
+    case AF_INET:
+      return GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
+    case AF_INET6:
+      return GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV6);
+    default:
+      return 0;
+  }
 }
 
 uint8_t CGame::CalcActiveReconnectProtocols() const
@@ -4136,11 +4182,7 @@ void CGame::AnnounceToAddress(string& addressLiteral, const optional<Version>& c
 
   sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, 6112);
-  if (isLoopbackAddress(address)) {
-    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(version, m_HostPort));
-  } else {
-    m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(version, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
-  }
+  m_Aura->m_Net.Send(address, GetGameDiscoveryInfo(version, GetHostPortFromTargetAddress(address)));
 }
 
 void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, const optional<Version>& customGameVersion)
@@ -4149,11 +4191,7 @@ void CGame::ReplySearch(sockaddr_storage* address, CSocket* socket, const option
   if (customGameVersion.has_value()) {
     version = customGameVersion.value();
   }
-  if (isLoopbackAddress(address)) {
-    socket->SendReply(address, GetGameDiscoveryInfo(version, m_HostPort));
-  } else {
-    socket->SendReply(address, GetGameDiscoveryInfo(version, GetHostPortForDiscoveryInfo(GetInnerIPVersion(address))));
-  }
+  socket->SendReply(address, GetGameDiscoveryInfo(version, GetHostPortFromTargetAddress(address)));
 }
 
 void CGame::SendGameDiscoveryCreate(const Version& version) const
@@ -4205,7 +4243,7 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 {
   // See CNet::SendGameDiscovery()
 
-  if (!m_Aura->m_Net.SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(AF_INET)))) {
+  if (!m_Aura->m_Net.SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4)))) {
     // Ensure the game is available at loopback.
     LOG_APP_IF(LOG_LEVEL_DEBUG, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
     m_Aura->m_Net.SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
@@ -4217,7 +4255,7 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
     if (isIPv6 && !m_Aura->m_Net.m_SupportTCPOverIPv6) {
       continue;
     }
-    m_Aura->m_Net.Send(&address, GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(isIPv6 ? AF_INET6 : AF_INET)));
+    m_Aura->m_Net.Send(&address, GetGameDiscoveryInfo(gameVersion, GetHostPortFromType(isIPv6 ? GAME_DISCOVERY_INTERFACE_IPV6 : GAME_DISCOVERY_INTERFACE_IPV4)));
   }
 
   // Send to active UDP in TCP tunnels and VLAN connections
@@ -4226,7 +4264,7 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
       for (auto& connection : serverConnections.second) {
         if (connection->GetDeleteMe()) continue;
         if (connection->GetIsUDPTunnel()) {
-          connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortForDiscoveryInfo(connection->GetUsingIPv6() ? AF_INET6 : AF_INET)));
+          connection->Send(GetGameDiscoveryInfo(gameVersion, GetHostPortFromType(connection->GetUsingIPv6() ? GAME_DISCOVERY_INTERFACE_IPV6 : GAME_DISCOVERY_INTERFACE_IPV4)));
         }
         if (connection->GetIsVLAN() && connection->HasGameVersion() && GetIsSupportedGameVersion(connection->GetGameVersion())) {
           SendGameDiscoveryInfoVLAN(connection);
@@ -4255,7 +4293,7 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       static_cast<uint32_t>(m_Slots.size()), // Total Slots
       static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1),
       IP,
-      GetHostPortForDiscoveryInfo(AF_INET),
+      GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4),
       m_HostCounter,
       m_EntryKey
     )

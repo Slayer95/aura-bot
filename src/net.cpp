@@ -386,6 +386,7 @@ bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
 CNet::CNet(CConfig& nCFG)
   : m_Aura(nullptr),
     m_Config(CNetConfig(nCFG)),
+    m_Bonjour(nullptr),
     m_SupportUDPOverIPv6(false),
     m_UDPMainServerEnabled(false),
     m_UDPMainServer(nullptr),
@@ -506,6 +507,8 @@ bool CNet::Init()
   if (m_VLANEnabled) {
     m_VLANServer = GetOrCreateTCPServer(m_VLANPort, "VLAN Server");
   }
+
+  m_Bonjour = CBonjour::CreateManager();
 
 #ifdef DISABLE_CPR
   QueryIPAddress();
@@ -1281,7 +1284,7 @@ bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t check
   }
 
   bool isVerbose = 0 != (checkMode & HEALTH_CHECK_VERBOSE);
-  const uint16_t gamePort = game->GetHostPortForDiscoveryInfo(AF_INET);
+  const uint16_t gamePort = game->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
   const uint32_t hostCounter = game->GetHostCounter();
 
   if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV4)) {
@@ -1809,18 +1812,18 @@ bool CNet::ResolveHostName(sockaddr_storage& address, const uint8_t acceptFamily
   return false;
 }
 
-CTCPServer* CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
+shared_ptr<CTCPServer> CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
 {
   auto it = m_GameServers.find(inputPort);
   if (it != m_GameServers.end()) {
     Print("[TCP] " + name + " assigned to port " + to_string(inputPort));
     return it->second;
   }
-  CTCPServer* gameServer = new CTCPServer(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
+  shared_ptr<CTCPServer> gameServer = make_shared<CTCPServer>(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
   if (!gameServer->Listen(m_SupportTCPOverIPv6 ? m_Config.m_BindAddress6 : m_Config.m_BindAddress4, inputPort, false)) {
     Print("[TCP] " + name + " Error listening on port " + to_string(inputPort));
-    delete gameServer;
-    return nullptr;
+    gameServer.reset();
+    return gameServer;
   }
   uint16_t assignedPort = gameServer->GetPort();
   m_GameServers[assignedPort] = gameServer;
@@ -2027,13 +2030,12 @@ CNet::~CNet()
 
   for (auto it = m_GameServers.begin(); it != m_GameServers.end();) {
     if (it->second != m_VLANServer) {
-      delete it->second;
+      it->second.reset();
     }
     it = m_GameServers.erase(it);
   }
   if (m_VLANServer) {
-    delete m_VLANServer;
-    m_VLANServer = nullptr;
+    m_VLANServer.reset();
   }
 
   FlushDNSCache();
@@ -2042,6 +2044,8 @@ CNet::~CNet()
   ResetIPAddressFetch();
   FlushOutgoingThrottles();
   m_HealthCheckContext.reset();
+
+  CBonjour::Destroy(m_Bonjour);
 
   if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
     Print("[NET] shutdown ok");

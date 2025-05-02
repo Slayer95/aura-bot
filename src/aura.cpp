@@ -2273,7 +2273,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 #ifndef DISABLE_MINIUPNP
   if (m_Net.m_Config.m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // FIXME? This is a long synchronous network call.
-    m_Net.RequestUPnP(NET_PROTOCOL_TCP, createdLobby->GetHostPortForDiscoveryInfo(AF_INET), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
+    m_Net.RequestUPnP(NET_PROTOCOL_TCP, createdLobby->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
   }
 #endif
 

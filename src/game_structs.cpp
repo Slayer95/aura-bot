@@ -23,6 +23,7 @@
 
  */
 
+#include "bonjour.h"
 #include "game_structs.h"
 #include "game_controller_data.h"
 #include "game_user.h"
@@ -210,3 +211,29 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
   }
   return false;
 }
+
+//
+// GameDiscoveryInterface
+//
+
+GameDiscoveryInterface::GameDiscoveryInterface()
+ : type(GAME_DISCOVERY_INTERFACE_NONE),
+   port(0)
+{
+}
+
+GameDiscoveryInterface::GameDiscoveryInterface(uint8_t nType, uint16_t nPort)
+ : type(nType),
+   port(nPort)
+{
+}
+
+GameDiscoveryInterface::~GameDiscoveryInterface()
+{
+}
+
+void GameDiscoveryInterface::InstallBonjour(CAura* nAura, shared_ptr<CGame> game, const Version& version)
+{
+  SetBonjour(version, make_shared<CBonjour>(nAura, game, type, port, version));
+}
+

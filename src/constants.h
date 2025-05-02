@@ -287,6 +287,11 @@ constexpr uint8_t GAME_SAVES_PER_PLAYER = 1u;
 constexpr uint8_t GAME_SAVES_PER_REFEREE_ANTIABUSE = 3u;
 constexpr uint8_t GAME_SAVES_PER_REFEREE_DEFAULT = 255u;
 
+constexpr uint8_t GAME_DISCOVERY_INTERFACE_NONE = 0u;
+constexpr uint8_t GAME_DISCOVERY_INTERFACE_LOOPBACK = 1u;
+constexpr uint8_t GAME_DISCOVERY_INTERFACE_IPV4 = 2u;
+constexpr uint8_t GAME_DISCOVERY_INTERFACE_IPV6 = 3u;
+
 constexpr uint8_t GAME_ONGOING = 0u;
 constexpr uint8_t GAME_OVER_TRUSTED = 1u;
 constexpr uint8_t GAME_OVER_MMD = 2u;

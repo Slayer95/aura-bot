@@ -28,6 +28,7 @@
 
 #include "includes.h"
 #include "socket.h"
+#include "bonjour.h"
 #include "config/config_net.h"
 
 #pragma once
@@ -94,6 +95,11 @@ public:
 
   CAura*                                                      m_Aura;
   CNetConfig                                                  m_Config;
+#ifndef DISABLE_BONJOUR
+  DNSServiceRef                                               m_Bonjour;                                                 
+#else
+  void*                                                       m_Bonjour;
+#endif
 
   // == SECTION START ==
   // Implements non-reloadable config entries.
@@ -109,7 +115,7 @@ public:
   CUDPServer*                                                 m_UDPMainServer;             // (IPv4) UDP I/O at port 6112. Supports broadcasts. May also act as reverse-proxy for UDP traffic.
   CUDPServer*                                                 m_UDPDeafSocket;             // (IPv4) UDP outbound traffic. Uses <net.udp_fallback.outbound_port> (should NOT be 6112). Supports broadcasts.
   CUDPServer*                                                 m_UDPIPv6Server;
-  CTCPServer*                                                 m_VLANServer;
+  std::shared_ptr<CTCPServer>                                 m_VLANServer;
 
   uint16_t                                                    m_UDP4TargetPort;
   uint16_t                                                    m_UDP4TargetProxyPort;
@@ -117,7 +123,7 @@ public:
   sockaddr_storage*                                           m_MainBroadcastTarget;
   sockaddr_storage*                                           m_ProxyBroadcastTarget;
 
-  std::map<uint16_t, CTCPServer*>                             m_GameServers;
+  std::map<uint16_t, std::shared_ptr<CTCPServer>>             m_GameServers;
   std::map<uint16_t, std::vector<CConnection*>>               m_IncomingConnections;        // connections that haven't identified their protocol yet
   std::map<uint16_t, std::vector<CGameSeeker*>>               m_GameSeekers;                // connections that use complementary protocols, such as VLAN, or UDP over TCP
   std::map<uint16_t, std::vector<CAsyncObserver*>>            m_GameObservers;              // connections that are CAsyncObserver
@@ -170,7 +176,7 @@ public:
 
   bool                                          ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
   bool                                          ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<std::string, sockaddr_storage*>&);
-  [[nodiscard]] CTCPServer*                     GetOrCreateTCPServer(uint16_t, const std::string& name);
+  [[nodiscard]] std::shared_ptr<CTCPServer>     GetOrCreateTCPServer(uint16_t, const std::string& name);
   void                                          FlushDNSCache();
   void                                          FlushSelfIPCache();
   void                                          FlushOutgoingThrottles();

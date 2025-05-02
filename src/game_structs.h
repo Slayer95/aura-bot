@@ -211,5 +211,20 @@ struct BannableUserSearchResult
   [[nodiscard]] inline CDBBan& operator*() { return value(); }
 };
 
+struct GameDiscoveryInterface
+{
+  uint8_t type;
+  uint16_t port;
+  std::map<Version, std::shared_ptr<CBonjour>> bonjours;
+
+  GameDiscoveryInterface();
+  GameDiscoveryInterface(uint8_t nType, uint16_t nPort);
+  ~GameDiscoveryInterface();
+
+  inline std::shared_ptr<CBonjour> GetBonjour(const Version& version) { return bonjours[version]; }
+  inline void SetBonjour(const Version& version, std::shared_ptr<CBonjour> nBonjour) { bonjours[version] = nBonjour; }
+
+  void InstallBonjour(CAura* nAura, std::shared_ptr<CGame> nGame, const Version& version);
+};
 
 #endif // AURA_GAME_STRUCTS_H_

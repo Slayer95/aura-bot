@@ -35,6 +35,7 @@
 class CAsyncObserver;
 class CAura;
 class CAuraDB;
+class CBonjour;
 class CBNCSUtilInterface;
 class CCLI;
 class CCommandContext;
@@ -111,6 +112,7 @@ struct CommandHistory;
 struct FileChunkCached;
 struct FileChunkTransient;
 struct GameControllerSearchResult;
+struct GameDiscoveryInterface;
 struct GameHistory;
 struct GameInteraction;
 struct GameSource;

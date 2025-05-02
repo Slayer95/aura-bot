@@ -48,6 +48,7 @@
 
 #include "includes.h"
 #include "list.h"
+#include "flat_map.h"
 #include "async_observer.h"
 #include "locations.h"
 #include "map.h"
@@ -59,7 +60,6 @@
 #include "save_game.h"
 #include "socket.h"
 #include "config/config_game.h"
-
 
 //
 // CGame
@@ -86,7 +86,8 @@ private:
 
 protected:
   bool                                                   m_Verbose;
-  CTCPServer*                                            m_Socket;                        // listening socket
+  std::shared_ptr<CTCPServer>                            m_Socket;                        // listening socket
+  FlatMap<uint8_t, GameDiscoveryInterface>               m_NetInterfaces;
   CDBBan*                                                m_LastLeaverBannable;            // last ban for the !banlast command - this is a pointer to one of the items in m_Bannables
   std::vector<CDBBan*>                                   m_Bannables;                     // std::vector of potential ban data for the database
   std::vector<CDBBan*>                                   m_ScopeBans;                     // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
@@ -401,10 +402,12 @@ public:
   std::string                                            GetAutoStartText() const;
   std::string                                            GetReadyStatusText() const;
   std::string                                            GetCmdToken() const;
-  CTCPServer*                                            GetSocket() const { return m_Socket; };
+  std::shared_ptr<CTCPServer>                            GetSocket() const { return m_Socket; };
   UserList&                                              GetUsers() { return m_Users; }
 
-  uint16_t                                               GetHostPortForDiscoveryInfo(const uint8_t protocol) const;
+  uint16_t                                               CalcHostPortFromType(const uint8_t type) const;
+  uint16_t                                               GetHostPortFromType(const uint8_t type) const;
+  uint16_t                                               GetHostPortFromTargetAddress(const sockaddr_storage* address) const;
   inline bool                                            GetIsRealmExcluded(const std::string& hostName) const { return m_RealmsExcluded.find(hostName) != m_RealmsExcluded.end() ; }
   uint8_t                                                CalcActiveReconnectProtocols() const;
   std::string                                            GetActiveReconnectProtocolsDetails() const;
