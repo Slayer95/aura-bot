@@ -1408,8 +1408,8 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
     m_Byte(255),
     m_FromUID(nFromUID),
     m_Flag(nFlag),
-    m_ToUIDs(std::move(nToUIDs)),
     m_ExtraFlags(nExtraFlags)
+    m_ToUIDs(std::move(nToUIDs))
 {
 }
 
