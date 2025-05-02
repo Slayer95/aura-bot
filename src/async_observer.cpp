@@ -202,21 +202,21 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
                 break;
               }
               bool skipActions = false;
-              switch (Data[9]) {
+              switch (Data[8]) {
                 case ACTION_MINIMAPSIGNAL:
                 case ACTION_MODAL_BTN_CLICK:
                 case ACTION_MODAL_BTN:
                 case ACTION_PAUSE:
                 case ACTION_RESUME:
                 case ACTION_SAVE:
-                  skipActions = (Length == 8 + GameProtocol::GetActionSize(Data[9]));
+                  skipActions = (Length == 8 + GameProtocol::GetActionSize(Data[8]));
                   break;
                 case ACTION_SAVE_ENDED:
                   skipActions = true;
                   break;
               }
               if (!skipActions) {
-                Print(GetLogPrefix() + "got action <" + ByteArrayToHexString(Data.data() + 4, Length - 4) + ">");
+                Print(GetLogPrefix() + "got action <" + ByteArrayToHexString(Data.data() + 8, Length - 8) + ">");
               }
               break;
             }
