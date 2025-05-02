@@ -8,8 +8,10 @@ AURABUILD_PJASS ?= 0
 # Requires Make 3.80+
 define VALIDATE_BOOL
 $(eval $1 := $(strip $($1)))
-ifneq ($(filter $($1),0 1),$($1))
+ifneq ($($1),0)
+ifneq ($($1),1)
 $(error $1 must be 0 or 1, but got '$($1)')
+endif
 endif
 endef
 
