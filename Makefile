@@ -5,9 +5,15 @@ AURABUILD_MDNS ?= 0
 AURABUILD_MINIUPNP ?= 1
 AURABUILD_PJASS ?= 0
 
+AURABUILD_STATIC := $(strip $(AURABUILD_STATIC))
+AURABUILD_CPR := $(strip $(AURABUILD_CPR))
+AURABUILD_DPP := $(strip $(AURABUILD_DPP))
+AURABUILD_MDNS := $(strip $(AURABUILD_MDNS))
+AURABUILD_MINIUPNP := $(strip $(AURABUILD_MINIUPNP))
+AURABUILD_PJASS := $(strip $(AURABUILD_PJASS))
+
 # Requires Make 3.80+
 define VALIDATE_BOOL
-$(eval $1 := $(strip $($1)))
 ifneq ($($1),0)
 ifneq ($($1),1)
 $(error $1 must be 0 or 1, but got '$($1)')
