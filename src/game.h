@@ -650,9 +650,12 @@ public:
   // Observer features
   inline std::shared_ptr<GameHistory> GetGameHistory() { return m_GameHistory; }
   void                                JoinObserver(CConnection* connection, const CIncomingJoinRequest& joinRequest, std::shared_ptr<CRealm> fromRealm);
-  void                                EventObserverLeft(CAsyncObserver* user, const uint32_t clientReason);
   void                                EventObserverMapSize(CAsyncObserver* connection, const CIncomingMapFileSize& mapSize);
-  void                                EventObserverDisconnectProtocolError(CAsyncObserver* user);
+
+  // Initialization
+  void                                RegisterNetInterfaces();
+  void                                RegisterBonjour(GameDiscoveryInterface& interface);
+
 
   // Map transfer
   uint8_t                   CheckCanTransferMap(const CConnection* connection, std::shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission);
