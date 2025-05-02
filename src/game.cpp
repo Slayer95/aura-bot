@@ -269,27 +269,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     }
 
     // start listening for connections
-
-    uint16_t hostPort = nAura->m_Net.NextHostPort();
-    m_Socket = m_Aura->m_Net.GetOrCreateTCPServer(hostPort, "Game <<" + GetShortNameLAN() + ">>");
-
-    if (m_Socket) {
-      m_HostPort = m_Socket->GetPort();
-      vector<pair<uint8_t, GameDiscoveryInterface>> interfaces;
-      interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_LOOPBACK, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_LOOPBACK, CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_LOOPBACK)));
-      interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV4, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV4, CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4)));
-      interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV6, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV6, CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV6)));
-
-      Version version = std::max(m_SupportedGameVersionsMin, GAMEVER(1u, 30u));
-      while (version <= m_SupportedGameVersionsMax) {
-        for (auto& entry : interfaces) {
-          entry.second.InstallBonjour(m_Aura, shared_from_this(), version);
-        }
-        version = GetNextVersion(version);
-      }
-
-      m_NetInterfaces = FlatMap<uint8_t, GameDiscoveryInterface>(move(interfaces));
-    } else {
+    if (!InitNet()) {
       m_Exiting = true;
     }
 
@@ -332,6 +312,212 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
         ));
       }
     }
+  }
+}
+
+void CGame::InitPRNG()
+{
+  random_device rd;
+  mt19937 gen(rd());
+  uniform_int_distribution<uint32_t> dis;
+  m_RandomSeed = dis(gen);
+  m_EntryKey = dis(gen);
+}
+
+void CGame::InitSlots()
+{
+  if (m_RestoredGame) {
+    m_Slots = m_RestoredGame->GetSlots();
+    // reset user slots
+    for (auto& slot : m_Slots) {
+      if (slot.GetIsPlayerOrFake()) {
+        slot.SetUID(0);
+        slot.SetDownloadStatus(100);
+        slot.SetSlotStatus(SLOTSTATUS_OPEN);
+      }
+    }
+    return;
+  }
+
+  // Done at the CGame level rather than CMap,
+  // so that Aura is able to deal with outdated/bugged map configs.
+
+  m_Slots = m_Map->GetSlots();
+
+  const bool useObservers = m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES;
+
+  // Match actual observer slots to set map flags.
+  if (!useObservers) {
+    CloseObserverSlots();
+  }
+
+  const bool customForces = m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES;
+  const bool fixedPlayers = m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS;
+  bitset<MAX_SLOTS_MODERN> usedColors;
+  for (auto& slot : m_Slots) {
+    slot.SetUID(0);
+    slot.SetDownloadStatus(SLOTPROG_RST);
+
+    if (!fixedPlayers) {
+      slot.SetType(SLOTTYPE_USER);
+    } else switch (slot.GetType()) {
+      case SLOTTYPE_USER:
+        break;
+      case SLOTTYPE_COMP:
+        slot.SetComputer(SLOTCOMP_YES);
+        break;
+      default:
+        // Treat every other value as SLOTTYPE_AUTO
+        // CMap should never set SLOTTYPE_NONE
+        // I bet that we don't need to set SLOTTYPE_NEUTRAL nor SLOTTYPE_RESCUEABLE either,
+        // since we already got <map.num_disabled>
+        if (slot.GetIsComputer()) {
+          slot.SetType(SLOTTYPE_COMP);
+        } else {
+          slot.SetType(SLOTTYPE_USER);
+        }
+        break;
+    }
+
+    if (slot.GetComputer() > 0) {
+      // The way WC3 client treats computer slots defined from WorldEdit depends on the
+      // Fixed Player Settings flag:
+      //  - OFF: Any computer slots are ignored, and they are treated as Open slots instead.
+      //  - ON: Computer slots are enforced. They cannot be removed, or edited in any way.
+      //
+      // For Aura, enforcing computer slots with Fixed Player Settings ON is a must.
+      // However, we can support default editable computer slots when it's OFF, through mapcfg files.
+      //
+      // All this also means that when Fixed Player Settings is off, there are no unselectable slots.
+      slot.SetComputer(SLOTCOMP_YES);
+      slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
+    } else {
+      //slot.SetComputer(SLOTCOMP_NO);
+      slot.SetSlotStatus(slot.GetSlotStatus() & SLOTSTATUS_VALID_INITIAL_NON_COMPUTER);
+    }
+
+    if (!slot.GetIsSelectable()) {
+      // There is no way to define default handicaps/difficulty using WorldEdit,
+      // and unselectable cannot be changed in the game lobby.
+      slot.SetHandicap(100);
+      slot.SetComputerType(SLOTCOMP_NORMAL);
+    } else {
+      // Handicap valid engine values are 50, 60, 70, 80, 90, 100
+      // The other 250 uint8 values may be set on-the-fly by Aura,
+      // and are used by maps that implement HCL.
+      //
+      // Aura supports default handicaps through mapcfg files.
+      uint8_t handicap = slot.GetHandicap() / 10;
+      if (handicap < 5) handicap = 5;
+      if (handicap > 10) handicap = 10;
+      slot.SetHandicap(handicap * 10);
+      slot.SetComputerType(slot.GetComputerType() & SLOTCOMP_VALID);
+    }
+
+    if (!customForces) {
+      // default user-customizable slot is always observer
+      // only when users join do we assign them a team
+      // (if they leave, the slots are reset to observers)
+      slot.SetTeam(m_Map->GetVersionMaxSlots());
+    }
+
+    // Ensure colors are unique for each playable slot.
+    // Observers must have color 12 or 24, according to game version.
+    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) {
+      slot.SetColor(m_Map->GetVersionMaxSlots());
+    } else {
+      const uint8_t originalColor = slot.GetColor();
+      if (usedColors.test(originalColor)) {
+        uint8_t testColor = originalColor;
+        do {
+          testColor = (testColor + 1) % m_Map->GetVersionMaxSlots();
+        } while (usedColors.test(testColor) && testColor != originalColor);
+        slot.SetColor(testColor);
+        usedColors.set(testColor);
+      } else {
+        usedColors.set(originalColor);
+      }
+    }
+
+    // When Fixed Player Settings is enabled, MAPFLAG_RANDOMRACES cannot be turned on.
+    if (!fixedPlayers && (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)) {
+      slot.SetRace(SLOTRACE_RANDOM);
+    } else {
+      // Ensure race is unambiguous. It's defined as a bitfield,
+      // so we gotta unset contradictory bits.
+      bitset<8> slotRace(slot.GetRace());
+      slotRace.reset(7);
+      if (fixedPlayers) {
+        // disable SLOTRACE_SELECTABLE
+        slotRace.reset(6);
+      } else {
+        // enable SLOTRACE_SELECTABLE
+        slotRace.set(6);
+      }
+      slotRace.reset(4);
+      uint8_t chosenRaceBit = 5; // SLOTRACE_RANDOM
+      bool foundRace = false;
+      while (chosenRaceBit--) {
+        // Iterate backwards so that SLOTRACE_RANDOM is preferred
+        // Why? Because if someone edited the mapcfg with an ambiguous race,
+        // it's likely they don't know what they are doing.
+        if (foundRace) {
+          slotRace.reset(chosenRaceBit);
+        } else {
+          foundRace = slotRace.test(chosenRaceBit);
+        }
+      }
+      if (!foundRace) { // Slot is missing a default race.
+        chosenRaceBit = 5; // SLOTRACE_RANDOM
+        slotRace.set(chosenRaceBit);
+        while (chosenRaceBit--) slotRace.reset(chosenRaceBit);
+      }
+      slot.SetRace(static_cast<uint8_t>(slotRace.to_ulong()));
+    }
+  }
+
+  if (useObservers) {
+    OpenObserverSlots();
+  }
+
+  if (m_Map->GetHMCEnabled()) {
+    CreateHMCPlayer();
+  }
+}
+
+bool CGame::InitNet()
+{
+  uint16_t hostPort = m_Aura->m_Net.NextHostPort();
+  m_Socket = m_Aura->m_Net.GetOrCreateTCPServer(hostPort, "Game <<" + GetShortNameLAN() + ">>");
+
+  if (!m_Socket) {
+    return false;
+  }
+
+  m_HostPort = m_Socket->GetPort();
+  vector<pair<uint8_t, GameDiscoveryInterface>> interfaces;
+  uint16_t port = CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_LOOPBACK);
+  interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_LOOPBACK, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_LOOPBACK, port));
+  port = CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
+  interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV4, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV4, port));
+  port = CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV6);
+  interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV6, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV6, port));
+
+  for (auto& entry : interfaces) {
+    InitBonjour(entry.second);
+  }
+
+  m_NetInterfaces = FlatMap<uint8_t, GameDiscoveryInterface>(move(interfaces));
+  return true;
+}
+
+void CGame::InitBonjour(GameDiscoveryInterface& interface)
+{
+  Version version = std::max(m_SupportedGameVersionsMin, GAMEVER(1u, 30u));
+  while (version <= m_SupportedGameVersionsMax) {
+    if (!GetIsSupportedGameVersion(version)) continue;
+    interface.AddBonjour(m_Aura, shared_from_this(), version);
+    version = GetNextVersion(version);
   }
 }
 
@@ -653,176 +839,6 @@ CGame::~CGame()
 
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
-  }
-}
-
-void CGame::InitPRNG()
-{
-  random_device rd;
-  mt19937 gen(rd());
-  uniform_int_distribution<uint32_t> dis;
-  m_RandomSeed = dis(gen);
-  m_EntryKey = dis(gen);
-}
-
-void CGame::InitSlots()
-{
-  if (m_RestoredGame) {
-    m_Slots = m_RestoredGame->GetSlots();
-    // reset user slots
-    for (auto& slot : m_Slots) {
-      if (slot.GetIsPlayerOrFake()) {
-        slot.SetUID(0);
-        slot.SetDownloadStatus(100);
-        slot.SetSlotStatus(SLOTSTATUS_OPEN);
-      }
-    }
-    return;
-  }
-
-  // Done at the CGame level rather than CMap,
-  // so that Aura is able to deal with outdated/bugged map configs.
-
-  m_Slots = m_Map->GetSlots();
-
-  const bool useObservers = m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES;
-
-  // Match actual observer slots to set map flags.
-  if (!useObservers) {
-    CloseObserverSlots();
-  }
-
-  const bool customForces = m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES;
-  const bool fixedPlayers = m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS;
-  bitset<MAX_SLOTS_MODERN> usedColors;
-  for (auto& slot : m_Slots) {
-    slot.SetUID(0);
-    slot.SetDownloadStatus(SLOTPROG_RST);
-
-    if (!fixedPlayers) {
-      slot.SetType(SLOTTYPE_USER);
-    } else switch (slot.GetType()) {
-      case SLOTTYPE_USER:
-        break;
-      case SLOTTYPE_COMP:
-        slot.SetComputer(SLOTCOMP_YES);
-        break;
-      default:
-        // Treat every other value as SLOTTYPE_AUTO
-        // CMap should never set SLOTTYPE_NONE
-        // I bet that we don't need to set SLOTTYPE_NEUTRAL nor SLOTTYPE_RESCUEABLE either,
-        // since we already got <map.num_disabled>
-        if (slot.GetIsComputer()) {
-          slot.SetType(SLOTTYPE_COMP);
-        } else {
-          slot.SetType(SLOTTYPE_USER);
-        }
-        break;
-    }
-
-    if (slot.GetComputer() > 0) {
-      // The way WC3 client treats computer slots defined from WorldEdit depends on the
-      // Fixed Player Settings flag:
-      //  - OFF: Any computer slots are ignored, and they are treated as Open slots instead.
-      //  - ON: Computer slots are enforced. They cannot be removed, or edited in any way.
-      //
-      // For Aura, enforcing computer slots with Fixed Player Settings ON is a must.
-      // However, we can support default editable computer slots when it's OFF, through mapcfg files.
-      //
-      // All this also means that when Fixed Player Settings is off, there are no unselectable slots.
-      slot.SetComputer(SLOTCOMP_YES);
-      slot.SetSlotStatus(SLOTSTATUS_OCCUPIED);
-    } else {
-      //slot.SetComputer(SLOTCOMP_NO);
-      slot.SetSlotStatus(slot.GetSlotStatus() & SLOTSTATUS_VALID_INITIAL_NON_COMPUTER);
-    }
-
-    if (!slot.GetIsSelectable()) {
-      // There is no way to define default handicaps/difficulty using WorldEdit,
-      // and unselectable cannot be changed in the game lobby.
-      slot.SetHandicap(100);
-      slot.SetComputerType(SLOTCOMP_NORMAL);
-    } else {
-      // Handicap valid engine values are 50, 60, 70, 80, 90, 100
-      // The other 250 uint8 values may be set on-the-fly by Aura,
-      // and are used by maps that implement HCL.
-      //
-      // Aura supports default handicaps through mapcfg files.
-      uint8_t handicap = slot.GetHandicap() / 10;
-      if (handicap < 5) handicap = 5;
-      if (handicap > 10) handicap = 10;
-      slot.SetHandicap(handicap * 10);
-      slot.SetComputerType(slot.GetComputerType() & SLOTCOMP_VALID);
-    }
-
-    if (!customForces) {
-      // default user-customizable slot is always observer
-      // only when users join do we assign them a team
-      // (if they leave, the slots are reset to observers)
-      slot.SetTeam(m_Map->GetVersionMaxSlots());
-    }
-
-    // Ensure colors are unique for each playable slot.
-    // Observers must have color 12 or 24, according to game version.
-    if (slot.GetTeam() == m_Map->GetVersionMaxSlots()) {
-      slot.SetColor(m_Map->GetVersionMaxSlots());
-    } else {
-      const uint8_t originalColor = slot.GetColor();
-      if (usedColors.test(originalColor)) {
-        uint8_t testColor = originalColor;
-        do {
-          testColor = (testColor + 1) % m_Map->GetVersionMaxSlots();
-        } while (usedColors.test(testColor) && testColor != originalColor);
-        slot.SetColor(testColor);
-        usedColors.set(testColor);
-      } else {
-        usedColors.set(originalColor);
-      }
-    }
-
-    // When Fixed Player Settings is enabled, MAPFLAG_RANDOMRACES cannot be turned on.
-    if (!fixedPlayers && (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)) {
-      slot.SetRace(SLOTRACE_RANDOM);
-    } else {
-      // Ensure race is unambiguous. It's defined as a bitfield,
-      // so we gotta unset contradictory bits.
-      bitset<8> slotRace(slot.GetRace());
-      slotRace.reset(7);
-      if (fixedPlayers) {
-        // disable SLOTRACE_SELECTABLE
-        slotRace.reset(6);
-      } else {
-        // enable SLOTRACE_SELECTABLE
-        slotRace.set(6);
-      }
-      slotRace.reset(4);
-      uint8_t chosenRaceBit = 5; // SLOTRACE_RANDOM
-      bool foundRace = false;
-      while (chosenRaceBit--) {
-        // Iterate backwards so that SLOTRACE_RANDOM is preferred
-        // Why? Because if someone edited the mapcfg with an ambiguous race,
-        // it's likely they don't know what they are doing.
-        if (foundRace) {
-          slotRace.reset(chosenRaceBit);
-        } else {
-          foundRace = slotRace.test(chosenRaceBit);
-        }
-      }
-      if (!foundRace) { // Slot is missing a default race.
-        chosenRaceBit = 5; // SLOTRACE_RANDOM
-        slotRace.set(chosenRaceBit);
-        while (chosenRaceBit--) slotRace.reset(chosenRaceBit);
-      }
-      slot.SetRace(static_cast<uint8_t>(slotRace.to_ulong()));
-    }
-  }
-
-  if (useObservers) {
-    OpenObserverSlots();
-  }
-
-  if (m_Map->GetHMCEnabled()) {
-    CreateHMCPlayer();
   }
 }
 
@@ -4203,7 +4219,8 @@ void CGame::SendGameDiscoveryCreate(const Version& version) const
 void CGame::SendGameDiscoveryCreate() const
 {
   Version version = m_SupportedGameVersionsMin;
-  while (version <= m_SupportedGameVersionsMax) {
+  Version maxVersion = std::min(m_SupportedGameVersionsMax, GAMEVER(1u, 29u));
+  while (version <= maxVersion) {
     if (GetIsSupportedGameVersion(version)) {
       SendGameDiscoveryCreate(version);
     }
@@ -4303,7 +4320,8 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
 void CGame::SendGameDiscoveryInfo()
 {
   Version version = m_SupportedGameVersionsMin;
-  while (version <= m_SupportedGameVersionsMax) {
+  Version maxVersion = std::min(m_SupportedGameVersionsMax, GAMEVER(1u, 29u));
+  while (version <= maxVersion) {
     if (GetIsSupportedGameVersion(version)) {
       SendGameDiscoveryInfo(version);
     }

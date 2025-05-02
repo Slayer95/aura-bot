@@ -653,8 +653,10 @@ public:
   void                                EventObserverMapSize(CAsyncObserver* connection, const CIncomingMapFileSize& mapSize);
 
   // Initialization
-  void                                RegisterNetInterfaces();
-  void                                RegisterBonjour(GameDiscoveryInterface& interface);
+  void                                InitPRNG();
+  void                                InitSlots();
+  bool                                InitNet();
+  void                                InitBonjour(GameDiscoveryInterface& interface);
 
 
   // Map transfer
@@ -668,8 +670,6 @@ public:
 
   CGameSlot* GetSlot(const uint8_t SID);
   const CGameSlot* InspectSlot(const uint8_t SID) const;
-  void InitPRNG();
-  void InitSlots();
   bool SwapEmptyAllySlot(const uint8_t SID);
   bool SwapSlots(const uint8_t SID1, const uint8_t SID2);
   bool OpenSlot(const uint8_t SID, const bool kick);
