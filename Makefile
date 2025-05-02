@@ -12,16 +12,16 @@ AURABUILD_MDNS := $(strip $(AURABUILD_MDNS))
 AURABUILD_MINIUPNP := $(strip $(AURABUILD_MINIUPNP))
 AURABUILD_PJASS := $(strip $(AURABUILD_PJASS))
 
-# Requires Make 3.80+
-define VALIDATE_BOOL
-ifneq ($($1),0)
-ifneq ($($1),1)
-$(error $1 must be 0 or 1, but got '$($1)')
-endif
-endif
-endef
+# This doesn't work...
+#define VALIDATE_BOOL
+#ifneq ($($1),0)
+#ifneq ($($1),1)
+#$(error $1 must be 0 or 1, but got '$($1)')
+#endif
+#endif
+#endef
 
-$(foreach flag,AURABUILD_STATIC AURABUILD_CPR AURABUILD_DPP AURABUILD_MDNS AURABUILD_MINIUPNP AURABUILD_PJASS,$(eval $(call VALIDATE_BOOL,$(flag))))
+#$(foreach flag,AURABUILD_STATIC AURABUILD_CPR AURABUILD_DPP AURABUILD_MDNS AURABUILD_MINIUPNP AURABUILD_PJASS,$(eval $(call VALIDATE_BOOL,$(flag))))
 
 SHELL = /bin/sh
 SYSTEM = $(shell uname)
