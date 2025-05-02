@@ -78,7 +78,8 @@ ServiceUser::~ServiceUser()
 {
 }
 
-bool ServiceUser::operator==(const ServiceUser& other) const {
+void ServiceUser::operator==(const ServiceUser& other)
+{
   return (
     (serviceType == other.serviceType) &&
     (servicePtr.lock() == other.servicePtr.lock()) &&
@@ -87,6 +88,22 @@ bool ServiceUser::operator==(const ServiceUser& other) const {
     (userName == other.userName) &&
     (subLocation == other.subLocation)
   );
+}
+
+ServiceUser& ServiceUser::operator=(const ServiceUser& other)
+{
+  if (this != &other) {
+    serviceType = other.serviceType;
+    servicePtr = other.servicePtr.lock();
+    if (other.userIdentifier.has_value()) {
+      userIdentifier = other.userIdentifier.value();
+    } else {
+      userIdentifier.reset();
+    }
+    userName = other.userName;
+    subLocation = other.subLocation;
+  }
+  return *this;
 }
 
 //
@@ -160,4 +177,14 @@ bool GameSource::operator==(const GameSource& other) const
     (game.lock() == other.game.lock()) &&
     reinterpret_cast<const void*>(user) == reinterpret_cast<const void*>(other.user)
   );
+}
+
+GameSource& GameSource::operator=(const GameSource& other)
+{
+  if (this != &other) {
+    userType = other.userType;
+    game = other.game.lock();
+    user = reinterpret_cast<GameUser::CGameUser*>(other.user);
+  }
+  return *this;
 }

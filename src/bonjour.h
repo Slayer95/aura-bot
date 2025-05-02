@@ -27,7 +27,7 @@ public:
 
 #ifdef DISABLE_BONJOUR
   inline DNSServiceRef static CreateManager() { return nullptr; }
-  inline void static Destroy(void* ptr) {}
+  inline void static Destroy(void* /*ptr*/) {}
 #else
   DNSServiceRef static CreateManager();
   void static Destroy(DNSServiceRef service);

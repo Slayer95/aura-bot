@@ -190,6 +190,7 @@ struct ServiceUser
     return subLocation;
   }
 
+  ServiceUser& operator=(const ServiceUser& other);
   bool operator==(const ServiceUser& other) const;
 };
 
@@ -229,6 +230,7 @@ struct GameSource
   void Expire();
   void Reset();
 
+  GameSource& operator=(const GameSource& other);
   bool operator==(const GameSource& other) const;
 };
 
