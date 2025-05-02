@@ -78,7 +78,7 @@ ServiceUser::~ServiceUser()
 {
 }
 
-bool ServiceUser::operator==(const ServiceUser& other)
+bool ServiceUser::operator==(const ServiceUser& other) const
 {
   return (
     (serviceType == other.serviceType) &&
