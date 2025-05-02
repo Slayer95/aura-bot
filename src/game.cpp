@@ -833,6 +833,8 @@ CGame::~CGame()
   ReleaseMapBusyTimedLock();
 
   m_Socket.reset();
+  m_Aura->m_Net.ClearStaleServers();
+
   for (auto& user : m_Users) {
     delete user;
   }

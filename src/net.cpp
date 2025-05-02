@@ -535,9 +535,11 @@ uint32_t CNet::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds)
     ++NumFDs;
   }
 
-  for (const auto& server : m_GameServers) {
-    server.second->SetFD(fd, send_fd, nfds);
-    ++NumFDs;
+  for (const auto& entry : m_GameServers) {
+    if (auto server = entry.second.lock()) {
+      server->SetFD(fd, send_fd, nfds);
+      ++NumFDs;
+    }
   }
 
   for (const auto& serverConnections : m_IncomingConnections) {
@@ -568,37 +570,39 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
 {
   // if hosting a lobby, accept new connections to its game server
 
-  for (const auto& server : m_GameServers) {
-    if (m_Aura->m_ExitingSoon) {
-      server.second->Discard(fd);
-      continue;
-    }
-    uint16_t localPort = server.first;
-    if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-      server.second->Discard(fd);
-      continue;
-    }
-    CStreamIOSocket* socket = server.second->Accept(fd);
-    if (socket) {
-      if (m_Config.m_ProxyReconnect > 0) {
-        CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
-        DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
-        m_IncomingConnections[localPort].push_back(incomingConnection);
-      } else if (m_Aura->m_Lobbies.empty() && m_Aura->m_JoinInProgressGames.empty()) {
-        DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] connection to port " + to_string(localPort) + " rejected.")
-        delete socket;
-      } else {
-        CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
-        DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
-        m_IncomingConnections[localPort].push_back(incomingConnection);
+  for (const auto& entry : m_GameServers) {
+    if (auto server = entry.second.lock()) {
+      if (m_Aura->m_ExitingSoon) {
+        server->Discard(fd);
+        continue;
       }
+      uint16_t localPort = entry.first;
       if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-        PRINT_IF(LOG_LEVEL_WARNING, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections")
+        server->Discard(fd);
+        continue;
       }
-    }
+      CStreamIOSocket* socket = server->Accept(fd);
+      if (socket) {
+        if (m_Config.m_ProxyReconnect > 0) {
+          CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
+          DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+          m_IncomingConnections[localPort].push_back(incomingConnection);
+        } else if (m_Aura->m_Lobbies.empty() && m_Aura->m_JoinInProgressGames.empty()) {
+          DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] connection to port " + to_string(localPort) + " rejected.")
+          delete socket;
+        } else {
+          CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
+          DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+          m_IncomingConnections[localPort].push_back(incomingConnection);
+        }
+        if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
+          PRINT_IF(LOG_LEVEL_WARNING, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections")
+        }
+      }
 
-    if (server.second->HasError()) {
-      m_Aura->m_Exiting = true;
+      if (server->HasError()) {
+        m_Aura->m_Exiting = true;
+      }
     }
   }
 
@@ -1814,11 +1818,18 @@ bool CNet::ResolveHostName(sockaddr_storage& address, const uint8_t acceptFamily
 
 shared_ptr<CTCPServer> CNet::GetOrCreateTCPServer(uint16_t inputPort, const string& name)
 {
-  auto it = m_GameServers.find(inputPort);
-  if (it != m_GameServers.end()) {
-    Print("[TCP] " + name + " assigned to port " + to_string(inputPort));
-    return it->second;
+  {
+    auto it = m_GameServers.find(inputPort);
+    if (it != m_GameServers.end()) {
+      if (!it->second.expired()) {
+        Print("[TCP] " + name + " assigned to port " + to_string(inputPort));
+        return it->second.lock();
+      }
+      m_GameServers.erase(it);
+    }
+    // it maybe invalidated
   }
+
   shared_ptr<CTCPServer> gameServer = make_shared<CTCPServer>(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
   if (!gameServer->Listen(m_SupportTCPOverIPv6 ? m_Config.m_BindAddress6 : m_Config.m_BindAddress4, inputPort, false)) {
     Print("[TCP] " + name + " Error listening on port " + to_string(inputPort));
@@ -1950,6 +1961,17 @@ void CNet::EventRealmDeleted(shared_ptr<const CRealm> realm)
   }
 }
 
+void CNet::ClearStaleServers()
+{
+  for (auto it = begin(m_GameServers); it != end(m_GameServers);) {
+    if (it->second.expired()) {
+      it = m_GameServers.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 void CNet::GracefulExit()
 {
   ResetHealthCheck();
@@ -2028,12 +2050,11 @@ CNet::~CNet()
   delete m_MainBroadcastTarget;
   delete m_ProxyBroadcastTarget;
 
-  for (auto it = m_GameServers.begin(); it != m_GameServers.end();) {
-    if (it->second != m_VLANServer) {
-      it->second.reset();
-    }
-    it = m_GameServers.erase(it);
+  for (auto& entry : m_GameServers) {
+    entry.second.reset();
   }
+  m_GameServers.clear();
+
   if (m_VLANServer) {
     m_VLANServer.reset();
   }
