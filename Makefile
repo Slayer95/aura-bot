@@ -1,42 +1,77 @@
+AURABUILD_STATIC ?= 0
+AURABUILD_CPR ?= 1
+AURABUILD_DPP ?= 1
+AURABUILD_MDNS ?= 0
+AURABUILD_MINIUPNP ?= 1
+AURABUILD_PJASS ?= 0
+
+ifneq ($(filter $(AURABUILD_STATIC),0 1),$(AURABUILD_STATIC))
+$(error AURABUILD_STATIC must be 0 or 1, but got '$(AURABUILD_STATIC)')
+endif
+
+ifneq ($(filter $(AURABUILD_CPR),0 1),$(AURABUILD_CPR))
+$(error AURABUILD_CPR must be 0 or 1, but got '$(AURABUILD_CPR)')
+endif
+
+ifneq ($(filter $(AURABUILD_DPP),0 1),$(AURABUILD_DPP))
+$(error AURABUILD_DPP must be 0 or 1, but got '$(AURABUILD_DPP)')
+endif
+
+ifneq ($(filter $(AURABUILD_MDNS),0 1),$(AURABUILD_MDNS))
+$(error AURABUILD_MDNS must be 0 or 1, but got '$(AURABUILD_MDNS)')
+endif
+
+ifneq ($(filter $(AURABUILD_MINIUPNP),0 1),$(AURABUILD_MINIUPNP))
+$(error AURABUILD_MINIUPNP must be 0 or 1, but got '$(AURABUILD_MINIUPNP)')
+endif
+
+ifneq ($(filter $(AURABUILD_PJASS),0 1),$(AURABUILD_PJASS))
+$(error AURABUILD_PJASS must be 0 or 1, but got '$(AURABUILD_PJASS)')
+endif
+
 SHELL = /bin/sh
 SYSTEM = $(shell uname)
 ARCH = $(shell uname -m)
 INSTALL_DIR = /usr
-
-ifndef CC
-  CC = gcc
-endif
-
-ifndef CXX
-  CXX = g++
-endif
-
+CC ?= gcc
+CXX ?= g++
 CCFLAGS += -fno-builtin
-CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti -DDISABLE_PJASS -DDISABLE_BONJOUR
+CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti
 DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 LFLAGS += -pthread -L. -Llib/ -L/usr/local/lib/ -Ldeps/bncsutil/src/bncsutil/ -lgmp -lbz2 -lz -lstorm -lbncsutil
 
-ifeq ($(AURASTATIC),1)
+ifeq ($(AURABUILD_STATIC),1)
   LFLAGS += -static
 endif
 
-ifeq ($(AURALINKMINIUPNP),0)
-  CXXFLAGS += -DDISABLE_MINIUPNP
-else
-  LFLAGS += -lminiupnpc
-endif
-
-ifeq ($(AURALINKCPR),0)
-  CXXFLAGS += -DDISABLE_CPR
-else
+ifeq ($(AURABUILD_CPR),1)
   LFLAGS += -lcpr
+else
+  CXXFLAGS += -DDISABLE_CPR
 endif
 
-ifeq ($(AURALINKDPP),0)
-  CXXFLAGS += -DDISABLE_DPP
-else
+ifeq ($(AURABUILD_DPP),1)
   LFLAGS += -ldpp
+else
+  CXXFLAGS += -DDISABLE_DPP
+endif
+
+ifeq ($(AURABUILD_MINIUPNP),1)
+  LFLAGS += -lminiupnpc
+else
+  CXXFLAGS += -DDISABLE_MINIUPNP
+endif
+
+CXXFLAGS += -DDISABLE_PJASS
+CXXFLAGS += -DDISABLE_BONJOUR
+
+ifeq ($(AURABUILD_PJASS),1)
+$(error AURABUILD_PJASS is not yet supported. Please set AURABUILD_PJASS=0)
+endif
+
+ifeq ($(AURABUILD_MDNS),1)
+$(error AURABUILD_MDNS is not yet supported. Please set AURABUILD_MDNS=0)
 endif
 
 ifeq ($(ARCH),x86_64)
@@ -126,7 +161,8 @@ COBJS = lib/sqlite3/sqlite3.o
 PROG = aura
 
 all: $(OBJS) $(COBJS) $(PROG)
-	@echo "Used CFLAGS: $(CXXFLAGS)"
+	@echo "Used CCFLAGS: $(CCFLAGS)"
+	@echo "Used CXXFLAGS: $(CXXFLAGS)"
 
 $(PROG): $(OBJS) $(COBJS)
 	@$(CXX) -o aura $(OBJS) $(COBJS) $(CXXFLAGS) $(LFLAGS)
