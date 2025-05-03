@@ -5933,7 +5933,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
 {
   bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG));
   if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
-    m_Aura->LogPersistent(GetLogPrefix() + "[CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
+    m_Aura->LogPersistent(GetLogPrefix() + "[" + m_Map->GetServerFileName() + "] [CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
   }
 
   // Enable --log-level debug to figure out HMC map-specific constants
@@ -5959,11 +5959,11 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
   // IF those assumptions don't hold and it turns out that e.g. both uint32_t values are different, just set
   // (hex works, with 0x prefix)
   // <map.w3hmc.trigger.main = first>
-  // <map.w3hmc.trigger.main = second>
+  // <map.w3hmc.trigger.complement = second>
   //
 
   if (canLogChatTriggers) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered: [0x" + ToHexString(first) + " | 0x" + ToHexString(second) + "]")
+    LOG_APP_IF(LOG_LEVEL_DEBUG, "[" + m_Map->GetServerFileName() + "] Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered : [0x" + ToHexString(first) + " | 0x" + ToHexString(second) + "]")
   }
 
   if (m_Map->GetMapType() == "microtraining") {
