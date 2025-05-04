@@ -3605,7 +3605,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
 
   if (actionType == ACTION_ALLIANCE_SETTINGS && (actionEnd >= actionStart + 6u) && actionStart[1] < MAX_SLOTS_MODERN) {
     GameUser::CGameUser* user = GetUserFromUID(UID);
-    const bool wantsShare = (ByteArrayToUInt32(actionStart + 2u, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) > 0;
+    const bool wantsShare = (ByteArrayToUInt32(actionStart + 2u, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
     const uint8_t targetSID = actionStart[1];
     if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
       if (wantsShare) {
@@ -3678,7 +3678,7 @@ void CGame::SendAllActionsCallback()
   for (const ActionQueue& actionQueue : frame.actions) {
     for (const CIncomingAction& action : actionQueue) {
       vector<const uint8_t*> delimiters = action.SplitAtomic();
-      for (size_t i = 0, j = 1; j < delimiters.size(); i++, j++) {
+      for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
         EventOutgoingAtomicAction(action.GetUID(), delimiters[i], delimiters[j]);
       }
     }
@@ -5717,47 +5717,52 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
     return false;
   }
 
-  const uint8_t actionType = action.GetSniffedType();
   CQueuedActionsFrame& actionFrame = user->GetPingEqualizerFrame();
 
   user->CheckReleaseOnHoldActions();
   user->AddActionCounters();
 
-  if (actionType == ACTION_ALLIANCE_SETTINGS && action.GetLength() >= 6 && action.GetUint8(1) < MAX_SLOTS_MODERN) {
-    const bool wantsShare = (action.GetUint32LE(2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) > 0;
-    const uint8_t targetSID = action.GetUint8(1);
-    if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
-      if (wantsShare) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to grant shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
-      } else {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to take away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
-      }
-      GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
-      if (targetUser && wantsShare) {
-        switch (m_Config.m_ShareUnitsHandler) {
-          case ON_SHARE_UNITS_NATIVE:
-            break;
+  vector<const uint8_t*> delimiters = action.SplitAtomic();
+  for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
+    const uint8_t actionType = delimiters[i][0];
+    const size_t actionSize = delimiters[j] - delimiters[i];
+    if (actionType == ACTION_ALLIANCE_SETTINGS && actionSize >= 6 && delimiters[i][1] < MAX_SLOTS_MODERN) {
+      const bool wantsShare = (ByteArrayToUInt32(delimiters[i] + 2, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+      const uint8_t targetSID = delimiters[i][1];
 
-          case ON_SHARE_UNITS_RESTRICT:
-            if (
-              (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS) &&
-              (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
-            ) {
-              // This is a well-behaved map (at least if it's melee).
-              // Handle restriction on CGame::SendAllActionsCallback
+      if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
+        if (wantsShare) {
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to grant shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+        } else {
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to take away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+        }
+        GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
+        if (targetUser && wantsShare) {
+          switch (m_Config.m_ShareUnitsHandler) {
+            case ON_SHARE_UNITS_NATIVE:
               break;
-            }
 
-            // either the map is not well-behaved, or the client is rogue/griefer - instakick
-            // falls through
+            case ON_SHARE_UNITS_RESTRICT:
+              if (
+                (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS) &&
+                (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
+              ) {
+                // This is a well-behaved map (at least if it's melee).
+                // Handle restriction on CGame::SendAllActionsCallback
+                break;
+              }
 
-          case ON_SHARE_UNITS_KICK:
-          default:
-            user->SetLeftCode(PLAYERLEAVE_LOST);
-            user->SetLeftReason("autokicked - antishare");
-            SendChat(user, "[ANTISHARE] You have been automatically kicked out of the game.");
-            // Treat as unrecoverable protocol error
-            return false;
+              // either the map is not well-behaved, or the client is rogue/griefer - instakick
+              // falls through
+
+            case ON_SHARE_UNITS_KICK:
+            default:
+              user->SetLeftCode(PLAYERLEAVE_LOST);
+              user->SetLeftReason("autokicked - antishare");
+              SendChat(user, "[ANTISHARE] You have been automatically kicked out of the game.");
+              // Treat as unrecoverable protocol error
+              return false;
+          }
         }
       }
     }
@@ -5789,7 +5794,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
     }
   }
 
-  switch (actionType) {
+  switch (action.GetSniffedType()) {
     case ACTION_SAVE:
       LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
       SendAllChat("[" + user->GetDisplayName() + "] is saving the game");

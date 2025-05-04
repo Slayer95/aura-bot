@@ -1309,7 +1309,7 @@ uint32_t CIncomingAction::GetUint32BE(const size_t offset) const
 pair<bool, uint16_t> CIncomingAction::CountAPMAtomic(const vector<uint8_t>& action)
 {
   const size_t size = action.size();
-  pair<bool, uint16_t> result = make_pair<bool, uint16_t>(false, 0);
+  pair<bool, uint16_t> result = make_pair<bool, uint16_t>(false, 0); // <errored, count>
   size_t pos = 0, next = 0;
   uint8_t actionType = 0xFF;
   bool lastWasDeselect = false;
@@ -1364,6 +1364,10 @@ vector<const uint8_t*> CIncomingAction::SplitAtomic() const
       if (size <= pos + 4) {
         break;
       }
+    }
+
+    if (actionType == ACTION_W3API && size <= pos + 13) {
+      break;
     }
 
     size_t next = GameProtocol::GetNextActionPos(m_Action, pos);
