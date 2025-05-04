@@ -611,6 +611,8 @@ constexpr uint8_t ACTION_LAST = 0xA2; // pending
 constexpr uint8_t ACTION_SELECTION_MODE_ADD = 1;
 constexpr uint8_t ACTION_SELECTION_MODE_REMOVE = 2;
 
+constexpr uint8_t JN_ALLIANCE_SETTINGS_SYNC_DATA = 0xF0;
+
 constexpr uint32_t ALLIANCE_SETTINGS_ALLY = 0x1Fu;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_VISION = 0x20u;
 constexpr uint32_t ALLIANCE_SETTINGS_SHARED_CONTROL = 0x40u;

@@ -125,6 +125,10 @@ namespace GameProtocol
         if (messageEnd == messageStart) return pos;
         return messageEnd + 1;
       }
+      case ACTION_ALLIANCE_SETTINGS: { // 0x50
+        if (action[pos + 1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) return action.size();
+        return pos + 6;
+      }
       case ACTION_GAME_CACHE_INT: // 0x6B
       case ACTION_GAME_CACHE_REAL: // 0x6C
       case ACTION_GAME_CACHE_BOOL: // 0x6D
@@ -1022,6 +1026,8 @@ namespace GameProtocol
   //    - 0x17 ACTION_GROUP_HOTKEY_ASSIGN - Size is 4+8n, n is the second byte after and excluding the action type
   //    - 0x6E ACTION_GAME_CACHE_UNIT
   //    - 0x77 ACTION_W3API
+  // C. Variadic size due to third party plugins:
+  //    - 0x50 ACTION_ALLIANCE_SETTINGS - Regular size is 6, but if the next byte is 0xF0, size is ???
   //
   // Variable sizes are signaled by a size of 0xFF
 
@@ -1061,7 +1067,7 @@ namespace GameProtocol
 
     /* Row     0x50  0x51  0x52  0x53     0x54  0x55  0x56  0x57     0x58  0x59  0x5A  0x5B     0x5C  0x5D  0x5E  0x5F */
 
-    /* 0x50 */ 0x06, 0x0A, 0x00, 0x00,    0x00, 0x00, 0x01, 0x00,    0x00, 0x00, 0x00, 0x00,    0x00, 0x00, 0x00, 0x00,
+    /* 0x50 */ 0xFF, 0x0A, 0x00, 0x00,    0x00, 0x00, 0x01, 0x00,    0x00, 0x00, 0x00, 0x00,    0x00, 0x00, 0x00, 0x00,
 
 
     // Other versions
@@ -1324,6 +1330,10 @@ pair<bool, uint16_t> CIncomingAction::CountAPMAtomic(const vector<uint8_t>& acti
       }
     }
     if (actionType == ACTION_W3API && size <= pos + 13) {
+      result.first = true;
+      break;
+    }
+    if (actionType == ACTION_ALLIANCE_SETTINGS && size <= pos + 6) {
       result.first = true;
       break;
     }

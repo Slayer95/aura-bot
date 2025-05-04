@@ -5726,42 +5726,46 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
   for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
     const uint8_t actionType = delimiters[i][0];
     const size_t actionSize = delimiters[j] - delimiters[i];
-    if (actionType == ACTION_ALLIANCE_SETTINGS && actionSize >= 6 && delimiters[i][1] < MAX_SLOTS_MODERN) {
-      const bool wantsShare = (ByteArrayToUInt32(delimiters[i] + 2, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
-      const uint8_t targetSID = delimiters[i][1];
+    if (actionType == ACTION_ALLIANCE_SETTINGS && actionSize >= 6) {
+      if (delimiters[i][1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] synchronizing JNLoader data");
+      } else if (delimiters[i][1] < MAX_SLOTS_MODERN) {
+        const bool wantsShare = (ByteArrayToUInt32(delimiters[i] + 2, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+        const uint8_t targetSID = delimiters[i][1];
 
-      if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
-        if (wantsShare) {
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to grant shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
-        } else {
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to take away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
-        }
-        GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
-        if (targetUser && wantsShare) {
-          switch (m_Config.m_ShareUnitsHandler) {
-            case ON_SHARE_UNITS_NATIVE:
-              break;
-
-            case ON_SHARE_UNITS_RESTRICT:
-              if (
-                (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS) &&
-                (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
-              ) {
-                // This is a well-behaved map (at least if it's melee).
-                // Handle restriction on CGame::SendAllActionsCallback
+        if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
+          if (wantsShare) {
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to grant shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+          } else {
+            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to take away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+          }
+          GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
+          if (targetUser && wantsShare) {
+            switch (m_Config.m_ShareUnitsHandler) {
+              case ON_SHARE_UNITS_NATIVE:
                 break;
-              }
 
-              // either the map is not well-behaved, or the client is rogue/griefer - instakick
-              // falls through
+              case ON_SHARE_UNITS_RESTRICT:
+                if (
+                  (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS) &&
+                  (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
+                ) {
+                  // This is a well-behaved map (at least if it's melee).
+                  // Handle restriction on CGame::SendAllActionsCallback
+                  break;
+                }
 
-            case ON_SHARE_UNITS_KICK:
-            default:
-              user->SetLeftCode(PLAYERLEAVE_LOST);
-              user->SetLeftReason("autokicked - antishare");
-              SendChat(user, "[ANTISHARE] You have been automatically kicked out of the game.");
-              // Treat as unrecoverable protocol error
-              return false;
+                // either the map is not well-behaved, or the client is rogue/griefer - instakick
+                // falls through
+
+              case ON_SHARE_UNITS_KICK:
+              default:
+                user->SetLeftCode(PLAYERLEAVE_LOST);
+                user->SetLeftReason("autokicked - antishare");
+                SendChat(user, "[ANTISHARE] You have been automatically kicked out of the game.");
+                // Treat as unrecoverable protocol error
+                return false;
+            }
           }
         }
       }
