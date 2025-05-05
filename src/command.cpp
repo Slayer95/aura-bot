@@ -678,8 +678,8 @@ optional<pair<string, string>> CCommandContext::CheckSudo(const string& message)
 
   bool isValidCaller = (
     GetSender() == m_Aura->m_SudoContext->GetSender() &&
-    GetServiceSource() == m_Aura->m_SudoContext->GetServiceSource() &&
-    GetGameSource() == m_Aura->m_SudoContext->GetGameSource() &&
+    InspectServiceSource() == m_Aura->m_SudoContext->InspectServiceSource() &&
+    InspectGameSource() == m_Aura->m_SudoContext->InspectGameSource() &&
     m_TargetRealm.lock() == m_Aura->m_SudoContext->m_TargetRealm.lock() &&
     m_TargetGame.lock() == m_Aura->m_SudoContext->m_TargetGame.lock()
   );

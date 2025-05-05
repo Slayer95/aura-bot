@@ -35,34 +35,39 @@ using namespace std;
 //
 
 ServiceUser::ServiceUser()
- : serviceType(ServiceType::kNone)
+ : serviceType(ServiceType::kNone),
+   subLocation(nullptr)
 {
 };
 
 ServiceUser::ServiceUser(const ServiceUser& otherService)
  : serviceType(otherService.serviceType),
    servicePtr(otherService.servicePtr.lock()),
-   userName(otherService.userName)
+   userName(otherService.userName),
+   subLocation(nullptr)
 {
 };
 
 ServiceUser::ServiceUser(ServiceType nServiceType, string nUserName)
  : serviceType(nServiceType),
-   userName(nUserName)
+   userName(nUserName),
+   subLocation(nullptr)
 {
 };
 
 ServiceUser::ServiceUser(ServiceType nServiceType, int64_t nUserIdentifier, string nUserName)
  : serviceType(nServiceType),
    userIdentifier(nUserIdentifier),
-   userName(nUserName)
+   userName(nUserName),
+   subLocation(nullptr)
 {
 };
 
 ServiceUser::ServiceUser(ServiceType nServiceType, string nUserName, shared_ptr<void> nServicePtr)
  : serviceType(nServiceType),
    servicePtr(nServicePtr),
-   userName(nUserName)
+   userName(nUserName),
+   subLocation(nullptr)
 {
 };
 
@@ -76,6 +81,8 @@ void ServiceUser::Reset()
 
 ServiceUser::~ServiceUser()
 {
+  delete subLocation;
+  subLocation = nullptr;
 }
 
 bool ServiceUser::operator==(const ServiceUser& other) const

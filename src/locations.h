@@ -104,14 +104,16 @@ struct SimpleNestedLocation
 
   SimpleNestedLocation(uint8_t nOrder, const std::string& locationName)
    : order(nOrder),
-     name(locationName)
+     name(locationName),
+     subLocation(nullptr)
   {
   }
 
   SimpleNestedLocation(uint8_t nOrder, const std::string& locationName, const uint64_t locationIdentifier)
    : order(nOrder),
      name(locationName),
-     id(locationIdentifier)
+     id(locationIdentifier),
+     subLocation(nullptr)
   {
   }
 
