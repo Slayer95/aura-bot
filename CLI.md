@@ -444,6 +444,26 @@ This flag enables sound notifications when a player joins the hosted game.
 This flag is equivalent to to ``<ui.notify_joins.enabled>`` in `config.ini`.
 This flag is disabled by default.
 
+## \`--lobby-chat\`, \`--no-lobby-chat\`
+
+This flag enables chat among players in the hosted game lobby.
+
+This flag is equivalent to to ``<hosting.chat_lobby.enabled>`` in `config.ini`.
+
+This flag is equivalent to to ``<hosting.chat_lobby.enabled>`` in in map configuration.
+
+This flag is enabled by default.
+
+## \`--in-game-chat\`, \`--no-in-game-chat\`
+
+This flag enables chat among players in the hosted game after it's started.
+
+This flag is equivalent to to ``<hosting.chat_in_game.enabled>`` in `config.ini`.
+
+This flag is equivalent to to ``<hosting.chat_in_game.enabled>`` in in map configuration.
+
+This flag is enabled by default.
+
 ## \`--tft\`
 
 This flag enables Warcraft III: Frozen Throne Ⓡ support for the hosted game.

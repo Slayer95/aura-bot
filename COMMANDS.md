@@ -16,6 +16,17 @@ Commands
 ## \`announce\`
 - Syntax: announce \<REALM\>, \<GAME NAME\>
 
+## \`apm\`
+- Aliases: slot
+
+## \`apmhandicap\`
+- Aliases: ah
+- Syntax: apmhandicap \<APM\>
+- Syntax: apmhandicap \<PLAYER\>, \<APM\>
+
+## \`apmtrainer\`
+- Syntax: apmtrainer \<APM\>
+
 ## \`autostart\`
 - Aliases: addas, as
 - Syntax: autostart \<slots\> , \<minutes\>
@@ -35,8 +46,12 @@ Commands
 ## \`channel\`
 - Syntax: channel \<CHANNEL\>
 
+## \`chat\`
+- Aliases: tchat, tallchat, allchat
+- Syntax: chat \<MESSAGE\>
+
 ## \`check\`
-- Aliases: slot, checkme
+- Aliases: checkme
 
 ## \`checkban\`
 - Syntax: checkban \<PLAYERNAME\>@\<REALM\>
@@ -65,7 +80,7 @@ Commands
 - Syntax: color \<PLAYER\> , \<COLOR\> - Color goes from 1 to 12
 
 ## \`comp\`
-- Aliases: bot
+- Aliases: amai, bot
 - Syntax: comp \<SLOT\> , \<SKILL\> - Skill is any of: easy, normal, insane
 
 ## \`countcfgs\`
@@ -118,6 +133,8 @@ Commands
 
 ## \`f\`
 - Aliases: where, from
+
+## \`ff\`
 
 ## \`ffa\`
 - Syntax: ffa \<ON|OFF\>
@@ -321,7 +338,6 @@ Commands
 ## \`restart\`
 
 ## \`resume\`
-- Aliases: autosave, save
 
 ## \`rmk\`
 - Aliases: remake
@@ -331,6 +347,11 @@ Commands
 
 ## \`s\`
 - Aliases: start, vs, go, g
+
+## \`save\`
+- Aliases: autosave
+- Syntax: save
+- Syntax: save \<ON|OFF\>
 
 ## \`say\`
 - Syntax: say \<REALM\> , \<MESSAGE\>
@@ -369,6 +390,8 @@ Commands
 - Aliases: swap
 - Syntax: swap \<PLAYER\> , \<PLAYER\>
 
+## \`sync\`
+
 ## \`team\`
 - Aliases: compteam
 - Syntax: team \<PLAYER\>
@@ -383,6 +406,7 @@ Commands
 - Syntax: terminator \<NUMBER\>
 
 ## \`timehandicap\`
+- Aliases: th
 - Syntax: timehandicap \<SECONDS\>
 - Syntax: timehandicap \<PLAYER\>, \<SECONDS\>
 

@@ -131,7 +131,7 @@ Config
 
 ## \`discord.direct_messages.list\`
 - Type: uint64set
-- Default value: 
+- Default value: '
 - Error handling: Use default value
 
 ## \`discord.direct_messages.mode\`
@@ -151,7 +151,7 @@ Config
 
 ## \`discord.invites.list\`
 - Type: uint64set
-- Default value: 
+- Default value: '
 - Error handling: Use default value
 
 ## \`discord.invites.mode\`
@@ -161,7 +161,7 @@ Config
 
 ## \`discord.log_games.channels\`
 - Type: uint64set
-- Default value: 
+- Default value: '
 - Error handling: Use default value
 
 ## \`discord.log_games.enabled\`
@@ -171,7 +171,7 @@ Config
 
 ## \`discord.sudo_users\`
 - Type: uint64set
-- Default value: 
+- Default value: '
 - Error handling: Use default value
 
 ## \`discord.unverified_users.reject_commands\`
@@ -535,47 +535,33 @@ Config
 - Default value: !m_IsHostMulti
 - Error handling: Use default value
 
-## \`global_realm.game_list.lobby_prefix\`
-- Type: string
+## \`global_realm.game_list.lobby.name_template\`
+- Type: gamenametemplate
+- Default value: {NAME}{COUNTER}
+- Error handling: Use default value
+
+## \`global_realm.game_list.lobby.name_template\`
+- Type: gamenametemplate
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.game_list.lobby_prefix\`
-- Type: string
-- Constraints: Min length: 0. Max length: 16.
+## \`global_realm.game_list.rehost.name_template\`
+- Type: gamenametemplate
+- Default value: -{COUNT}
+- Error handling: Use default value
+
+## \`global_realm.game_list.rehost.name_template\`
+- Type: gamenametemplate
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.game_list.lobby_suffix\`
-- Type: string
-- Default value: Empty
+## \`global_realm.game_list.watchable.name_template\`
+- Type: gamenametemplate
+- Default value: {NAME}{COUNTER}
 - Error handling: Use default value
 
-## \`global_realm.game_list.lobby_suffix\`
-- Type: string
-- Constraints: Min length: 0. Max length: 16.
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.game_list.watchable_prefix\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.game_list.watchable_prefix\`
-- Type: string
-- Constraints: Min length: 0. Max length: 16.
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.game_list.watchable_suffix\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.game_list.watchable_suffix\`
-- Type: string
-- Constraints: Min length: 0. Max length: 16.
+## \`global_realm.game_list.watchable.name_template\`
+- Type: gamenametemplate
 - Default value: Empty
 - Error handling: Use default value
 
@@ -864,7 +850,25 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
+## \`hosting.apm_limiter.max.average\`
+- Type: uint16
+- Error handling: Use default value
+
+## \`hosting.apm_limiter.max.burst\`
+- Type: uint16
+- Error handling: Use default value
+
 ## \`hosting.autostart.requires_balance\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`hosting.chat_in_game.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`hosting.chat_lobby.enabled\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value
@@ -1092,6 +1096,11 @@ Config
 ## \`hosting.latency.default\`
 - Type: uint16
 - Default value: 100
+- Error handling: Use default value
+
+## \`hosting.latency.drift.max\`
+- Type: uint16
+- Default value: 50
 - Error handling: Use default value
 
 ## \`hosting.latency.equalizer.enabled\`
@@ -1338,6 +1347,21 @@ Config
 ## \`lan_realm.commands.moderator.permissions\`
 - Type: enum
 - Default value: auto
+- Error handling: Use default value
+
+## \`lan_realm.lobby.name_template\`
+- Type: gamenametemplate
+- Default value: {NAME}{COUNTER}
+- Error handling: Use default value
+
+## \`lan_realm.rehost.name_template\`
+- Type: gamenametemplate
+- Default value: -{COUNT}
+- Error handling: Use default value
+
+## \`lan_realm.watchable.name_template\`
+- Type: gamenametemplate
+- Default value: {NAME}{COUNTER}
 - Error handling: Use default value
 
 ## \`maps.jass.enabled\`
@@ -1676,7 +1700,7 @@ Config
 
 ## \`net.udp_server.block_list\`
 - Type: ipstringset
-- Default value: 
+- Default value: '
 - Error handling: Use default value
 
 ## \`net.udp_server.enabled\`

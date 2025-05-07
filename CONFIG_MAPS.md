@@ -129,32 +129,32 @@ Map
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.controllers.losers.max\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.controllers.losers.min\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.controllers.max\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.controllers.min\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.controllers.winners.max\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.controllers.winners.min\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
@@ -184,32 +184,32 @@ Map
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.teams.losers.max\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.teams.losers.min\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.teams.max\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.teams.min\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.teams.winners.max\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.constraints.teams.winners.min\`
-- Type: slot
+- Type: playercount
 - Default value: Empty
 - Error handling: Use default value
 
@@ -282,7 +282,27 @@ Map
 - Default value: 2
 - Error handling: Use default value
 
+## \`map.hosting.apm_limiter.max.average\`
+- Type: uint16
+- Default value: 800
+- Error handling: Use default value
+
+## \`map.hosting.apm_limiter.max.burst\`
+- Type: uint16
+- Default value: (uint16_t
+- Error handling: Use default value
+
 ## \`map.hosting.autostart.requires_balance\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`map.hosting.chat_in_game.enabled\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
+## \`map.hosting.chat_lobby.enabled\`
 - Type: bool
 - Default value: false
 - Error handling: Use default value
@@ -662,8 +682,13 @@ Map
 - Default value: MAP_FEATURE_TOGGLE_DISABLED
 - Error handling: Use default value
 
-## \`map.w3hmc.trigger\`
-- Type: uint16
+## \`map.w3hmc.trigger.complement\`
+- Type: uint32
+- Default value: Empty
+- Error handling: Use default value
+
+## \`map.w3hmc.trigger.main\`
+- Type: uint32
 - Default value: 0
 - Error handling: Use default value
 
