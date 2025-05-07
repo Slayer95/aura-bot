@@ -338,6 +338,8 @@ public:
 
   std::optional<bool>                   m_LogCommands;
   std::optional<uint8_t>                m_ReconnectionMode;
+  std::optional<bool>                   m_EnableLobbyChat;
+  std::optional<bool>                   m_EnableInGameChat;
   std::optional<uint8_t>                m_IPFloodHandler;
   std::optional<uint8_t>                m_LeaverHandler;
   std::optional<uint8_t>                m_ShareUnitsHandler;

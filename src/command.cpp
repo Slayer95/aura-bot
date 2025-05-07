@@ -1247,11 +1247,16 @@ shared_ptr<CGame> CCommandContext::GetTargetGame(const string& rawInput)
 
 void CCommandContext::UseImplicitReplaceable()
 {
-  if (!m_TargetGame.expired()) return;
+  auto sourceGame = GetSourceGame();
+  if (auto targetGame = GetTargetGame()) {
+    if (targetGame->GetIsReplaceable() && !targetGame->GetCountDownStarted() && (sourceGame == targetGame || !targetGame->GetHasAnyUser())) {
+      return;
+    }
+  }
 
-  for (auto it = m_Aura->m_Lobbies.rbegin(); it != m_Aura->m_Lobbies.rend(); ++it) {
-    if ((*it)->GetIsReplaceable() && !(*it)->GetCountDownStarted()) {
-      m_TargetGame = *it;
+  for (auto& lobby : m_Aura->m_Lobbies) {
+    if (lobby->GetIsReplaceable() && !lobby->GetCountDownStarted() && (sourceGame == lobby || !lobby->GetHasAnyUser())) {
+      m_TargetGame = lobby;
     }
   }
 
@@ -1265,7 +1270,7 @@ void CCommandContext::UseImplicitHostedGame()
   if (!m_TargetGame.expired()) return;
 
   m_TargetGame = m_Aura->GetMostRecentLobbyFromCreator(GetSender());
-  if (!m_TargetGame.expired()) m_TargetGame = m_Aura->GetMostRecentLobby();
+  if (m_TargetGame.expired()) m_TargetGame = m_Aura->GetMostRecentLobby();
 
   if (!m_TargetGame.expired() && !GetIsSudo()) {
     UpdatePermissions();
@@ -1544,6 +1549,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       shared_ptr<CGame> targetGame = GetTargetGame();
 
       if (!targetGame || targetGame->GetIsMirror()) {
+        ErrorReply("Game not found.");
         break;
       }
 
@@ -3869,7 +3875,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetGame->m_MuteAll) {
+      if (targetGame->GetMuteAll()) {
         ErrorReply("Global and private chats are already muted.");
         break;
       }
@@ -3880,7 +3886,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       SendAll("Global and private chats muted (allied chat is unaffected)");
-      targetGame->m_MuteAll = true;
+      targetGame->SetMuteAll(true);
       break;
     }
 
@@ -6548,7 +6554,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetGame->m_MuteAll) {
+      if (targetGame->GetMuteAll()) {
         ErrorReply("Global chat is not muted.");
         break;
       }
@@ -6559,7 +6565,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       SendAll("Global chat unmuted");
-      targetGame->m_MuteAll = false;
+      targetGame->SetMuteAll(false);
       break;
     }
 

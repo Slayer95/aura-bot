@@ -195,6 +195,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--max-apm", m_GameMaxAPM, "Limits the actions each player may perform per minute (APM).");
   app.add_option("--max-burst-apm", m_GameMaxBurstAPM, "Limits the actions each player may perform per minute (APM).");
   app.add_option("--reconnection", m_GameReconnectionMode, "Customizes GProxy support for the hosted game. Values: disabled, basic, extended.")->check(CLI::IsMember({"disabled", "basic", "extended"}));
+  app.add_flag(  "--lobby-chat,--no-lobby-chat{false}", m_GameEnableLobbyChat, "Whether to allow players to engage in chat in the hosted lobby.");
+  app.add_flag(  "--in-game-chat,--no-in-game-chat{false}", m_GameEnableInGameChat, "Whether to allow players to engage in chat in the hosted game.");
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
   app.add_option("--reserve", m_GameReservations, "Adds a player to the reserved list of the game lobby.");
   app.add_flag(  "--check-joinable,--no-check-joinable{false}", m_GameCheckJoinable, "Reports whether the game is joinable over the Internet.");

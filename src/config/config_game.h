@@ -118,6 +118,8 @@ struct CGameConfig
   std::set<std::string>    m_LoggedWords;
   uint8_t                  m_LogChatTypes;
   bool                     m_LogCommands;
+  bool                     m_EnableLobbyChat;
+  bool                     m_EnableInGameChat;
   uint8_t                  m_DesyncHandler;
   uint8_t                  m_IPFloodHandler;
   uint8_t                  m_LeaverHandler;

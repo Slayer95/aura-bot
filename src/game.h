@@ -189,7 +189,7 @@ protected:
   bool                                                   m_Locked;                        // if the game owner is the only one allowed to run game commands or not
   bool                                                   m_ChatOnly;                      // if we should ignore game start commands
   bool                                                   m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
-  bool                                                   m_MuteLobby;                     // if we should stop forwarding lobby chat messages
+  bool                                                   m_ChatEnabled;                   // if we should forward chat messages
   bool                                                   m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
   bool                                                   m_CountDownStarted;              // if the game start countdown has started or not
   bool                                                   m_CountDownFast;
@@ -624,10 +624,10 @@ public:
   bool                      GetIsVirtualPlayerSlot(const uint8_t SID) const;
   bool                      GetHasAnotherPlayer(const uint8_t ExceptSID) const;
   bool                      CheckIPFlood(const std::string joinName, const sockaddr_storage* sourceAddress) const;
-  std::vector<uint8_t>      GetChatUIDs() const;
-  std::vector<uint8_t>      GetChatUIDs(uint8_t excludeUID) const;
-  std::vector<uint8_t>      GetObserverUIDs() const;
-  std::vector<uint8_t>      GetChatObserverUIDs(uint8_t excludeUID) const;
+  std::vector<uint8_t>      GetAllChatUIDs() const;
+  std::vector<uint8_t>      GetObserverChatUIDs() const;
+  std::vector<uint8_t>      GetFilteredChatUIDs(uint8_t fromUID, const std::vector<uint8_t>& toUIDs) const;
+  std::vector<uint8_t>      GetFilteredChatObserverUIDs(uint8_t fromUID, const std::vector<uint8_t>& toUIDs) const;
   uint8_t                   GetPublicHostUID() const;
   uint8_t                   GetHiddenHostUID() const;
   uint8_t                   GetHostUID() const;
@@ -799,8 +799,11 @@ public:
   inline void SetSupportedGameVersion(const Version& nVersion);
   inline void SetSaveOnLeave(const uint8_t nValue) { m_SaveOnLeave = nValue; }
 
-  inline void SetIsReplaceable(const bool nValue) { m_Replaceable = nValue; }
-  inline void SetIsBeingReplaced(const bool nValue) { m_Replacing = nValue; }
+  inline void SetIsReplaceable(const bool nValue = true) { m_Replaceable = nValue; }
+  inline void SetIsBeingReplaced(const bool nValue = true) { m_Replacing = nValue; }
+  inline void SetIsPublicStartable(const bool nValue = true) { m_PublicStart = nValue; }
+  inline void SetLocked(const bool nValue = true) { m_Locked = nValue; }
+  inline void SetMuteAll(const bool nValue = true) { m_MuteAll = nValue; }
 
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
   void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }

@@ -186,6 +186,8 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LoggedWords                            = CFG.GetSet("hosting.log_words", ',', true, false, {});
   m_LogChatTypes                           = CFG.GetBool("hosting.log_non_ascii", false) ? LOG_CHAT_TYPE_NON_ASCII : 0;
   m_LogCommands                            = CFG.GetBool("hosting.log_commands", false);
+  m_EnableLobbyChat                        = CFG.GetBool("hosting.chat_lobby.enabled", true);
+  m_EnableInGameChat                       = CFG.GetBool("hosting.chat_in_game.enabled", true);
   m_DesyncHandler                          = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
   m_IPFloodHandler                         = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
   m_LeaverHandler                          = CFG.GetStringIndex("hosting.game_protocol.leaver_handler", {"none", "native", "share"}, ON_PLAYER_LEAVE_NATIVE);
@@ -319,6 +321,8 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT(m_LoggedWords)
   INHERIT(m_LogChatTypes)
   INHERIT_MAP_OR_CUSTOM(m_LogCommands, m_LogCommands, m_LogCommands)
+  INHERIT_MAP_OR_CUSTOM(m_EnableLobbyChat, m_EnableLobbyChat, m_EnableLobbyChat)
+  INHERIT_MAP_OR_CUSTOM(m_EnableInGameChat, m_EnableInGameChat, m_EnableInGameChat)
   INHERIT(m_DesyncHandler)
   INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)
   INHERIT_MAP_OR_CUSTOM(m_LeaverHandler, m_LeaverHandler, m_LeaverHandler)

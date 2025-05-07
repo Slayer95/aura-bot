@@ -316,6 +316,7 @@ namespace GameUser
     bool GetShouldHoldActionInner();
     bool GetShouldHoldAction(uint16_t count);
     void CheckReleaseOnHoldActions();
+    bool CheckMuted();
 
     void AddActionCounters();
     void ShiftRecentActionCounters();

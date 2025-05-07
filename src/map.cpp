@@ -2154,6 +2154,14 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_ReconnectionMode = CFG.GetStringIndex("map.reconnection.mode", {"disabled", "basic", "extended"}, RECONNECT_DISABLED);
     if (m_ReconnectionMode.value() == RECONNECT_ENABLED_GPROXY_EXTENDED) m_ReconnectionMode = m_ReconnectionMode.value() | RECONNECT_ENABLED_GPROXY_BASIC;
   }
+
+  if (CFG.Exists("map.hosting.chat_lobby.enabled")) {
+    m_EnableLobbyChat = CFG.GetBool("map.hosting.chat_lobby.enabled", false);
+  }
+  if (CFG.Exists("map.hosting.chat_in_game.enabled")) {
+    m_EnableInGameChat = CFG.GetBool("map.hosting.chat_in_game.enabled", false);
+  }
+
   if (CFG.Exists("map.hosting.ip_filter.flood_handler")) {
     m_IPFloodHandler = CFG.GetStringIndex("map.hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
   }

@@ -1723,6 +1723,8 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   SetVerbose(nCLI->m_Verbose);
   SetDisplayMode(nCLI->GetGameDisplayType());
   if (nCLI->m_GameReconnectionMode.has_value()) SetReconnectionMode(nCLI->GetGameReconnectionMode());
+  if (nCLI->m_GameEnableLobbyChat.has_value()) SetEnableLobbyChat(nCLI->m_GameEnableLobbyChat.value());
+  if (nCLI->m_GameEnableInGameChat.has_value()) SetEnableInGameChat(nCLI->m_GameEnableInGameChat.value());
   if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
   if (nCLI->m_GameLeaverHandler.has_value()) SetLeaverHandler(nCLI->GetGameLeaverHandler());
   if (nCLI->m_GameShareUnitsHandler.has_value()) SetShareUnitsHandler(nCLI->GetGameShareUnitsHandler());

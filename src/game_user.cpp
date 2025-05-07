@@ -339,15 +339,30 @@ void CGameUser::CheckReleaseOnHoldActions()
   ReleaseOnHoldActionsCount(releasedCount);
 }
 
-void CGameUser::AddActionCounters() {
+void CGameUser::AddActionCounters()
+{
   ++m_ActionCounter;
   ++m_RecentActionCounter[2];
 }
 
-void CGameUser::ShiftRecentActionCounters() {
+void CGameUser::ShiftRecentActionCounters()
+{
   m_RecentActionCounter[0] = m_RecentActionCounter[1];
   m_RecentActionCounter[1] = m_RecentActionCounter[2];
   m_RecentActionCounter[2] = 0;
+}
+
+bool CGameUser::CheckMuted()
+{
+  if (!GetIsMuted()) {
+    return false;
+  }
+  if (GetMuteEndTicks() < GetTicks()) {
+    UnMute();
+    return false;
+  }
+
+  return true;
 }
 
 shared_ptr<CRealm> CGameUser::GetRealm(bool mustVerify) const

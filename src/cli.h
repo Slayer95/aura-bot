@@ -135,6 +135,9 @@ public:
   std::optional<bool>                   m_GameLatencyEqualizerEnabled;
   std::optional<uint8_t>                m_GameLatencyEqualizerFrames;
 
+  std::optional<bool>                   m_GameEnableLobbyChat;
+  std::optional<bool>                   m_GameEnableInGameChat;
+
   std::optional<uint32_t>               m_GameMapDownloadTimeout;
   std::optional<bool>                   m_GameCheckJoinable;
   std::optional<bool>                   m_GameNotifyJoins;

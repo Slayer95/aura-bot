@@ -173,6 +173,8 @@ public:
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_ReconnectionMode;
+  std::optional<bool>                             m_EnableLobbyChat;
+  std::optional<bool>                             m_EnableInGameChat;
   std::optional<uint8_t>                          m_IPFloodHandler;
   std::optional<uint8_t>                          m_LeaverHandler;
   std::optional<uint8_t>                          m_ShareUnitsHandler;
@@ -359,6 +361,8 @@ public:
   void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
   void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
   void SetReconnectionMode(const uint8_t nValue) { m_ReconnectionMode = nValue;}
+  void SetEnableLobbyChat(const uint8_t nValue) { m_EnableLobbyChat = nValue;}
+  void SetEnableInGameChat(const uint8_t nValue) { m_EnableInGameChat = nValue;}
   void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
   void SetLeaverHandler(const uint8_t nValue) { m_LeaverHandler = nValue;}
   void SetShareUnitsHandler(const uint8_t nValue) { m_ShareUnitsHandler = nValue; }
