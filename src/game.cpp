@@ -6099,11 +6099,11 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
     if (shouldRelay) {
       if (!didRelay) {
         SendChatMessage(user, incomingChatMessage);
-        shouldRelay = false;
+        didRelay = true;
       }
     } else if (!isCommand) {
-      if (muteAll && targetType == CHAT_RECV_ALL) {
-        SendChat(user, "Error - You may only use [Allied] chat. Press (Shift+Enter).");
+      if (m_ChatEnabled && muteAll && targetType == CHAT_RECV_ALL) {
+        SendChat(user, "Error - You may only use [Allied] chat. Press (Shift+Enter.)");
       } else {
         SendChat(user, "Error - Chat is disabled.");
       }
