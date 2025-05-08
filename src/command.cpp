@@ -7998,6 +7998,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       break;
     }
 
+    case HashCode("r"):
     case HashCode("ready"): {
       shared_ptr<CGame> targetGame = GetTargetGame();
 
@@ -8043,7 +8044,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       ++targetGame->m_ControllersReadyCount;
       --targetGame->m_ControllersNotReadyCount;
-      SendAll("Player [" + GetSender() + "] ready to start the game. Please don't go AFK.");
+      SendAll("Player [" + GetSender() + "] now ready to start the game.");
       break;
     }
 
