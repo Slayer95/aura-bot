@@ -332,6 +332,10 @@ constexpr uint8_t GAME_FRAME_TYPE_CHAT = 3u;
 constexpr uint8_t GAME_FRAME_TYPE_LATENCY = 4u;
 constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 5u;
 
+constexpr uint8_t GAME_DISCOVERY_CHANGED_NONE = 0u;
+constexpr uint8_t GAME_DISCOVERY_CHANGED_MINOR = 1u;
+constexpr uint8_t GAME_DISCOVERY_CHANGED_MAJOR = 2u;
+
 constexpr uint8_t GAME_RESULT_SOURCE_NONE = 0u;
 constexpr uint8_t GAME_RESULT_SOURCE_LEAVECODE = 1u;
 constexpr uint8_t GAME_RESULT_SOURCE_MMD = 2u;

@@ -211,7 +211,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameHistory(make_shared<GameHistory>()),
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
     m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
-    m_GameDiscoveryInfoChanged(false),
+    m_GameDiscoveryInfoChanged(GAME_DISCOVERY_CHANGED_NONE),
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
@@ -4137,7 +4137,7 @@ vector<uint8_t>* CGame::GetGameDiscoveryInfoTemplate()
     return &m_GameDiscoveryInfo;
   }
   m_GameDiscoveryInfo = GetGameDiscoveryInfoTemplateInner(&m_GameDiscoveryInfoVersionOffset, &m_GameDiscoveryInfoDynamicOffset);
-  m_GameDiscoveryInfoChanged = false;
+  m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_NONE;
   return &m_GameDiscoveryInfo;
 }
 
@@ -6982,7 +6982,7 @@ void CGame::EventGameLoaded()
 
   // move the game to the games in progress vector
   if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
-    m_GameDiscoveryInfoChanged = true;
+    m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_MAJOR;
     m_Aura->TrackGameJoinInProgress(shared_from_this());
 
     if (GetUDPEnabled()) {
@@ -7152,7 +7152,7 @@ void CGame::Remake()
   m_APMTrainerPaused = false;
   m_APMTrainerTicks = 0;
   m_GameResultsSource = GAME_RESULT_SOURCE_NONE;
-  m_GameDiscoveryInfoChanged = true;
+  m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_MAJOR;
 
   m_HostCounter = m_Aura->NextHostCounter();
   m_ChatEnabled = m_Config.m_EnableLobbyChat;

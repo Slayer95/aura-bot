@@ -228,7 +228,7 @@ protected:
   Version                                                m_SupportedGameVersionsMin;
   Version                                                m_SupportedGameVersionsMax;
 
-  bool                                                   m_GameDiscoveryInfoChanged;
+  uint8_t                                                m_GameDiscoveryInfoChanged;
   std::vector<uint8_t>                                   m_GameDiscoveryInfo;
   uint16_t                                               m_GameDiscoveryInfoVersionOffset;
   uint16_t                                               m_GameDiscoveryInfoDynamicOffset;
@@ -426,7 +426,7 @@ public:
   void                                                   UpdateReadyCounters();
   void                                                   ResetDropVotes();
   void                                                   ResetOwnerSeen();
-  void                                                   UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = true; }
+  void                                                   UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_MAJOR; }
 
   inline int64_t                                         GetCreationTime() const { return m_CreationTime; }
   inline uint32_t                                        GetUptime() const {
