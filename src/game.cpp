@@ -634,7 +634,7 @@ bool CGame::InitStats()
     return false;
   }
   if (m_Map->GetMMDType() == MMD_TYPE_DOTA) {
-    m_DotaStats = new CDotaStats(shared_from_this());
+    m_DotaStats = new Dota::CDotaStats(shared_from_this());
   } else {
     m_CustomStats = new CW3MMD(shared_from_this());
   }
@@ -660,7 +660,7 @@ bool CGame::InitHMC()
   return true;
 }
 
-bool CGame::EventGameCache(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
+bool CGame::EventGameCacheInteger(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
 {
   if (!m_CustomStats && !m_DotaStats && !m_GameInteractiveHost) return false;
 
@@ -688,17 +688,17 @@ bool CGame::EventGameCache(const uint8_t UID, const uint8_t* actionStart, const 
   value = ByteArrayToUInt32(stringEnd + 1, false);
 
   if (m_CustomStats) {
-    if (!m_CustomStats->EventGameCache(UID, cacheFileName, missionKey, key, value)) {
+    if (!m_CustomStats->EventGameCacheInteger(UID, cacheFileName, missionKey, key, value)) {
       DestroyStats();
     }
   } else if (m_DotaStats) {
-    if (!m_DotaStats->EventGameCache(UID, cacheFileName, missionKey, key, value)) {
+    if (!m_DotaStats->EventGameCacheInteger(UID, cacheFileName, missionKey, key, value)) {
       DestroyStats();
     }
   }
 
   if (m_GameInteractiveHost) {
-    if (!m_GameInteractiveHost->EventGameCache(UID, cacheFileName, missionKey, key, value)) {
+    if (!m_GameInteractiveHost->EventGameCacheInteger(UID, cacheFileName, missionKey, key, value)) {
       DestroyHMC();
     }
   }
@@ -3655,7 +3655,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
   }
 
   if (actionType == ACTION_GAME_CACHE_INT && actionEnd >= actionStart + 6u) {
-    EventGameCache(UID, actionStart, actionEnd);
+    EventGameCacheInteger(UID, actionStart, actionEnd);
   }
 }
 

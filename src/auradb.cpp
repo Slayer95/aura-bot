@@ -1359,7 +1359,7 @@ bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
   return Success;
 }
 
-void CAuraDB::SaveDotAStats(CDotaStats* dotaStats)
+void CAuraDB::SaveDotAStats(Dota::CDotaStats* dotaStats)
 {
   if (Begin())
   {
@@ -1413,9 +1413,9 @@ void CAuraDB::SaveDotAStats(CDotaStats* dotaStats)
 
         uint8_t result = GAME_RESULT_DRAWER;
 
-        if ((dotaStats->m_Winner == DOTA_WINNER_SENTINEL && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == DOTA_WINNER_SCOURGE && Color >= 7 && Color <= 11))
+        if ((dotaStats->m_Winner == Dota::WINNER_SENTINEL && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == Dota::WINNER_SCOURGE && Color >= 7 && Color <= 11))
           result = GAME_RESULT_WINNER;
-        else if ((dotaStats->m_Winner == DOTA_WINNER_SCOURGE && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == DOTA_WINNER_SENTINEL && Color >= 7 && Color <= 11))
+        else if ((dotaStats->m_Winner == Dota::WINNER_SCOURGE && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == Dota::WINNER_SENTINEL && Color >= 7 && Color <= 11))
           result = GAME_RESULT_LOSER;
 
         UpdateDotAPlayerOnEnd(Name, Server, result, dotaPlayer);

@@ -43,8 +43,8 @@
 
 */
 
-#ifndef W3MMD_H
-#define W3MMD_H
+#ifndef AURA_W3MMD_H
+#define AURA_W3MMD_H
 
 #include "../includes.h"
 #include "../game_structs.h"
@@ -156,7 +156,7 @@ public:
   [[nodiscard]] inline bool GetIsGameOver() { return m_GameOver; }
 
   bool HandleTokens(uint8_t fromUID, uint32_t valueID, std::vector<std::string> tokens);
-  bool EventGameCache(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
+  bool EventGameCacheInteger(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
   bool ProcessDefinition(CW3MMDDefinition* nDef);
   bool ProcessAction(CW3MMDAction* nAction);
   bool UpdateQueue();
@@ -172,4 +172,4 @@ public:
   void LogMetaData(int64_t recvTicks, const std::string& text) const;
 };
 
-#endif
+#endif // AURA_W3MMD_H

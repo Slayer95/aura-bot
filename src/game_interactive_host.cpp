@@ -121,7 +121,7 @@ void CGameInteractiveHost::ResolveInteraction(pair<const uint32_t, GameInteracti
   entry.second.SetDone();
 }
 
-bool CGameInteractiveHost::EventGameCache(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
+bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
 {
   if (m_Error) {
     return !m_Error;

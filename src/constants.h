@@ -422,8 +422,8 @@ constexpr uint8_t SLOTPROG_NEW = 0u;
 constexpr uint8_t SLOTPROG_RDY = 100u;
 constexpr uint8_t SLOTPROG_RST = 255u;
 
-constexpr int MAX_SLOTS_MODERN = 24;
-constexpr int MAX_SLOTS_LEGACY = 12;
+constexpr unsigned int MAX_SLOTS_MODERN = 24;
+constexpr unsigned int MAX_SLOTS_LEGACY = 12;
 
 // game_controller_data.h
 
@@ -946,12 +946,6 @@ constexpr uint8_t PJASS_OPTIONS_FILTER = 7u;
 constexpr uint8_t PJASS_OPTIONS_CHECKGLOBALSINIT = 8u;
 constexpr uint8_t PJASS_OPTIONS_CHECKSTRINGHASH = 9u;
 constexpr uint8_t PJASS_OPTIONS_CHECKNUMBERLITERALS = 10u;
-
-// dota.h
-
-constexpr uint8_t DOTA_WINNER_UNDECIDED = 0u;
-constexpr uint8_t DOTA_WINNER_SENTINEL = 1u;
-constexpr uint8_t DOTA_WINNER_SCOURGE = 2u;
 
 // w3mmd.h
 

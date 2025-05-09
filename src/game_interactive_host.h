@@ -73,7 +73,7 @@ public:
   void Send(const std::string& message);
   void SendResult(const uint32_t interactionId, const std::string& result);
   void ResolveInteraction(std::pair<const uint32_t, GameInteraction>&, const std::string& result);
-  bool EventGameCache(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
+  bool EventGameCacheInteger(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
   std::string GetLogPrefix() const;
   [[nodiscard]] static long GetMapTime();
 };

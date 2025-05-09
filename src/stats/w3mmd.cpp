@@ -275,7 +275,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   return true;
 }
 
-bool CW3MMD::EventGameCache(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t /*cacheValue*/)
+bool CW3MMD::EventGameCacheInteger(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t /*cacheValue*/)
 {
   if (m_Error) {
     return !m_Error;

@@ -47,7 +47,6 @@ class CDBDotAPlayerSummary;
 class CDBGamePlayerSummary;
 class CDBGameSummary;
 class CDiscord;
-class CDotaStats;
 class CGame;
 class CGameController;
 class CGameInteractiveHost;
@@ -82,6 +81,11 @@ class FlatMap;
 namespace GameUser
 {
   class CGameUser;
+};
+
+namespace Dota
+{
+  class CDotaStats;
 };
 
 #ifndef DISABLE_DPP

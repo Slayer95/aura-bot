@@ -54,6 +54,7 @@
 #include "../util.h"
 
 using namespace std;
+using namespace Dota;
 
 //
 // CDotaStats
@@ -61,7 +62,7 @@ using namespace std;
 
 CDotaStats::CDotaStats(shared_ptr<CGame> nGame)
   : m_Game(ref(*nGame)),
-    m_Winner(DOTA_WINNER_UNDECIDED),
+    m_Winner(Dota::WINNER_UNDECIDED),
     m_SwitchEnabled(false),
     m_Time(make_pair<uint32_t, uint32_t>(0u, 0u))
     
@@ -82,7 +83,7 @@ CDotaStats::~CDotaStats()
   }
 }
 
-bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
+bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
 {
   if (fileName != "dr.x") {
     return true;
@@ -115,36 +116,30 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
 
       GameUser::CGameUser* killerUser = nullptr;
       if (GetIsPlayerColor(*killerColor)) {
-        killerUser = m_Game.get().GetUserFromColor(*killerColor);
+        killerUser = GetUserFromColor(*killerColor);
         if (!m_Players[*killerColor]) {
           m_Players[*killerColor] = new CDBDotAPlayer();
         }
       }
-      GameUser::CGameUser* victimUser = m_Game.get().GetUserFromColor(*victimColor);
+      GameUser::CGameUser* victimUser = GetUserFromColor(*victimColor);
       if (!m_Players[*victimColor]) {
         m_Players[*victimColor] = new CDBDotAPlayer();
       }
 
-      if (killerUser) {
-        if (victimUser) {
-          // check for denies
-          if (GetAreSameTeamColors(*killerColor, *victimColor)) {
-            Print(GetLogPrefix() + "[" + killerUser->GetName() + "] denied player [" + victimUser->GetName() + "]");
-          } else {
-            // non-leaver killed a non-leaver
-            m_Players[*killerColor]->IncKills();
-            m_Players[*victimColor]->IncDeaths();
-            Print(GetLogPrefix() + "[" + killerUser->GetName() + "] killed player [" + victimUser->GetName() + "]");
-          }
-        } else {
-          // Scourge/Sentinel/leaver killed a non-leaver
-          m_Players[*victimColor]->IncDeaths();
-        }
-      } else if (GetIsSentinelCreepsColor(*killerColor)) {
-        Print(GetLogPrefix() + "[" + killerUser->GetName() + "] the Sentinel killed player [" + victimUser->GetName() + "]");
-      } else if (GetIsScourgeCreepsColor(*killerColor)) {
-        Print(GetLogPrefix() + "[" + killerUser->GetName() + "] the Scourge killed player [" + victimUser->GetName() + "]");
+      bool isFriendlyFire = GetAreSameTeamColors(*killerColor, *victimColor);
+      if (killerUser) m_Players[*killerColor]->IncKills();
+      if (victimUser) m_Players[*victimColor]->IncDeaths();
+
+      string action = "killed";
+      if (isFriendlyFire) {
+        action = "denied";
       }
+      if (victimUser) {
+        action.append(" player");
+      } else {
+        action.append(" leaver");
+      }
+      Print(GetLogPrefix() + GetActorNameFromColor(*killerColor) + action + " [" + victimUser->GetName() + "]");
     }
     else if (key.size() >= 7 && key.compare(0, 6, "Assist") == 0)
     {
@@ -211,6 +206,28 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
       Print(GetLogPrefix() + "the World Tree is now at " + to_string(cacheValue) + "% HP");
     }
 
+    else if (key.size() >= 4 && key.compare(0, 3, "CSS") == 0)
+    {
+      // incremental creeping performance stats sent every 5 minutes
+
+      optional<uint32_t> maybeColor = ToUint32(key.substr(3));
+      if (maybeColor.has_value() && GetIsPlayerColor(*maybeColor)) {
+        uint32_t creepData = cacheValue;
+        uint32_t creepDenies = creepData % 256;
+        creepData = (creepData - creepDenies) / 256;
+        uint32_t neutralKills = creepData % 4096;
+        creepData = (creepData - neutralKills) / 4096;
+        uint32_t creepKills = creepData;
+
+        m_Players[cacheValue]->AddCreepKills(creepKills);
+        m_Players[cacheValue]->AddCreepDenies(creepDenies);
+        m_Players[cacheValue]->AddNeutralKills(neutralKills);
+
+        string playerName = GetUserNameFromColor(*maybeColor);
+        //Print(GetLogPrefix() + "[" + playerName + "] " + to_string(creepKills) + " creeps killed, " + to_string(creepDenies) + " denied, " + to_string(neutralKills) + "neutrals");
+      }
+    }
+
     else if (key.size() >= 5 && key.compare(0, 2, "CK") == 0)
     {
       // a player disconnected
@@ -241,24 +258,16 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
         m_Players[cacheValue]->SetCreepDenies(*creepDenies);
         m_Players[cacheValue]->SetNeutralKills(*neutralKills);
 
-        string subjectName = to_string(cacheValue);
-        GameUser::CGameUser* subjectUser = m_Game.get().GetUserFromColor(cacheValue);
-        if (subjectUser) {
-          subjectName = subjectUser->GetName();
-        }
-        Print(GetLogPrefix() + "[" + subjectName + "] disconnected");
+        string playerName = GetUserNameFromColor(cacheValue);
+        Print(GetLogPrefix() + "[" + playerName + "] disconnected");
       }
     }
 
     else if (key.size() >= 11 && key.compare(0, 11, "MHSuspected") == 0)
     {
       if (GetIsPlayerColor(cacheValue)) {
-        string subjectName = to_string(cacheValue);
-        GameUser::CGameUser* subjectUser = m_Game.get().GetUserFromColor(cacheValue);
-        if (subjectUser) {
-          subjectName = subjectUser->GetName();
-        }
-        Print(GetLogPrefix() + "[" + subjectName + "] suspected map hacker");
+        string playerName = GetUserNameFromColor(cacheValue);
+        Print(GetLogPrefix() + "[" + playerName + "] suspected map hacker");
       }
     }
 
@@ -332,14 +341,14 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
       // Value 2 -> scourge
 
       uint8_t winner = static_cast<uint8_t>(cacheValue);
-      if (winner == DOTA_WINNER_SENTINEL || winner == DOTA_WINNER_SCOURGE) {
+      if (winner == Dota::WINNER_SENTINEL || winner == Dota::WINNER_SCOURGE) {
         m_Winner = winner;
       }
       m_GameOverTime = m_Game.get().GetEffectiveTicks() / 1000;
 
-      if (m_Winner == DOTA_WINNER_SENTINEL)
+      if (m_Winner == Dota::WINNER_SENTINEL)
         Print(GetLogPrefix() + "detected winner: Sentinel");
-      else if (m_Winner == DOTA_WINNER_SCOURGE)
+      else if (m_Winner == Dota::WINNER_SCOURGE)
         Print(GetLogPrefix() + "detected winner: Scourge");
       else
         Print(GetLogPrefix() + "detected winner: " + to_string(cacheValue));
@@ -436,6 +445,42 @@ void CDotaStats::FlushQueue()
 {
 }
 
+[[nodiscard]] GameUser::CGameUser* CDotaStats::GetUserFromColor(const uint8_t color) const
+{
+  if (!GetIsPlayerColor(color)) return nullptr;
+  return m_Game.get().GetUserFromColor(color);
+}
+
+[[nodiscard]] std::string CDotaStats::GetUserNameFromColor(const uint8_t color) const
+{
+  switch (color) {
+    case SENTINEL_CREEPS_COLOR:
+      return "Sentinel"; // should never happen - use GetActorNameFromColor() instead
+    case SCOURGE_CREEPS_COLOR:
+      return "Scourge"; // should never happen - use GetActorNameFromColor() instead
+    default: {
+      GameUser::CGameUser* user = GetUserFromColor(color);
+      if (user) return user->GetName();
+      return "Player " + ToDecString(color);
+    }
+  }
+}
+
+[[nodiscard]] std::string CDotaStats::GetActorNameFromColor(const uint8_t color) const
+{
+  switch (color) {
+    case SENTINEL_CREEPS_COLOR:
+      return "the Sentinel";
+    case SCOURGE_CREEPS_COLOR:
+      return "the Scourge";
+    default: {
+      GameUser::CGameUser* user = GetUserFromColor(color);
+      if (user) return "Player [" + user->GetName() + "]";
+      return "Player " + ToDecString(color);
+    }
+  }
+}
+
 vector<CGameController*> CDotaStats::GetSentinelControllers() const
 {
   vector<CGameController*> controllers;
@@ -461,7 +506,7 @@ vector<CGameController*> CDotaStats::GetScourgeControllers() const
 optional<GameResults> CDotaStats::GetGameResults(const GameResultConstraints& /*constraints*/) const
 {
   optional<GameResults> gameResults;
-  if (m_Winner == DOTA_WINNER_UNDECIDED) {
+  if (m_Winner == Dota::WINNER_UNDECIDED) {
     return gameResults;
   }
 
@@ -470,7 +515,7 @@ optional<GameResults> CDotaStats::GetGameResults(const GameResultConstraints& /*
 
   gameResults.emplace();
 
-  if (m_Winner == DOTA_WINNER_SENTINEL) {
+  if (m_Winner == Dota::WINNER_SENTINEL) {
     gameResults->winners.swap(sentinel);
     gameResults->losers.swap(scourge);
   } else {

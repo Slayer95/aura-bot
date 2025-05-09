@@ -374,7 +374,7 @@ public:
   [[nodiscard]] std::vector<std::string>      GetIPs(const std::string& name, const std::string& server);
   [[nodiscard]] std::vector<std::string>      GetAlts(const std::string& addressLiteral);
 
-  void                                        SaveDotAStats(CDotaStats* dotaStats);
+  void                                        SaveDotAStats(Dota::CDotaStats* dotaStats);
 
   // Games
   bool                                        GameAdd(const uint64_t gameId, const std::string& creator, const std::string& mapClientPath, const std::string& mapServerPath, const std::array<uint8_t, 4>& mapCRC32, const std::vector<std::string>& playerNames, const std::vector<uint8_t>& playerIDs, const std::vector<uint8_t>& slotIDs, const std::vector<uint8_t>& colorIDs);
@@ -545,6 +545,9 @@ public:
   inline void SetCreepKills(uint32_t nCreepKills) { m_CreepKills = nCreepKills; }
   inline void SetCreepDenies(uint32_t nCreepDenies) { m_CreepDenies = nCreepDenies; }
   inline void SetNeutralKills(uint32_t nNeutralKills) { m_NeutralKills = nNeutralKills; }
+  inline void AddCreepKills(uint32_t nCreepKills) { m_CreepKills += nCreepKills; }
+  inline void AddCreepDenies(uint32_t nCreepDenies) { m_CreepDenies += nCreepDenies; }
+  inline void AddNeutralKills(uint32_t nNeutralKills) { m_NeutralKills += nNeutralKills; }
   inline void SetHero(const std::string& nHero) { m_Hero = nHero; }
   inline void SetItem(const uint8_t i, const std::string& item) { m_Items[i] = item; }
 };

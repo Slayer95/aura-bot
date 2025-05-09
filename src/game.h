@@ -92,7 +92,7 @@ protected:
   std::vector<CDBBan*>                                   m_Bannables;                     // std::vector of potential ban data for the database
   std::vector<CDBBan*>                                   m_ScopeBans;                     // it must be a different vector from m_Bannables, because m_Bannables has unique name data, while m_ScopeBans has unique (name, server) data
   CW3MMD*                                                m_CustomStats;
-  CDotaStats*                                            m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
+  Dota::CDotaStats*                                      m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
   CGameInteractiveHost*                                  m_GameInteractiveHost;
   CSaveGame*                                             m_RestoredGame;
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
@@ -858,7 +858,7 @@ public:
 
   bool InitStats();
   bool InitHMC();
-  bool EventGameCache(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd);
+  bool EventGameCacheInteger(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd);
   bool UpdateStatsQueue() const;
   void FlushStatsQueue() const;
   void TrySaveStats() const;
