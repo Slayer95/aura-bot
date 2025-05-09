@@ -209,6 +209,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
     else if (key.size() >= 4 && key.compare(0, 3, "CSS") == 0)
     {
       // incremental creeping performance stats sent every 5 minutes
+      // supersedes CSK, NK, CSD
 
       optional<uint32_t> maybeColor = ToUint32(key.substr(3));
       if (maybeColor.has_value() && GetIsPlayerColor(*maybeColor)) {
@@ -325,9 +326,9 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
     }
 
     // Unhandled keys:
-    // CSK  Creep kills by the period in valueInt. Periodic.
-    // NK   Neutral creep kills by the period in valueInt. Periodic.
-    // CSD  Creep denies by the period in valueInt. Periodic.
+    // CSK  Creep kills by the period in valueInt. Periodic. Superseded by CSS.
+    // NK   Neutral creep kills by the period in valueInt. Periodic. Superseded by CSS.
+    // CSD  Creep denies by the period in valueInt. Periodic. Superseded by CSS.
     // PUI_ Hero pick up an item.
     // DRI_ Hero drop an item.
 
