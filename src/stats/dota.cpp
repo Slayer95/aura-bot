@@ -240,9 +240,26 @@ bool CDotaStats::EventGameCache(const uint8_t /*fromUID*/, const std::string& fi
         m_Players[cacheValue]->SetCreepKills(*creepKills);
         m_Players[cacheValue]->SetCreepDenies(*creepDenies);
         m_Players[cacheValue]->SetNeutralKills(*neutralKills);
-      }
 
-      Print(GetLogPrefix() + "player disconnected");
+        string subjectName = to_string(cacheValue);
+        GameUser::CGameUser* subjectUser = m_Game.get().GetUserFromColor(cacheValue);
+        if (subjectUser) {
+          subjectName = subjectUser->GetName();
+        }
+        Print(GetLogPrefix() + "[" + subjectName + "] disconnected");
+      }
+    }
+
+    else if (key.size() >= 11 && key.compare(0, 11, "MHSuspected") == 0)
+    {
+      if (GetIsPlayerColor(cacheValue)) {
+        string subjectName = to_string(cacheValue);
+        GameUser::CGameUser* subjectUser = m_Game.get().GetUserFromColor(cacheValue);
+        if (subjectUser) {
+          subjectName = subjectUser->GetName();
+        }
+        Print(GetLogPrefix() + "[" + subjectName + "] suspected map hacker");
+      }
     }
 
     else if (key.size() >= 9 && key.compare(0, 9, "GameStart") == 0)
