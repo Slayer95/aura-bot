@@ -56,6 +56,44 @@
 using namespace std;
 using namespace Dota;
 
+optional<uint8_t> Dota::EnsureHeroColor(uint32_t input)
+{
+  optional<uint8_t> result;
+  if (GetIsHeroColor(input)) {
+    result = static_cast<uint8_t>(input);
+  }
+  return result;
+}
+
+optional<uint8_t> Dota::EnsureActorColor(uint32_t input)
+{
+  optional<uint8_t> result;
+  if (input < MAX_SLOTS_LEGACY) {
+    result = static_cast<uint8_t>(input);
+  }
+  return result;
+}
+
+optional<uint8_t> Dota::ParseHeroColor(const string& input)
+{
+  optional<uint8_t> result;
+  optional<uint32_t> maybeColor = ToUint32(input);
+  if (GetIsHeroColor(*maybeColor)) {
+    result = static_cast<uint8_t>(*maybeColor);
+  }
+  return result;
+}
+
+optional<uint8_t> Dota::ParseActorColor(const string& input)
+{
+  optional<uint8_t> result;
+  optional<uint32_t> maybeColor = ToUint32(input);
+  if (*maybeColor < MAX_SLOTS_LEGACY) {
+    result = static_cast<uint8_t>(*maybeColor);
+  }
+  return result;
+}
+
 //
 // CDotaStats
 //
@@ -69,8 +107,12 @@ CDotaStats::CDotaStats(shared_ptr<CGame> nGame)
 {
   Print("[STATS] using dota stats");
 
-  for (auto& dotaPlayer : m_Players) {
-    dotaPlayer = nullptr;
+  for (unsigned int i = 0; i < sizeof(m_Players); ++i) {
+    if (GetIsHeroColor(i)) {
+      m_Players[i] = new CDBDotAPlayer();
+    } else {
+      m_Players[i] = nullptr;
+    }
   }
 }
 
@@ -89,159 +131,178 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
     return true;
   }
 
-  //Print( "[STATS] " + missionKey + ", " + key + ", " + to_string( cacheValue ) );
-
-  if (missionKey == "Data")
-  {
+  if (missionKey == "Data") {
     // these are received during the game
     // you could use these to calculate killing sprees and double or triple kills (you'd have to make up your own time restrictions though)
     // you could also build a table of "who killed who" data
 
-    if (key.size() >= 5 && key.compare(0, 4, "Hero") == 0)
-    {
-      // a hero died
-      optional<uint32_t> killerColor;
-      optional<uint32_t> victimColor = ToUint32(key.substr(4));
+    string eventName = key;
+    string eventStringData;
 
-      if (GetIsPlayerColor(cacheValue) || cacheValue == 0 || cacheValue == 6) {
-        killerColor = cacheValue;
+    if (key.size() >= 4 && key.compare(0, 4, "Mode") == 0) {
+      eventStringData = key.substr(4);
+      eventName = "Mode";
+    } else {
+      string::size_type keyNumIndex = key.find_first_of("1234567890_");
+      if (keyNumIndex != string::npos) {
+        eventStringData = key.substr(keyNumIndex);
+        eventName = key.substr(0, keyNumIndex);
       }
-      if (!killerColor.has_value() || (!GetIsPlayerColor(*killerColor) && *killerColor != 0 && *killerColor != 6)) {
-        return true;
-      }
-      if (!victimColor.has_value() || !GetIsPlayerColor(*victimColor)) {
-        return true;
+    }
+
+    uint64_t eventHash = HashCode(eventName);
+
+    switch (eventHash) {
+      case HashCode("Hero"): {
+        // a hero died
+        optional<uint8_t> killerColor = EnsureActorColor(cacheValue);
+        optional<uint8_t> victimColor = ParseHeroColor(eventStringData);
+        if (!killerColor.has_value() || !victimColor.has_value()) {
+          break;
+        }
+
+        GameUser::CGameUser* killerUser = GetUserFromColor(*killerColor);
+        GameUser::CGameUser* victimUser = GetUserFromColor(*victimColor);
+        bool isFriendlyFire = GetAreSameTeamColors(*killerColor, *victimColor);
+
+        // only count kills from non-leavers
+        if (killerUser) m_Players[*killerColor]->IncKills();
+        m_Players[*victimColor]->IncDeaths();
+
+        string action = "killed";
+        if (isFriendlyFire) {
+          action = "denied";
+        }
+        if (victimUser) {
+          action.append(" player");
+        } else {
+          action.append(" leaver");
+        }
+
+        Print(GetLogPrefix() + GetActorNameFromColor(*killerColor) + action + " [" + victimUser->GetName() + "]");
+        break;
       }
 
+      case HashCode("Assist"): {
+        optional<uint8_t> assisterColor = ParseHeroColor(eventStringData);
+        optional<uint8_t> victimColor = EnsureHeroColor(cacheValue);
+        if (assisterColor.has_value() && victimColor.has_value()) {
+          GameUser::CGameUser* assisterUser = GetUserFromColor(*assisterColor);
+          if (assisterUser) { // only count assists from non-leavers
+            m_Players[*assisterColor]->IncAssists();
+            Print(GetLogPrefix() + GetActorNameFromColor(*assisterColor) + " assisted on killing [" + GetUserNameFromColor(*victimColor) + "]");
+          }
+        }
+        break;
+      }
 
-      GameUser::CGameUser* killerUser = nullptr;
-      if (GetIsPlayerColor(*killerColor)) {
-        killerUser = GetUserFromColor(*killerColor);
-        if (!m_Players[*killerColor]) {
-          m_Players[*killerColor] = new CDBDotAPlayer();
+      case HashCode("Tower"): {
+        optional<uint8_t> siegeColor = EnsureActorColor(cacheValue);
+        if (siegeColor.has_value() && eventStringData.size() == 3) {
+          GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
+          if (siegeUser) { // only count tower destroyed by non-leavers
+            m_Players[cacheValue]->IncTowerKills();
+          }
+
+          bool isFriendlyFire = false;
+          string action = "destroyed";
+          if (isFriendlyFire) {
+            action = "denied";
+          }
+
+          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + " team " + string(1, eventStringData[0]) + "'s " + ToOrdinalName((size_t)eventStringData[1]) + " tower at lane " + string(1, eventStringData[2]));
+        }
+
+        break;
+      }
+
+      case HashCode("Rax"): {
+        optional<uint8_t> siegeColor = EnsureActorColor(cacheValue);
+        if (siegeColor.has_value() && eventStringData.size() == 3) {
+          GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
+          if (siegeUser) { // only count tower destroyed by non-leavers
+            m_Players[cacheValue]->IncRaxKills();
+          }
+
+          bool isFriendlyFire = false;
+          string action = "destroyed";
+          if (isFriendlyFire) {
+            action = "denied";
+          }
+
+          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + " team " + string(1, eventStringData[0]) + "'s Barracks (type " + string(1, eventStringData[1]) + ") at " + ToOrdinalName((size_t)(eventStringData[2])) + " lane");
+        }
+        break;
+      }
+
+      case HashCode("Courier"): {
+        optional<uint8_t> killerColor = EnsureActorColor(cacheValue);
+        optional<uint8_t> victimColor = ParseHeroColor(eventStringData);
+        if (killerColor.has_value() && victimColor.has_value()) {
+          GameUser::CGameUser* killerUser = GetUserFromColor(*killerColor);
+          if (killerUser) { // only count couriers killed by non-leavers
+            m_Players[cacheValue]->IncCourierKills();
+          }
+
+          bool isFriendlyFire = false;
+          string action = "killed";
+          if (isFriendlyFire) {
+            action = "denied";
+          }
+
+          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + " [" + GetUserNameFromColor(*victimColor) + "]'s courier");
+        }
+        break;
+      }
+
+      case HashCode("Throne"): {
+        if (!eventStringData.empty()) break;
+        // the frozen throne got hurt
+        Print(GetLogPrefix() + "the Frozen Throne is now at " + to_string(cacheValue) + "% HP");
+        break;
+      }
+
+      case HashCode("Tree"): {
+        if (!eventStringData.empty()) break;
+        // the world tree got hurt
+        Print(GetLogPrefix() + "the World Tree Tree is now at " + to_string(cacheValue) + "% HP");
+        break;
+      }
+
+      case HashCode("CSS"): {
+        // incremental creeping performance stats sent every 5 minutes
+        // supersedes CSK, NK, CSD
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          uint32_t creepData = cacheValue;
+          uint32_t creepDenies = creepData & 0xFF; // 8 bits
+          creepData >>= 8;
+          uint32_t neutralKills = creepData & 0xFFF; // 12 bits
+          creepData >>= 12;
+          uint32_t creepKills = creepData; // 12 bits
+
+          m_Players[*heroColor]->AddCreepKills(creepKills);
+          m_Players[*heroColor]->AddCreepDenies(creepDenies);
+          m_Players[*heroColor]->AddNeutralKills(neutralKills);
+
+          string playerName = GetUserNameFromColor(*heroColor);
+          //Print(GetLogPrefix() + "[" + playerName + "] " + to_string(creepKills) + " creeps killed, " + to_string(creepDenies) + " denied, " + to_string(neutralKills) + "neutrals");
         }
       }
-      GameUser::CGameUser* victimUser = GetUserFromColor(*victimColor);
-      if (!m_Players[*victimColor]) {
-        m_Players[*victimColor] = new CDBDotAPlayer();
-      }
+      break;
 
-      bool isFriendlyFire = GetAreSameTeamColors(*killerColor, *victimColor);
-      if (killerUser) m_Players[*killerColor]->IncKills();
-      if (victimUser) m_Players[*victimColor]->IncDeaths();
-
-      string action = "killed";
-      if (isFriendlyFire) {
-        action = "denied";
-      }
-      if (victimUser) {
-        action.append(" player");
-      } else {
-        action.append(" leaver");
-      }
-      Print(GetLogPrefix() + GetActorNameFromColor(*killerColor) + action + " [" + victimUser->GetName() + "]");
-    }
-    else if (key.size() >= 7 && key.compare(0, 6, "Assist") == 0)
-    {
-      // check if the assist was on a non-leaver
-
-      if (m_Game.get().GetUserFromColor(static_cast<uint8_t>(cacheValue)))
-      {
-        optional<uint32_t> assisterColor = ToUint32(key.substr(6));
-        if (assisterColor.has_value() && GetIsPlayerColor(*assisterColor)) {
-          if (!m_Players[*assisterColor])
-            m_Players[*assisterColor] = new CDBDotAPlayer();
-
-          m_Players[*assisterColor]->IncAssists();
-        }
-      }
-    }
-
-    else if (key.size() >= 8 && key.compare(0, 5, "Tower") == 0)
-    {
-      // a tower died
-
-      if (GetIsPlayerColor(cacheValue))
-      {
-        if (!m_Players[cacheValue])
-          m_Players[cacheValue] = new CDBDotAPlayer();
-
-        m_Players[cacheValue]->IncTowerKills();
-      }
-    }
-    else if (key.size() >= 6 && key.compare(0, 3, "Rax") == 0)
-    {
-      // a rax died
-
-      if (GetIsPlayerColor(cacheValue))
-      {
-        if (!m_Players[cacheValue])
-          m_Players[cacheValue] = new CDBDotAPlayer();
-
-        m_Players[cacheValue]->IncRaxKills();
-      }
-    }
-    else if (key.size() >= 8 && key.compare(0, 7, "Courier") == 0)
-    {
-      // a courier died
-
-      if (GetIsPlayerColor(cacheValue))
-      {
-        if (!m_Players[cacheValue])
-          m_Players[cacheValue] = new CDBDotAPlayer();
-
-        m_Players[cacheValue]->IncCourierKills();
-      }
-    }
-
-    else if (key.size() >= 6 && key.compare(0, 6, "Throne") == 0)
-    {
-      // the frozen throne got hurt
-      Print(GetLogPrefix() + "the Frozen Throne is now at " + to_string(cacheValue) + "% HP");
-    }
-
-    else if (key.size() >= 4 && key.compare(0, 4, "Tree") == 0)
-    {
-      // the world tree got hurt
-      Print(GetLogPrefix() + "the World Tree is now at " + to_string(cacheValue) + "% HP");
-    }
-
-    else if (key.size() >= 4 && key.compare(0, 3, "CSS") == 0)
-    {
-      // incremental creeping performance stats sent every 5 minutes
-      // supersedes CSK, NK, CSD
-
-      optional<uint32_t> maybeColor = ToUint32(key.substr(3));
-      if (maybeColor.has_value() && GetIsPlayerColor(*maybeColor)) {
-        uint32_t creepData = cacheValue;
-        uint32_t creepDenies = creepData % 256;
-        creepData = (creepData - creepDenies) / 256;
-        uint32_t neutralKills = creepData % 4096;
-        creepData = (creepData - neutralKills) / 4096;
-        uint32_t creepKills = creepData;
-
-        m_Players[cacheValue]->AddCreepKills(creepKills);
-        m_Players[cacheValue]->AddCreepDenies(creepDenies);
-        m_Players[cacheValue]->AddNeutralKills(neutralKills);
-
-        string playerName = GetUserNameFromColor(*maybeColor);
-        //Print(GetLogPrefix() + "[" + playerName + "] " + to_string(creepKills) + " creeps killed, " + to_string(creepDenies) + " denied, " + to_string(neutralKills) + "neutrals");
-      }
-    }
-
-    else if (key.size() >= 5 && key.compare(0, 2, "CK") == 0)
-    {
-      // a player disconnected
-
-      if (GetIsPlayerColor(cacheValue)) {
-        string::size_type denyIndex = key.find('D');
-        if (denyIndex == string::npos || denyIndex < 2) return true;
-        string::size_type neutralIndex = key.find('N', denyIndex + 1);
+      case HashCode("CK"): {
+        // a player disconnected - the map sends a final creep performance stats update
+        if (eventStringData.size() < 5) break; 
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        string::size_type denyIndex = eventStringData.find('D');
+        if (denyIndex == string::npos) return true;
+        string::size_type neutralIndex = eventStringData.find('N', denyIndex + 1);
         if (neutralIndex == string::npos) return true;
 
-        string creepKillsString = key.substr(2, denyIndex - 2);
-        string creepDeniesString = key.substr(denyIndex + 1, neutralIndex - (denyIndex + 1));
-        string neutralKillsString = key.substr(neutralIndex + 1);
+        string creepKillsString = eventStringData.substr(0, denyIndex);
+        string creepDeniesString = eventStringData.substr(denyIndex + 1, neutralIndex - (denyIndex + 1));
+        string neutralKillsString = eventStringData.substr(neutralIndex + 1);
 
         optional<uint32_t> creepKills = ToUint32(creepKillsString);
         optional<uint32_t> creepDenies = ToUint32(creepDeniesString);
@@ -250,88 +311,113 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
           return true;
         }
 
-        if (!m_Players[cacheValue]) {
-          m_Players[cacheValue] = new CDBDotAPlayer();
-          m_Players[cacheValue]->SetColor(cacheValue);
-        }
+        m_Players[*heroColor]->SetCreepKills(*creepKills);
+        m_Players[*heroColor]->SetCreepDenies(*creepDenies);
+        m_Players[*heroColor]->SetNeutralKills(*neutralKills);
 
-        m_Players[cacheValue]->SetCreepKills(*creepKills);
-        m_Players[cacheValue]->SetCreepDenies(*creepDenies);
-        m_Players[cacheValue]->SetNeutralKills(*neutralKills);
-
-        string playerName = GetUserNameFromColor(cacheValue);
+        string playerName = GetUserNameFromColor(*heroColor);
         Print(GetLogPrefix() + "[" + playerName + "] disconnected");
+        break;
       }
-    }
 
-    else if (key.size() >= 11 && key.compare(0, 11, "MHSuspected") == 0)
-    {
-      if (GetIsPlayerColor(cacheValue)) {
-        string playerName = GetUserNameFromColor(cacheValue);
-        Print(GetLogPrefix() + "[" + playerName + "] suspected map hacker");
+      case HashCode("RuneStore"): {
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          Print(GetLogPrefix() + "[" + playerName + "] stored a rune");
+        }        
+        break;
       }
-    }
 
-    else if (key.size() >= 9 && key.compare(0, 9, "GameStart") == 0)
-    {
-      // Zero time in the game, creeps spawn.
-      if (cacheValue == 1) {
-        //m_Game.get().SetCreepSpawnTime(GetTime());
-        Print(GetLogPrefix() + "creeps spawned");
-      }
-    }
-
-    else if (key.size() >= 8 && key.compare(0, 4, "SWAP") == 0)
-    {
-      // swap players
-      string::size_type firstUnderscore = key.find('_');
-      if (firstUnderscore == string::npos) return true;
-      string::size_type secondUnderscore = key.find('_', firstUnderscore + 1);
-      if (secondUnderscore == string::npos) return true;
-      string fromString = key.substr(firstUnderscore + 1, secondUnderscore - (firstUnderscore + 1));
-      string toString = key.substr(secondUnderscore + 1);
-      optional<uint32_t> fromColor = ToUint32(fromString);
-      optional<uint32_t> toColor = ToUint32(toString);
-      if (!fromColor.has_value() || !toColor.has_value()) return true;
-      if (!GetIsPlayerColor(*fromColor) || !GetIsPlayerColor(*toColor)) return true;
-      GameUser::CGameUser* fromPlayer = m_Game.get().GetUserFromColor(*fromColor);
-      GameUser::CGameUser* toPlayer = m_Game.get().GetUserFromColor(*toColor);
-      
-      if (!m_SwitchEnabled && GetIsSentinelPlayerColor(*fromColor) != GetIsSentinelPlayerColor(*toColor)) {
-        m_Players[*toColor]->SetNewColor(*fromColor);
-        m_Players[*fromColor]->SetNewColor(*toColor);
-        
-        CDBDotAPlayer* tmp = m_Players[*toColor];
-        m_Players[*toColor] = m_Players[*fromColor];
-        m_Players[*fromColor] = tmp;
-        
-        if (fromPlayer) fromString = fromPlayer->GetName();
-        if (toPlayer) toString = toPlayer->GetName();
-
-        Print(GetLogPrefix() + "swap players from [" + fromString + "] to [" + toString + "].");
-      }
-    }
-    else if (key.size() >= 4 && key.compare(0, 4, "Mode") == 0)
-    {
-      Print(GetLogPrefix() + "detected game mode: [" + key.substr(4) + "]");
-      // Game mode
-      string::size_type KeyStringSize = key.size();
-      if (KeyStringSize % 2 != 0) KeyStringSize--;
-      for (string::size_type i = 4; i < KeyStringSize; i += 2) {
-        if (key[i] == 's' && key[i + 1] == 'o') {
-          m_SwitchEnabled = true;
-          Print(GetLogPrefix() + "detected so mode.");
+      case HashCode("AfkDetect"): {
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          Print(GetLogPrefix() + "[" + playerName + "] detected as AFK");
         }
+        break;
+      }
+
+      case HashCode("MHSuspected"): {
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(cacheValue);
+          Print(GetLogPrefix() + "[" + playerName + "] suspected map hacker");
+        }
+        break;
+      }
+
+      case HashCode("GameStart"): {
+        if (cacheValue == 1) {
+          //m_Game.get().SetCreepSpawnTime(GetTime());
+          Print(GetLogPrefix() + "creeps spawned");
+        }
+        break;
+      }
+
+      case HashCode("SWAP"): {
+        // swap players
+        string::size_type firstUnderscore = eventStringData.find('_');
+        if (firstUnderscore == string::npos) return true;
+        string::size_type secondUnderscore = eventStringData.find('_', firstUnderscore + 1);
+        if (secondUnderscore == string::npos) return true;
+        string fromString = eventStringData.substr(firstUnderscore + 1, secondUnderscore - (firstUnderscore + 1));
+        string toString = eventStringData.substr(secondUnderscore + 1);
+        optional<uint32_t> fromColor = ToUint32(fromString);
+        optional<uint32_t> toColor = ToUint32(toString);
+        if (!fromColor.has_value() || !toColor.has_value()) return true;
+        if (!GetIsHeroColor(*fromColor) || !GetIsHeroColor(*toColor)) return true;
+        GameUser::CGameUser* fromPlayer = m_Game.get().GetUserFromColor(*fromColor);
+        GameUser::CGameUser* toPlayer = m_Game.get().GetUserFromColor(*toColor);
+        
+        if (!m_SwitchEnabled && GetIsSentinelHeroColor(*fromColor) != GetIsSentinelHeroColor(*toColor)) {
+          m_Players[*toColor]->SetNewColor(*fromColor);
+          m_Players[*fromColor]->SetNewColor(*toColor);
+          
+          CDBDotAPlayer* tmp = m_Players[*toColor];
+          m_Players[*toColor] = m_Players[*fromColor];
+          m_Players[*fromColor] = tmp;
+          
+          if (fromPlayer) fromString = fromPlayer->GetName();
+          if (toPlayer) toString = toPlayer->GetName();
+
+          Print(GetLogPrefix() + "swap players from [" + fromString + "] to [" + toString + "].");
+        } else {
+          Print(GetLogPrefix() + "swap players from [" + fromString + "] to [" + toString + "] (switch enabled).");
+        }
+        break;
+      }
+
+      case HashCode("Mode"): {
+        Print(GetLogPrefix() + "detected game mode: [" + eventStringData + "]");
+        // Game mode
+        string::size_type KeyStringSize = eventStringData.size();
+        if (KeyStringSize % 2 != 0) KeyStringSize--;
+        for (string::size_type i = 0; i < KeyStringSize; i += 2) {
+          if (key[i] == 's' && key[i + 1] == 'o') {
+            m_SwitchEnabled = true;
+            Print(GetLogPrefix() + "detected so mode.");
+          }
+        }
+        break;
+      }
+
+      default: {
+        if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+          Print(GetLogPrefix() + "unhandled dota event: [" + key + "] for " + to_string(cacheValue));
+        }
+
+        // Unhandled keys:
+        // CSK  Creep kills by the period in valueInt. Periodic. Superseded by CSS.
+        // NK   Neutral creep kills by the period in valueInt. Periodic. Superseded by CSS.
+        // CSD  Creep denies by the period in valueInt. Periodic. Superseded by CSS.
+        // PUI_ Hero pick up an item.
+        // DRI_ Hero drop an item.
+        //
+        // Unknown keys:
+        // Buyback?
       }
     }
-
-    // Unhandled keys:
-    // CSK  Creep kills by the period in valueInt. Periodic. Superseded by CSS.
-    // NK   Neutral creep kills by the period in valueInt. Periodic. Superseded by CSS.
-    // CSD  Creep denies by the period in valueInt. Periodic. Superseded by CSS.
-    // PUI_ Hero pick up an item.
-    // DRI_ Hero drop an item.
-
   }
   else if (missionKey == "Global")
   {
@@ -363,58 +449,47 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
   {
     // these are only received at the end of the game
 
-    uint8_t ID = 0;
-    try {
-      ID = static_cast<uint8_t>(stoul(missionKey));
-    } catch (...) {
-    }
-
-    if (GetIsPlayerColor(ID))
+    optional<uint8_t> heroColor = ParseHeroColor(missionKey);
+    if (heroColor.has_value())
     {
-      if (!m_Players[ID])
-      {
-        m_Players[ID] = new CDBDotAPlayer();
-        m_Players[ID]->SetColor(ID);
-      }
-
       // Key "3"		-> Creep Kills
       // Key "4"		-> Creep Denies
       // Key "7"		-> Neutral Kills
-      // Key "id"     -> ID (1-5 for sentinel, 6-10 for scourge, accurate after using -sp and/or -switch)
+      // Key "id"     -> *heroColor (1-5 for sentinel, 6-10 for scourge, accurate after using -sp and/or -switch)
 
       switch (key[0]) {
         case '1':
-          m_Players[ID]->SetKills(cacheValue);
+          m_Players[*heroColor]->SetKills(cacheValue);
           break;
         case '2':
-          m_Players[ID]->SetDeaths(cacheValue);
+          m_Players[*heroColor]->SetDeaths(cacheValue);
           break;
         case '3':
-          m_Players[ID]->SetCreepKills(cacheValue);
+          m_Players[*heroColor]->SetCreepKills(cacheValue);
           break;
         case '4':
-          m_Players[ID]->SetCreepDenies(cacheValue);
+          m_Players[*heroColor]->SetCreepDenies(cacheValue);
           break;
         case '5':
-          m_Players[ID]->SetAssists(cacheValue);
+          m_Players[*heroColor]->SetAssists(cacheValue);
           break;
         case '6':
-          m_Players[ID]->SetGold(cacheValue);
+          m_Players[*heroColor]->SetGold(cacheValue);
           break;
         case '7':
-          m_Players[ID]->SetNeutralKills(cacheValue);
+          m_Players[*heroColor]->SetNeutralKills(cacheValue);
           break;
         case '8': {
           array<uint8_t, 4> valueBE = CreateFixedByteArray(cacheValue, true);
           // 8_0 to 8_1
           if (key.size() >= 3 && key[1] == '_' && (0x30 <= key[2] && key[2] <= 0x35)) {
-            m_Players[ID]->SetItem(key[2] - 0x30, string(valueBE.begin(), valueBE.end()));
+            m_Players[*heroColor]->SetItem(key[2] - 0x30, string(valueBE.begin(), valueBE.end()));
           }
           break;
         }
         case '9': {
           array<uint8_t, 4> valueBE = CreateFixedByteArray(cacheValue, true);
-          m_Players[ID]->SetHero(string(valueBE.begin(), valueBE.end()));
+          m_Players[*heroColor]->SetHero(string(valueBE.begin(), valueBE.end()));
           break;
         }
         case 'i':
@@ -422,9 +497,9 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             // DotA sends id values from 1-10 with 1-5 being sentinel players and 6-10 being scourge players
             // unfortunately the actual player colours are from 1-5 and from 7-11 so we need to deal with this case here
             if (cacheValue >= 6)
-              m_Players[ID]->SetNewColor(static_cast<uint8_t>(cacheValue + 1));
+              m_Players[*heroColor]->SetNewColor(static_cast<uint8_t>(cacheValue + 1));
             else
-              m_Players[ID]->SetNewColor(static_cast<uint8_t>(cacheValue));
+              m_Players[*heroColor]->SetNewColor(static_cast<uint8_t>(cacheValue));
           }
           break;
 
@@ -433,6 +508,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
       }
     }
   }
+
 
   return true;
 }
@@ -448,7 +524,7 @@ void CDotaStats::FlushQueue()
 
 [[nodiscard]] GameUser::CGameUser* CDotaStats::GetUserFromColor(const uint8_t color) const
 {
-  if (!GetIsPlayerColor(color)) return nullptr;
+  if (!GetIsHeroColor(color)) return nullptr;
   return m_Game.get().GetUserFromColor(color);
 }
 

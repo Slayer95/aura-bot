@@ -44,15 +44,19 @@ namespace Dota
   [[nodiscard]] inline bool GetIsValidColor(const uint32_t color) { return color < MAX_SLOTS_LEGACY; }
   [[nodiscard]] inline bool GetIsSentinelCreepsColor(const uint8_t color) { return color == Dota::SENTINEL_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsSentinelCreepsColor(const uint32_t color) { return GetIsValidColor(color) && GetIsSentinelCreepsColor((uint8_t)(color)); }
-  [[nodiscard]] inline bool GetIsSentinelPlayerColor(const uint8_t color) { return SENTINEL_HERO_MIN_COLOR <= color && color <= SENTINEL_HERO_MAX_COLOR; }
+  [[nodiscard]] inline bool GetIsSentinelHeroColor(const uint8_t color) { return SENTINEL_HERO_MIN_COLOR <= color && color <= SENTINEL_HERO_MAX_COLOR; }
   [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint8_t color) { return color == Dota::SCOURGE_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint32_t color) { return GetIsValidColor(color) && GetIsScourgeCreepsColor((uint8_t)(color)); }
-  [[nodiscard]] inline bool GetIsScourgePlayerColor(const uint8_t color) { return SCOURGE_HERO_MIN_COLOR <= color && color <= SCOURGE_HERO_MAX_COLOR; }
-  [[nodiscard]] inline bool GetIsPlayerColor(const uint8_t color) { return GetIsSentinelPlayerColor(color) || GetIsScourgePlayerColor(color); }
-  [[nodiscard]] inline bool GetIsPlayerColor(const uint32_t color) { return GetIsValidColor(color) && GetIsPlayerColor((uint8_t)color);}
+  [[nodiscard]] inline bool GetIsScourgeHeroColor(const uint8_t color) { return SCOURGE_HERO_MIN_COLOR <= color && color <= SCOURGE_HERO_MAX_COLOR; }
+  [[nodiscard]] inline bool GetIsHeroColor(const uint8_t color) { return GetIsSentinelHeroColor(color) || GetIsScourgeHeroColor(color); }
+  [[nodiscard]] inline bool GetIsHeroColor(const uint32_t color) { return GetIsValidColor(color) && GetIsHeroColor((uint8_t)color);}
   [[nodiscard]] inline bool GetAreSameTeamColors(const uint8_t a, const uint8_t b) { return (a < SCOURGE_CREEPS_COLOR) == (b < SCOURGE_CREEPS_COLOR); }
 
-  //
+  [[nodiscard]] std::optional<uint8_t> EnsureHeroColor(uint32_t input);
+  [[nodiscard]] std::optional<uint8_t> EnsureActorColor(uint32_t input);
+  [[nodiscard]] std::optional<uint8_t> ParseHeroColor(const std::string& input);
+  [[nodiscard]] std::optional<uint8_t> ParseActorColor(const std::string& input);
+
   // CDotaStats
   //
 

@@ -1591,6 +1591,7 @@ inline void NormalizeDirectory(std::filesystem::path& filePath)
 [[nodiscard]] inline std::optional<uint32_t> ToUint32(const std::string& input)
 {
   std::optional<uint32_t> container = std::nullopt;
+  if (input.empty()) return container;
 
   try {
     int64_t Value = std::stol(input);
