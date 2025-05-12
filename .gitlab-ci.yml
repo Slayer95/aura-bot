@@ -72,7 +72,7 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so* dist/bin-shared
   # CPR (shared, .so)
   - git clone https://github.com/libcpr/cpr.git cpr-src
-  - cd cpr-src && git checkout 3fbe802 && mkdir build && cd build
+  - cd cpr-src && mkdir build && cd build
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=ON
   - cmake --build . --parallel
   - cmake --install .
