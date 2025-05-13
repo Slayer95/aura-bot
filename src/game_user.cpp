@@ -572,7 +572,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               if (useSystemRTT && (!m_MeasuredRTT.has_value() || m_MeasuredRTT.value().first + SYSTEM_RTT_POLLING_PERIOD < Ticks)) {
                 optional<uint32_t> rtt = m_Socket->GetRTT();
                 if (rtt.has_value()) {
-                  m_MeasuredRTT = make_pair(Ticks, useLiteralRTT ? rtt.value() : (2 * rtt.value()));
+                  m_MeasuredRTT = make_pair(Ticks, useLiteralRTT ? rtt.value() : (rtt.value() / 2));
                   m_RTTValues.clear();
                 } else {
                   useSystemRTT = false;
