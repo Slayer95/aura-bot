@@ -123,6 +123,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_AutoRehostQuotaConservative  = CFG.GetBool("hosting.games_quota.auto_rehost.conservative", false);
 
   m_AutomaticallySetGameOwner    = CFG.GetBool("hosting.game_owner.from_creator", true);
+  m_EnableEndGame                = CFG.GetBool("hosting.early_end.enabled", true);
 
   m_EnableDeleteOversizedMaps    = CFG.GetBool("maps.storage.delete_huge.enabled", false);
   m_MaxSavedMapSize              = CFG.GetUint32("maps.storage.delete_huge.size", 0x6400); // 25 MiB

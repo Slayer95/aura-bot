@@ -71,6 +71,7 @@ struct CBotConfig
   bool                                    m_AutoRehostQuotaConservative;
 
   bool                                    m_AutomaticallySetGameOwner;   // whether the game creator should automatically be set as game owner
+  bool                                    m_EnableEndGame;               // globally enables/disables !end, !rmk commands
   bool                                    m_EnableDeleteOversizedMaps;   // may delete maps in m_MapPath exceeding m_MaxSavedMapSize
   uint32_t                                m_MaxSavedMapSize;             // maximum byte size of maps kept persistently in the m_MapPath folder
 
