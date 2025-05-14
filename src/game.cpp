@@ -7056,7 +7056,7 @@ void CGame::HandleGameLoadedStats()
 
 bool CGame::GetIsRemakeable()
 {
-  if (!m_Map || m_RestoredGame || m_FromAutoReHost) {
+  if (!m_Map || m_RestoredGame || m_FromAutoReHost || m_JoinInProgressVirtualUser.has_value()) {
     return false;
   }
   return true;

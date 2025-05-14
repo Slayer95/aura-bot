@@ -2177,7 +2177,7 @@ bool CAura::GetNewGameIsInQuotaReplace() const
 
 bool CAura::GetNewGameIsInQuotaConservative() const
 {
-  if (m_Lobbies.size() + m_JoinInProgressGames.size() >= m_Config.m_MaxLobbies) return false;
+  if (m_Lobbies.size() + m_JoinInProgressGames.size() - m_ReplacingLobbiesCounter >= m_Config.m_MaxLobbies) return false;
   if (m_StartedGames.size() >= m_Config.m_MaxStartedGames) return false;
   if (m_Lobbies.size() + m_StartedGames.size() >= m_Config.m_MaxTotalGames) return false;
   return true;

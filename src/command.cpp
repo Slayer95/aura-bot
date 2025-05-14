@@ -3307,7 +3307,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (!m_Aura->GetNewGameIsInQuotaConservative()) {
+      if (!m_Aura->GetNewGameIsInQuotaReplace()) {
         ErrorReply("There is already a lobby being hosted.");
         break;
       }
