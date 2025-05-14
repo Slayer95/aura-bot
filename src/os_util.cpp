@@ -26,6 +26,9 @@
 #include "os_util.h"
 #include "util.h"
 
+#include <cstdio>
+#include <cstdlib>
+
 using namespace std;
 
 #ifdef _WIN32
@@ -242,6 +245,13 @@ void SetWindowTitle(PLATFORM_STRING_TYPE nWindowTitle)
 #ifdef _WIN32
   SetConsoleTitleW(nWindowTitle.c_str());
 #else
+  static std::optional<bool> supportsOSC;
+  if (!supportsOSC.has_value()) {
+    supportsOSC = isatty(fileno(stdout)) && getenv("TERM") && strcmp(getenv("TERM"), "dumb") != 0;
+  }
+  if (!supportsOSC.value()) {
+    return;
+  }
   cout << "\033]0;" << nWindowTitle.c_str() << "\007";
 #endif
 }
