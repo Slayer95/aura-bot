@@ -3826,6 +3826,25 @@ std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm, bool forceL
   return TrimString(RemoveDuplicateWhiteSpace(replaced));
 }
 
+std::string CGame::GetNextCustomGameName(shared_ptr<const CRealm> realm, bool forceLobby) const
+{
+  string nameTemplate = GetCustomGameNameTemplate(realm, forceLobby);
+
+  const FlatMap<int64_t, string> textCache;
+
+  vector<pair<int64_t, function<string()>>> textFuncs;
+  textFuncs.reserve(3);
+  textFuncs.emplace_back(HashCode("MODE"),    [this] () { return this->GetHCLCommandString(); });
+  textFuncs.emplace_back(HashCode("NAME"),    [this] () { return this->GetGameName(); });
+  textFuncs.emplace_back(HashCode("COUNTER"), [this, realm]() { return this->GetNextCreationCounterText(realm); });
+  static_assert(HashCode("MODE") < HashCode("NAME"), "Hash for MODE is not before NAME");
+  static_assert(HashCode("NAME") < HashCode("COUNTER"), "Hash for NAME is not before COUNTER");
+  const FlatMap<int64_t, function<string()>> textFuncMap(move(textFuncs));
+
+  string replaced = ReplaceTemplate(nameTemplate, nullptr, &textCache, nullptr, &textFuncMap);
+  return TrimString(RemoveDuplicateWhiteSpace(replaced));
+}
+
 std::string CGame::GetDiscoveryNameLAN() const
 {
   return GetCustomGameName(nullptr, false);
@@ -7154,6 +7173,7 @@ void CGame::Remake()
   m_GameResultsSource = GAME_RESULT_SOURCE_NONE;
   m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_MAJOR;
 
+  NextCreationCounter();
   m_HostCounter = m_Aura->NextHostCounter();
   m_ChatEnabled = m_Config.m_EnableLobbyChat;
   InitPRNG();
@@ -10457,18 +10477,8 @@ bool CGame::GetAllowsIPFlood() const
   return m_Config.m_IPFloodHandler != ON_IPFLOOD_DENY;
 }
 
-string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
+string CGame::GetCustomCreationCounterText(shared_ptr<const CRealm> realm, char counter) const
 {
-  if (m_CreationCounter == 0) return string();
-
-  // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
-  char counter;
-  if (m_CreationCounter < 10) {
-    counter = static_cast<uint8_t>(48u + m_CreationCounter);
-  } else {
-    counter = static_cast<uint8_t>(87u + m_CreationCounter);
-  }
-
   string counterTemplate;
   if (realm) {
     counterTemplate = realm->GetReHostCounterTemplate();
@@ -10483,6 +10493,37 @@ string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
   const FlatMap<int64_t, function<string()>> textFuncMap;
 
   return ReplaceTemplate(counterTemplate, nullptr, &textCache, nullptr, &textFuncMap);
+}
+
+string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
+{
+  if (m_CreationCounter == 0) return string();
+
+  // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
+  char counter;
+  if (m_CreationCounter < 10) {
+    counter = static_cast<uint8_t>(48u + m_CreationCounter);
+  } else {
+    counter = static_cast<uint8_t>(87u + m_CreationCounter);
+  }
+
+  return GetCustomCreationCounterText(realm, counter);
+}
+
+string CGame::GetNextCreationCounterText(shared_ptr<const CRealm> realm) const
+{
+  uint16_t creationCounter = (m_CreationCounter + 1) % 36;
+  ++creationCounter;
+
+  // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
+  char counter;
+  if (creationCounter < 10) {
+    counter = static_cast<uint8_t>(48u + creationCounter);
+  } else {
+    counter = static_cast<uint8_t>(87u + creationCounter);
+  }
+
+  return GetCustomCreationCounterText(realm, counter);
 }
 
 string CGame::GetIndexHostName() const

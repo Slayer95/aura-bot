@@ -1519,6 +1519,7 @@ void CGameSetup::OnGameCreate()
   m_RestoredGame = nullptr;
   if (m_LobbyAutoRehosted) {
     m_CreationCounter = (m_CreationCounter + 1) % 36;
+    if (m_CreationCounter == 0) ++m_CreationCounter;
   }
 }
 

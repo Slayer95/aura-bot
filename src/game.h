@@ -272,13 +272,16 @@ public:
   inline uint8_t                                         GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string                                     GetGameName() const { return m_GameName; }
   inline uint16_t                                        GetCreationCounter() const { return m_CreationCounter; }
+  std::string                                            GetCustomCreationCounterText(std::shared_ptr<const CRealm> realm, char counter) const;
   std::string                                            GetCreationCounterText(std::shared_ptr<const CRealm> realm) const;
+  std::string                                            GetNextCreationCounterText(std::shared_ptr<const CRealm> realm) const;
   inline uint64_t                                        GetGameID() const { return m_PersistentId; }
   inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
   std::string                                            GetCustomGameNameTemplate(std::shared_ptr<const CRealm> realm = nullptr, bool forceLobby = false) const;
   std::string                                            GetCustomGameName(std::shared_ptr<const CRealm> realm = nullptr, bool forceLobby = false) const;
+  std::string                                            GetNextCustomGameName(std::shared_ptr<const CRealm> realm = nullptr, bool forceLobby = false) const;
   std::string                                            GetDiscoveryNameLAN() const;
   std::string                                            GetShortNameLAN() const;
   std::string                                            GetAnnounceText(std::shared_ptr<const CRealm> realm = nullptr) const;
@@ -808,6 +811,7 @@ public:
   bool GetIsAutoVirtualPlayers() const { return m_IsAutoVirtualPlayers; }
   void SetAutoVirtualPlayers(const bool nEnableVirtualHostPlayer) { m_IsAutoVirtualPlayers = nEnableVirtualHostPlayer; }
   void RemoveCreator();
+  inline void NextCreationCounter() { ++m_CreationCounter; }
 
   uint8_t GetNumEnabledTeamSlots(const uint8_t team) const;
   std::vector<uint8_t> GetNumFixedComputersByTeam() const;

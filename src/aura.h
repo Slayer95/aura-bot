@@ -232,7 +232,7 @@ public:
   void CheckScripts();
   void ClearAutoRehost();
 
-  void LoadMapAliases();
+  bool LoadMapAliases();
   void LoadIPToCountryData(const CConfig& CFG);
   void InitContextMenu();
   void InitPathVariable();

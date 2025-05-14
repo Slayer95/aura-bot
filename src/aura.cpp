@@ -1475,10 +1475,12 @@ void CAura::EventGameRemake(shared_ptr<CGame> game)
   */
 
   for (auto& realm : m_Realms) {
-    if (!realm->GetAnnounceHostToChat()) continue;
-    realm->QueueChatChannel("Game remake: " + game->GetMap()->GetServerFileName());
-    if (game->MatchesCreatedFromRealm(realm)) {
-      realm->QueueWhisper("Game remake: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
+    realm->TrySetGameBroadcastPending(game);
+    if (realm->GetAnnounceHostToChat()) {
+      realm->QueueChatChannel("Game remake: " + game->GetMap()->GetServerFileName());
+      if (game->MatchesCreatedFromRealm(realm)) {
+        realm->QueueWhisper("Game remake: " + game->GetMap()->GetServerFileName(), game->GetCreatorName());
+      }
     }
   }
 }
@@ -1819,16 +1821,16 @@ uint8_t CAura::ExtractScripts()
   return FilesExtracted;
 }
 
-void CAura::LoadMapAliases()
+bool CAura::LoadMapAliases()
 {
   CConfig aliases;
   if (!aliases.Read(m_Config.m_AliasesPath)) {
-    return;
+    return false;
   }
 
   if (!m_DB->Begin()) {
     Print("[AURA] internal database error - map aliases will not be available");
-    return;
+    return false;
   }
 
   for (const auto& entry : aliases.GetEntries()) {
@@ -1839,7 +1841,9 @@ void CAura::LoadMapAliases()
 
   if (!m_DB->Commit()) {
     Print("[AURA] internal database error - map aliases will not be available");
+    return false;
   }
+  return true;
 }
 
 void CAura::LoadIPToCountryData(const CConfig& CFG)

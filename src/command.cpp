@@ -3193,19 +3193,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (target.length() > m_Aura->m_MaxGameNameSize) {
-        ErrorReply("Unable to create game [" + target + "]. The game name is too long (the maximum is " + to_string(m_Aura->m_MaxGameNameSize) + " characters)");
+      if (gameName.length() > m_Aura->m_MaxGameNameSize) {
+        ErrorReply("Unable to create game [" + gameName + "]. The game name is too long (the maximum is " + to_string(m_Aura->m_MaxGameNameSize) + " characters)");
         break;
       }
 
       if (targetGame) {
-        SendReply("Trying to rehost with name [" + target + "].", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
+        SendReply("Trying to rehost with name [" + gameName + "].", CHAT_SEND_TARGET_ALL | CHAT_LOG_INCIDENT);
       }
 
       bool IsPrivate = cmdHash == HashCode("priv");
       if (targetGame) {
         targetGame->m_DisplayMode = IsPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC;
-        targetGame->m_GameName = target;
+        targetGame->m_GameName = gameName;
         targetGame->m_HostCounter = m_Aura->NextHostCounter();
         targetGame->UpdateGameDiscovery();
         for (auto& realm : m_Aura->m_Realms) {
@@ -3312,12 +3312,21 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
+      if (targetGame->GetFromAutoReHost()) {
+        ErrorReply("This map is already automatically rehosted.");
+        break;
+      }
       if (!targetGame->GetIsRemakeable()) {
         ErrorReply("This game cannot be remade.");
         break;
       }
-      targetGame->SendAllChat("Please rejoin the remade game <<" + targetGame->GetCustomGameName(GetSourceRealm(), true) + ">>.");
-      targetGame->SendEveryoneElseLeftAndDisconnect("was disconnected (admin remade game)");
+
+      targetGame->SendAllChat("Please rejoin the remade game <<" + targetGame->GetNextCustomGameName(GetSourceRealm(), true) + ">>.");
+      if (GetIsGameUser() && GetGameUser()->GetIsOwner(nullopt)) {
+        targetGame->SendEveryoneElseLeftAndDisconnect("was disconnected (owner remade game)");
+      } else {
+        targetGame->SendEveryoneElseLeftAndDisconnect("was disconnected (admin remade game)");
+      }
       targetGame->RemakeStart();
       break;
     }
@@ -4120,7 +4129,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
 
       if (lower == "aliases") {
-        m_Aura->LoadMapAliases();
+        if (!m_Aura->LoadMapAliases()) {
+          ErrorReply("Failed to reload map aliases.");
+          break;
+        }
         SendReply("Commited map aliases to SQLite.");
       } else {
         ErrorReply("Usage " + cmdToken + "import [DATA TYPE]. Supported data types are: aliases");
