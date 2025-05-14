@@ -888,6 +888,11 @@ Config
 - Default value: ON_DESYNC_NOTIFY
 - Error handling: Use default value
 
+## \`hosting.early_end.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`hosting.enabled\`
 - Type: bool
 - Default value: true
