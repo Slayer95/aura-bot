@@ -704,7 +704,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
 uint8_t CRealm::CountChatQuota()
 {
   if (m_ChatQuotaInUse.empty()) return 0;
-  int64_t minTicks = GetTicks() - static_cast<int64_t>(m_Config.m_FloodQuotaTime) * 60000 - 300; // 300 ms hardcoded latency
+  int64_t minTicks = GetTicks() - static_cast<int64_t>(m_Config.m_FloodQuotaTime) * 1000 - 300; // 300 ms hardcoded latency
   uint16_t spentQuota = 0;
   for (auto it = begin(m_ChatQuotaInUse); it != end(m_ChatQuotaInUse);) {
     if ((*it).first < minTicks) {
@@ -727,7 +727,8 @@ bool CRealm::CheckWithinChatQuota(CQueuedChatMessage* message)
     message->SetWasThrottled(true);
     return false;
   }
-  const bool success = message->SelectSize(m_Config.m_VirtualLineLength, m_CurrentChannel) + spentQuota <= m_Config.m_FloodQuotaLines;
+  uint16_t size = message->SelectSize(m_Config.m_VirtualLineLength, m_CurrentChannel);
+  const bool success = size + spentQuota <= m_Config.m_FloodQuotaLines;
   if (!success) message->SetWasThrottled(true);
   return success;
 }
@@ -1352,6 +1353,7 @@ void CRealm::TrySendPendingChats()
       }
     }
   }
+
   if (!waitForPriority) {
     while (m_LoggedIn && !m_ChatQueueMain.empty()) {
       CQueuedChatMessage* nextMessage = m_ChatQueueMain.front();
