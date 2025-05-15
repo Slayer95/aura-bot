@@ -718,7 +718,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
     if (gameName.empty() || hostName.empty() || mapPath.empty()) {
       Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
@@ -734,7 +734,7 @@ namespace GameProtocol
     StatString.push_back(0);
     AppendByteArrayFast(StatString, mapWidth);
     AppendByteArrayFast(StatString, mapHeight);
-    AppendByteArrayFast(StatString, mapHash);
+    AppendByteArrayFast(StatString, mapBlizzHash);
     AppendByteArrayString(StatString, mapPath, true);
     AppendByteArrayString(StatString, hostName, true);
     StatString.push_back(0);
@@ -766,7 +766,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::array<uint8_t, 4>& mapHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
   {
     if (gameName.empty() || hostName.empty() || mapPath.empty()) {
       Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
@@ -783,7 +783,7 @@ namespace GameProtocol
     StatString.push_back(0);
     AppendByteArrayFast(StatString, mapWidth);
     AppendByteArrayFast(StatString, mapHeight);
-    AppendByteArrayFast(StatString, mapHash);
+    AppendByteArrayFast(StatString, mapBlizzHash);
     AppendByteArrayString(StatString, mapPath, true);
     AppendByteArrayString(StatString, hostName, true);
     StatString.push_back(0);

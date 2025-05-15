@@ -1021,7 +1021,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapCRC, const array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
   {
     string HostCounterString = ToHexString(hostCounter);
 
@@ -1039,7 +1039,7 @@ namespace BNETProtocol
     StatString.push_back(0);
     AppendByteArrayFast(StatString, mapWidth);
     AppendByteArrayFast(StatString, mapHeight);
-    AppendByteArrayFast(StatString, mapCRC);
+    AppendByteArrayFast(StatString, mapBlizzHash);
     AppendByteArrayString(StatString, mapPath, true);
     AppendByteArrayString(StatString, hostName, true);
     StatString.push_back(0);
