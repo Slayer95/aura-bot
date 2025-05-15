@@ -244,7 +244,7 @@ public:
     if (ExtractMessageTokens(message, privateToken, matchPadding, matchCmd, matchTarget)) {
       result = COMMAND_TOKEN_MATCH_PRIVATE;
       if (matchPadding) {
-        matchToken = privateToken + " ";
+        matchToken = privateToken + " "; // keyword-based tokens
       } else {
         matchToken = privateToken;
       }
@@ -255,7 +255,7 @@ public:
     if (ExtractMessageTokens(message, broadcastToken, matchPadding, matchCmd, matchTarget)) {
       result = COMMAND_TOKEN_MATCH_BROADCAST;
       if (matchPadding) {
-        matchToken = broadcastToken + " ";
+        matchToken = broadcastToken + " "; // keyword-based tokens
       } else {
         matchToken = broadcastToken;
       }

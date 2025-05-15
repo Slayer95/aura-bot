@@ -969,7 +969,6 @@ shared_ptr<CRealm> CAura::GetRealmByHostName(const string& hostName) const
 
 ServiceType CAura::FindServiceFromHostName(const string& hostName, void*& location) const
 {
-  // TODO: CAura::FindServiceFromHostName() location ptr
   if (m_IRC.MatchHostName(hostName)) {
     return ServiceType::kIRC;
   }
@@ -978,6 +977,7 @@ ServiceType CAura::FindServiceFromHostName(const string& hostName, void*& locati
   }
   for (const auto& realm : m_Realms) {
     if (realm->GetServer() == hostName) {
+      location = realm.get();
       return ServiceType::kRealm;
     }
   }
@@ -1051,7 +1051,7 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
     case 0: { // AppAction
       const AppAction& action = std::get<AppAction>(genAction);
       uint8_t result = HandleAction(action);
-      if (result == APP_ACTION_WAIT && m_LoopTicks < action.queuedTime + 20000) {
+      if (result == APP_ACTION_WAIT && action.queuedTicks + 20000 < m_LoopTicks) {
         result = APP_ACTION_TIMEOUT;
       }
       return result;
@@ -1059,7 +1059,7 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
     case 1: { // LazyCommandContext
       const LazyCommandContext& lazyCtx = std::get<LazyCommandContext>(genAction);
       uint8_t result = HandleDeferredCommandContext(lazyCtx);
-      if (result == APP_ACTION_WAIT && m_LoopTicks < lazyCtx.queuedTime + 20000) {
+      if (result == APP_ACTION_WAIT && lazyCtx.queuedTicks + 20000 < m_LoopTicks) {
         result = APP_ACTION_TIMEOUT;
       }
       return result;

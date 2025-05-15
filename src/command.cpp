@@ -8271,11 +8271,8 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       }
       break;
     case ServiceType::kRealm:
-      Print("[AURA] --exec parsed user at service is realm.");
       CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
-      Print("[AURA] --exec parsed user at service is realm " + sourceRealm->GetCanonicalDisplayName() + ".");
       if (!sourceRealm->GetLoggedIn()) {
-        Print("[AURA] --exec realm not logged in yet...");
         return APP_ACTION_WAIT;
       }
 

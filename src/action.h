@@ -44,14 +44,14 @@ struct AppAction
   uint8_t mode;
   uint32_t value_1;
   uint32_t value_2;
-  int64_t queuedTime;
+  int64_t queuedTicks;
 
   AppAction(uint8_t nType, uint8_t nMode = 0, uint32_t nValue1 = 0, uint32_t nValue2 = 0)
    : type(nType),
      mode(nMode),
      value_1(nValue1),
      value_2(nValue2),
-     queuedTime(GetTicks())
+     queuedTicks(GetTicks())
   {
   };
 
@@ -61,7 +61,7 @@ struct AppAction
 struct LazyCommandContext
 {
   bool broadcast;
-  int64_t queuedTime;
+  int64_t queuedTicks;
   std::string command;
   std::string target;
   std::string targetGame;
@@ -69,17 +69,18 @@ struct LazyCommandContext
   std::string identityLoc;
   CommandAuth auth;
 
-  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nTarget, const std::string& nTargetGame, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
+  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nTarget, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
    : broadcast(nBroadcast),
-     queuedTime(GetTicks()),
+     queuedTicks(GetTicks()),
      command(nCommand),
      target(nTarget),
-     targetGame(nTargetGame),
      identityName(nIdentityName),
      identityLoc(nIdentityLoc),
      auth(nAuth)
   {
   };
+
+  inline void SetTargetGame(const std::string& nTargetGame) { targetGame = nTargetGame; }
 
   ~LazyCommandContext() = default;
 };
