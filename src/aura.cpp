@@ -476,6 +476,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_MetaDataNeedsUpdate(false),
 
     m_LogLevel(LOG_LEVEL_DEBUG),
+    m_LoopTicks(APP_MIN_TICKS),
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
     m_StartedFastPollingTicks(APP_MIN_TICKS),
     m_SupportsModernSlots(false),
@@ -1050,7 +1051,7 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
     case 0: { // AppAction
       const AppAction& action = std::get<AppAction>(genAction);
       uint8_t result = HandleAction(action);
-      if (result == APP_ACTION_WAIT && GetTicks() < action.queuedTime + 20000) {
+      if (result == APP_ACTION_WAIT && m_LoopTicks < action.queuedTime + 20000) {
         result = APP_ACTION_TIMEOUT;
       }
       return result;
@@ -1058,7 +1059,7 @@ uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
     case 1: { // LazyCommandContext
       const LazyCommandContext& lazyCtx = std::get<LazyCommandContext>(genAction);
       uint8_t result = HandleDeferredCommandContext(lazyCtx);
-      if (result == APP_ACTION_WAIT && GetTicks() < lazyCtx.queuedTime + 20000) {
+      if (result == APP_ACTION_WAIT && m_LoopTicks < lazyCtx.queuedTime + 20000) {
         result = APP_ACTION_TIMEOUT;
       }
       return result;
@@ -1080,7 +1081,7 @@ int64_t CAura::GetSelectBlockTime() const
   }
   m_Net.UpdateSelectBlockTime(usecBlock);
 
-  if (usecBlock < 10000 && m_IsFastPolling && m_StartedFastPollingTicks + 1000 < GetTicks()) {
+  if (usecBlock < 10000 && m_IsFastPolling && m_StartedFastPollingTicks + 1000 < m_LoopTicks) {
     // Block for at least 10 ms to avoid CPU starvation
     usecBlock = 10000;
   }
@@ -1090,6 +1091,7 @@ int64_t CAura::GetSelectBlockTime() const
 
 bool CAura::Update()
 {
+  m_LoopTicks = GetTicks();
   if (gGracefulExit == 1 || m_ExitingSoon) {
     // Intentionally execute on every loop turn after graceful exit is flagged.
     GracefulExit();
@@ -1188,7 +1190,7 @@ bool CAura::Update()
 
   if (tv.tv_usec == 0) {
     if (!m_IsFastPolling) {
-      m_StartedFastPollingTicks = GetTicks();
+      m_StartedFastPollingTicks = m_LoopTicks;
     }
     m_IsFastPolling = true;
   } else {
@@ -1209,6 +1211,8 @@ bool CAura::Update()
 
     this_thread::sleep_for(chrono::milliseconds(200));
   }
+
+  m_LoopTicks = GetTicks();
 
   // update map downloads
   if (m_GameSetup) {
@@ -2037,7 +2041,7 @@ void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, c
   if (!MatchLogLevel(LOG_LEVEL_WARNING)) {
     return;
   }
-  int64_t Ticks = GetTicks();
+  int64_t Ticks = m_LoopTicks;
   if (Ticks < m_LastPerformanceWarningTicks + 5000) {
     return;
   }
@@ -2199,7 +2203,7 @@ bool CAura::GetNewGameIsInQuotaAutoReHost() const
 bool CAura::GetIsAutoHostThrottled() const
 {
   if (m_Realms.empty()) return false;
-  return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= GetTicks();
+  return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= m_LoopTicks;
 }
 
 bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
@@ -2258,7 +2262,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 
   shared_ptr<CGame> createdLobby = make_shared<CGame>(this, gameSetup);
   m_LobbiesPending.push_back(createdLobby);
-  m_LastGameHostedTicks = GetTicks();
+  m_LastGameHostedTicks = m_LoopTicks;
   if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;
     m_LastGameAutoHostedTicks = m_LastGameHostedTicks;

@@ -89,6 +89,7 @@ public:
   bool                                               m_MetaDataNeedsUpdate;
 
   uint8_t                                            m_LogLevel;
+  int64_t                                            m_LoopTicks;
   int64_t                                            m_LastPerformanceWarningTicks;
   int64_t                                            m_StartedFastPollingTicks;
   std::optional<Version>                             m_GameDataVersion;
