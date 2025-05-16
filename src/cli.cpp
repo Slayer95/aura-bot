@@ -229,7 +229,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     {"sudo", CommandAuth::kSudo}
   };
 
-  app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->check(CLI::IsMember(commandAuths))->transform(CLI::Transformer(commandAuths));
+  app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->transform(CLI::CheckedTransformer(commandAuths));
   app.add_option("--exec-game", m_ExecGame, "Customizes the channel when running commands from the CLI. Values: lobby, game#IDX");
   app.add_flag(  "--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
 
