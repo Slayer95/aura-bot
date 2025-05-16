@@ -259,6 +259,7 @@ constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG = 5u;
 constexpr uint8_t MAP_TRANSFER_CHECK_BUFFERBLOAT = 6u;
 
 // game.h
+constexpr uint8_t SLOTS_UNCHANGED = 0;
 constexpr uint8_t SLOTS_ALIGNMENT_CHANGED = (1 << 0);
 constexpr uint8_t SLOTS_DOWNLOAD_PROGRESS_CHANGED = (1 << 1);
 constexpr uint8_t SLOTS_HCL_INJECTED = (1 << 2);
@@ -333,8 +334,10 @@ constexpr uint8_t GAME_FRAME_TYPE_LATENCY = 4u;
 constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 5u;
 
 constexpr uint8_t GAME_DISCOVERY_CHANGED_NONE = 0u;
-constexpr uint8_t GAME_DISCOVERY_CHANGED_MINOR = 1u;
-constexpr uint8_t GAME_DISCOVERY_CHANGED_MAJOR = 2u;
+constexpr uint8_t GAME_DISCOVERY_CHANGED_SLOTS = 1u;
+constexpr uint8_t GAME_DISCOVERY_CHANGED_STAT = 2u;
+constexpr uint8_t GAME_DISCOVERY_CHANGED_NET = 4u;
+constexpr uint8_t GAME_DISCOVERY_CHANGED_MAJOR = GAME_DISCOVERY_CHANGED_STAT | GAME_DISCOVERY_CHANGED_NET;
 
 constexpr uint8_t GAME_RESULT_SOURCE_NONE = 0u;
 constexpr uint8_t GAME_RESULT_SOURCE_LEAVECODE = 1u;

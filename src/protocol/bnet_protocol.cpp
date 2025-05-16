@@ -1053,8 +1053,8 @@ namespace BNETProtocol
       const uint8_t Unknown[]    = {255, 3, 0, 0};
       const uint8_t CustomGame[] = {0, 0, 0, 0};
 
-      packet.push_back(BNETProtocol::Magic::BNET_HEADER);                // BNET header constant
-      packet.push_back(BNETProtocol::Magic::STARTADVEX3);   // SID_STARTADVEX3
+      packet.push_back(BNETProtocol::Magic::BNET_HEADER);    // BNET header constant
+      packet.push_back(BNETProtocol::Magic::STARTADVEX3);    // SID_STARTADVEX3
       packet.push_back(0);                                   // packet length will be assigned later
       packet.push_back(0);                                   // packet length will be assigned later
       packet.push_back(state);                               // State (16 = public, 17 = private, 18 = close)
@@ -1062,11 +1062,11 @@ namespace BNETProtocol
       packet.push_back(0);                                   // State continued...
       packet.push_back(0);                                   // State continued...
       AppendByteArray(packet, upTime, false);                // time since creation
-      AppendByteArray(packet, mapGameType, false);           // Game Type, Parameter
+      AppendByteArray(packet, mapGameType, false);           // Game Type (public? saved?)
       AppendByteArray(packet, Unknown, 4);                   // ???
       AppendByteArray(packet, CustomGame, 4);                // Custom Game
       AppendByteArrayString(packet, gameName, true);         // Game Name
-      packet.push_back(0);                                   // Game Password is NULL
+      packet.push_back(0);                                   // Game Password is empty
       packet.push_back(86 + maxSupportedSlots);              // Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of UID's Warcraft III will allocate
       AppendByteArrayString(packet, HostCounterString, false); // Host Counter - exclude null terminator
       AppendByteArrayFast(packet, StatString);               // Stat String

@@ -801,12 +801,12 @@ namespace GameProtocol
     AppendByteArray(packet, Zeros, 4);
     AppendByteArray(packet, hostCounter, false);                     // Host Counter
     AppendByteArray(packet, entryKey, false);                        // Entry Key
-    AppendByteArrayString(packet, gameName, true);                           // Game Name
+    AppendByteArrayString(packet, gameName, true);                   // Game Name
     packet.push_back(0);                                             // ??? (maybe game password)
     AppendByteArrayFast(packet, StatString);                         // Stat String
     packet.push_back(0);                                             // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
     AppendByteArray(packet, slotsTotal, false);                      // Slots Total
-    AppendByteArray(packet, mapGameType, false);                     // Game Type
+    AppendByteArray(packet, mapGameType, false);                     // Game Type (saved?)
     AppendByteArray(packet, Unknown2, 4);                            // ???
     *dynamicInfoOffset = static_cast<uint16_t>(packet.size());       // TCP port
     AppendByteArray(packet, Zeros, 4);                               // Slots Available off-by-one

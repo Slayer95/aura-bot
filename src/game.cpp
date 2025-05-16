@@ -171,7 +171,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_VirtualHostUID(0xFF),
     m_Exiting(false),
     m_ExitingSoon(false),
-    m_SlotInfoChanged(0),
+    m_SlotInfoChanged(SLOTS_UNCHANGED),
     m_JoinedVirtualHosts(0),
     m_ReconnectProtocols(0),
     m_Replaceable(nGameSetup->m_LobbyReplaceable),
@@ -211,7 +211,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameHistory(make_shared<GameHistory>()),
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
     m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
-    m_GameDiscoveryInfoChanged(GAME_DISCOVERY_CHANGED_NONE),
+    m_GameDiscoveryInfoChanged(GAME_DISCOVERY_CHANGED_MAJOR),
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
@@ -1343,7 +1343,7 @@ void CGame::UpdateJoinable()
     if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
       SendAllSlotInfo();
       UpdateReadyCounters();
-      m_SlotInfoChanged &= ~(SLOTS_DOWNLOAD_PROGRESS_CHANGED);
+      m_SlotInfoChanged &= ~SLOTS_DOWNLOAD_PROGRESS_CHANGED;
     }
 
     m_LastDownloadCounterResetTicks = Ticks;
@@ -1354,10 +1354,10 @@ bool CGame::UpdateLobby()
 {
   const int64_t Ticks = GetTicks();
 
-  if (m_SlotInfoChanged & (SLOTS_ALIGNMENT_CHANGED)) {
+  if (m_SlotInfoChanged & SLOTS_ALIGNMENT_CHANGED) {
     SendAllSlotInfo();
     UpdateReadyCounters();
-    m_SlotInfoChanged &= ~(SLOTS_ALIGNMENT_CHANGED);
+    m_SlotInfoChanged &= ~SLOTS_ALIGNMENT_CHANGED;
   }
 
   if (GetIsAutoStartDue()) {
@@ -2310,7 +2310,8 @@ void CGame::SendAllSlotInfo()
   if (!m_Users.empty()) {
     SendAll(GetSlotInfo());
   }
-  m_SlotInfoChanged = 0;
+
+  m_SlotInfoChanged = SLOTS_UNCHANGED;
 }
 
 uint8_t CGame::GetNumEnabledTeamSlots(const uint8_t team) const
@@ -4152,11 +4153,11 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
 
 vector<uint8_t>* CGame::GetGameDiscoveryInfoTemplate()
 {
-  if (!m_GameDiscoveryInfoChanged && !m_GameDiscoveryInfo.empty()) {
+  if (!(m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_MAJOR)) {
     return &m_GameDiscoveryInfo;
   }
   m_GameDiscoveryInfo = GetGameDiscoveryInfoTemplateInner(&m_GameDiscoveryInfoVersionOffset, &m_GameDiscoveryInfoDynamicOffset);
-  m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_NONE;
+  m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_MAJOR;
   return &m_GameDiscoveryInfo;
 }
 
@@ -6290,7 +6291,7 @@ void CGame::EventUserRequestRace(GameUser::CGameUser* user, uint8_t race)
   CGameSlot* slot = GetSlot(GetSIDFromUID(user->GetUID()));
   if (slot) {
     slot->SetRace(race | SLOTRACE_SELECTABLE);
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   }
 }
 
@@ -6316,7 +6317,7 @@ void CGame::EventUserRequestHandicap(GameUser::CGameUser* user, uint8_t handicap
   CGameSlot* slot = GetSlot(GetSIDFromUID(user->GetUID()));
   if (slot) {
     slot->SetHandicap(handicap);
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   }
 }
 
@@ -7143,7 +7144,7 @@ void CGame::Remake()
   m_JoinInProgressVirtualUser.reset();
   m_VirtualHostUID = 0xFF;
   m_ExitingSoon = false;
-  m_SlotInfoChanged = 0;
+  m_SlotInfoChanged = SLOTS_UNCHANGED;
   m_JoinedVirtualHosts = 0;
   m_ReconnectProtocols = 0;
   //m_Replaceable = false;
@@ -7644,20 +7645,26 @@ void CGame::ResolveVirtualUsers()
 
   // Hack to workaround WC3Stats.com bad handling of MMD info about computers
   // https://github.com/wc3stats/w3lib/blob/4e96ea411e01a41c5492b85fd159a0cb318ea2b8/src/w3g/Model/W3MMD.php#L140-L157
-  if (m_Map->GetMMDSupported() && m_Map->GetMMDAboutComputers() && GetNumComputers() > 0) {
-    if (m_Map->GetMapObservers() == MAPOBS_REFEREES || m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
-      optional<string> virtualPlayerName;
-      if (m_Map->GetMapType() == "evergreen") {
-        virtualPlayerName = "AMAI Insane";
-      } else {
-        virtualPlayerName = "Computer";
-      }
-      if (CreateFakeObserver(virtualPlayerName)) {
-        CGameVirtualUser& virtualUser = m_FakeUsers.back();
-        virtualUser.DisableAllActions();
-        m_InertVirtualUser = CGameVirtualUserReference(virtualUser);
-        ++m_JoinedVirtualHosts;
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual player for WC3Stats workaround [" + virtualPlayerName.value() + "]")
+  if (m_Map->GetMMDSupported() && m_Map->GetMMDAboutComputers()) {
+    uint8_t remainingComputers = GetNumComputers();
+    while (remainingComputers > 0) {
+      if (m_Map->GetMapObservers() == MAPOBS_REFEREES || m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
+        optional<string> virtualPlayerName;
+        if (m_Map->GetMapType() == "evergreen") {
+          virtualPlayerName = "AMAI Insane";
+        } else {
+          virtualPlayerName = "Computer";
+        }
+        if (CreateFakeObserver(virtualPlayerName)) {
+          --remainingComputers;
+          CGameVirtualUser& virtualUser = m_FakeUsers.back();
+          virtualUser.DisableAllActions();
+          m_InertVirtualUser = CGameVirtualUserReference(virtualUser);
+          ++m_JoinedVirtualHosts;
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual player for WC3Stats workaround [" + virtualPlayerName.value() + "]")
+        }// else {
+        break;
+        //}
       }
     }
   }
@@ -8274,7 +8281,7 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
     }
   }
 
-  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   return true;
 }
 
@@ -8313,7 +8320,8 @@ bool CGame::OpenSlot(const uint8_t SID, const bool kick)
   if (user && !GetHasAnotherPlayer(SID)) {
     EventLobbyLastPlayerLeaves();
   }
-  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
   return true;
 }
 
@@ -8380,7 +8388,8 @@ bool CGame::CloseSlot(const uint8_t SID, const bool kick)
     m_Slots[SID] = CGameSlot(slot->GetType(), 0, SLOTPROG_RST, SLOTSTATUS_CLOSED, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
   }
   
-  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
   return true;
 }
 
@@ -8432,7 +8441,8 @@ bool CGame::ComputerSlot(uint8_t SID, uint8_t skill, bool kick)
   // ignore layout, override computers
   if (ComputerSlotInner(SID, skill, true, true)) {
     if (GetSlotsOpen() == 0 && GetNumJoinedUsersOrFake() > 1) DeleteVirtualHost();
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+    m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
   }
   return true;
 }
@@ -8487,7 +8497,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
       }
     }
 
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
     return true;
   }
 }
@@ -8541,13 +8551,13 @@ bool CGame::SetSlotColor(const uint8_t SID, const uint8_t colour, const bool for
       return false;
     } else {
       SwapSlots(SID, takenSID); // Guaranteed to succeed at this point;
-      m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+      m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       return true;
     }
   } else {
     if (takenSlot) takenSlot->SetColor(m_Slots[SID].GetColor());
     m_Slots[SID].SetColor(colour);
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
     return true;
   }
 }
@@ -8620,7 +8630,8 @@ void CGame::OpenAllSlots()
   }
 
   if (anyChanged) {
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   }
 }
 
@@ -8659,7 +8670,8 @@ bool CGame::CloseAllTeamSlots(const uint8_t team)
   if (anyChanged) {
     if (GetNumJoinedUsersOrFake() > 1)
       DeleteVirtualHost();
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   }
 
   return anyChanged;
@@ -8683,7 +8695,8 @@ bool CGame::CloseAllTeamSlots(const bitset<MAX_SLOTS_MODERN> occupiedTeams)
   if (anyChanged) {
     if (GetNumJoinedUsersOrFake() > 1)
       DeleteVirtualHost();
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   }
 
   return anyChanged;
@@ -8706,7 +8719,8 @@ bool CGame::CloseAllSlots()
   if (anyChanged) {
     if (GetNumJoinedUsersOrFake() > 1)
       DeleteVirtualHost();
-    m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+    m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
+    m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
   }
 
   return anyChanged;
@@ -8802,7 +8816,8 @@ bool CGame::ComputerNSlots(const uint8_t skill, const uint8_t expectedCount, con
   }
 
   if (GetSlotsOpen() == 0 && GetNumJoinedUsersOrFake() > 1) DeleteVirtualHost();
-  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
 
   return remainingComputers == 0;
 }
@@ -8836,6 +8851,7 @@ bool CGame::ComputerAllSlots(const uint8_t skill)
 
   if (GetSlotsOpen() == 0 && GetNumJoinedUsersOrFake() > 1) DeleteVirtualHost();
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
   return true;
 }
 
@@ -8855,8 +8871,7 @@ void CGame::ShuffleSlots()
 
   // now we shuffle PlayerSlots
 
-  if (GetIsCustomForces())
-  {
+  if (GetIsCustomForces()) {
     // rather than rolling our own probably broken shuffle algorithm we use random_shuffle because it's guaranteed to do it properly
     // so in order to let random_shuffle do all the work we need a vector to operate on
     // unfortunately we can't just use PlayerSlots because the team/colour/race shouldn't be modified
@@ -8881,9 +8896,7 @@ void CGame::ShuffleSlots()
       Slots.emplace_back(PlayerSlots[SIDs[i]].GetType(), PlayerSlots[SIDs[i]].GetUID(), PlayerSlots[SIDs[i]].GetDownloadStatus(), PlayerSlots[SIDs[i]].GetSlotStatus(), PlayerSlots[SIDs[i]].GetComputer(), PlayerSlots[i].GetTeam(), PlayerSlots[i].GetColor(), PlayerSlots[i].GetRace());
 
     PlayerSlots = Slots;
-  }
-  else
-  {
+  } else {
     // regular game
     // it's easy when we're allowed to swap the team/colour/race!
 
@@ -8894,7 +8907,7 @@ void CGame::ShuffleSlots()
 
   // now we put m_Slots back together again
 
-  auto              CurrentPlayer = begin(PlayerSlots);
+  auto CurrentPlayer = begin(PlayerSlots);
   vector<CGameSlot> Slots;
 
   for (auto& slot : m_Slots) {
@@ -8907,7 +8920,7 @@ void CGame::ShuffleSlots()
   }
 
   m_Slots = Slots;
-  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
 }
 
 void CGame::ReportSpoofed(const string& server, GameUser::CGameUser* user)
@@ -10237,6 +10250,7 @@ CGameVirtualUser* CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UI
 
   m_FakeUsers.emplace_back(shared_from_this(), SID, UID, name).SetIsObserver(m_Slots[SID].GetTeam() == m_Map->GetVersionMaxSlots());
   m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
   return &m_FakeUsers.back();
 }
 
@@ -10313,7 +10327,8 @@ bool CGame::DeleteFakeUser(uint8_t SID)
       UnrefFakeUser(it->GetSID());
       it = m_FakeUsers.erase(it);
       CreateVirtualHost();
-      m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+      m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+      m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
       return true;
     }
   }
@@ -10412,7 +10427,8 @@ void CGame::DeleteFakeUsersLobby()
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   CreateVirtualHost();
-  m_SlotInfoChanged |= (SLOTS_ALIGNMENT_CHANGED);
+  m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
+  m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_SLOTS;
 }
 
 void CGame::DeleteFakeUsersLoaded()
