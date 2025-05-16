@@ -227,7 +227,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -267,7 +267,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -307,7 +307,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;DISABLE_MINIUPNP;DISABLE_PJASS;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;DISABLE_PJASS;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -347,7 +347,7 @@
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -390,7 +390,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -431,7 +431,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -472,7 +472,7 @@
       <Optimization>MinSpace</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;DISABLE_CPR;DISABLE_DPP;DISABLE_MINIUPNP;DISABLE_PJASS;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;DISABLE_CPR;DISABLE_DPP;DISABLE_MINIUPNP;DISABLE_PJASS;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -513,7 +513,7 @@
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\pjass\include;..\deps\miniupnpc\include;..\cpr\vcpkg\include;..\curl\vcpkg\include;..\deps\StormLib\src\zlib;..\dpp\official\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_THREADSAFE=0;SQLITE_OMIT_LOAD_EXTENSION;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;DEBUG;_CONSOLE;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;CRC32_USE_LOOKUP_TABLE_SLICING_BY_16;CURL_STATICLIB;USE_SSLEAY;USE_OPENSSL;MINIUPNP_STATICLIB;DISABLE_BONJOUR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
