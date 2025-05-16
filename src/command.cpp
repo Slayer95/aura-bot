@@ -8247,9 +8247,11 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       }
       break;
     case ServiceType::kIRC:
-      if (!nAura->m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
-      if (nAura->m_IRC.m_Config.m_Channels.empty()) return APP_ACTION_ERROR;
-      if (!nAura->m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
+      if (lazyCtx.online) {
+        if (!nAura->m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
+        if (nAura->m_IRC.m_Config.m_Channels.empty()) return APP_ACTION_ERROR;
+        if (!nAura->m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
+      }
 
       try {
          if (targetGame) {
@@ -8272,7 +8274,7 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       break;
     case ServiceType::kRealm:
       CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
-      if (!sourceRealm->GetLoggedIn()) {
+      if (lazyCtx.online && !sourceRealm->GetLoggedIn()) {
         return APP_ACTION_WAIT;
       }
 

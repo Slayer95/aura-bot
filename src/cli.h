@@ -187,6 +187,7 @@ public:
   std::string                           m_ExecGame;
   std::vector<std::string>              m_ExecCommands;
   bool                                  m_ExecBroadcast;
+  bool                                  m_ExecOnline;
 
   CCLI();
   ~CCLI();

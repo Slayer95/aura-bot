@@ -48,7 +48,9 @@ CCLI::CCLI()
  : m_UseStandardPaths(false),
    m_InfoAction(CLIAction::kNone),
    m_Verbose(false),
-   m_ExecAuth(CommandAuth::kAuto)
+   m_ExecAuth(CommandAuth::kAuto),
+   m_ExecBroadcast(false),
+   m_ExecOnline(true)
 {
 }
 
@@ -232,6 +234,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->transform(CLI::CheckedTransformer(commandAuths));
   app.add_option("--exec-game", m_ExecGame, "Customizes the channel when running commands from the CLI. Values: lobby, game#IDX");
   app.add_flag(  "--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
+  app.add_flag(  "--exec-online,--exec-offline{false}", m_ExecOnline, "Customizes whether the bot should be connected to a service before running a CLI command using an identity from that service.");
 
   // Port-forwarding
 #ifndef DISABLE_MINIUPNP
@@ -765,7 +768,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     string cmdToken, command, target;
     if (ExtractMessageTokens(execEntry, cmdToken, padding, command, target)) {
       pair<string, string> identity = SplitAddress(m_ExecAs.value());
-      LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, command, target, ToLowerCase(identity.first), ToLowerCase(identity.second), m_ExecAuth);
+      LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, m_ExecOnline, command, target, ToLowerCase(identity.first), ToLowerCase(identity.second), m_ExecAuth);
       nAura->m_PendingActions.push(lazyCommand);
     }
   }

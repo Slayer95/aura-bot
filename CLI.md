@@ -1490,6 +1490,26 @@ This parameter sets the authentication mode for executing commands specified by 
 - rootadmin: Treats the user as a root admin of their server.
 - sudo: Treats the user as a bot sudoer. These are the highest privileges.
 
+## \`--exec-online\`
+
+This flag defers the execution of the command specified by --exec until the bot has successfully connected 
+to the associated server. It ensures that the command is only executed in an online state, with a confirmed 
+connection to the intended destination.
+
+Use this flag when the command relies on server-side validation, interaction, or any server-dependent 
+resources.
+
+This flag is enabled by default.
+
+## \`--exec-offline\`
+
+This flag forces the command specified by --exec to be executed eagerly, without waiting for the bot 
+to connect to the associated server. It enables the execution of commands that do not require 
+server connectivity or are safe to run in an offline context.
+
+Use this flag when the command is purely local or when immediate execution is desired regardless 
+of connection status.
+
 ## \`--exec-game \<IDENTIFIER\>\`
 
 This parameter determines where the command specified by --exec will be run.

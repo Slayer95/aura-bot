@@ -61,6 +61,7 @@ struct AppAction
 struct LazyCommandContext
 {
   bool broadcast;
+  bool online;
   int64_t queuedTicks;
   std::string command;
   std::string target;
@@ -69,8 +70,9 @@ struct LazyCommandContext
   std::string identityLoc;
   CommandAuth auth;
 
-  LazyCommandContext(bool nBroadcast, const std::string& nCommand, const std::string& nTarget, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
+  LazyCommandContext(bool nBroadcast, bool nOnline, const std::string& nCommand, const std::string& nTarget, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
    : broadcast(nBroadcast),
+     online(nOnline),
      queuedTicks(GetTicks()),
      command(nCommand),
      target(nTarget),
