@@ -99,7 +99,7 @@ endif
 
 LDLIBS_SYS += -ldl
 
-CPPFLAGS += -DSQLITE_THREADSAFE=1 -DSQLITE_OMIT_LOAD_EXTENSION -DCRC32_USE_LOOKUP_TABLE_SLICING_BY_16
+CPPFLAGS += -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION
 CPPFLAGS += $(DFLAGS)
 CPPFLAGS += -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
 
