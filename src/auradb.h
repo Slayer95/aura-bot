@@ -84,7 +84,7 @@ constexpr uint8_t STMT_CACHE_SIZE = 12u;
 
 CREATE TABLE moderators (
     name TEXT NOT NULL,
-    server TEXT NOT NULL DEFAULT "",
+    server TEXT NOT NULL DEFAULT '',
     PRIMARY KEY ( name, server )
 )
 

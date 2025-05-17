@@ -356,10 +356,10 @@ void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
     /*
     Print("[AURA] Updating database schema...");
 
-    if (m_DB->Exec(R"(ALTER TABLE bans ADD COLUMN ip TEXT NOT NULL DEFAULT ""; ALTER TABLE bans ADD COLUMN expiry TEXT NOT NULL DEFAULT ""; ALTER TABLE bans RENAME COLUMN moderators moderator; ALTER TABLE bans ADD COLUMN authserver TEXT NOT NULL default ""))") != SQLITE_OK)
+    if (m_DB->Exec(R"(ALTER TABLE bans ADD COLUMN ip TEXT NOT NULL DEFAULT ''; ALTER TABLE bans ADD COLUMN expiry TEXT NOT NULL DEFAULT ''; ALTER TABLE bans RENAME COLUMN moderators moderator; ALTER TABLE bans ADD COLUMN authserver TEXT NOT NULL default ''))") != SQLITE_OK)
       Print("[SQLITE3] error widening bans table - " + m_DB->GetError());
 
-    if (m_DB->Exec(R"(ALTER TABLE players ADD COLUMN server TEXT NOT NULL DEFAULT ""; ALTER TABLE players ADD COLUMN initialip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN latestip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN initialreport TEXT NOT NULL DEFAULT ""; ALTER TABLE players ADD COLUMN reports INTEGER DEFAULT 0; ALTER TABLE players ADD COLUMN latestgame INTEGER DEFAULT 0))") != SQLITE_OK)
+    if (m_DB->Exec(R"(ALTER TABLE players ADD COLUMN server TEXT NOT NULL DEFAULT ''; ALTER TABLE players ADD COLUMN initialip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN latestip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN initialreport TEXT NOT NULL DEFAULT ''; ALTER TABLE players ADD COLUMN reports INTEGER DEFAULT 0; ALTER TABLE players ADD COLUMN latestgame INTEGER DEFAULT 0))") != SQLITE_OK)
       Print("[SQLITE3] error widening players table - " + m_DB->GetError());
 
     // crc32 here is the true CRC32 hash of the map file (i.e. <map.file_hash.crc32> in the map ini, NOT <map.scripts_hash.blizz>, NOR legacy <map_crc>)
@@ -376,7 +376,7 @@ void CAuraDB::Initialize()
 {
   Print("[SQLITE3] initializing database");
 
-  if (m_DB->Exec(R"(CREATE TABLE moderators ( name TEXT NOT NULL, server TEXT NOT NULL DEFAULT "", PRIMARY KEY ( name, server ) ))") != SQLITE_OK)
+  if (m_DB->Exec(R"(CREATE TABLE moderators ( name TEXT NOT NULL, server TEXT NOT NULL DEFAULT '', PRIMARY KEY ( name, server ) ))") != SQLITE_OK)
     Print("[SQLITE3] error creating moderators table - " + m_DB->GetError());
 
   if (m_DB->Exec("CREATE TABLE bans ( name TEXT NOT NULL, server TEXT NOT NULL, authserver TEXT NOT NULL, ip TEXT NOT NULL, date TEXT NOT NULL, expiry TEXT NOT NULL, permanent INTEGER DEFAULT 0, moderator TEXT NOT NULL, reason TEXT, PRIMARY KEY ( name, server, authserver ) )") != SQLITE_OK)
@@ -403,7 +403,7 @@ void CAuraDB::Initialize()
 
   // Insert schema number
   sqlite3_stmt* Statement = nullptr;
-  m_DB->Prepare(R"(INSERT INTO config VALUES ( "schema_number", ? ))", reinterpret_cast<void**>(&Statement));
+  m_DB->Prepare(R"(INSERT INTO config VALUES ( 'schema_number', ? ))", reinterpret_cast<void**>(&Statement));
   if (Statement) {
     sqlite3_bind_int64(Statement, 1, SchemaNumber);
     const int32_t RC = m_DB->Step(Statement);
@@ -1432,8 +1432,8 @@ void CAuraDB::SaveDotAStats(Dota::CDotaStats* dotaStats)
 
 CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
 {
-  string playerNames = "";
-  string playerIDs = "";
+  string playerNames;
+  string playerIDs;
   bool success = false;
 
   sqlite3_stmt* Statement = nullptr;
