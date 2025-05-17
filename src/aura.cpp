@@ -528,8 +528,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
 
-  CRC32::Initialize();
-
   if (!CFG.GetSuccess() || !LoadDefaultConfigs(CFG, &m_Net.m_Config)) {
     Print("[CONFIG] Error: Critical errors found in " + PathToString(m_ConfigPath.filename()));
     m_Ready = false;
