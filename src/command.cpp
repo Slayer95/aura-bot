@@ -1154,26 +1154,26 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
 
   string target = inputTarget;
   string::size_type realmStart = inputTarget.find('@');
-  const bool isFullyQualified = realmStart != string::npos;
+  bool isFullyQualified = realmStart != string::npos;
   if (isFullyQualified) {
     realmFragment = TrimString(inputTarget.substr(realmStart + 1));
     nameFragment = TrimString(inputTarget.substr(0, realmStart));
     if (!nameFragment.empty() && nameFragment.size() <= MAX_PLAYER_NAME_SIZE) {
       if (allowNoRealm && realmFragment.empty()) {
-        return RealmUserSearchResult(nameFragment, realmFragment, realm);
+        return RealmUserSearchResult(isFullyQualified, nameFragment, realmFragment, realm);
       }
       realm = GetTargetRealmOrCurrent(realmFragment);
       if (realm) {
         realmFragment = realm->GetServer();
       }
-      if (realm == nullptr) return RealmUserSearchResult(nameFragment, realmFragment);
-      return RealmUserSearchResult(nameFragment, realmFragment, realm);
+      if (!realm) return RealmUserSearchResult(isFullyQualified, nameFragment, realmFragment); // failure
+      return RealmUserSearchResult(isFullyQualified, nameFragment, realmFragment, realm);
     }
     // Handle @PLAYER
     target = realmFragment;
     realmFragment.clear();
     nameFragment.clear();
-    //isFullyQualified = false;
+    isFullyQualified = false;
   }
 
   if (/*!isFullyQualified && */GetIsGameUser()) {
@@ -1196,6 +1196,8 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
       realmFragment = targetPlayer->GetRealmHostName();
       nameFragment = targetPlayer->GetName();
     }
+    realm = GetTargetRealmOrCurrent(realmFragment);
+    return RealmUserSearchResult(isFullyQualified, nameFragment, realmFragment, realm);
   }
 
   if (GetServiceSourceType() == ServiceType::kRealm) {
@@ -1210,14 +1212,14 @@ RealmUserSearchResult CCommandContext::GetParseTargetRealmUser(const string& inp
   }
 
   if (realmFragment.empty()) {
-    return RealmUserSearchResult(nameFragment, realmFragment, realm);
+    return RealmUserSearchResult(isFullyQualified, nameFragment, realmFragment, realm);
   } else {
     realm = GetTargetRealmOrCurrent(realmFragment);
     if (realm) {
       realmFragment = realm->GetServer();
     }
-    if (realm == nullptr) return RealmUserSearchResult(nameFragment, realmFragment);
-    return RealmUserSearchResult(nameFragment, realmFragment, realm);
+    if (!realm) return RealmUserSearchResult(isFullyQualified, nameFragment, realmFragment);
+    return RealmUserSearchResult(isFullyQualified, nameFragment, realmFragment, realm);
   }
 }
 
@@ -1801,22 +1803,44 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
       shared_ptr<CGame> targetGame = baseTargetGame;
-      if (target.empty() && (!targetGame || targetGame->GetIsHiddenPlayerNames())) {
-        ErrorReply("Usage: " + cmdToken + "stats <PLAYER>");
-        ErrorReply("Usage: " + cmdToken + "statsdota <PLAYER>");
+
+      if (target.empty()) {
+        if (!GetIsGameUser() && GetServiceSourceType() != ServiceType::kRealm) {
+          ErrorReply("Usage: " + cmdToken + "stats <PLAYERNAME>@<REALM>");
+          ErrorReply("Usage: " + cmdToken + "statsdota <PLAYERNAME>@<REALM>");
+          break;
+        }
+        target = GetSender();
+      }
+
+      auto realmUserResult = GetParseTargetRealmUser(target, true, true);
+      if (targetGame && targetGame->GetIsHiddenPlayerNames() && !realmUserResult.GetIsFullyQualified()) {
+        ErrorReply("Cannot look up stats of anonymous players.");
         break;
       }
-      GameUser::CGameUser* targetPlayer = RunTargetUserOrSelf(target);
-      if (!targetPlayer) {
+
+      if (!realmUserResult.GetSuccess()) {
+        if (!realmUserResult.hostName.empty()) {
+          ErrorReply(realmUserResult.hostName + " is not a valid PvPGN realm.");
+        } else {
+          ErrorReply("Usage: " + cmdToken + "stats <PLAYERNAME>@<REALM>");
+          ErrorReply("Usage: " + cmdToken + "statsdota <PLAYERNAME>@<REALM>");
+        }
         break;
       }
-      const bool isDota = cmdHash == HashCode("statsdota") || targetGame->GetClientFileName().find("DotA") != string::npos;
-      const bool isUnverified = targetPlayer->GetRealm(false) != nullptr && !targetPlayer->GetIsRealmVerified();
-      string targetIdentity = "[" + targetPlayer->GetExtendedName() + "]";
+
+      string targetName = realmUserResult.userName;
+      string targetHostName = realmUserResult.hostName;
+      shared_ptr<CRealm> targetRealm = realmUserResult.GetRealm();
+      GameUser::CGameUser* targetPlayer = targetGame ? targetGame->GetUserFromName(targetName, false) : nullptr;
+
+      const bool isDota = cmdHash == HashCode("statsdota") || (targetGame && targetGame->GetMap()->GetMapType() == "dota");
+      const bool isUnverified = targetPlayer && targetRealm && !targetPlayer->GetIsRealmVerified();
+      string targetIdentity = "[" + targetName + "@" + ToFormattedRealm(targetHostName) + "]";
       if (isUnverified) targetIdentity += " (unverified)";
 
       if (isDota) {
-        CDBDotAPlayerSummary* DotAPlayerSummary = m_Aura->m_DB->DotAPlayerSummaryCheck(targetPlayer->GetName(), targetPlayer->GetRealmHostName());
+        CDBDotAPlayerSummary* DotAPlayerSummary = m_Aura->m_DB->DotAPlayerSummaryCheck(targetName, targetHostName);
         if (!DotAPlayerSummary) {
           SendReply(targetIdentity + " has no registered DotA games.");
           break;
@@ -1844,7 +1868,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         SendReply(summaryText);
         delete DotAPlayerSummary;
       } else {
-        CDBGamePlayerSummary* GamePlayerSummary = m_Aura->m_DB->GamePlayerSummaryCheck(targetPlayer->GetName(), targetPlayer->GetRealmHostName());
+        CDBGamePlayerSummary* GamePlayerSummary = m_Aura->m_DB->GamePlayerSummaryCheck(targetName, targetHostName);
         if (!GamePlayerSummary) {
           SendReply(targetIdentity + " has no registered games.");
           break;

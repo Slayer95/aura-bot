@@ -62,22 +62,26 @@ struct GameControllerSearchResult
 struct RealmUserSearchResult
 {
   bool success;
+  bool fullyQualified;
   std::string userName;
   std::string hostName;
   std::weak_ptr<CRealm> realm;
 
   RealmUserSearchResult()
-   : success(false)
+   : success(false),
+     fullyQualified(false)
   {}
 
-  RealmUserSearchResult(const std::string& nUserName, const std::string& nHostName)
+  RealmUserSearchResult(const bool nFullyQualified, const std::string& nUserName, const std::string& nHostName)
    : success(false),
+     fullyQualified(nFullyQualified),
      userName(nUserName),
      hostName(nHostName)
   {}
 
-  RealmUserSearchResult(const std::string& nUserName, const std::string& nHostName, std::shared_ptr<CRealm> nRealm)
+  RealmUserSearchResult(const bool nFullyQualified, const std::string& nUserName, const std::string& nHostName, std::shared_ptr<CRealm> nRealm)
    : success(true),
+     fullyQualified(nFullyQualified),
      userName(nUserName),
      hostName(nHostName),
      realm(nRealm)
@@ -86,6 +90,7 @@ struct RealmUserSearchResult
   ~RealmUserSearchResult() = default;
 
   [[nodiscard]] inline bool GetSuccess() const { return success; }
+  [[nodiscard]] inline bool GetIsFullyQualified() const { return fullyQualified; }
   [[nodiscard]] inline const std::string& GetUser() const { return userName; }
   [[nodiscard]] inline const std::string& GetHostName() const { return hostName; }
   [[nodiscard]] inline std::shared_ptr<CRealm> GetRealm() const { return realm.lock(); }
