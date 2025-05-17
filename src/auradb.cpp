@@ -149,7 +149,6 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
 {
   m_Data[MAP_DATA_TYPE_ITEM] = map<string, vector<string>>();
 
-#ifndef DISABLE_DPP
   ifstream twrpgFile;
   twrpgFile.open(sourceFile.native().c_str(), ios::in);
   if (twrpgFile.fail()) {
@@ -169,7 +168,6 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
     }
     twrpgFile.close();
   }
-#endif
 }
 
 //
