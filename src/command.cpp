@@ -4429,7 +4429,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      GameUser::CGameUser* targetPlayer = targetGame->GetUserFromName(targetName, false);
+      GameUser::CGameUser* targetPlayer = targetGame ? targetGame->GetUserFromName(targetName, false) : nullptr;
       if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
         targetPlayer->CloseConnection();
         //targetPlayer->SetDeleteMe(true);
