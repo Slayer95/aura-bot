@@ -115,15 +115,15 @@ namespace utf8
                     ++it; 
                     cp = ((cp << 12) & 0xffff) + ((utf8::internal::mask8(*it) << 6) & 0xfff);
                     ++it;
-                    cp = static_cast<utfchar32_t>(cp + ((*it) & 0x3f));
+                    cp += (*it) & 0x3f;
                     break;
                 case 4:
                     ++it;
                     cp = ((cp << 18) & 0x1fffff) + ((utf8::internal::mask8(*it) << 12) & 0x3ffff);                
                     ++it;
-                    cp = static_cast<utfchar32_t>(cp + ((utf8::internal::mask8(*it) << 6) & 0xfff));
+                    cp += (utf8::internal::mask8(*it) << 6) & 0xfff;
                     ++it;
-                    cp = static_cast<utfchar32_t>(cp + ((*it) & 0x3f)); 
+                    cp += (*it) & 0x3f; 
                     break;
             }
             ++it;
