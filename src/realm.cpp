@@ -616,7 +616,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     string cmdToken, command, target;
     uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
     if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
-      if (isWhisper) {
+      if (isWhisper && fromUser != "PvPGN Realm") {
         string tokenName = GetTokenName(m_Config.m_PrivateCmdToken);
         string example = m_Aura->m_Net.m_Config.m_AllowDownloads ? "host wc3maps-8" : "host castle";
         QueueWhisper("Hi, " + fromUser + ". Use " + m_Config.m_PrivateCmdToken + tokenName + " for commands. Example: " + m_Config.m_PrivateCmdToken + example, fromUser);
