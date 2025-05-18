@@ -47,6 +47,7 @@ struct CCommandConfig
   // Admin commands
   uint8_t m_AliasPermissions;
   uint8_t m_ImportPermissions;
+  uint8_t m_ListGamesPermissions;
 
   // Hosting commands
   uint8_t m_HostPermissions;

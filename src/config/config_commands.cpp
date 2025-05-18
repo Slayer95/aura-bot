@@ -51,6 +51,7 @@ CCommandConfig::CCommandConfig()
 
    m_AliasPermissions(COMMAND_PERMISSIONS_AUTO),
    m_ImportPermissions(COMMAND_PERMISSIONS_AUTO),
+   m_ListGamesPermissions(COMMAND_PERMISSIONS_AUTO),
 
    m_HostPermissions(COMMAND_PERMISSIONS_AUTO),
    m_HostRawPermissions(COMMAND_PERMISSIONS_AUTO),
@@ -77,6 +78,7 @@ CCommandConfig::CCommandConfig(CConfig& CFG, const string& nKeyPrefix, const boo
 
   m_AliasPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_alias.permissions", commandPermissions, COMMAND_PERMISSIONS_SUDO);
   m_ImportPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_import.permissions", commandPermissions, COMMAND_PERMISSIONS_SUDO);
+  m_ListGamesPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_listgames.permissions", commandPermissions, COMMAND_PERMISSIONS_SUDO);
 
   m_HostPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_host.permissions", commandPermissions, hostingPermissions);
   m_HostRawPermissions = CFG.GetStringIndex(m_CFGKeyPrefix + "commands.custom_hostraw.permissions", commandPermissions, hostingPermissions);

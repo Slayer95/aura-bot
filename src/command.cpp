@@ -7750,7 +7750,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     case HashCode("listgames"):
     case HashCode("getgames"):
     case HashCode("games"): {
-      if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
+      if (!CheckPermissions(m_Config->m_ListGamesPermissions, COMMAND_PERMISSIONS_ROOTADMIN)) {
         ErrorReply("Not allowed to list games.");
         break;
       }
@@ -7766,7 +7766,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         SendReply("No games hosted.");
         break;
       }
-      SendReply(JoinVector(currentGames, false), CHAT_LOG_INCIDENT);
+      vector<string> replyLines = JoinReplyListCompact(currentGames);
+      for (const auto& line : replyLines) {
+        SendReply(line);
+      }
       break;
     }
 
