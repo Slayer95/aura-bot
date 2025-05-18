@@ -36,6 +36,7 @@ namespace Dota
   constexpr uint8_t SCOURGE_HERO_MAX_COLOR = 11u;
   constexpr uint8_t SCOURGE_ALLIANCE_MIN_COLOR = SCOURGE_CREEPS_COLOR;
   constexpr uint8_t SCOURGE_ALLIANCE_MAX_COLOR = SCOURGE_HERO_MAX_COLOR;
+  constexpr uint8_t NEUTRAL_CREEPS_COLOR = 12u;
 
   constexpr uint8_t WINNER_UNDECIDED = 0u;
   constexpr uint8_t WINNER_SENTINEL = 1u;
@@ -47,6 +48,8 @@ namespace Dota
   [[nodiscard]] inline bool GetIsSentinelHeroColor(const uint8_t color) { return SENTINEL_HERO_MIN_COLOR <= color && color <= SENTINEL_HERO_MAX_COLOR; }
   [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint8_t color) { return color == Dota::SCOURGE_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint32_t color) { return GetIsValidColor(color) && GetIsScourgeCreepsColor((uint8_t)(color)); }
+  [[nodiscard]] inline bool GetIsNeutralCreepsColor(const uint8_t color) { return color == NEUTRAL_CREEPS_COLOR; }
+  [[nodiscard]] inline bool GetIsNeutralCreepsColor(const uint32_t color) { return GetIsValidColor(color) && GetIsNeutralCreepsColor((uint8_t)(color)); }
   [[nodiscard]] inline bool GetIsScourgeHeroColor(const uint8_t color) { return SCOURGE_HERO_MIN_COLOR <= color && color <= SCOURGE_HERO_MAX_COLOR; }
   [[nodiscard]] inline bool GetIsHeroColor(const uint8_t color) { return GetIsSentinelHeroColor(color) || GetIsScourgeHeroColor(color); }
   [[nodiscard]] inline bool GetIsHeroColor(const uint32_t color) { return GetIsValidColor(color) && GetIsHeroColor((uint8_t)color);}
@@ -56,6 +59,10 @@ namespace Dota
   [[nodiscard]] std::optional<uint8_t> EnsureActorColor(uint32_t input);
   [[nodiscard]] std::optional<uint8_t> ParseHeroColor(const std::string& input);
   [[nodiscard]] std::optional<uint8_t> ParseActorColor(const std::string& input);
+  [[nodiscard]] std::string GetLaneName(const uint8_t code);
+  [[nodiscard]] std::string GetTeamNameBaseZero(const uint8_t code);
+  [[nodiscard]] std::string GetTeamNameBaseOne(const uint8_t code);
+  [[nodiscard]] std::string GetRuneName(const uint8_t code);
 
   // CDotaStats
   //
@@ -74,7 +81,7 @@ namespace Dota
     uint8_t                                       m_Winner;
     bool                                          m_SwitchEnabled;
     std::pair<uint32_t, uint32_t>                 m_Time;
-    CDBDotAPlayer*                                m_Players[12];
+    std::array<CDBDotAPlayer*, 12>                m_Players;
 
     explicit CDotaStats(std::shared_ptr<CGame> nGame);
     ~CDotaStats();

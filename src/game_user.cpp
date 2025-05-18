@@ -522,6 +522,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
               ++m_SyncCounter;
               m_Game.get().EventUserKeepAlive(this);
+
+              if (m_Disconnected) {
+                Abort = true;
+              }
             }
             break;
           }
@@ -687,7 +691,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
         // Process no more packets
         break;
       }
-      
+
       LengthProcessed += Length;
       Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }

@@ -68,7 +68,7 @@ optional<uint8_t> Dota::EnsureHeroColor(uint32_t input)
 optional<uint8_t> Dota::EnsureActorColor(uint32_t input)
 {
   optional<uint8_t> result;
-  if (input < MAX_SLOTS_LEGACY) {
+  if (input <= MAX_SLOTS_LEGACY) {
     result = static_cast<uint8_t>(input);
   }
   return result;
@@ -88,10 +88,52 @@ optional<uint8_t> Dota::ParseActorColor(const string& input)
 {
   optional<uint8_t> result;
   optional<uint32_t> maybeColor = ToUint32(input);
-  if (*maybeColor < MAX_SLOTS_LEGACY) {
+  if (*maybeColor <= MAX_SLOTS_LEGACY) {
     result = static_cast<uint8_t>(*maybeColor);
   }
   return result;
+}
+
+string Dota::GetLaneName(const uint8_t code)
+{
+  switch (code) {
+    case 0: return "Top Lane";
+    case 1: return "Mid Lane";
+    case 2: return "Bot Lane";
+  }
+  return "Invalid Lane";
+}
+
+string Dota::GetTeamNameBaseZero(const uint8_t code)
+{
+  switch (code) {
+    case 0: return "Sentinel";
+    case 1: return "Scourge";
+  }
+  return string();
+}
+
+string Dota::GetTeamNameBaseOne(const uint8_t code)
+{
+  switch (code) {
+    case 1: return "Sentinel";
+    case 2: return "Scourge";
+  }
+  return string();
+}
+
+string Dota::GetRuneName(const uint8_t code)
+{
+  switch (code) {
+    case 1: return "Haste";
+    case 2: return "Regeneration";
+    case 3: return "Double Damage";
+    case 4: return "Illusion";
+    case 5: return "Invisibility";
+    case 6: return "Bounty";
+    case 8: return "Wisdom";
+    default: return "#" + ToDecString(code);
+  }
 }
 
 //
@@ -106,12 +148,11 @@ CDotaStats::CDotaStats(shared_ptr<CGame> nGame)
     
 {
   Print("[STATS] using dota stats");
+  m_Players.fill(nullptr);
 
-  for (unsigned int i = 0; i < sizeof(m_Players); ++i) {
+  for (unsigned int i = 0; i < m_Players.size(); ++i) {
     if (GetIsHeroColor(i)) {
       m_Players[i] = new CDBDotAPlayer();
-    } else {
-      m_Players[i] = nullptr;
     }
   }
 }
@@ -179,7 +220,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
           action.append(" leaver");
         }
 
-        Print(GetLogPrefix() + GetActorNameFromColor(*killerColor) + action + " [" + victimUser->GetName() + "]");
+        Print(GetLogPrefix() + GetActorNameFromColor(*killerColor) + " " + action + " [" + victimUser->GetName() + "]");
         break;
       }
 
@@ -198,19 +239,20 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
 
       case HashCode("Tower"): {
         optional<uint8_t> siegeColor = EnsureActorColor(cacheValue);
-        if (siegeColor.has_value() && eventStringData.size() == 3) {
+        vector<uint8_t> towerId = SplitNumeral(eventStringData);
+        if (siegeColor.has_value() && towerId.size() == 3) {
           GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
           if (siegeUser) { // only count tower destroyed by non-leavers
             m_Players[cacheValue]->IncTowerKills();
           }
 
-          bool isFriendlyFire = false;
+          bool isFriendlyFire = towerId[0] == 0 == GetIsSentinelHeroColor(*siegeColor);
           string action = "destroyed";
           if (isFriendlyFire) {
             action = "denied";
           }
 
-          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + " team " + string(1, eventStringData[0]) + "'s " + ToOrdinalName((size_t)eventStringData[1]) + " tower at lane " + string(1, eventStringData[2]));
+          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + GetTeamNameBaseZero(towerId[0]) + "'s " + ToOrdinalName((size_t)(towerId[1])) + " tower at " + GetLaneName(towerId[2]));
         }
 
         break;
@@ -218,19 +260,25 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
 
       case HashCode("Rax"): {
         optional<uint8_t> siegeColor = EnsureActorColor(cacheValue);
-        if (siegeColor.has_value() && eventStringData.size() == 3) {
+        vector<uint8_t> raxId = SplitNumeral(eventStringData);
+        if (siegeColor.has_value() && raxId.size() == 3) {
           GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
           if (siegeUser) { // only count tower destroyed by non-leavers
             m_Players[cacheValue]->IncRaxKills();
           }
 
-          bool isFriendlyFire = false;
+          bool isFriendlyFire = raxId[0] == 0 == GetIsSentinelHeroColor(*siegeColor);
           string action = "destroyed";
           if (isFriendlyFire) {
             action = "denied";
           }
 
-          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + " team " + string(1, eventStringData[0]) + "'s Barracks (type " + string(1, eventStringData[1]) + ") at " + ToOrdinalName((size_t)(eventStringData[2])) + " lane");
+          string typeName = "melee";
+          if (raxId[2] == 1) {
+            typeName = "ranged";
+          }
+
+          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + " " + GetTeamNameBaseZero(raxId[0]) + "'s " + typeName + " Barracks at " + GetLaneName(raxId[1]));
         }
         break;
       }
@@ -288,8 +336,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
           string playerName = GetUserNameFromColor(*heroColor);
           //Print(GetLogPrefix() + "[" + playerName + "] " + to_string(creepKills) + " creeps killed, " + to_string(creepDenies) + " denied, " + to_string(neutralKills) + "neutrals");
         }
+        break;
       }
-      break;
 
       case HashCode("CK"): {
         // a player disconnected - the map sends a final creep performance stats update
@@ -320,11 +368,54 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         break;
       }
 
-      case HashCode("RuneStore"): {
+      case HashCode("XGPM"): {
         optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
         if (heroColor.has_value()) {
+          /*
+          uint32_t xgData = cacheValue;
           string playerName = GetUserNameFromColor(*heroColor);
-          Print(GetLogPrefix() + "[" + playerName + "] stored a rune");
+          //Print(GetLogPrefix() + "[" + playerName + "] " + to_string(creepKills) + " creeps killed, " + to_string(creepDenies) + " denied, " + to_string(neutralKills) + "neutrals");
+          */
+        }
+        break;
+      }
+
+      case HashCode("Level"): {
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          Print(GetLogPrefix() + "[" + playerName + "] advanced to Lv. " + eventStringData);
+        }
+        break;
+      }
+
+      case HashCode("Talent"): {
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          uint32_t tier = cacheValue / 10;
+          uint32_t variant = cacheValue % 10;
+          string playerName = GetUserNameFromColor(*heroColor);
+          Print(GetLogPrefix() + "[" + playerName + "] chose option #" + to_string(variant) + " as their " + ToOrdinalName(tier) + " talent");
+        }
+        break;
+      }
+
+      case HashCode("RuneUse"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          Print(GetLogPrefix() + "[" + playerName + "] used a " + GetRuneName((uint8_t)eventStringData[0]) + " rune");
+        }        
+        break;
+      }
+
+      case HashCode("RuneStore"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          Print(GetLogPrefix() + "[" + playerName + "] stored a " + GetRuneName((uint8_t)eventStringData[0]) + " rune");
         }        
         break;
       }
@@ -388,17 +479,29 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         break;
       }
 
+      case HashCode("APBan"): {
+        break;
+      }
+
       case HashCode("Mode"): {
-        Print(GetLogPrefix() + "detected game mode: [" + eventStringData + "]");
+        Print(GetLogPrefix() + "mode -" + eventStringData);
         // Game mode
         string::size_type KeyStringSize = eventStringData.size();
         if (KeyStringSize % 2 != 0) KeyStringSize--;
         for (string::size_type i = 0; i < KeyStringSize; i += 2) {
-          if (key[i] == 's' && key[i + 1] == 'o') {
+          if (eventStringData[i] == 's' && eventStringData[i + 1] == 'o') {
             m_SwitchEnabled = true;
-            Print(GetLogPrefix() + "detected so mode.");
+            Print(GetLogPrefix() + "Switch On");
           }
         }
+        break;
+      }
+
+      case HashCode("PUI"):
+      case HashCode("DRI"): {
+        if (eventStringData.size() < 2) break;
+        optional<uint32_t> heroColor = ParseHeroColor(eventStringData.substr(1));
+        if (!heroColor.has_value()) break;
         break;
       }
 
@@ -445,6 +548,9 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
       m_Time.second = cacheValue;
     }
   }
+  /*else if (missionKey == "DLL_State" || missionKey == "bonus" || missionKey == "bonush" || missionKey == "DonRepeatFail" || missionKey == "SyncCounter<XY>.000")
+  {
+  }*/
   else if (missionKey.size() <= 2 && missionKey.find_first_not_of("1234567890") == string::npos)
   {
     // these are only received at the end of the game
@@ -535,6 +641,8 @@ void CDotaStats::FlushQueue()
       return "Sentinel"; // should never happen - use GetActorNameFromColor() instead
     case SCOURGE_CREEPS_COLOR:
       return "Scourge"; // should never happen - use GetActorNameFromColor() instead
+    case NEUTRAL_CREEPS_COLOR:
+      return "Neutral Creeps";
     default: {
       GameUser::CGameUser* user = GetUserFromColor(color);
       if (user) return user->GetName();
@@ -550,6 +658,8 @@ void CDotaStats::FlushQueue()
       return "the Sentinel";
     case SCOURGE_CREEPS_COLOR:
       return "the Scourge";
+    case NEUTRAL_CREEPS_COLOR:
+      return "Neutral Creeps";
     default: {
       GameUser::CGameUser* user = GetUserFromColor(color);
       if (user) return "Player [" + user->GetName() + "]";

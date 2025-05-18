@@ -941,6 +941,20 @@ inline void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, con
   return output;
 }
 
+[[nodiscard]] inline std::vector<uint8_t> SplitNumeral(const std::string& input)
+{
+  std::vector<uint8_t> result;
+  result.reserve(input.size());
+  for (const auto& c : input) {
+    if (isdigit(c)) {
+      result.push_back(c - 0x30);
+    } else {
+      return std::vector<uint8_t>();
+    }
+  }
+  return result;
+}
+
 [[nodiscard]] inline std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;
