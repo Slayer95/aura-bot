@@ -7748,7 +7748,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     //
 
     case HashCode("listgames"):
-    case HashCode("getgames"): {
+    case HashCode("getgames"):
+    case HashCode("games"): {
       if (0 == (m_Permissions & (USER_PERMISSIONS_CHANNEL_ROOTADMIN | USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         ErrorReply("Not allowed to list games.");
         break;
