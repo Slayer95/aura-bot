@@ -5734,6 +5734,8 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
     if (actionType == ACTION_ALLIANCE_SETTINGS && actionSize >= 6) {
       if (delimiters[i][1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) {
         LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] synchronizing JNLoader data");
+      } else if (delimiters[i][1] == MH_DOTA_SETTINGS_SYNC_DATA) {
+        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] synchronizing DotA data");
       } else if (delimiters[i][1] < MAX_SLOTS_MODERN) {
         const bool wantsShare = (ByteArrayToUInt32(delimiters[i] + 2, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
         const uint8_t targetSID = delimiters[i][1];

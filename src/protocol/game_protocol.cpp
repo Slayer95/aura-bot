@@ -127,6 +127,7 @@ namespace GameProtocol
       }
       case ACTION_ALLIANCE_SETTINGS: { // 0x50
         if (action[pos + 1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) return action.size();
+        if (action[pos + 1] == MH_DOTA_SETTINGS_SYNC_DATA) return pos + 6 + ByteArrayToUInt32(action, false, pos + 2);
         return pos + 6;
       }
       case ACTION_GAME_CACHE_INT: // 0x6B
