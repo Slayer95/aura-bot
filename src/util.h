@@ -1257,6 +1257,16 @@ inline void AssignLength(std::vector<uint8_t>& content)
   }
 }
 
+[[nodiscard]] inline std::string FourCCToString(uint32_t fourCC) {
+  std::string result;
+  result.reserve(4);
+  result += static_cast<char>(static_cast<uint8_t>(fourCC >> 24));
+  result += static_cast<char>(static_cast<uint8_t>(fourCC >> 16));
+  result += static_cast<char>(static_cast<uint8_t>(fourCC >> 8));
+  result += static_cast<char>(static_cast<uint8_t>(fourCC));
+  return result;
+}
+
 [[nodiscard]] inline std::string RemoveNonAlphanumeric(const std::string& s) {
     std::regex nonAlphanumeric("[^a-zA-Z0-9]");
     return std::regex_replace(s, nonAlphanumeric, "");
