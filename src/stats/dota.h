@@ -63,6 +63,8 @@ namespace Dota
   [[nodiscard]] std::string GetTeamNameBaseZero(const uint8_t code);
   [[nodiscard]] std::string GetTeamNameBaseOne(const uint8_t code);
   [[nodiscard]] std::string GetRuneName(const uint8_t code);
+  [[nodiscard]] std::string GetItemName(const uint32_t code);
+  [[nodiscard]] std::string GetHeroName(const uint32_t code);
 
   // CDotaStats
   //
