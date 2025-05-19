@@ -1471,7 +1471,7 @@ string Dota::GetItemName(const uint32_t code)
     case FourCC("I06N"): return "Yasha Recipe";
     case FourCC("I06O"): return "Yasha Recipe";
     case FourCC("I0E0"): return "Yasha Recipe";
-    default: return "item " + to_string(code);
+    default: return "item " + FourCCToString(code);
   }
 }
 
@@ -1658,7 +1658,7 @@ string Dota::GetHeroName(const uint32_t code)
     case FourCC("N0MC"): return "Winter Wyvern (Auroth)";
     case FourCC("N0MO"): return "Winter Wyvern (Auroth)";
     case FourCC("E01A"): return "Witch Doctor (Vol'Jin)";
-    default: return "Hero " + to_string(code);
+    default: return "Hero " + FourCCToString(code);
   }
 }
 
