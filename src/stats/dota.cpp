@@ -131,14 +131,20 @@ string Dota::GetRuneName(const uint8_t code)
     case 4: return "Illusion";
     case 5: return "Invisibility";
     case 6: return "Bounty";
+    case 7: return "Arcane";
     case 8: return "Wisdom";
-    default: return "#" + ToDecString(code);
+    case 9: return "Shield";
+    case 49: return "Water";
+    default:
+      if (50 <= code) return GetRuneName(code % 48);
+      return "#" + ToDecString(code);
   }
 }
 
 string Dota::GetItemName(const uint32_t code)
 {
   switch (code) {
+    case 0: return "(no item)";
     case FourCC("I0OY"): return "Abyssal Blade";
     case FourCC("I0OX"): return "Abyssal Blade";
     case FourCC("I0OZ"): return "Abyssal Blade";
@@ -1241,8 +1247,8 @@ string Dota::GetItemName(const uint32_t code)
     case FourCC("I0KQ"): return "Radiance";
     case FourCC("I0KR"): return "Radiance";
     case FourCC("I0BS"): return "Radiance";
-    case FourCC("I0A8"): return "Radiance (|cFF00FF00On|r)";
-    case FourCC("I0KP"): return "Radiance (|cFFF00000Off|r)";
+    case FourCC("I0A8"): return "Radiance (On)";
+    case FourCC("I0KP"): return "Radiance (Off)";
     case FourCC("I07G"): return "Radiance Recipe";
     case FourCC("I07F"): return "Radiance Recipe";
     case FourCC("I0EJ"): return "Radiance Recipe";
@@ -1259,14 +1265,14 @@ string Dota::GetItemName(const uint32_t code)
     case FourCC("IRRP"): return "Regeneration";
     case FourCC("I0P0"): return "Ring of Aquila";
     case FourCC("I0P2"): return "Ring of Aquila";
-    case FourCC("I0P1"): return "Ring of Aquila (|cFF00FF00Normal|r)";
-    case FourCC("I0P4"): return "Ring of Aquila (|cFFF00000Heroes|r)";
+    case FourCC("I0P1"): return "Ring of Aquila (Normal)";
+    case FourCC("I0P4"): return "Ring of Aquila (Heroes)";
     case FourCC("I0P3"): return "Ring of Aquila (Heroes)";
     case FourCC("I0P5"): return "Ring of Aquila (Heroes)";
     case FourCC("I067"): return "Ring of Basilius";
     case FourCC("I068"): return "Ring of Basilius";
     case FourCC("I01M"): return "Ring of Basilius";
-    case FourCC("I06A"): return "Ring of Basilius (|cFFF00000Heroes|r)";
+    case FourCC("I06A"): return "Ring of Basilius (Heroes)";
     case FourCC("I069"): return "Ring of Basilius (Heroes)";
     case FourCC("I0C6"): return "Ring of Basilius (Heroes)";
     case FourCC("I13I"): return "Ring of Basilius Recipe";
@@ -1478,6 +1484,7 @@ string Dota::GetItemName(const uint32_t code)
 string Dota::GetHeroName(const uint32_t code)
 {
   switch (code) {
+    case 0: return "(no hero)";
     case FourCC("H06S"): return "Admiral (Daelin Proudmoore)";
     case FourCC("N01I"): return "Alchemist (Razzil Darkbrew)";
     case FourCC("N01H"): return "Alchemist (Razzil Darkbrew)";
@@ -1772,13 +1779,13 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             m_Players[cacheValue]->IncTowerKills();
           }
 
-          bool isFriendlyFire = towerId[0] == 0 == GetIsSentinelHeroColor(*siegeColor);
+          bool isFriendlyFire = (towerId[0] == 0) == GetIsSentinelHeroColor(*siegeColor);
           string action = "destroyed";
           if (isFriendlyFire) {
             action = "denied";
           }
 
-          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + GetTeamNameBaseZero(towerId[0]) + "'s " + ToOrdinalName((size_t)(towerId[1])) + " tower at " + GetLaneName(towerId[2]));
+          Print(GetLogPrefix() + GetActorNameFromColor(cacheValue) + " " + action + " " + GetTeamNameBaseZero(towerId[0]) + "'s " + ToOrdinalName((size_t)(towerId[1])) + " tower at " + GetLaneName(towerId[2]));
         }
 
         break;
@@ -1793,7 +1800,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             m_Players[cacheValue]->IncRaxKills();
           }
 
-          bool isFriendlyFire = raxId[0] == 0 == GetIsSentinelHeroColor(*siegeColor);
+          bool isFriendlyFire = (raxId[0] == 0) == GetIsSentinelHeroColor(*siegeColor);
           string action = "destroyed";
           if (isFriendlyFire) {
             action = "denied";
@@ -1954,6 +1961,30 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         break;
       }
 
+      case HashCode("FF"): {
+        if (eventStringData.size() != 1) break;
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          if (eventStringData[0] == '+') {
+            Print(GetLogPrefix() + "[" + playerName + "] voted for forfeiting the game");
+          } else if (eventStringData[0] == '-') {
+            Print(GetLogPrefix() + "[" + playerName + "] voted against forfeiting the game");
+          }
+        }
+        break;
+      }
+
+      case HashCode("Buyback"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          Print(GetLogPrefix() + "[" + playerName + "] revived themselves (" + to_string(cacheValue) + " gold)");
+        }
+        break;
+      }
+
       case HashCode("RuneUse"): {
         if (eventStringData.empty()) break;
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
@@ -2034,6 +2065,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
       }
 
       case HashCode("APBan"): {
+        Print(GetLogPrefix() + "pick banned <" + GetHeroName(cacheValue) + ">");
         break;
       }
 
@@ -2070,11 +2102,6 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
           Print(GetLogPrefix() + "unhandled dota event: [" + key + "] for " + to_string(cacheValue));
         }
-
-        //
-        // Unknown keys:
-        // Buyback?
-        // FF-?
       }
     }
   }
@@ -2109,7 +2136,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
   }*/
   else if (missionKey.size() <= 2 && missionKey.find_first_not_of("1234567890") == string::npos)
   {
-    // these are only received at the end of the game
+    // most of these are only received at the end of the game
 
     optional<uint8_t> heroColor = ParseHeroColor(missionKey);
     if (heroColor.has_value())
@@ -2153,8 +2180,13 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
           break;
         }
         case '9': {
+          // game start
           m_Players[*heroColor]->SetHero(FourCCToString(cacheValue));
-          Print(GetLogPrefix() + "[" + playerName + "] is <" + GetHeroName(cacheValue) + ">.");
+          if (cacheValue == 0) {
+            Print(GetLogPrefix() + "[" + playerName + "] failed to pick a hero.");
+          } else {
+            Print(GetLogPrefix() + "[" + playerName + "] picked <" + GetHeroName(cacheValue) + ">.");
+          }
           break;
         }
         case 'i':
