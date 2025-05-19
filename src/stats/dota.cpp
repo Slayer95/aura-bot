@@ -2065,7 +2065,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
       }
 
       case HashCode("APBan"): {
-        Print(GetLogPrefix() + "pick banned <" + GetHeroName(cacheValue) + ">");
+        Print(GetLogPrefix() + "banned <" + GetHeroName(cacheValue) + ">");
         break;
       }
 
