@@ -6125,14 +6125,13 @@ string Dota::GetAbilityName(const uint32_t code)
     case FourCC("A277"): return "Zeal Regen - 3";
     case FourCC("A278"): return "Zeal Regen - 4";
     case FourCC("A0R8"): return "Zombify";
-    default: return "ability " + FourCCToString(code);
+    default: return "Hero " + FourCCToString(code);
   }
 }
 
 string Dota::GetHeroName(const uint32_t code)
 {
   switch (code) {
-    case 0: return "(no hero)";
     case FourCC("H06S"): return "Admiral (Daelin Proudmoore)";
     case FourCC("N01I"): return "Alchemist (Razzil Darkbrew)";
     case FourCC("N01H"): return "Alchemist (Razzil Darkbrew)";
@@ -6847,38 +6846,41 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
       }
 
       case HashCode("SWAP"): {
+        // Note: DotA v6.78c AI 1.4e Farewell does not implement SWAP event
         // -swap command
         // swap players - this event happens twice symmetrically!
         string::size_type firstUnderscore = eventStringData.find('_');
-        if (firstUnderscore == string::npos) return true;
+        if (firstUnderscore == string::npos) break;
         string::size_type secondUnderscore = eventStringData.find('_', firstUnderscore + 1);
-        if (secondUnderscore == string::npos) return true;
+        if (secondUnderscore == string::npos) break;
         string fromString = eventStringData.substr(firstUnderscore + 1, secondUnderscore - (firstUnderscore + 1));
         string toString = eventStringData.substr(secondUnderscore + 1);
         optional<uint32_t> fromColor = ToUint32(fromString);
         optional<uint32_t> toColor = ToUint32(toString);
-        if (!fromColor.has_value() || !toColor.has_value()) return true;
-        if (!GetIsHeroColor(*fromColor) || !GetIsHeroColor(*toColor)) return true;
+        if (!fromColor.has_value() || !toColor.has_value()) break;
+        if (!GetIsHeroColor(*fromColor) || !GetIsHeroColor(*toColor)) break;
+        if (!m_SwitchEnabled && !GetAreSameTeamColors(*fromColor, *toColor)) {
+          Print(GetLogPrefix() + "got event [" + key + "], but game mode is not -so");
+          break;
+        }
         GameUser::CGameUser* fromPlayer = m_Game.get().GetUserFromColor(*fromColor);
         GameUser::CGameUser* toPlayer = m_Game.get().GetUserFromColor(*toColor);
-        
-        if (!m_SwitchEnabled && GetIsSentinelHeroColor(*fromColor) != GetIsSentinelHeroColor(*toColor)) {
-          CDBDotAPlayer* tmp = m_Players[*toColor];
-          m_Players[*toColor] = m_Players[*fromColor];
-          m_Players[*fromColor] = tmp;
-
-          CDBDotAPlayer* fromDotaPlayer = m_Players[*fromColor];
-          if (fromDotaPlayer) fromDotaPlayer->SetNewColor(*fromColor);
-          CDBDotAPlayer* toDotaPlayer = m_Players[*fromColor];
-          if (toDotaPlayer) toDotaPlayer->SetNewColor(*toColor);
-
-          string fromName = GetUserNameFromColor(*fromColor);
-          string toName = GetUserNameFromColor(*toColor);
-
-          LogMetaData(m_Game.get().GetEffectiveTicks(), "swap players from [" + fromName + "] to [" + toName + "].");
-        } else {
-          LogMetaData(m_Game.get().GetEffectiveTicks(), "swap players from [" + fromString + "] to [" + toString + "] (switch enabled).");
+        CDBDotAPlayer* fromData = m_Players[*fromColor];
+        CDBDotAPlayer* toData = m_Players[*toColor];
+        string fromHeroName = GetHeroName(FourCC(fromData->GetHero()));
+        string toHeroName = GetHeroName(FourCC(toData->GetHero()));
+        string fromName = GetUserNameFromColor(*fromColor);
+        string toName = GetUserNameFromColor(*toColor);
+        Print(GetLogPrefix() + "got event " + key + " (" + GetHeroName(cacheValue) + ") [" + fromName + "] <-> [" + toName + "]");
+        if (FourCC(toData->GetHero()) != cacheValue) {
+          Print(GetLogPrefix() + " swap ignored - got " + GetHeroName(cacheValue) + " but heroes were [" + fromHeroName + ", " + toHeroName + "]");
+          // This event is expected!
+          // TODO: Queue of SWAPs that are OK to ignore
+          break;
         }
+        Print(GetLogPrefix() + "swapping [" + fromHeroName + "] with [" + toHeroName + "]");
+        m_Players[*fromColor] = toData;
+        m_Players[*toColor] = fromData;
         break;
       }
 
@@ -7091,12 +7093,26 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
           break;
         }
         case '9': {
-          // game start
-          m_Players[*heroColor]->SetHero(FourCCToString(cacheValue));
+          // sent on game start and game end
+          string heroFourCC = FourCCToString(cacheValue);
+          bool matches = !m_Players[*heroColor]->HasHero() || m_Players[*heroColor]->GetHero() == heroFourCC;
+          m_Players[*heroColor]->SetHero(heroFourCC);
           if (cacheValue == 0) {
             LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] failed to pick a hero.");
-          } else {
+          } else if (matches) {
             LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] is <" + GetHeroName(cacheValue) + ">.");
+          } else {
+            // This can happen if -swap was successfully used but SWAP event did not trigger.
+            LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] is <" + GetHeroName(cacheValue) + ">. (Hero mismatch.)";
+          }
+          break;
+        }
+        case 'M': {
+          if (key.size() >= 9 && key.compare(0, 8, "Maphack_") == 0) {
+            optional<uint8_t> heroColor = ParseHeroColor(key.substr(8));
+            if (heroColor.has_value()) {
+              LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] flagged as map hacker.");
+            }
           }
           break;
         }
@@ -7104,10 +7120,11 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
           if (key.size() >= 2 && key[1] == 'd' && 1 <= cacheValue && cacheValue <= 10) {
             // DotA sends id values from 1-10 with 1-5 being sentinel players and 6-10 being scourge players
             // unfortunately the actual player colours are from 1-5 and from 7-11 so we need to deal with this case here
-            if (cacheValue >= 6)
+            if (cacheValue >= 6) {
               m_Players[*heroColor]->SetNewColor(static_cast<uint8_t>(cacheValue + 1));
-            else
+            } else {
               m_Players[*heroColor]->SetNewColor(static_cast<uint8_t>(cacheValue));
+            }
           }
           break;
 

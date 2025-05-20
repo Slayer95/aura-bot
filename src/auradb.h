@@ -526,6 +526,7 @@ public:
   [[nodiscard]] inline uint32_t GetTowerKills() const { return m_TowerKills; }
   [[nodiscard]] inline uint32_t GetRaxKills() const { return m_RaxKills; }
   [[nodiscard]] inline uint32_t GetCourierKills() const { return m_CourierKills; }
+  [[nodiscard]] inline bool HasHero() { return !m_Hero.empty(); }
   [[nodiscard]] inline std::string GetHero() { return m_Hero; }
   [[nodiscard]] inline std::string GetItem(uint8_t i) { return m_Items[i]; }
 
