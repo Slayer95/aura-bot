@@ -6661,6 +6661,32 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         break;
       }
 
+      case HashCode("Roshan"): {
+        if (!eventStringData.empty()) break;
+        LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + GetTeamNameBaseZero(cacheValue) + "] slain Roshan");
+        break;
+      }
+
+      case HashCode("AegisOn"): {
+        if (!eventStringData.empty()) break;
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] got Aegis of the Immortal");
+        }
+        break;
+      }
+
+      case HashCode("AegisOff"): {
+        if (!eventStringData.empty()) break;
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] lost Aegis of the Immortal");
+        }
+        break;
+      }
+
       case HashCode("FF"): {
         if (eventStringData.size() != 1) break;
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
