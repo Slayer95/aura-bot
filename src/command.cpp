@@ -6966,22 +6966,6 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         MapCFG.SetUint8("map.cfg.schema_number", MAP_CONFIG_SCHEMA_NUMBER);
         MapCFG.Set("map.path", R"(Maps\Download\)" + nameString);
         MapCFG.Set("map.local_path", nameString);
-        string mapType;
-        if (nameString.find("_evrgrn3") != string::npos) {
-          mapType = "evergreen";
-        } else if (nameString.find("DotA") != string::npos) {
-          mapType = "dota";
-        } else if (ToLowerCase(nameString).find("microtrain") != string::npos) {
-          mapType = "microtraining";
-        }
-        if (!mapType.empty()) {
-          MapCFG.Set("map.type", mapType);
-        }
-        if (mapType == "evergreen") {
-          MapCFG.Set("map.meta.site", "https://www.hiveworkshop.com/threads/351924/");
-          MapCFG.Set("map.meta.short_desc", "This map uses Warcraft 3: Reforged game mechanics.");
-        }
-
         MapCFG.Set("map.downloaded.by", GetSender());
 
         shared_ptr<CMap> parsedMap = nullptr;

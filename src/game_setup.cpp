@@ -661,15 +661,6 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
     MapCFG.Set("map.meta.url", m_MapDownloadUri);
     MapCFG.Set("map.downloaded.by", m_Attribution);
   }
-  if (baseFileName.find("_evrgrn3") != string::npos) {
-    if (m_MapSiteUri.empty()) MapCFG.Set("map.site", "https://www.hiveworkshop.com/threads/351924/");
-    MapCFG.Set("map.meta.short_desc", "This map uses Warcraft 3: Reforged game mechanics.");
-    MapCFG.Set("map.type", "evergreen");
-  } else if (baseFileName.find("DotA") != string::npos) {
-    MapCFG.Set("map.type", "dota");
-  } else if (ToLowerCase(baseFileName).find("microtrain") != string::npos) {
-    MapCFG.Set("map.type", "microtraining");
-  }
 
   shared_ptr<CMap> baseMap = nullptr;
   try {

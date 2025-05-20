@@ -1621,12 +1621,13 @@ void CMap::Load(CConfig* CFG)
     SetMapObservers(MAPOBS_ALLOWED);
   }
 
+  LoadGameConfigOverrides(*CFG);
+  LoadMapSpecificConfig(*CFG); // as in not overrides
+
   if (m_MapType == "dota") {
     m_EnableLagScreen = false;
   }
 
-  LoadGameConfigOverrides(*CFG);
-  LoadMapSpecificConfig(*CFG); // as in not overrides
   m_GameResultConstraints = GameResultConstraints(this, *CFG);
 
   // Out of the box support for auto-starting maps using the Host Force + Others Force pattern (e.g. Warlock)
@@ -2237,11 +2238,43 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_MapFilterMaker = CFG.GetUint8("map.filter_maker", MAPFILTER_MAKER_USER);
   m_MapFilterSize = CFG.GetUint8("map.filter_size", MAPFILTER_SIZE_LARGE);
 
-  m_MapSiteURL = CFG.GetString("map.meta.site");
+  if (CFG.Exists("map.type")) {
+    m_MapType = CFG.GetString("map.type");
+  } else {
+    string mapType;
+    string::size_type evergreenIndex = m_MapTitle.find(" Evergreen");
+    if (evergreenIndex != 0 && evergreenIndex != string::npos) {
+      mapType = "evergreen";
+    } else if (m_MapTitle.find("DotA") != string::npos) {
+      mapType = "dota";
+    } else {
+      string clientFileName = GetClientFileName();
+      if (clientFileName.find("microtrain") != string::npos) {
+        mapType = "microtraining";
+      }
+    }
+    if (!mapType.empty()) {
+      m_MapType = mapType;
+      CFG.SetString("map.type", m_MapType);
+    }
+  }
+
+  if (CFG.Exists("map.meta.site")) {
+    m_MapSiteURL = CFG.GetString("map.meta.site");
+  } else if (m_MapType == "evergreen") {
+    m_MapSiteURL = "https://www.hiveworkshop.com/threads/351924/";
+    CFG.SetString("map.meta.site", m_MapSiteURL);
+  }
+
+  if (CFG.Exists("map.meta.short_desc")) {
+    m_MapShortDesc = CFG.GetString("map.meta.short_desc");
+  } else if (m_MapType == "evergreen") {
+    m_MapShortDesc = "This map uses Warcraft 3: Reforged game mechanics.";
+    CFG.SetString("map.meta.short_desc", m_MapShortDesc);
+  }
+  
   m_MapShortDesc = CFG.GetString("map.meta.short_desc");
   m_MapURL = CFG.GetString("map.meta.url");
-
-  m_MapType = CFG.GetString("map.type");
 
   vector<string> aiTypes = {"none", "melee", "amai", "custom"};
   m_MapAIType = m_MapType == "evergreen" || m_MapType == "amai" ? AI_TYPE_AMAI : AI_TYPE_MELEE;
