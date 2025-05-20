@@ -53,7 +53,10 @@ namespace Dota
   [[nodiscard]] inline bool GetIsScourgeHeroColor(const uint8_t color) { return SCOURGE_HERO_MIN_COLOR <= color && color <= SCOURGE_HERO_MAX_COLOR; }
   [[nodiscard]] inline bool GetIsHeroColor(const uint8_t color) { return GetIsSentinelHeroColor(color) || GetIsScourgeHeroColor(color); }
   [[nodiscard]] inline bool GetIsHeroColor(const uint32_t color) { return GetIsValidColor(color) && GetIsHeroColor((uint8_t)color);}
-  [[nodiscard]] inline bool GetAreSameTeamColors(const uint8_t a, const uint8_t b) { return (a < SCOURGE_CREEPS_COLOR) == (b < SCOURGE_CREEPS_COLOR); }
+  [[nodiscard]] inline bool GetAreSameTeamColors(const uint8_t a, const uint8_t b) {
+    if (GetIsNeutralCreepsColor(a) || GetIsNeutralCreepsColor(b)) return a == b;
+    return (a < SCOURGE_CREEPS_COLOR) == (b < SCOURGE_CREEPS_COLOR);
+  }
 
   [[nodiscard]] std::optional<uint8_t> EnsureHeroColor(uint32_t input);
   [[nodiscard]] std::optional<uint8_t> EnsureActorColor(uint32_t input);
@@ -63,6 +66,7 @@ namespace Dota
   [[nodiscard]] std::string GetTeamNameBaseZero(const uint8_t code);
   [[nodiscard]] std::string GetTeamNameBaseOne(const uint8_t code);
   [[nodiscard]] std::string GetRuneName(const uint8_t code);
+  [[nodiscard]] std::string GetAbilityName(const uint32_t code);
   [[nodiscard]] std::string GetItemName(const uint32_t code);
   [[nodiscard]] std::string GetHeroName(const uint32_t code);
 
