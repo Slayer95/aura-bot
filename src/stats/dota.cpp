@@ -127,16 +127,15 @@ string Dota::GetRuneName(const uint8_t code)
   switch (code) {
     case 1: return "Haste";
     case 2: return "Regeneration";
-    case 3: return "Double Damage";
+    case 3: return "Amplify Damage";
     case 4: return "Illusion";
     case 5: return "Invisibility";
     case 6: return "Bounty";
     case 7: return "Arcane";
     case 8: return "Wisdom";
     case 9: return "Shield";
-    case 49: return "Water";
+    case 10: return "Water";
     default:
-      if (50 <= code) return GetRuneName(code % 48);
       return "#" + ToDecString(code);
   }
 }
@@ -6373,7 +6372,7 @@ CDotaStats::~CDotaStats()
   }
 }
 
-bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
+bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
 {
   if (fileName != "dr.x") {
     return true;
@@ -6461,7 +6460,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             action = "denied";
           }
 
-          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(cacheValue) + " " + action + " " + GetTeamNameBaseZero(towerId[0]) + "'s " + ToOrdinalName((size_t)(towerId[1])) + " tower at " + GetLaneName(towerId[2]));
+          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(*siegeColor) + " " + action + " " + GetTeamNameBaseZero(towerId[0]) + "'s " + ToOrdinalName((size_t)(towerId[1])) + " tower at " + GetLaneName(towerId[2]));
         }
 
         break;
@@ -6487,7 +6486,29 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             typeName = "ranged";
           }
 
-          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(cacheValue) + " " + action + " " + GetTeamNameBaseZero(raxId[0]) + "'s " + typeName + " Barracks at " + GetLaneName(raxId[1]));
+          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(*siegeColor) + " " + action + " " + GetTeamNameBaseZero(raxId[0]) + "'s " + typeName + " Barracks at " + GetLaneName(raxId[1]));
+        }
+        break;
+      }
+
+      case HashCode("Shrine"): {
+        optional<uint8_t> siegeColor = EnsureActorColor(cacheValue);
+        vector<uint8_t> shrineId = SplitNumeral(eventStringData);
+        if (siegeColor.has_value() && shrineId.size() == 2) {
+          GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
+
+          bool isFriendlyFire = (raxId[0] == 0) == GetIsSentinelColor(*siegeColor);
+          string action = "destroyed";
+          if (isFriendlyFire) {
+            action = "denied";
+          }
+
+          string location = "West";
+          if (shrineId[1] == 1) {
+            location = "East";
+          }
+
+          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(*siegeColor) + " " + action + " " + GetTeamNameBaseZero(raxId[0]) + "'s " + location + " Shrine of Wisdom");
         }
         break;
       }
@@ -6507,7 +6528,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             action = "denied";
           }
 
-          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(cacheValue) + " " + action + " [" + GetUserNameFromColor(*victimColor) + "]'s courier");
+          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(*killerColor) + " " + action + " [" + GetUserNameFromColor(*victimColor) + "]'s courier");
         }
         break;
       }
@@ -6667,6 +6688,16 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         break;
       }
 
+      case HashCode("Cheese"): {
+        if (!eventStringData.empty()) break;
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] ate their Cheese");
+        }
+        break;
+      }
+
       case HashCode("AegisOn"): {
         if (!eventStringData.empty()) break;
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
@@ -6683,6 +6714,62 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         if (heroColor.has_value()) {
           string playerName = GetUserNameFromColor(*heroColor);
           LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] lost Aegis of the Immortal");
+        }
+        break;
+      }
+
+      case HashCode("AghBless"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> fromColor = ParseHeroColor(eventStringData);
+        optional<uint8_t> toColor = EnsureHeroColor(cacheValue);
+        if (fromColor.has_value() && toColor.has_value()) {
+          string fromName = GetUserNameFromColor(*fromColor);
+          string toName = GetUserNameFromColor(*toColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + fromName + "] used Aghanim's Blessing on " + toName);
+        }
+        break;
+      }
+
+      case HashCode("AghBlessPickup"): {
+        if (!eventStringData.empty()) break;
+        optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] picked up Aghanim's Blessing");
+        }
+        break;
+      }
+
+      case HashCode("AghGift"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> fromColor = ParseHeroColor(eventStringData);
+        optional<uint8_t> toColor = EnsureHeroColor(cacheValue);
+        if (fromColor.has_value() && toColor.has_value()) {
+          string fromName = GetUserNameFromColor(*fromColor);
+          string toName = GetUserNameFromColor(*toColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + fromName + "] used Aghanim's Gift on " + toName);
+        }
+        break;
+      }
+
+      case HashCode("Moonshard"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> fromColor = ParseHeroColor(eventStringData);
+        optional<uint8_t> toColor = EnsureHeroColor(cacheValue);
+        if (fromColor.has_value() && toColor.has_value()) {
+          string fromName = GetUserNameFromColor(*fromColor);
+          string toName = GetUserNameFromColor(*toColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + fromName + "] used Moonshard on " + toName);
+        }
+        break;
+      }
+
+      case HashCode("Tome"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] used a tome (#" + to_string(cacheValue / 280) + ")");
         }
         break;
       }
@@ -6713,20 +6800,22 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
 
       case HashCode("RuneUse"): {
         if (eventStringData.empty()) break;
+        optional<uint32_t> runeId = ToUint32(eventStringData);
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
-        if (heroColor.has_value()) {
+        if (heroColor.has_value() && runeId.has_value() && (*runeId <= 0xFF)) {
           string playerName = GetUserNameFromColor(*heroColor);
-          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] used a " + GetRuneName((uint8_t)eventStringData[0]) + " rune");
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] used a " + GetRuneName((uint8_t)(*runeId)) + " rune");
         }        
         break;
       }
 
       case HashCode("RuneStore"): {
         if (eventStringData.empty()) break;
+        optional<uint32_t> runeId = ToUint32(eventStringData);
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
-        if (heroColor.has_value()) {
+        if (heroColor.has_value() && runeId.has_value() && (*runeId <= 0xFF)) {
           string playerName = GetUserNameFromColor(*heroColor);
-          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] stored a " + GetRuneName((uint8_t)eventStringData[0]) + " rune");
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] stored a " + GetRuneName((uint8_t)(*runeId)) + " rune");
         }        
         break;
       }
@@ -6735,7 +6824,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
         if (heroColor.has_value()) {
           string playerName = GetUserNameFromColor(*heroColor);
-          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] detected as AFK");
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] detected as griefer (" + FourCCToString(cacheValue) + ")");
         }
         break;
       }
@@ -6744,7 +6833,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
         if (heroColor.has_value()) {
           string playerName = GetUserNameFromColor(cacheValue);
-          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] suspected map hacker");
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] is probably a map hacker");
         }
         break;
       }
@@ -6758,7 +6847,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
       }
 
       case HashCode("SWAP"): {
-        // swap players
+        // -swap command
+        // swap players - this event happens twice symmetrically!
         string::size_type firstUnderscore = eventStringData.find('_');
         if (firstUnderscore == string::npos) return true;
         string::size_type secondUnderscore = eventStringData.find('_', firstUnderscore + 1);
@@ -6792,14 +6882,51 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
         break;
       }
 
+      case HashCode("Ban"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), playerName + " banned <" + GetHeroName(cacheValue) + ">");
+        }
+        break;
+      }
+
+      case HashCode("Pick"): {
+        if (eventStringData.empty()) break;
+        optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
+        if (heroColor.has_value()) {
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), playerName + " picked <" + GetHeroName(cacheValue) + ">");
+        }
+        break;
+      }
+
       case HashCode("APBan"): {
         LogMetaData(m_Game.get().GetEffectiveTicks(), "banned <" + GetHeroName(cacheValue) + ">");
         break;
       }
 
+      case HashCode("Pool"): {
+        if (eventStringData.empty()) break;
+        optional<uint32_t> heroIndex = ToUint32(eventStringData);
+        if (heroIndex.has_value()) {
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "<" + GetHeroName(cacheValue) + "> rolled as " + ToOrdinalName(*heroIndex) + " hero in the pool");
+        }
+        break;
+      }
+
       case HashCode("Mode"): {
-        LogMetaData(m_Game.get().GetEffectiveTicks(), "mode -" + eventStringData);
-        // Game mode
+        string byWhom;
+        if (cacheValue == 0) {
+          byWhom = " (set by host bot)";
+        } else {
+          optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
+          if (heroColor.has_value()) {
+            byWhom = " (set by " + GetActorNameFromColor(*heroColor) + ")";
+          }
+        }
+
         string::size_type KeyStringSize = eventStringData.size();
         if (KeyStringSize % 2 != 0) KeyStringSize--;
         for (string::size_type i = 0; i < KeyStringSize; i += 2) {
@@ -6808,6 +6935,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             LogMetaData(m_Game.get().GetEffectiveTicks(), "Switch On");
           }
         }
+
+        LogMetaData(m_Game.get().GetEffectiveTicks(), "mode -" + eventStringData + byWhom);
         break;
       }
 
@@ -6822,6 +6951,27 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
           }
           string playerName = GetUserNameFromColor(*heroColor);
           LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] " + action + " <" + GetItemName(cacheValue) + ">.");
+        }
+        break;
+      }
+
+      case HashCode("AA"):
+      case HashCode("HA"):
+      case HashCode("AtrophyAuraPermanent"):
+      case HashCode("DuelWinner"):
+      case HashCode("EssenceShiftPerm"):
+      case HashCode("FleshHeapCharge"):
+      case HashCode("SilencerIntSteal"): {
+        break;
+      }
+
+      case HashCode("LoD"): {
+        if (eventStringData.size() < 6) break;
+        if (eventStringData.compare(0, 5, "_INV_") == 0) {
+          optional<uint32_t> heroColor = ParseHeroColor(eventStringData.substr(5));
+          if (heroColor.has_value()) {
+            // ??
+          }
         }
         break;
       }
@@ -6859,7 +7009,40 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
       m_Time.second = cacheValue;
     }
   }
-  /*else if (missionKey == "DLL_State" || missionKey == "bonus" || missionKey == "bonush" || missionKey == "DonRepeatFail" || missionKey == "SyncCounter<XY>.000")
+  else if (missionKey == "MHDetection")
+  {
+    optional<uint8_t> heroColor = ParseHeroColor(key);
+    if (heroColor.has_value()) {
+      string playerName = GetUserNameFromColor(cacheValue);
+      if (*heroColor == fromUID) {
+        LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] may be a map hacker");
+      } else {
+        string claimName = m_Game.get().GetUserNameFromUID(fromUID);
+        Print(
+          GetLogPrefix() + "[" + claimName + "] claims [" + playerName +"] is map hacker (but they are likely hacking themselves)"
+        );
+      }
+    }
+  }
+  else if (missionKey == "bonus" && !key.empty() && key[0] == 'f')
+  {
+    string fromName = m_Game.get().GetUserNameFromUID(fromUID);
+    if (key == "fail") {
+      Print(GetLogPrefix() + "[" + fromName + "] failed to connect to bonus servers");
+    } else if (key.size() == 1) ´{
+      Print(GetLogPrefix() + "[" + fromName + "] connected to bonus servers");
+    }
+  }
+  /*else if (
+    missionKey == "DLL_State" ||
+    missionKey == "BindIssue" ||
+    missionKey == "bonush" || missionKey == "bonusdbg" ||
+    missionKey == "DonRepeatFail" || missionKey == "AnSentNotRcvd" ||
+    missionKey == "pngs" ||
+    missionKey == "DFatal_<COLOR>" || missionKey == "DFatalM_<COLOR>" ||
+    missionKey == "MHDetected_<COLOR> ||
+    missionKey == "SyncCounter<XY>.000"
+  )
   {
   }*/
   else if (missionKey.size() <= 2 && missionKey.find_first_not_of("1234567890") == string::npos)
@@ -6913,7 +7096,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
           if (cacheValue == 0) {
             LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] failed to pick a hero.");
           } else {
-            LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] picked <" + GetHeroName(cacheValue) + ">.");
+            LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] is <" + GetHeroName(cacheValue) + ">.");
           }
           break;
         }
