@@ -6455,7 +6455,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             m_Players[*siegeColor]->IncTowerKills();
           }
 
-          bool isFriendlyFire = (towerId[0] == 0) == GetIsSentinelHeroColor(*siegeColor);
+          bool isFriendlyFire = (towerId[0] == 0) == GetIsSentinelColor(*siegeColor);
           string action = "destroyed";
           if (isFriendlyFire) {
             action = "denied";
@@ -6476,7 +6476,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             m_Players[*siegeColor]->IncRaxKills();
           }
 
-          bool isFriendlyFire = (raxId[0] == 0) == GetIsSentinelHeroColor(*siegeColor);
+          bool isFriendlyFire = (raxId[0] == 0) == GetIsSentinelColor(*siegeColor);
           string action = "destroyed";
           if (isFriendlyFire) {
             action = "denied";
@@ -6501,7 +6501,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t /*fromUID*/, const std::str
             m_Players[*killerColor]->IncCourierKills();
           }
 
-          bool isFriendlyFire = false;
+          bool isFriendlyFire = GetAreSameTeamColors(*killerColor, *victimColor);
           string action = "killed";
           if (isFriendlyFire) {
             action = "denied";

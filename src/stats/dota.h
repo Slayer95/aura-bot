@@ -46,11 +46,13 @@ namespace Dota
   [[nodiscard]] inline bool GetIsSentinelCreepsColor(const uint8_t color) { return color == Dota::SENTINEL_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsSentinelCreepsColor(const uint32_t color) { return GetIsValidColor(color) && GetIsSentinelCreepsColor((uint8_t)(color)); }
   [[nodiscard]] inline bool GetIsSentinelHeroColor(const uint8_t color) { return SENTINEL_HERO_MIN_COLOR <= color && color <= SENTINEL_HERO_MAX_COLOR; }
+  [[nodiscard]] inline bool GetIsSentinelColor(const uint8_t color) { return color < SCOURGE_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint8_t color) { return color == Dota::SCOURGE_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsScourgeCreepsColor(const uint32_t color) { return GetIsValidColor(color) && GetIsScourgeCreepsColor((uint8_t)(color)); }
   [[nodiscard]] inline bool GetIsNeutralCreepsColor(const uint8_t color) { return color == NEUTRAL_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsNeutralCreepsColor(const uint32_t color) { return GetIsValidColor(color) && GetIsNeutralCreepsColor((uint8_t)(color)); }
   [[nodiscard]] inline bool GetIsScourgeHeroColor(const uint8_t color) { return SCOURGE_HERO_MIN_COLOR <= color && color <= SCOURGE_HERO_MAX_COLOR; }
+  [[nodiscard]] inline bool GetIsScourgeColor(const uint8_t color) { return SCOURGE_CREEPS_COLOR <= color && color < NEUTRAL_CREEPS_COLOR; }
   [[nodiscard]] inline bool GetIsHeroColor(const uint8_t color) { return GetIsSentinelHeroColor(color) || GetIsScourgeHeroColor(color); }
   [[nodiscard]] inline bool GetIsHeroColor(const uint32_t color) { return GetIsValidColor(color) && GetIsHeroColor((uint8_t)color);}
   [[nodiscard]] inline bool GetAreSameTeamColors(const uint8_t a, const uint8_t b) {
