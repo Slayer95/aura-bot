@@ -6846,9 +6846,15 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
       }
 
       case HashCode("SWAP"): {
+        // swap players - this event happens twice symmetrically! (-swap or -switch commands?)
         // Note: DotA v6.78c AI 1.4e Farewell does not implement SWAP event
-        // -swap command
-        // swap players - this event happens twice symmetrically!
+        // DotA 6.8 AI English, DotA v6.74c AI 1.3b don't implement it either
+        // Maybe it's just all AI versions that remove it...
+        //
+        // Versions that do implement it:
+        // DotA v6.83d-rb4
+        // DotA v6.85k Allstars
+        // DotA_Allstars_7.04f9
         string::size_type firstUnderscore = eventStringData.find('_');
         if (firstUnderscore == string::npos) break;
         string::size_type secondUnderscore = eventStringData.find('_', firstUnderscore + 1);
@@ -6860,6 +6866,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         if (!fromColor.has_value() || !toColor.has_value()) break;
         if (!GetIsHeroColor(*fromColor) || !GetIsHeroColor(*toColor)) break;
         if (!m_SwitchEnabled && !GetAreSameTeamColors(*fromColor, *toColor)) {
+          // shouldn't happen with regular gameplay
           Print(GetLogPrefix() + "got event [" + key + "], but game mode is not -so");
           break;
         }
@@ -7103,7 +7110,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
             LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] is <" + GetHeroName(cacheValue) + ">.");
           } else {
             // This can happen if -swap was successfully used but SWAP event did not trigger.
-            LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] is <" + GetHeroName(cacheValue) + ">. (Hero mismatch.)";
+            LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] is <" + GetHeroName(cacheValue) + ">. (Hero mismatch.)");
           }
           break;
         }
