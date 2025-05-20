@@ -6497,7 +6497,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         if (siegeColor.has_value() && shrineId.size() == 2) {
           GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
 
-          bool isFriendlyFire = (raxId[0] == 0) == GetIsSentinelColor(*siegeColor);
+          bool isFriendlyFire = (shrineId[0] == 0) == GetIsSentinelColor(*siegeColor);
           string action = "destroyed";
           if (isFriendlyFire) {
             action = "denied";
@@ -6508,7 +6508,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
             location = "East";
           }
 
-          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(*siegeColor) + " " + action + " " + GetTeamNameBaseZero(raxId[0]) + "'s " + location + " Shrine of Wisdom");
+          LogMetaData(m_Game.get().GetEffectiveTicks(), GetActorNameFromColor(*siegeColor) + " " + action + " " + GetTeamNameBaseZero(shrineId[0]) + "'s " + location + " Shrine of Wisdom");
         }
         break;
       }
@@ -7029,7 +7029,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
     string fromName = m_Game.get().GetUserNameFromUID(fromUID);
     if (key == "fail") {
       Print(GetLogPrefix() + "[" + fromName + "] failed to connect to bonus servers");
-    } else if (key.size() == 1) ´{
+    } else if (key.size() == 1) {
       Print(GetLogPrefix() + "[" + fromName + "] connected to bonus servers");
     }
   }
