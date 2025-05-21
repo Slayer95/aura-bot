@@ -205,6 +205,23 @@ uint32_t CGameUser::GetRTT() const
   return GetOperationalRTT() * 2;
 }
 
+bool CGameUser::GetIsDownloading() const
+{
+  return InspectMapTransfer().GetIsInProgress();
+}
+
+bool CGameUser::GetIsRTTMeasuredConsistent() const
+{
+  if (GetIsDownloading()) return false;
+  return m_MeasuredRTT.has_value() || GetStoredRTTCount() >= CONSISTENT_PINGS_COUNT;
+}
+
+bool CGameUser::GetIsRTTMeasuredBadConsistent() const
+{
+  if (GetIsDownloading()) return false;
+  return m_MeasuredRTT.has_value() || GetStoredRTTCount() >= 2;
+}
+
 string CGameUser::GetConnectionErrorString() const
 {
   string errorString;

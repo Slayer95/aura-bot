@@ -187,13 +187,14 @@ namespace GameUser
     [[nodiscard]] std::shared_ptr<CGame>          GetGame();
     [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
     [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
+    [[nodiscard]] bool                            GetIsDownloading() const;
     [[nodiscard]] inline CommandHistory*          GetCommandHistory() { return &m_CommandHistory; }
     [[nodiscard]] inline const CommandHistory*    InspectCommandHistory() const { return &m_CommandHistory; }
     [[nodiscard]] inline std::array<uint8_t, 4>   GetIPv4Internal() const { return m_IPv4Internal; }
     [[nodiscard]] inline size_t                   GetStoredRTTCount() const { return m_RTTValues.size(); }
     [[nodiscard]] inline bool                     GetIsRTTMeasured() const { return m_MeasuredRTT.has_value() || !m_RTTValues.empty(); }
-    [[nodiscard]] inline bool                     GetIsRTTMeasuredConsistent() const { return m_MeasuredRTT.has_value() || GetStoredRTTCount() >= CONSISTENT_PINGS_COUNT; }
-    [[nodiscard]] inline bool                     GetIsRTTMeasuredBadConsistent() const { return m_MeasuredRTT.has_value() || GetStoredRTTCount() >= 2; }
+    [[nodiscard]] bool                            GetIsRTTMeasuredConsistent() const;
+    [[nodiscard]] bool                            GetIsRTTMeasuredBadConsistent() const;
     [[nodiscard]] inline uint32_t                 GetPongCounter() const { return m_PongCounter; }
     [[nodiscard]] inline size_t                   GetNumCheckSums() const { return m_CheckSums.size(); }
     [[nodiscard]] inline std::queue<uint32_t>*    GetCheckSums() { return &m_CheckSums; }
