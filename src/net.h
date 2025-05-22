@@ -214,6 +214,7 @@ public:
   void                                   PropagateDoNotRouteEnabled(const bool nEnable);
   void                                   OnConfigReload();
   void                                   OnUserKicked(GameUser::CGameUser* user, bool deferred = false);
+  void                                   RegisterGameProxy(CConnection* connection, std::shared_ptr<CGame> nGame);
   void                                   RegisterGameSeeker(CConnection* connection, uint8_t nType);
   void                                   EventGameReset(std::shared_ptr<const CGame> nGame);
   void                                   EventRealmDeleted(std::shared_ptr<const CRealm> nRealm);

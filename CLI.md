@@ -839,11 +839,13 @@ missing, and thus defaults to ``realm_N.unique_name`` (which itself defaults to 
 This option lets Aura automatically register an alias for the map hosted. Aliases are case-insensitive, and 
 normalized according to the rules listed in \`aliases.ini\`.
 
-## \`--mirror \<IP:PORT\#ID\>\`
+## \`--mirror \<IP:PORT\#ID\>\`, \`--mirror \<IP:PORT\#ID:KEY\>\`
 
 This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 
 instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms. The actual host is identified 
 by their IPv4 address and PORT. The game ID, also known as "host counter", should be provided in hexadecimal.
+
+Games originally hosted over LAN require the KEY to be specified.
 
 When mirroring games, the following parameters are likely to also be useful:
 - `--exclude`: In order to avoid duplicate broadcasts in the source PvPGN realm, if any.

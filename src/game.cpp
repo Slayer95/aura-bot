@@ -151,7 +151,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LastLagScreenResetTime(0),
     m_RandomSeed(0),
     m_HostCounter(nGameSetup->m_Identifier.has_value() ? nGameSetup->m_Identifier.value() : nAura->NextHostCounter()),
-    m_EntryKey(0),
+    m_EntryKey(nGameSetup->m_EntryKey.value_or(0)),
     m_SyncCounter(0),
     m_SyncCounterChecked(0),
     m_MaxPingEqualizerDelayFrames(0),

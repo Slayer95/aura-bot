@@ -48,13 +48,13 @@ using namespace std;
 CTCPProxy::CTCPProxy(CConnection* nConnection, shared_ptr<CGame> nGame)
   : m_Aura(nConnection->m_Aura),
     m_Type(TCPProxyType::kDumb),
+    m_Port(nConnection->GetPort()),
     m_DeleteMe(false),
     m_ClientPaused(false),
     m_ServerPaused(false),
     m_OutgoingSocket(nullptr),
     m_Game(nGame)
 {
-  // TODO: Ensure that nConnection->SetSocket(nullptr) is called afterwards
   m_IncomingSocket = nConnection->GetSocket();
   m_OutgoingSocket = new CTCPClient(AF_INET, m_Game->GetGameName());
 }
@@ -88,7 +88,7 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
 
   if (pendingBytes >= kHighWatermark || (*pausedRecvFlag && pendingBytes > kLowWatermark)) {
     if (m_Aura->GetLoopTicks() - fromSocket->GetLastRecv() >= timeout) {
-      DPRINT_IF(LOG_LEVEL_DEBUG, "Terminating stalled proxy.")
+      PRINT_IF(LOG_LEVEL_DEBUG, "Terminating stalled proxy.")
       m_DeleteMe = true;
       return TCPProxyStatus::kDestroy;
     }
@@ -100,12 +100,13 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
 
   if (fromSocket->DoRecv(fd)) {
     string* incomingBytes = fromSocket->GetBytes();
+    vector<uint8_t> byteArray = vector<uint8_t>(incomingBytes->begin(), incomingBytes->end());
     toSocket->PutBytes(*incomingBytes);
     incomingBytes->clear();
     return TCPProxyStatus::kOk;
   }
   if (m_Aura->GetLoopTicks() - fromSocket->GetLastRecv() >= timeout) {
-    DPRINT_IF(LOG_LEVEL_DEBUG, "Terminating inactive proxy.")
+    PRINT_IF(LOG_LEVEL_DEBUG, "Terminating inactive proxy.")
     m_DeleteMe = true;
     return TCPProxyStatus::kDestroy;
   }
@@ -132,6 +133,7 @@ TCPProxyStatus CTCPProxy::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       }
       return result;
     }
+    m_IncomingSocket->m_RecvBuffer.swap(m_OutgoingSocket->m_SendBuffer);
     // falls through
   } else if (!m_OutgoingSocket->GetConnected() && !m_OutgoingSocket->HasError()) {
     sockaddr_storage outgoingAddress = IPv4ArrayToAddress(m_Game->GetPublicHostAddress());

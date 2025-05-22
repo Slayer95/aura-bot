@@ -551,7 +551,7 @@ uint32_t CNet::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds)
   }
 
   for (const auto& serverConnections : m_GameProxies) {
-    // std::pair<uint16_t, vector<CGameSeeker*>>
+    // std::pair<uint16_t, vector<CTCPProxy*>>
     for (const auto& connection : serverConnections.second) {
       NumFDs += connection->SetFD(fd, send_fd, nfds);;
     }
@@ -1959,6 +1959,15 @@ void CNet::OnUserKicked(GameUser::CGameUser* user, bool deferred)
     m_IncomingConnections[connection->GetPort()].push_back(connection);
   }
   user->SetSocket(nullptr);
+}
+
+void CNet::RegisterGameProxy(CConnection* connection, shared_ptr<CGame> game)
+{
+  CStreamIOSocket* socket = connection->GetSocket();
+  if (!socket) return;
+  CTCPProxy* proxy = new CTCPProxy(connection, game);
+  m_GameProxies[proxy->GetPort()].push_back(proxy);
+  connection->SetSocket(nullptr);
 }
 
 void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)

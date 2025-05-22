@@ -142,7 +142,8 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
             if (targetLobby->GetIsMirror()) {
               if (targetLobby->GetIsProxy()) {
-                result = INCON_UPDATE_PROMOTED;
+                m_Aura->m_Net.RegisterGameProxy(this, targetLobby);
+                result = INCON_UPDATE_PROMOTED_PASSTHROUGH;
               } else {
                 DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + "ignored (non-proxy mirror)")
               }

@@ -134,7 +134,7 @@ public:
   bool                                            m_OwnerLess;
   std::pair<std::string, std::string>             m_Owner;
   std::optional<uint32_t>                         m_Identifier;
-  std::optional<uint32_t>                         m_ChannelKey;
+  std::optional<uint32_t>                         m_EntryKey;
   std::optional<bool>                             m_ChecksReservation;
   std::vector<std::string>                        m_Reservations;
   std::optional<uint8_t>                          m_CrossPlayMode;
@@ -273,7 +273,7 @@ public:
   inline bool GetIsDownloading() const { return m_IsStepDownloading; }
   inline bool GetHasBeenHosted() const { return m_CreationCounter > 0; }
 
-  [[nodiscard]] bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier);
+  [[nodiscard]] bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier, const uint32_t nEntryKey = 0);
   [[nodiscard]] bool SetMirrorSource(const std::string& nInput);
   void AddIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   void RemoveIgnoredRealm(std::shared_ptr<const CRealm> nRealm);

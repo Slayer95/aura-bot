@@ -56,6 +56,7 @@ public:
   CAura*                                            m_Aura;
   TCPProxyType                                      m_Type;
   std::optional<Version>                            m_GameVersion;
+  uint16_t                                          m_Port;
   bool                                              m_DeleteMe;
   bool                                              m_ClientPaused;
   bool                                              m_ServerPaused;
@@ -70,6 +71,7 @@ public:
   [[nodiscard]] inline bool HasGameVersion() const { return m_GameVersion.has_value(); }
   [[nodiscard]] inline const std::optional<Version>& GetMaybeGameVersion() const { return m_GameVersion; }
   [[nodiscard]] inline const Version& GetGameVersion() const { return m_GameVersion.value(); }
+  [[nodiscard]] inline uint16_t GetPort() const { return m_Port; }
   [[nodiscard]] inline CStreamIOSocket* GetIncomingSocket() const { return m_IncomingSocket; }
   [[nodiscard]] inline CStreamIOSocket* GetOutgoingSocket() const { return m_OutgoingSocket; }
   inline void SetType(TCPProxyType nType) { m_Type = nType; }

@@ -1350,31 +1350,33 @@ bool CGameSetup::RunHost()
   return m_Aura->CreateGame(shared_from_this());
 }
 
-bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier)
+bool CGameSetup::SetMirrorSource(const sockaddr_storage& sourceAddress, const uint32_t gameIdentifier, const uint32_t entryKey)
 {
   m_IsMirror = true;
   m_IsProxy = true; // TODO: CGameSetup::m_IsProxy
-  m_Identifier = nGameIdentifier;
-  memcpy(&m_RealmsAddress, &nSourceAddress, sizeof(sockaddr_storage));
+  m_Identifier = gameIdentifier;
+  m_EntryKey = entryKey;
+  memcpy(&m_RealmsAddress, &sourceAddress, sizeof(sockaddr_storage));
   return true;
 }
 
 bool CGameSetup::SetMirrorSource(const string& nInput)
 {
-  string::size_type portStart = nInput.find(":", 0);
+  string::size_type portStart = nInput.find(':', 0);
   if (portStart == string::npos) return false;
-  string::size_type idStart = nInput.find("#", portStart);
+  string::size_type idStart = nInput.find('#', portStart);
   if (idStart == string::npos) return false;
   string rawAddress = nInput.substr(0, portStart);
   if (rawAddress.length() < 7) return false;
   string rawPort = nInput.substr(portStart + 1, idStart - (portStart + 1));
   if (rawPort.empty()) return false;
-  string::size_type idEnd = nInput.find(":", idStart);
-  string rawId;
+  string::size_type idEnd = nInput.find(':', idStart);
+  string rawId, rawEntryKey;
   if (idEnd == string::npos) {
     rawId = nInput.substr(idStart + 1);
   } else {
     rawId = nInput.substr(idStart + 1, idEnd - (idStart + 1));
+    rawEntryKey = nInput.substr(idEnd + 1);
   }
   if (rawId.empty()) return false;
   optional<sockaddr_storage> maybeAddress;
@@ -1384,22 +1386,25 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
     maybeAddress = CNet::ParseAddress(rawAddress, ACCEPT_IPV4);
   }
   if (!maybeAddress.has_value()) return false;
-  uint16_t gamePort = 0;
-  uint32_t gameId = 0;
-  try {
-    int64_t value = stol(rawPort);
-    if (value <= 0 || value > 0xFFFF) return false;
-    gamePort = static_cast<uint16_t>(value);
-  } catch (...) {
+  optional<uint16_t> maybeGamePort = ParseUint16(rawPort);
+  if (!maybeGamePort.has_value()) {
     return false;
   }
+  uint32_t entryKey = 0;
   optional<uint32_t> maybeId = ParseUint32Hex(rawId);
   if (!maybeId.has_value()) {
     return false;
   }
-  gameId = maybeId.value();
-  SetAddressPort(&(maybeAddress.value()), gamePort);
-  return SetMirrorSource(maybeAddress.value(), gameId);
+  if (!rawEntryKey.empty()) {
+    optional<uint32_t> maybeEntryKey = ParseUint32Hex(rawEntryKey);
+    if (!maybeEntryKey.has_value()) {
+      return false;
+    }
+    entryKey = maybeEntryKey.value();
+  }
+
+  SetAddressPort(&(maybeAddress.value()), *maybeGamePort);
+  return SetMirrorSource(*maybeAddress, *maybeId, entryKey);
 }
 
 void CGameSetup::AddIgnoredRealm(shared_ptr<const CRealm> nRealm)
