@@ -182,7 +182,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_MuteAll(false),
     m_ChatEnabled(false),
     m_IsMirror(nGameSetup->GetIsMirror()),
-    m_IsProxy(nGameSetup->GetIsMirror()), // TODO: CGame::m_IsProxy
+    m_IsProxy(nGameSetup->GetIsProxy()),
     m_CountDownStarted(false),
     m_CountDownFast(false),
     m_CountDownUserInitiated(false),

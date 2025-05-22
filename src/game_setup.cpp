@@ -188,7 +188,8 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_IsMapDownloaded(false),
 
     m_OwnerLess(false),
-    m_IsMirror(false),    
+    m_IsMirror(false),
+    m_IsProxy(false),
     m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
@@ -233,7 +234,8 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_IsMapDownloaded(false),
 
     m_OwnerLess(false),
-    m_IsMirror(false),    
+    m_IsMirror(false),
+    m_IsProxy(false),
     m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
@@ -1351,6 +1353,7 @@ bool CGameSetup::RunHost()
 bool CGameSetup::SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier)
 {
   m_IsMirror = true;
+  m_IsProxy = true; // TODO: CGameSetup::m_IsProxy
   m_Identifier = nGameIdentifier;
   memcpy(&m_RealmsAddress, &nSourceAddress, sizeof(sockaddr_storage));
   return true;

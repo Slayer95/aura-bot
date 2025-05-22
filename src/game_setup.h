@@ -139,6 +139,7 @@ public:
   std::vector<std::string>                        m_Reservations;
   std::optional<uint8_t>                          m_CrossPlayMode;
   bool                                            m_IsMirror;
+  bool                                            m_IsProxy;
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
@@ -268,6 +269,7 @@ public:
   bool RunHost();
 
   inline bool GetIsMirror() const { return m_IsMirror; }
+  inline bool GetIsProxy() const { return m_IsProxy; }
   inline bool GetIsDownloading() const { return m_IsStepDownloading; }
   inline bool GetHasBeenHosted() const { return m_CreationCounter > 0; }
 
