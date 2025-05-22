@@ -276,7 +276,7 @@ struct MapTransfer
     SetFinished();
     SetFinishedTicks(GetTicks());
   }
-  inline bool GetIsInProgress() { return GetStarted() && !GetFinished(); }
+  inline bool GetIsInProgress() const { return GetStarted() && !GetFinished(); }
 };
 
 //
