@@ -741,6 +741,16 @@ inline void AppendByteArray(std::vector<uint8_t>& b, const double i, bool bigEnd
   }
 }
 
+inline void AppendSwapString(std::string& fromString, std::string& toString)
+{
+  if (toString.empty()) {
+    fromString.swap(toString);
+  } else {
+    toString.append(fromString);
+    fromString.clear();
+  }
+}
+
 inline void AppendProtoBufferFromLengthDelimitedS2S(std::vector<uint8_t>& b, const std::string& key, const std::string& value)
 {
   size_t thisSize = key.size() + value.size() + 4;

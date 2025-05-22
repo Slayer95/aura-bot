@@ -87,7 +87,7 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
   string::size_type pendingBytes = toSocket->GetSendBufferSize();
 
   if (pendingBytes >= kHighWatermark || (*pausedRecvFlag && pendingBytes > kLowWatermark)) {
-    if (m_Aura->GetLoopTicks() - fromSocket->GetLastRecv() >= timeout) {
+    if (m_Aura->GetTicksIsAfterDelay(fromSocket->GetLastRecv(), timeout)) {
       PRINT_IF(LOG_LEVEL_DEBUG, "Terminating stalled proxy.")
       m_DeleteMe = true;
       return TCPProxyStatus::kDestroy;
@@ -99,13 +99,10 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
   *pausedRecvFlag = false;
 
   if (fromSocket->DoRecv(fd)) {
-    string* incomingBytes = fromSocket->GetBytes();
-    vector<uint8_t> byteArray = vector<uint8_t>(incomingBytes->begin(), incomingBytes->end());
-    toSocket->PutBytes(*incomingBytes);
-    incomingBytes->clear();
+    AppendSwapString(fromSocket->m_RecvBuffer, toSocket->m_SendBuffer); 
     return TCPProxyStatus::kOk;
   }
-  if (m_Aura->GetLoopTicks() - fromSocket->GetLastRecv() >= timeout) {
+  if (m_Aura->GetTicksIsAfterDelay(fromSocket->GetLastRecv(), timeout)) {
     PRINT_IF(LOG_LEVEL_DEBUG, "Terminating inactive proxy.")
     m_DeleteMe = true;
     return TCPProxyStatus::kDestroy;
@@ -133,7 +130,7 @@ TCPProxyStatus CTCPProxy::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       }
       return result;
     }
-    m_IncomingSocket->m_RecvBuffer.swap(m_OutgoingSocket->m_SendBuffer);
+    AppendSwapString(m_IncomingSocket->m_RecvBuffer, m_OutgoingSocket->m_SendBuffer);
     // falls through
   } else if (!m_OutgoingSocket->GetConnected() && !m_OutgoingSocket->HasError()) {
     sockaddr_storage outgoingAddress = IPv4ArrayToAddress(m_Game->GetPublicHostAddress());
