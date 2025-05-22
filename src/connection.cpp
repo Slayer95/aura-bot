@@ -133,6 +133,7 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got join request for #" + ToHexString(joinRequest.GetHostCounter()) + " (name: " + joinRequest.GetName() + ")")
             shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest.GetHostCounter());
             if (!targetLobby) {
+              DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " did not match a game")
               break;
             }
             if (targetLobby->GetHostPort() != m_Port) {
@@ -141,7 +142,7 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               break;
             }
             if (targetLobby->GetIsMirror()) {
-              if (targetLobby->GetIsProxy()) {
+              if (targetLobby->GetIsMirrorProxy()) {
                 m_Aura->m_Net.RegisterGameProxy(this, targetLobby);
                 result = INCON_UPDATE_PROMOTED_PASSTHROUGH;
               } else {

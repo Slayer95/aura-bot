@@ -100,6 +100,7 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
 
   if (fromSocket->DoRecv(fd)) {
     AppendSwapString(fromSocket->m_RecvBuffer, toSocket->m_SendBuffer); 
+    vector<uint8_t> byteArray = vector<uint8_t>(toSocket->m_SendBuffer.begin(), toSocket->m_SendBuffer.end());
     return TCPProxyStatus::kOk;
   }
   if (m_Aura->GetTicksIsAfterDelay(fromSocket->GetLastRecv(), timeout)) {
@@ -131,6 +132,7 @@ TCPProxyStatus CTCPProxy::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       return result;
     }
     AppendSwapString(m_IncomingSocket->m_RecvBuffer, m_OutgoingSocket->m_SendBuffer);
+    vector<uint8_t> byteArray = vector<uint8_t>(m_OutgoingSocket->m_SendBuffer.begin(), m_OutgoingSocket->m_SendBuffer.end());
     // falls through
   } else if (!m_OutgoingSocket->GetConnected() && !m_OutgoingSocket->HasError()) {
     sockaddr_storage outgoingAddress = IPv4ArrayToAddress(m_Game->GetPublicHostAddress());

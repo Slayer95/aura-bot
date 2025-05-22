@@ -103,7 +103,8 @@ public:
   std::optional<std::string>            m_GameOwner;
   std::optional<bool>                   m_GameOwnerLess;
   std::vector<std::string>              m_ExcludedRealms;
-  std::optional<std::string>            m_MirrorSource;
+  std::optional<std::string>            m_GameMirrorSource;
+  std::optional<bool>                   m_GameMirrorProxy;
 
   std::optional<std::string>            m_GameLobbyTimeoutMode;
   std::optional<std::string>            m_GameLobbyOwnerTimeoutMode;

@@ -154,8 +154,9 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--tft,--roc{false}", m_GameIsExpansion, "Customizes whether the hosted lobby will target Reign of Chaos or Frozen Throne clients.");
   app.add_option("--crossplay", m_GameCrossPlayMode, "Customizes the crossplay capabilities of the hosted lobby. Values: none, conservative, optimistic, force")->check(CLI::IsMember({"none", "conservative", "optimistic", "force"}));
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
-  app.add_option("--mirror", m_MirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
+  app.add_option("--mirror", m_GameMirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
+  app.add_flag(  "--proxy", m_GameMirrorProxy, "Proxies LAN connections towards the mirrored game.");
 
   app.add_option("--lobby-timeout-mode", m_GameLobbyTimeoutMode, "Customizes under which circumstances should a game lobby timeout. Values: never, empty, ownerless, strict")->check(CLI::IsMember({"never", "empty", "ownerless", "strict"}));
   app.add_option("--lobby-owner-timeout-mode", m_GameLobbyOwnerTimeoutMode, "Customizes under which circumstances should game ownership expire. Values: never, absent, strict")->check(CLI::IsMember({"never", "absent", "strict"}));
@@ -750,10 +751,13 @@ bool CCLI::QueueActions(CAura* nAura) const
         Print("Failed to add alias.");
       }
     }
-    if (m_MirrorSource.has_value()) {
-      if (!gameSetup->SetMirrorSource(m_MirrorSource.value())) {
-        Print("[AURA] Invalid mirror source [" + m_MirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
+    if (m_GameMirrorSource.has_value()) {
+      if (!gameSetup->SetMirrorSource(m_GameMirrorSource.value())) {
+        Print("[AURA] Invalid mirror source [" + m_GameMirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
         return false;
+      }
+      if (m_GameMirrorProxy.has_value()) {
+        gameSetup->SetMirrorProxy(m_GameMirrorProxy.value());
       }
     }
     gameSetup->AcquireHost(this, userName);

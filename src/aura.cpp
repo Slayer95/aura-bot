@@ -880,12 +880,26 @@ shared_ptr<CGame> CAura::GetLobbyOrObservableByHostCounterExact(uint32_t hostCou
 
 shared_ptr<CGame> CAura::GetLobbyByHostCounter(uint32_t hostCounter) const
 {
-  return GetLobbyByHostCounterExact(hostCounter & 0x00FFFFFF);
+  uint32_t baseHostCounter = hostCounter & 0x00FFFFFF;
+  for (const auto& lobby : m_Lobbies) {
+    uint32_t thisHostCounter = lobby->GetHostCounter();
+    if (thisHostCounter == hostCounter || thisHostCounter == baseHostCounter) {
+      return lobby;
+    }
+  }
+  return nullptr;
 }
 
 shared_ptr<CGame> CAura::GetLobbyOrObservableByHostCounter(uint32_t hostCounter) const
 {
-  return GetLobbyOrObservableByHostCounterExact(hostCounter & 0x00FFFFFF);
+  uint32_t baseHostCounter = hostCounter & 0x00FFFFFF;
+  for (const auto& game : GetJoinableGames()) {
+    uint32_t thisHostCounter = game->GetHostCounter();
+    if (thisHostCounter == hostCounter || thisHostCounter == baseHostCounter) {
+      return game;
+    }
+  }
+  return nullptr;
 }
 
 shared_ptr<CGame> CAura::GetGameByIdentifier(const uint64_t gameIdentifier) const

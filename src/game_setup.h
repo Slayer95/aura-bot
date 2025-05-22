@@ -139,7 +139,7 @@ public:
   std::vector<std::string>                        m_Reservations;
   std::optional<uint8_t>                          m_CrossPlayMode;
   bool                                            m_IsMirror;
-  bool                                            m_IsProxy;
+  bool                                            m_IsMirrorProxy;
   uint8_t                                         m_RealmsDisplayMode;
   sockaddr_storage                                m_RealmsAddress;
   std::set<std::string>                           m_RealmsExcluded;
@@ -269,12 +269,13 @@ public:
   bool RunHost();
 
   inline bool GetIsMirror() const { return m_IsMirror; }
-  inline bool GetIsProxy() const { return m_IsProxy; }
+  inline bool GetIsMirrorProxy() const { return m_IsMirrorProxy; }
   inline bool GetIsDownloading() const { return m_IsStepDownloading; }
   inline bool GetHasBeenHosted() const { return m_CreationCounter > 0; }
 
   [[nodiscard]] bool SetMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier, const uint32_t nEntryKey = 0);
   [[nodiscard]] bool SetMirrorSource(const std::string& nInput);
+  inline void SetMirrorProxy(const bool nMirrorProxy) { m_IsMirrorProxy = nMirrorProxy; }
   void AddIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   void RemoveIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   void SetDisplayMode(const uint8_t nDisplayMode);
@@ -310,92 +311,92 @@ public:
   [[nodiscard]] bool MatchesCreatedFromIRC() const;
   [[nodiscard]] bool MatchesCreatedFromDiscord() const;
 
-  void SetName(const std::string& nName) { m_Name = nName; }
-  void SetBaseName(const std::string& nName) {
+  inline void SetName(const std::string& nName) { m_Name = nName; }
+  inline void SetBaseName(const std::string& nName) {
     m_Name = nName;
     m_BaseName = nName;
   }
-  void SetOwner(const std::string& ownerName, const std::string& ownerRealm) {
+  inline void SetOwner(const std::string& ownerName, const std::string& ownerRealm) {
     m_Owner = std::make_pair(ownerName, ownerRealm);
   }
 
-  void SetLobbyTimeoutMode(const uint8_t nMode) { m_LobbyTimeoutMode = nMode; }
-  void SetLobbyOwnerTimeoutMode(const uint8_t nMode) { m_LobbyOwnerTimeoutMode = nMode; }
-  void SetLoadingTimeoutMode(const uint8_t nMode) { m_LoadingTimeoutMode = nMode; }
-  void SetPlayingTimeoutMode(const uint8_t nMode) { m_PlayingTimeoutMode = nMode; }
+  inline void SetLobbyTimeoutMode(const uint8_t nMode) { m_LobbyTimeoutMode = nMode; }
+  inline void SetLobbyOwnerTimeoutMode(const uint8_t nMode) { m_LobbyOwnerTimeoutMode = nMode; }
+  inline void SetLoadingTimeoutMode(const uint8_t nMode) { m_LoadingTimeoutMode = nMode; }
+  inline void SetPlayingTimeoutMode(const uint8_t nMode) { m_PlayingTimeoutMode = nMode; }
 
-  void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
-  void SetLobbyOwnerTimeout(const uint32_t nTimeout) { m_LobbyOwnerTimeout = nTimeout; }
-  void SetLoadingTimeout(const uint32_t nTimeout) { m_LoadingTimeout = nTimeout; }
-  void SetPlayingTimeout(const uint32_t nTimeout) { m_PlayingTimeout = nTimeout; }
+  inline void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
+  inline void SetLobbyOwnerTimeout(const uint32_t nTimeout) { m_LobbyOwnerTimeout = nTimeout; }
+  inline void SetLoadingTimeout(const uint32_t nTimeout) { m_LoadingTimeout = nTimeout; }
+  inline void SetPlayingTimeout(const uint32_t nTimeout) { m_PlayingTimeout = nTimeout; }
 
-  void SetPlayingTimeoutWarningShortCountDown(const uint8_t nMode) { m_PlayingTimeoutWarningShortCountDown = nMode; }
-  void SetPlayingTimeoutWarningShortInterval(const uint32_t nTimeout) { m_PlayingTimeoutWarningShortInterval = nTimeout; }
-  void SetPlayingTimeoutWarningLargeCountDown(const uint8_t nMode) { m_PlayingTimeoutWarningLargeCountDown = nMode; }
-  void SetPlayingTimeoutWarningLargeInterval(const uint32_t nTimeout) { m_PlayingTimeoutWarningLargeInterval = nTimeout; }
+  inline void SetPlayingTimeoutWarningShortCountDown(const uint8_t nMode) { m_PlayingTimeoutWarningShortCountDown = nMode; }
+  inline void SetPlayingTimeoutWarningShortInterval(const uint32_t nTimeout) { m_PlayingTimeoutWarningShortInterval = nTimeout; }
+  inline void SetPlayingTimeoutWarningLargeCountDown(const uint8_t nMode) { m_PlayingTimeoutWarningLargeCountDown = nMode; }
+  inline void SetPlayingTimeoutWarningLargeInterval(const uint32_t nTimeout) { m_PlayingTimeoutWarningLargeInterval = nTimeout; }
 
-  void SetLobbyOwnerReleaseLANLeaver(const bool nRelease) { m_LobbyOwnerReleaseLANLeaver = nRelease; }
+  inline void SetLobbyOwnerReleaseLANLeaver(const bool nRelease) { m_LobbyOwnerReleaseLANLeaver = nRelease; }
 
-  void SetLobbyCountDownInterval(const uint32_t nValue) { m_LobbyCountDownInterval = nValue; }
-  void SetLobbyCountDownStartValue(const uint32_t nValue) { m_LobbyCountDownStartValue = nValue; }
+  inline void SetLobbyCountDownInterval(const uint32_t nValue) { m_LobbyCountDownInterval = nValue; }
+  inline void SetLobbyCountDownStartValue(const uint32_t nValue) { m_LobbyCountDownStartValue = nValue; }
 
-  void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
-  void SetNotifyJoins(const bool nNotifyJoins) { m_NotifyJoins = nNotifyJoins; }
-  void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
-  void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
+  inline void SetIsCheckJoinable(const bool nCheckJoinable) { m_CheckJoinable = nCheckJoinable; }
+  inline void SetNotifyJoins(const bool nNotifyJoins) { m_NotifyJoins = nNotifyJoins; }
+  inline void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
+  inline void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
 
-  void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
+  inline void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
 
-  void SetSaveGameAllowed(const bool nSave) { m_SaveGameAllowed = nSave; }
+  inline void SetSaveGameAllowed(const bool nSave) { m_SaveGameAllowed = nSave; }
 
-  void SetResultSource(const uint8_t nResultSource) { m_ResultSource = nResultSource; }
-  void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
-  void SetContext(std::shared_ptr<CCommandContext> nCtx) { m_Ctx = nCtx; }
-  void SetMapReadyCallback(const uint8_t action, const std::string& data) {
+  inline void SetResultSource(const uint8_t nResultSource) { m_ResultSource = nResultSource; }
+  inline void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
+  inline void SetContext(std::shared_ptr<CCommandContext> nCtx) { m_Ctx = nCtx; }
+  inline void SetMapReadyCallback(const uint8_t action, const std::string& data) {
     m_MapReadyCallbackAction = action;
     m_MapReadyCallbackData = data;
   }
-  void SetMapExtraOptions(CGameExtraOptions* opts) { m_MapExtraOptions = opts; }
-  void SetGameSavedFile(const std::filesystem::path& filePath);
-  void SetCheckReservation(const bool nChecksReservation) { m_ChecksReservation = nChecksReservation; }
-  void SetReservations(const std::vector<std::string>& nReservations) { m_Reservations = nReservations; }
-  void SetCrossPlayMode(const uint8_t nValue) { m_CrossPlayMode = nValue; }
-  void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
-  void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
-  void SetReconnectionMode(const uint8_t nValue) { m_ReconnectionMode = nValue;}
-  void SetEnableLobbyChat(const uint8_t nValue) { m_EnableLobbyChat = nValue;}
-  void SetEnableInGameChat(const uint8_t nValue) { m_EnableInGameChat = nValue;}
-  void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
-  void SetLeaverHandler(const uint8_t nValue) { m_LeaverHandler = nValue;}
-  void SetShareUnitsHandler(const uint8_t nValue) { m_ShareUnitsHandler = nValue; }
-  void SetUnsafeNameHandler(const uint8_t nValue) { m_UnsafeNameHandler = nValue;}
-  void SetBroadcastErrorHandler(const uint8_t nValue) { m_BroadcastErrorHandler = nValue;}
-  void SetEnableLagScreen(const bool nValue) { m_EnableLagScreen = nValue; }
-  void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
-  void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
-  void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }
-  void SetLatencyEqualizerEnabled(const bool nValue) { m_LatencyEqualizerEnabled = nValue; }
-  void SetLatencyEqualizerFrames(const uint8_t nValue) { m_LatencyEqualizerFrames = nValue; }
-  void SetHCL(const std::string& nHCL) { m_HCL = nHCL; }
-  void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
+  inline void SetMapExtraOptions(CGameExtraOptions* opts) { m_MapExtraOptions = opts; }
+  inline void SetGameSavedFile(const std::filesystem::path& filePath);
+  inline void SetCheckReservation(const bool nChecksReservation) { m_ChecksReservation = nChecksReservation; }
+  inline void SetReservations(const std::vector<std::string>& nReservations) { m_Reservations = nReservations; }
+  inline void SetCrossPlayMode(const uint8_t nValue) { m_CrossPlayMode = nValue; }
+  inline void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
+  inline void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
+  inline void SetReconnectionMode(const uint8_t nValue) { m_ReconnectionMode = nValue;}
+  inline void SetEnableLobbyChat(const uint8_t nValue) { m_EnableLobbyChat = nValue;}
+  inline void SetEnableInGameChat(const uint8_t nValue) { m_EnableInGameChat = nValue;}
+  inline void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
+  inline void SetLeaverHandler(const uint8_t nValue) { m_LeaverHandler = nValue;}
+  inline void SetShareUnitsHandler(const uint8_t nValue) { m_ShareUnitsHandler = nValue; }
+  inline void SetUnsafeNameHandler(const uint8_t nValue) { m_UnsafeNameHandler = nValue;}
+  inline void SetBroadcastErrorHandler(const uint8_t nValue) { m_BroadcastErrorHandler = nValue;}
+  inline void SetEnableLagScreen(const bool nValue) { m_EnableLagScreen = nValue; }
+  inline void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
+  inline void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
+  inline void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }
+  inline void SetLatencyEqualizerEnabled(const bool nValue) { m_LatencyEqualizerEnabled = nValue; }
+  inline void SetLatencyEqualizerFrames(const uint8_t nValue) { m_LatencyEqualizerFrames = nValue; }
+  inline void SetHCL(const std::string& nHCL) { m_HCL = nHCL; }
+  inline void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
 
-  void SetNumPlayersToStartGameOver(const uint8_t nNumPlayersToStartGameOver) { m_NumPlayersToStartGameOver = nNumPlayersToStartGameOver; }
-  void SetAutoKickPing(const uint32_t nAutoKickPing) { m_AutoKickPing = nAutoKickPing; }
-  void SetWarnKickPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
-  void SetSafeKickPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
-  void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
-  void SetMaxAPM(const uint16_t nMaxAPM) { m_MaxAPM = nMaxAPM; }
-  void SetMaxBurstAPM(const uint16_t nMaxBurstAPM) { m_MaxBurstAPM = nMaxBurstAPM; }
-  void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
-  void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
-  void SetGameIsExpansion(const bool nGameIsExpansion) { m_GameIsExpansion = nGameIsExpansion; }
-  void SetGameVersion(const Version& nGameVersion) { m_GameVersion = nGameVersion; }
-  void SetLoadInGame(const bool nGameLoadInGame) { m_LoadInGame = nGameLoadInGame; }
-  void SetEnableJoinObserversInProgress(const bool nGameEnableJoinObserversInProgress) { m_EnableJoinObserversInProgress = nGameEnableJoinObserversInProgress; }
-  void SetEnableJoinPlayersInProgress(const bool nGameEnableJoinPlayersInProgress) { m_EnableJoinPlayersInProgress = nGameEnableJoinPlayersInProgress; }
+  inline void SetNumPlayersToStartGameOver(const uint8_t nNumPlayersToStartGameOver) { m_NumPlayersToStartGameOver = nNumPlayersToStartGameOver; }
+  inline void SetAutoKickPing(const uint32_t nAutoKickPing) { m_AutoKickPing = nAutoKickPing; }
+  inline void SetWarnKickPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
+  inline void SetSafeKickPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
+  inline void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
+  inline void SetMaxAPM(const uint16_t nMaxAPM) { m_MaxAPM = nMaxAPM; }
+  inline void SetMaxBurstAPM(const uint16_t nMaxBurstAPM) { m_MaxBurstAPM = nMaxBurstAPM; }
+  inline void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
+  inline void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
+  inline void SetGameIsExpansion(const bool nGameIsExpansion) { m_GameIsExpansion = nGameIsExpansion; }
+  inline void SetGameVersion(const Version& nGameVersion) { m_GameVersion = nGameVersion; }
+  inline void SetLoadInGame(const bool nGameLoadInGame) { m_LoadInGame = nGameLoadInGame; }
+  inline void SetEnableJoinObserversInProgress(const bool nGameEnableJoinObserversInProgress) { m_EnableJoinObserversInProgress = nGameEnableJoinObserversInProgress; }
+  inline void SetEnableJoinPlayersInProgress(const bool nGameEnableJoinPlayersInProgress) { m_EnableJoinPlayersInProgress = nGameEnableJoinPlayersInProgress; }
 
-  void SetLogCommands(const bool nLogCommands) { m_LogCommands = nLogCommands; }
-  void SetAutoStartRequiresBalance(const bool nRequiresBalance) { m_AutoStartRequiresBalance = nRequiresBalance; }
+  inline void SetLogCommands(const bool nLogCommands) { m_LogCommands = nLogCommands; }
+  inline void SetAutoStartRequiresBalance(const bool nRequiresBalance) { m_AutoStartRequiresBalance = nRequiresBalance; }
 
   void ClearExtraOptions();
   void ExportTemporaryToMap(CConfig* MapCFG);

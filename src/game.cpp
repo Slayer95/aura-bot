@@ -182,7 +182,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_MuteAll(false),
     m_ChatEnabled(false),
     m_IsMirror(nGameSetup->GetIsMirror()),
-    m_IsProxy(nGameSetup->GetIsProxy()),
+    m_IsMirrorProxy(nGameSetup->GetIsMirrorProxy()),
     m_CountDownStarted(false),
     m_CountDownFast(false),
     m_CountDownUserInitiated(false),
@@ -290,7 +290,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_PublicHostAddress = AddressToIPv4Array(&(nGameSetup->m_RealmsAddress));
     m_PublicHostPort = GetAddressPort(&(nGameSetup->m_RealmsAddress));
 
-    if (m_IsProxy && !InitNet()) {
+    if (m_IsMirrorProxy && !InitNet()) {
       m_Exiting = true;
     }
   }

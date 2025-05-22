@@ -159,12 +159,12 @@ Commands
 
 ## \`freestart\`
 
+## \`games\`
+- Aliases: listgames, getgames
+
 ## \`getclan\`
 
 ## \`getfriends\`
-
-## \`getgames\`
-- Aliases: listgames
 
 ## \`getobservers\`
 - Aliases: getplayers
@@ -327,6 +327,7 @@ Commands
 - Syntax: race \<PLAYER\> , \<RACE\> - Race is human/orc/undead/elf/random/roll
 
 ## \`ready\`
+- Aliases: r
 
 ## \`readystatus\`
 - Aliases: checkready, askready
@@ -378,8 +379,8 @@ Commands
 
 ## \`stats\`
 - Aliases: statsdota
-- Syntax: stats \<PLAYER\>
-- Syntax: statsdota \<PLAYER\>
+- Syntax: stats \<PLAYERNAME\>@\<REALM\>
+- Syntax: statsdota \<PLAYERNAME\>@\<REALM\>
 
 ## \`status\`
 
