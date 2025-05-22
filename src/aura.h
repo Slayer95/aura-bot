@@ -209,6 +209,10 @@ public:
   [[nodiscard]] inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
   [[nodiscard]] inline bool GetHasGames() { return !m_StartedGames.empty() || !m_Lobbies.empty(); }
 
+  [[nodiscard]] inline int64_t GetLoopTicks() const { return m_LoopTicks; }
+  [[nodiscard]] inline bool GetTicksIsAfter(int64_t referenceTicks) const { return referenceTicks <= m_LoopTicks; }
+  [[nodiscard]] inline bool GetTicksIsAfterDelay(int64_t referenceTicks, int64_t delayTicks) const { return referenceTicks + delayTicks <= m_LoopTicks; }
+
   // events
 
   void EventBNETGameRefreshSuccess(std::shared_ptr<CRealm> realm);

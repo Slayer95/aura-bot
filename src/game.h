@@ -191,6 +191,7 @@ protected:
   bool                                                   m_MuteAll;                       // if we should stop forwarding ingame chat messages targeted for all players or not
   bool                                                   m_ChatEnabled;                   // if we should forward chat messages
   bool                                                   m_IsMirror;                      // if we aren't actually hosting the game, but just broadcasting it
+  bool                                                   m_IsProxy;
   bool                                                   m_CountDownStarted;              // if the game start countdown has started or not
   bool                                                   m_CountDownFast;
   bool                                                   m_CountDownUserInitiated;
@@ -321,6 +322,7 @@ public:
   inline bool                                            GetCountDownFast() const { return m_CountDownFast; }
   inline bool                                            GetCountDownUserInitiated() const { return m_CountDownUserInitiated; }
   inline bool                                            GetIsMirror() const { return m_IsMirror; }
+  inline bool                                            GetIsProxy() const { return m_IsProxy; }
   inline bool                                            GetIsDraftMode() const { return m_IsDraftMode; }
   bool                                                   GetIsHiddenPlayerNames() const;
   inline bool                                            GetGameLoading() const { return m_GameLoading; }

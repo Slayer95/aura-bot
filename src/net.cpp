@@ -40,6 +40,7 @@
 #include "connection.h"
 #include "game.h"
 #include "protocol/game_protocol.h"
+#include "proxy/tcp_proxy.h"
 #include "game_seeker.h"
 #include "game_user.h"
 #include "realm.h"
@@ -549,6 +550,13 @@ uint32_t CNet::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds)
     }
   }
 
+  for (const auto& serverConnections : m_GameProxies) {
+    // std::pair<uint16_t, vector<CGameSeeker*>>
+    for (const auto& connection : serverConnections.second) {
+      NumFDs += connection->SetFD(fd, send_fd, nfds);;
+    }
+  }
+
   for (const auto& serverConnections : m_GameSeekers) {
     // std::pair<uint16_t, vector<CGameSeeker*>>
     for (const auto& connection : serverConnections.second) {
@@ -623,10 +631,29 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
     }
   }
 
+  for (auto& serverConnections : m_GameProxies) {
+    for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
+      // *i is a pointer to a CTCPProxy
+      TCPProxyStatus result = (*i)->Update(fd, send_fd, GAME_USER_TIMEOUT_VANILLA);
+      if (result == TCPProxyStatus::kOk) {
+        ++i;
+        continue;
+      }
+      if ((*i)->GetIncomingSocket()) {
+        (*i)->GetIncomingSocket()->DoSend(send_fd); // flush the socket
+      }
+      if ((*i)->GetOutgoingSocket()) {
+        (*i)->GetOutgoingSocket()->DoSend(send_fd); // flush the socket
+      }
+      delete *i;
+      i = serverConnections.second.erase(i);
+    }
+  }
+
   for (auto& serverConnections : m_GameSeekers) {
     int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
-      // *i is a pointer to a CConnection
+      // *i is a pointer to a CGameSeeker
       GameSeekerStatus result = (*i)->Update(fd, send_fd, timeout);
       if (result == GameSeekerStatus::kOk) {
         ++i;
@@ -642,7 +669,7 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
 
   for (auto& serverConnections : m_GameObservers) {
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
-      // *i is a pointer to a CConnection
+      // *i is a pointer to a CAsyncObserver
       uint8_t result = (*i)->Update(fd, send_fd, GAME_USER_TIMEOUT_VANILLA);
       if (result == ASYNC_OBSERVER_OK) {
         ++i;
@@ -1839,6 +1866,7 @@ shared_ptr<CTCPServer> CNet::GetOrCreateTCPServer(uint16_t inputPort, const stri
   uint16_t assignedPort = gameServer->GetPort();
   m_GameServers[assignedPort] = gameServer;
   m_IncomingConnections[assignedPort] = vector<CConnection*>();
+  m_GameProxies[assignedPort] = vector<CTCPProxy*>();
   m_GameSeekers[assignedPort] = vector<CGameSeeker*>();
   m_GameObservers[assignedPort] = vector<CAsyncObserver*>();
 
@@ -1985,6 +2013,19 @@ void CNet::GracefulExit()
     }
   }
 
+  for (auto& serverConnections : m_GameProxies) {
+    for (auto& connection : serverConnections.second) {
+      connection->SetType(TCPProxyType::kExiting);
+      connection->SetTimeout(2000);
+      if (connection->GetIncomingSocket()) {
+        connection->GetIncomingSocket()->ClearRecvBuffer();
+      }
+      if (connection->GetOutgoingSocket()) {
+        connection->GetOutgoingSocket()->ClearRecvBuffer();
+      }
+    }
+  }
+
   for (auto& serverConnections : m_GameSeekers) {
     for (auto& connection : serverConnections.second) {
       connection->SetType(INCON_TYPE_KICKED_PLAYER);
@@ -2005,6 +2046,12 @@ void CNet::GracefulExit()
 bool CNet::CheckGracefulExit() const
 {
   for (const auto& serverConnections : m_IncomingConnections) {
+    if (!serverConnections.second.empty()) {
+      return false;
+    }
+  }
+
+  for (const auto& serverConnections : m_GameProxies) {
     if (!serverConnections.second.empty()) {
       return false;
     }

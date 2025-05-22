@@ -126,21 +126,33 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest.GetIsValid()) {
-              DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got invalid REQJOIN " + ByteArrayToDecString(Bytes))
+              DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">")
               Abort = true;
               break;
             }
-            DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
+            DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] Got join request for #" + ToHexString(joinRequest.GetHostCounter()) + " (name: " + joinRequest.GetName() + ")")
             shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest.GetHostCounter());
             if (!targetLobby) {
               break;
             }
-            if (targetLobby->GetIsMirror() || targetLobby->GetHostPort() != m_Port) {
-              DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Got valid REQJOIN " + ByteArrayToDecString(Bytes))
+            if (targetLobby->GetHostPort() != m_Port) {
+              DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " ignored (bad port)")
+              Abort = true;
+              break;
+            }
+            if (targetLobby->GetIsMirror()) {
+              if (targetLobby->GetIsProxy()) {
+                result = INCON_UPDATE_PROMOTED;
+              } else {
+                DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + "ignored (non-proxy mirror)")
+              }
               Abort = true;
               break;
             }
             joinRequest.UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
+            if (joinRequest.GetIsCensored()) {
+              DPRINT_IF(LOG_LEVEL_TRACE, "[AURA] User name censored: [" + joinRequest.GetOriginalName() + "] -> [" + joinRequest.GetName() + "]")
+            }
             const uint8_t joinResult = targetLobby->EventRequestJoin(this, joinRequest);
             if (joinResult == JOIN_RESULT_PLAYER) {
               result = INCON_UPDATE_PROMOTED;

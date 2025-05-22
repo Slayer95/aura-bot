@@ -125,6 +125,7 @@ public:
 
   std::map<uint16_t, std::weak_ptr<CTCPServer>>               m_GameServers;
   std::map<uint16_t, std::vector<CConnection*>>               m_IncomingConnections;        // connections that haven't identified their protocol yet
+  std::map<uint16_t, std::vector<CTCPProxy*>>                 m_GameProxies;
   std::map<uint16_t, std::vector<CGameSeeker*>>               m_GameSeekers;                // connections that use complementary protocols, such as VLAN, or UDP over TCP
   std::map<uint16_t, std::vector<CAsyncObserver*>>            m_GameObservers;              // connections that are CAsyncObserver
   std::queue<std::pair<uint16_t, CConnection*>>               m_DownGradedConnections;      // connections that are waiting for insertion into m_IncomingConnections, built from a stale CStreamIOSocket

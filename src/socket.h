@@ -370,6 +370,14 @@ inline void SetAddressPort(sockaddr_storage* address, const uint16_t port)
   return {0, 0, 0, 0};
 }
 
+[[nodiscard]] inline sockaddr_storage IPv4ArrayToAddress(const std::array<uint8_t, 4>& ipBytes) {
+  sockaddr_storage address;
+  address.ss_family = AF_INET;
+  sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&address);
+  memcpy(&(addr4->sin_addr.s_addr), ipBytes.data(), 4);
+  return address;
+}
+
 //
 // CSocket
 //
@@ -399,6 +407,7 @@ public:
   [[nodiscard]] inline int32_t                  GetError() const { return m_Error; }
   [[nodiscard]] inline bool                     HasError() const { return m_HasError; }
   [[nodiscard]] inline bool                     HasFin() const { return m_HasFin; }
+  inline void                                   SetErrored(const bool nErrored) { m_HasError = true; }
 
   [[nodiscard]] inline ADDRESS_LENGTH_TYPE  GetAddressLength() const {
     if (m_Family == AF_INET6)
@@ -453,6 +462,7 @@ public:
   void Disconnect();
 
   [[nodiscard]] inline std::string*               GetBytes() { return &m_RecvBuffer; }
+  [[nodiscard]] inline std::string::size_type     GetRecvBufferSize() { return m_RecvBuffer.size(); }
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
   inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
   bool DoRecv(fd_set* fd);
@@ -466,6 +476,7 @@ public:
     m_SendBuffer += std::string(begin(bytes), end(bytes));
     return bytes.size();
   }
+  [[nodiscard]] inline std::string::size_type   GetSendBufferSize() { return m_SendBuffer.size(); }
   inline void                                   ClearSendBuffer() { m_SendBuffer.clear(); }
   inline void                                   SubstrSendBuffer(uint32_t i) { m_SendBuffer = m_SendBuffer.substr(i); }
   [[nodiscard]] inline bool                     GetIsSendPending() { return !m_SendBuffer.empty(); }
@@ -490,11 +501,13 @@ class CTCPClient final : public CStreamIOSocket
 {
 public:
   bool                      m_Connecting;
+  int64_t                   m_ConnectingStartTicks;
 
   CTCPClient(uint8_t nFamily, std::string nName);
   ~CTCPClient() final;
 
   [[nodiscard]] inline bool         GetConnecting() const { return m_Connecting; }
+  [[nodiscard]] inline int64_t      GetConnectingStartTicks() const { return m_ConnectingStartTicks; }
   [[nodiscard]] bool                CheckConnect();
   void                              Connect(const std::optional<sockaddr_storage>& localAddress, const sockaddr_storage& remoteHost);
 

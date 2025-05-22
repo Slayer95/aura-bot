@@ -71,6 +71,7 @@ class CSocket;
 class CStreamIOSocket;
 class CTCPClient;
 class CTCPServer;
+class CTCPProxy;
 class CUDPServer;
 class CUDPSocket;
 class CW3MMD;

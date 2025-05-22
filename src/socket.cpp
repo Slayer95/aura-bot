@@ -493,7 +493,8 @@ void CStreamIOSocket::Disconnect()
 
 CTCPClient::CTCPClient(uint8_t nFamily, string nName)
   : CStreamIOSocket(nFamily, nName),
-    m_Connecting(false)
+    m_Connecting(false),
+    m_ConnectingStartTicks(0)
 {
 }
 
@@ -554,6 +555,7 @@ void CTCPClient::Connect(const optional<sockaddr_storage>& localAddress, const s
   }
 
   m_Connecting = true;
+  m_ConnectingStartTicks = GetTicks();
 }
 
 bool CTCPClient::CheckConnect()

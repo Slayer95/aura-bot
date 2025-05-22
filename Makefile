@@ -125,6 +125,7 @@ OBJS = lib/base64/base64.o \
        src/config/config_irc.o \
        src/config/config_discord.o \
        src/config/config_net.o \
+       src/proxy/tcp_proxy.o \
        src/auradb.o \
        src/bncsutil_interface.o \
        src/bonjour.o \
