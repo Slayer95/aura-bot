@@ -72,6 +72,7 @@ public:
   [[nodiscard]] inline const std::optional<Version>& GetMaybeGameVersion() const { return m_GameVersion; }
   [[nodiscard]] inline const Version& GetGameVersion() const { return m_GameVersion.value(); }
   [[nodiscard]] inline uint16_t GetPort() const { return m_Port; }
+  [[nodiscard]] inline bool GetDeleteMe() const { return m_DeleteMe; }
   [[nodiscard]] inline CStreamIOSocket* GetIncomingSocket() const { return m_IncomingSocket; }
   [[nodiscard]] inline CStreamIOSocket* GetOutgoingSocket() const { return m_OutgoingSocket; }
   inline void SetType(TCPProxyType nType) { m_Type = nType; }
