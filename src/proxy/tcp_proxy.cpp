@@ -78,6 +78,7 @@ bool CTCPProxy::CloseConnection()
   if (m_OutgoingSocket->GetConnected()) {
     m_OutgoingSocket->Close();
   }
+  return true;
 }
 
 TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket, CStreamIOSocket* toSocket, bool* pausedRecvFlag, int64_t timeout)

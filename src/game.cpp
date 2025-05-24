@@ -212,7 +212,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameHistory(make_shared<GameHistory>()),
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
     m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
-    m_GameDiscoveryInfoChanged(GAME_DISCOVERY_CHANGED_MAJOR),
+    m_GameDiscoveryActive(false),
+    m_GameDiscoveryInfoChanged(GAME_DISCOVERY_CHANGED_NEW),
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
@@ -819,9 +820,9 @@ void CGame::StartGameOverTimer(bool isMMD)
   }
 
   if (GetIsLobbyOrMirror()) {
-    if (GetUDPEnabled()) {
+    if (m_GameDiscoveryActive) {
       SendGameDiscoveryDecreate();
-      SetUDPEnabled(false);
+      m_GameDiscoveryActive = false;
     }
     if (m_DisplayMode != GAME_DISPLAY_NONE) {
       AnnounceDecreateToRealms(); // ResetGameBroadcastData(), STOPADV
@@ -1693,11 +1694,13 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
-      if (m_Aura->m_Net.m_UDPMainServerEnabled && m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
-        SendGameDiscoveryRefresh();
-      } else {
+      if (!(m_Aura->m_Net.m_UDPMainServerEnabled && m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode)) {
         SendGameDiscoveryInfo();
+      } else if (m_GameDiscoveryInfoChanged) {
+        SendGameDiscoveryRefresh();
+        m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_SLOTS;
       }
+      m_GameDiscoveryActive = true;
     }
 
     m_LastPingTicks = Ticks;
@@ -6674,8 +6677,10 @@ void CGame::EventGameStartedLoading()
   }
 
   m_VersionErrors.clear();
-  if (GetUDPEnabled()) {
+
+  if (m_GameDiscoveryActive) {
     SendGameDiscoveryDecreate();
+    m_GameDiscoveryActive = false;
   }
 
   // and finally reenter battle.net chat
@@ -7012,8 +7017,9 @@ void CGame::EventGameLoaded()
     m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_MAJOR;
     m_Aura->TrackGameJoinInProgress(shared_from_this());
 
-    if (GetUDPEnabled()) {
+    if (GetUDPEnabled() && !m_GameDiscoveryActive) {
       SendGameDiscoveryCreate();
+      m_GameDiscoveryActive = true;
     }
 
     // TODO: Broadcast watchable game to PvPGN realms
@@ -7179,7 +7185,7 @@ void CGame::Remake()
   m_APMTrainerPaused = false;
   m_APMTrainerTicks = 0;
   m_GameResultsSource = GAME_RESULT_SOURCE_NONE;
-  m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_MAJOR;
+  m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_NEW;
 
   NextCreationCounter();
   m_HostCounter = m_Aura->NextHostCounter();
@@ -10475,9 +10481,21 @@ bool CGame::GetUDPEnabled() const
   return m_Config.m_UDPEnabled;
 }
 
-void CGame::SetUDPEnabled(bool nEnabled)
+void CGame::SetUDPEnabled(bool toEnabled)
 {
-  m_Config.m_UDPEnabled = nEnabled;
+  if (m_Config.m_UDPEnabled == toEnabled) {
+    return;
+  }
+  m_Config.m_UDPEnabled = toEnabled;
+
+  if (toEnabled != m_GameDiscoveryActive && (!toEnabled || GetIsStageAcceptingJoins())) {
+    if (toEnabled) {
+      SendGameDiscoveryCreate();
+    } else {
+      SendGameDiscoveryDecreate();
+    }
+    m_GameDiscoveryActive = toEnabled;
+  }
 }
 
 bool CGame::GetHasDesyncHandler() const

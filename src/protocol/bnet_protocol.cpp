@@ -1046,7 +1046,7 @@ namespace BNETProtocol
     AppendByteArrayFast(StatString, mapSHA1);
     StatString = EncodeStatString(StatString);
 
-    if (!gameName.empty() && !hostName.empty() && !mapPath.empty() && StatString.size() < 128 && HostCounterString.size() == 8)
+    if (!gameName.empty() && !hostName.empty() && !mapPath.empty() && HostCounterString.size() == 8)
     {
       // make the rest of the packet
 

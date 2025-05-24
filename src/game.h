@@ -229,6 +229,7 @@ protected:
   Version                                                m_SupportedGameVersionsMin;
   Version                                                m_SupportedGameVersionsMax;
 
+  bool                                                   m_GameDiscoveryActive;
   uint8_t                                                m_GameDiscoveryInfoChanged;
   std::vector<uint8_t>                                   m_GameDiscoveryInfo;
   uint16_t                                               m_GameDiscoveryInfoVersionOffset;

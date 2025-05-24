@@ -7115,11 +7115,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
           break;
         }
         case 'M': {
-          if (key.size() >= 9 && key.compare(0, 8, "Maphack_") == 0) {
-            optional<uint8_t> heroColor = ParseHeroColor(key.substr(8));
-            if (heroColor.has_value()) {
-              LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] flagged as map hacker.");
-            }
+          if (key.size() >= 9 && key.compare(0, 8, "Maphack_") == 0 && key.substr(8) == missionKey) {
+            LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] flagged as map hacker.");
           }
           break;
         }

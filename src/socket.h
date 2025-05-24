@@ -407,7 +407,7 @@ public:
   [[nodiscard]] inline int32_t                  GetError() const { return m_Error; }
   [[nodiscard]] inline bool                     HasError() const { return m_HasError; }
   [[nodiscard]] inline bool                     HasFin() const { return m_HasFin; }
-  inline void                                   SetErrored(const bool nErrored) { m_HasError = true; }
+  inline void                                   SetErrored(const bool nErrored) { m_HasError = nErrored; }
 
   [[nodiscard]] inline ADDRESS_LENGTH_TYPE  GetAddressLength() const {
     if (m_Family == AF_INET6)

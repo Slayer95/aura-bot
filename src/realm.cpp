@@ -1569,6 +1569,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
     m_GameBroadcastStartTicks = Ticks;
   }
 
+  string hostName = m_Config.m_UserName;
   Version version = GetGameVersion();
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
     game->GetDisplayMode(),
@@ -1577,7 +1578,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
     game->GetAnnounceWidth(),
     game->GetAnnounceHeight(),
     m_GameBroadcastName,
-    m_Config.m_UserName,
+    hostName,
     game->GetUptime(),
     game->GetSourceFilePath(),
     game->GetSourceFileHashBlizz(version),
