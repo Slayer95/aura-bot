@@ -277,7 +277,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     } else if (examples) {
       m_InfoAction = CLIAction::kExamples;
     } else if (m_RunTests) {
-      return CLIResult::kRunTests;
+      return CLIResult::kTest;
     }
     return CLIResult::kInfoAndQuit;
   }

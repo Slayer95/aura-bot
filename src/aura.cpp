@@ -400,7 +400,7 @@ int main(const int argc, char** argv)
           Print("[AURA] invalid CLI usage - please see CLI.md");
           exitCode = 1;
           break;
-        case CLIResult::kRunTests:
+        case CLIResult::kTest:
         case CLIResult::kOk:
         case CLIResult::kConfigAndQuit: {
           CConfig CFG;
@@ -613,7 +613,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     UpdateCFGCacheEntries();
   }
 
-  if (nCLI.m_RunTests()) {
+  if (nCLI.m_RunTests) {
     uint16_t result = TestRunner::Run();
     if (result == 0) {
       Print("[TEST] Tests OK");

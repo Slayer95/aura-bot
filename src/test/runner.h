@@ -29,8 +29,11 @@
 #include "../includes.h"
 #include "../file_util.h"
 
+#include <stdexcept>
+
 namespace TestRunner
 {
+  [[nodiscard]] bool CheckStatStrings();
   [[nodiscard]] uint16_t Run();
 };
 

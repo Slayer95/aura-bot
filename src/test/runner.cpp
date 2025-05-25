@@ -24,13 +24,55 @@
  */
 
 #include "runner.h"
-#include "util.h"
+#include "../util.h"
 
 using namespace std;
 
-uint16_t TestRunner::Run()
+bool TestRunner::CheckStatStrings()
 {
-  return 0;
+  bool success = true;
+  filesystem::path rawFolder = "test/fixtures/protocol/stat-strings/raw";
+  filesystem::path encFolder = "test/fixtures/protocol/stat-strings/encoded";
+
+  try {
+    for (const auto& entry : filesystem::directory_iterator(rawFolder)) {
+      filesystem::path fromPath = entry.path();
+      filesystem::path fileName = fromPath.filename();
+      filesystem::path outPath = encFolder / fileName;
+      if (filesystem::is_regular_file(fromPath)) {
+        vector<uint8_t> fromContents, actual, expected;
+        if (!FileRead(fromPath, fromContents, 0xFFFF)) {
+          throw runtime_error("Failed to read file [" + PathToString(fromPath) + "]");
+        }
+        actual = EncodeStatString(fromContents);
+        if (filesystem::exists(outPath)) {
+          if (!FileRead(outPath, expected, 0xFFFF)) {
+            throw runtime_error("Failed to read file [" + PathToString(outPath) + "]");
+          }
+          if (expected != actual) {
+            Print("[TEST] ERR - EncodeStatString [" + PathToString(fromPath) + "] Expected output <" + ByteArrayToHexString(expected) + "> but got <" + ByteArrayToHexString(actual) + ">");
+            success = false;
+          }
+        } else {
+          filesystem::path pendingName = filesystem::path(PLATFORM_STRING_TYPE(fileName.native().c_str()) + PLATFORM_STRING("-new"));
+          filesystem::path pendingPath = encFolder / pendingName;
+          if (!FileWrite(pendingPath, reinterpret_cast<const uint8_t*>(actual.data()), actual.size())) {
+            throw runtime_error("Failed to write file [" + PathToString(pendingPath) + "]");
+          }
+          Print("[TEST] Pending - EncodeStatString [" + PathToString(fromPath) + "] Generated output snapshot");
+        }
+      }
+    }
+  } catch (const exception& e) {
+    success = false;
+    Print("[TEST] ERR - " + string(e.what()));
+  }
+
+  return success;
 }
 
-#endif
+uint16_t TestRunner::Run()
+{
+  if (!CheckStatStrings()) return 1;
+  return 0;
+}
