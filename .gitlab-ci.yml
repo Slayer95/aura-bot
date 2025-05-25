@@ -129,7 +129,7 @@ Assemble:
   ### exit 1: no inputs connected
   ###          initialization failure - please review your configuration file
   - export AURA_HOME=$CI_PROJECT_DIR
-  - ./aura --verbose --no-bnet --game-version=27 --log-level=debug --exit || echo $?
+  - ./aura --verbose --no-bnet --game-version=27 --log-level=debug --test --exit || echo $?
   ## test --config
   ### expects directly reads config-example.ini
   ### exits 1: no inputs connected.

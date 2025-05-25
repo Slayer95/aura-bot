@@ -162,6 +162,7 @@ OBJS = lib/base64/base64.o \
        src/integration/irc.o \
        src/stats/dota.o \
        src/stats/w3mmd.o \
+       src/test/runner.o \
 
 COBJS = lib/sqlite3/sqlite3.o
 

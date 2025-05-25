@@ -47,6 +47,7 @@ enum class CLIResult : uint8_t
   kError         = 1u,
   kInfoAndQuit   = 2u,
   kConfigAndQuit = 3u,
+  kTest = 4u,
 };
 
 //
@@ -189,6 +190,8 @@ public:
   std::vector<std::string>              m_ExecCommands;
   bool                                  m_ExecBroadcast;
   bool                                  m_ExecOnline;
+
+  bool                                  m_RunTests;
 
   CCLI();
   ~CCLI();

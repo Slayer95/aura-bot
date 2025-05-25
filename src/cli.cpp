@@ -50,7 +50,8 @@ CCLI::CCLI()
    m_Verbose(false),
    m_ExecAuth(CommandAuth::kAuto),
    m_ExecBroadcast(false),
-   m_ExecOnline(true)
+   m_ExecOnline(true),
+   m_RunTests(false)
 {
 }
 
@@ -246,6 +247,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--port-forward-udp", m_PortForwardUDP, "Enable port-forwarding on the given UDP ports. Repeatable. (This distribution of Aura does not support this feature.)");
 #endif
 
+  app.add_flag(  "--test", m_RunTests, "Run tests to ensure Aura is working correctly.");
+
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
@@ -268,11 +271,13 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     return CLIResult::kError;
   }
 
-  if (about || examples) {
+  if (about || examples || m_RunTests) {
     if (about) {
       m_InfoAction = CLIAction::kAbout;
     } else if (examples) {
       m_InfoAction = CLIAction::kExamples;
+    } else if (m_RunTests) {
+      return CLIResult::kRunTests;
     }
     return CLIResult::kInfoAndQuit;
   }

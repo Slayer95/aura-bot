@@ -71,6 +71,7 @@
 #include "cli.h"
 #include "integration/irc.h"
 #include "protocol/vlan_protocol.h"
+#include "test/runner.h"
 #include <utf8/utf8.h>
 
 #include <csignal>
@@ -399,6 +400,7 @@ int main(const int argc, char** argv)
           Print("[AURA] invalid CLI usage - please see CLI.md");
           exitCode = 1;
           break;
+        case CLIResult::kRunTests:
         case CLIResult::kOk:
         case CLIResult::kConfigAndQuit: {
           CConfig CFG;
@@ -609,6 +611,17 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   if (m_Config.m_EnableCFGCache) {
     UpdateCFGCacheEntries();
+  }
+
+  if (nCLI.m_RunTests()) {
+    uint16_t result = TestRunner::Run();
+    if (result == 0) {
+      Print("[TEST] Tests OK");
+    } else {
+      Print("[TEST] Tests failed with code " + to_string(result));
+      m_Ready = false;
+    }
+    return;
   }
 
   if (!nCLI.QueueActions(this)) {

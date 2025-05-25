@@ -177,6 +177,9 @@
     <ClCompile Include="stats\w3mmd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="test\runner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\base64\base64.h">
@@ -375,6 +378,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stats\w3mmd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="test\runner.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="rate_limiter.h">
