@@ -99,6 +99,7 @@ private:
   bool                             m_LoggedIn;                  // if we've logged into battle.net or not
   bool                             m_FailedLogin;               // if we tried to login but failed
   bool                             m_FailedSignup;              // if we tried to sign up but failed
+  bool                             m_EnteringChat;
   bool                             m_HadChatActivity;           // whether we've received chat/whisper events
   bool                             m_AnyWhisperRejected;        // whether the realm rejected any whisper because the receiver was not offline.
   bool                             m_ChatQueuedGameAnnouncement;// for !host, !announce
@@ -165,7 +166,7 @@ public:
   std::optional<BNETProtocol::WhoisInfo>  ParseWhoisInfo(const std::string& message) const;
   bool                                    GetConnected() const;
   bool                                    GetEnabled() const;
-  bool                                    GetPvPGN() const;
+  bool                                    GetIsPvPGN() const;
   std::string                             GetServer() const;
   uint16_t                                GetServerPort() const;
   std::string                             GetInputID() const;

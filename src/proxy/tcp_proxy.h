@@ -62,7 +62,7 @@ public:
   bool                                              m_ServerPaused;
   CStreamIOSocket*                                  m_IncomingSocket;
   CTCPClient*                                       m_OutgoingSocket;
-  std::shared_ptr<CGame>                            m_Game;
+  std::weak_ptr<CGame>                              m_Game;
   std::optional<int64_t>                            m_TimeoutTicks;
 
   CTCPProxy(CConnection* nConnection, std::shared_ptr<CGame> nGame);

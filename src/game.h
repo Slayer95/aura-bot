@@ -432,7 +432,9 @@ public:
   void                                                   UpdateReadyCounters();
   void                                                   ResetDropVotes();
   void                                                   ResetOwnerSeen();
-  void                                                   UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_MAJOR; }
+  [[nodiscard]] inline bool                              GetIsGameDiscoveryActive() const { return m_GameDiscoveryActive; }
+  inline void                                            SetGameDiscoveryActive(const bool nActive = true) { m_GameDiscoveryActive = nActive; }
+  inline void                                            UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_MAJOR; }
 
   inline int64_t                                         GetCreationTime() const { return m_CreationTime; }
   inline uint32_t                                        GetUptime() const {

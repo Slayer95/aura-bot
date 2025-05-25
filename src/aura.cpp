@@ -1451,17 +1451,16 @@ void CAura::EventGameDeleted(shared_ptr<CGame> game)
     m_AutoReHosted = false;
   }
 
-  if (game->GetIsStageAcceptingJoins()) {
-    if (game->GetUDPEnabled()) {
-      game->SendGameDiscoveryDecreate();
+  if (game->GetIsGameDiscoveryActive()) {
+    game->SendGameDiscoveryDecreate();
+    game->SetGameDiscoveryActive(false);
+  }
+  for (auto& realm : m_Realms) {
+    if (realm->GetGameBroadcast() == game) {
+      realm->ResetGameBroadcastData();
     }
-    for (auto& realm : m_Realms) {
-      if (realm->GetGameBroadcast() == game) {
-        realm->ResetGameBroadcastData();
-      }
-      if (realm->GetGameBroadcastPending() == game) {
-        realm->ResetGameBroadcastPending();
-      }
+    if (realm->GetGameBroadcastPending() == game) {
+      realm->ResetGameBroadcastPending();
     }
   }
 

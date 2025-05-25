@@ -101,6 +101,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_LoggedIn(false),
     m_FailedLogin(false),
     m_FailedSignup(false),
+    m_EnteringChat(false),
     m_HadChatActivity(false),
     m_AnyWhisperRejected(false),
     m_ChatQueuedGameAnnouncement(false),
@@ -229,8 +230,9 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
             if (enterChatResult.success) {
               m_ChatNickName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
-              ResetGameBroadcastStatus();
+              ResetGameBroadcastData(); // m_EnteringChat guards against ENTERCHAT network loop
               AutoJoinChat();
+              m_EnteringChat = false;
             }
 
             break;
@@ -454,7 +456,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
     return;
   }
 
-  if (GetPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
+  if (GetIsPvPGN() && m_Socket->GetLastRecv() + REALM_APP_KEEPALIVE_IDLE_TIME < Time) {
     // Many PvPGN servers do not implement TCP Keep Alive. However, all PvPGN servers reply to BNET protocol null packets.
     int64_t expectedNullsSent = ((Time - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TIME) / REALM_APP_KEEPALIVE_INTERVAL) + 1;
     if (expectedNullsSent > REALM_APP_KEEPALIVE_MAX_MISSED) {
@@ -803,7 +805,7 @@ bool CRealm::GetEnabled() const
   return m_Config.m_Enabled;
 }
 
-bool CRealm::GetPvPGN() const
+bool CRealm::GetIsPvPGN() const
 {
   return m_Config.m_Type == REALM_TYPE_PVPGN;
 }
@@ -1070,10 +1072,14 @@ void CRealm::AutoJoinChat()
 void CRealm::SendEnterChat()
 {
   Send(BNETProtocol::SEND_SID_ENTERCHAT());
+  m_EnteringChat = true;
 }
 
 void CRealm::TrySendEnterChat()
 {
+  if (m_EnteringChat) {
+    return;
+  }
   if (!m_AnchorChannel.empty() || !m_Config.m_FirstChannel.empty()) {
     SendEnterChat();
   }
@@ -1386,7 +1392,7 @@ void CRealm::ResetGameBroadcastData()
   m_GameBroadcast.reset();
   ResetGameBroadcastStatus();
   QueueGameUncreate();
-  SendEnterChat();
+  TrySendEnterChat();
 }
 
 bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const

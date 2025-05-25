@@ -136,8 +136,10 @@ TCPProxyStatus CTCPProxy::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     vector<uint8_t> byteArray = vector<uint8_t>(m_OutgoingSocket->m_SendBuffer.begin(), m_OutgoingSocket->m_SendBuffer.end());
     // falls through
   } else if (!m_OutgoingSocket->GetConnected() && !m_OutgoingSocket->HasError()) {
-    sockaddr_storage outgoingAddress = IPv4ArrayToAddress(m_Game->GetPublicHostAddress());
-    SetAddressPort(&outgoingAddress, m_Game->GetPublicHostPort());
+    auto game = m_Game.lock();
+    if (!game) return TCPProxyStatus::kDestroy;
+    sockaddr_storage outgoingAddress = IPv4ArrayToAddress(game->GetPublicHostAddress());
+    SetAddressPort(&outgoingAddress, game->GetPublicHostPort());
     m_OutgoingSocket->Connect(nullopt, outgoingAddress);
     return result;
   }
