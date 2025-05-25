@@ -1696,11 +1696,15 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
       if (!(m_Aura->m_Net.m_UDPMainServerEnabled && m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode)) {
         SendGameDiscoveryInfo();
-      } else if (m_GameDiscoveryInfoChanged) {
+      } else {
         SendGameDiscoveryRefresh();
-        m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_SLOTS;
       }
       m_GameDiscoveryActive = true;
+    }
+
+    if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
+      // Bonjour
+      m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_SLOTS;
     }
 
     m_LastPingTicks = Ticks;
