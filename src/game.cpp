@@ -4329,9 +4329,14 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
 {
   array<uint8_t, 4> IP = {0, 0, 0, 0};
+  uint16_t port = GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
+  if (m_IsMirror) {
+    IP = GetPublicHostAddress();
+    port = GetPublicHostPort();
+  }
   gameSeeker->Send(
     VLANProtocol::SEND_VLAN_GAMEINFO(
-      true /* TFT */,
+      GetIsExpansion(),
       gameSeeker->GetGameVersion(),
       GetGameType(),
       GetGameFlags(),
@@ -4345,7 +4350,7 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       static_cast<uint32_t>(m_Slots.size()), // Total Slots
       static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1),
       IP,
-      GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4),
+      port,
       m_HostCounter,
       m_EntryKey
     )

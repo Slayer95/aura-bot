@@ -171,7 +171,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
             if (vlanSearch.isValid) {
               m_GameVersion = GAMEVER(1, vlanSearch.gameVersion);
               for (const auto& game : m_Aura->GetJoinableGames()) {
-                if (!game->GetIsMirror() && game->GetIsStageAcceptingJoins()) {
+                if (game->GetIsStageAcceptingJoins()) {
                   game->SendGameDiscoveryInfoVLAN(this);
                 }
               }
