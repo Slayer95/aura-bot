@@ -56,7 +56,7 @@ CTCPProxy::CTCPProxy(CConnection* nConnection, shared_ptr<CGame> nGame)
     m_Game(nGame)
 {
   m_IncomingSocket = nConnection->GetSocket();
-  m_OutgoingSocket = new CTCPClient(AF_INET, m_Game->GetGameName());
+  m_OutgoingSocket = new CTCPClient(AF_INET, nGame->GetGameName());
 }
 
 CTCPProxy::~CTCPProxy()
