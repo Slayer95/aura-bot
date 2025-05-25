@@ -40,7 +40,7 @@ bool TestRunner::CheckStatStrings()
       filesystem::path fileName = fromPath.filename();
       filesystem::path outPath = encFolder / fileName;
       if (filesystem::is_regular_file(fromPath)) {
-        vector<uint8_t> fromContents, actual, expected;
+        vector<uint8_t> fromContents, actual, expected, reversed;
         if (!FileRead(fromPath, fromContents, 0xFFFF)) {
           throw runtime_error("Failed to read file [" + PathToString(fromPath) + "]");
         }
@@ -60,6 +60,11 @@ bool TestRunner::CheckStatStrings()
             throw runtime_error("Failed to write file [" + PathToString(pendingPath) + "]");
           }
           Print("[TEST] Pending - EncodeStatString [" + PathToString(fromPath) + "] Generated output snapshot");
+        }
+        reversed = DecodeStatString(actual);
+        if (reversed != fromContents) {
+          Print("[TEST] ERR - DecodeStatString failed to reverse EncodeStatString [" + PathToString(fromPath) + "]");
+          success = false;
         }
       }
     }
