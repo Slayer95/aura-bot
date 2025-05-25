@@ -1108,50 +1108,92 @@ inline void AssignLength(std::vector<uint8_t>& content)
     return path + std::string(1, Separator);
 }
 
-[[nodiscard]] inline std::vector<uint8_t> EncodeStatString(std::vector<uint8_t>& data)
+[[nodiscard]] inline std::vector<uint8_t> EncodeStatString(const std::vector<uint8_t>& data)
 {
-  std::vector<uint8_t> Result;
-  uint8_t              Mask = 1;
+  uint8_t b = 0, mask = 1;
+  size_t i = 0, j = 0, w = 1;
+  size_t len = data.size();
+  size_t fullBlockCount = len / 7u;
+  size_t fullBlockLen = fullBlockCount * 7u;
+  size_t outSize = fullBlockCount * 8u;
+  if (fullBlockLen < len) {
+    outSize += (len % 7u) + 1u;
+  }
+  std::vector<uint8_t> result;
+  result.resize(outSize);
 
-  for (uint32_t i = 0; i < data.size(); ++i)
-  {
-    if ((data[i] % 2) == 0)
-      Result.push_back(data[i] + 1);
-    else
-    {
-      Result.push_back(data[i]);
-      Mask |= 1 << ((i % 7) + 1);
+  for (; i < fullBlockLen; i += 7, w++) {
+    mask = 1;
+    for (j = 0; j < 7; j++, w++) {
+      b = data[i + j];
+      if (b % 2 == 0) {
+        result[w] = b + 1;
+      } else {
+        result[w] = b;
+        mask |= (1u << (j + 1u));
+      }
     }
-
-    if (i % 7 == 6 || i == data.size() - 1)
-    {
-      Result.insert(end(Result) - 1 - (i % 7), Mask);
-      Mask = 1;
-    }
+    result[w - 8] = mask;
   }
 
-  return Result;
+  if (fullBlockLen < len) {
+    mask = 1;
+    for (i = fullBlockLen; i < len; i++, w++) {
+      b = data[i];
+      if (b % 2 == 0) {
+        result[w] = b + 1;
+      } else {
+        result[w] = b;
+        mask |= (1u << ((i % 7u) + 1u));
+      }
+    }
+    result[fullBlockCount * 8] = mask;
+  }
+
+
+  return result;
 }
 
 [[nodiscard]] inline std::vector<uint8_t> DecodeStatString(const std::vector<uint8_t>& data)
 {
-  uint8_t              Mask = 1;
-  std::vector<uint8_t> Result;
+  uint8_t mask = 1u;
+  uint8_t bitOrder = 0u;
+  size_t i = 0, j = 0;
+  size_t len = data.size();
+  size_t fullBlockCount = len / 8u;
+  size_t fullBlockLen = fullBlockCount * 8u;
+  size_t outSize = fullBlockCount * 7u;
+  if (fullBlockLen < len) {
+    outSize += (len % 8u) - 1u;
+  }
+  std::vector<uint8_t> result;
+  result.reserve(outSize);
 
-  for (uint32_t i = 0; i < data.size(); ++i)
-  {
-    if ((i % 8) == 0)
-      Mask = data[i];
-    else
-    {
-      if ((Mask & (1 << (i % 8))) == 0)
-        Result.push_back(data[i] - 1);
-      else
-        Result.push_back(data[i]);
+  for (i = 0; i < fullBlockLen; i += 8) {
+    mask = data[i];
+    for (j = 1; j < 8; j++) {
+      bitOrder = (uint8_t)j;
+      if (((mask >> bitOrder) & 0x1) == 0) {
+        result.push_back(data[i + j] - 1);
+      } else {
+        result.push_back(data[i + j]);
+      }
     }
   }
 
-  return Result;
+  if (fullBlockLen < len) {
+    mask = data[fullBlockLen];
+    for (i = fullBlockLen + 1; i < len; i++) {
+      bitOrder = (uint8_t)i % 8;
+      if (((mask >> bitOrder) & 0x1) == 0) {
+        result.push_back(data[i] - 1);
+      } else {
+        result.push_back(data[i]);
+      }
+    }
+  }
+
+  return result;
 }
 
 [[nodiscard]] inline std::vector<std::string> Tokenize(const std::string& s, const char delim)
