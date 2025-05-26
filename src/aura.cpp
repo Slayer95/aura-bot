@@ -1458,6 +1458,7 @@ void CAura::EventGameDeleted(shared_ptr<CGame> game)
   for (auto& realm : m_Realms) {
     if (realm->GetGameBroadcast() == game) {
       realm->ResetGameBroadcastData();
+      realm->TrySendEnterChat();
     }
     if (realm->GetGameBroadcastPending() == game) {
       realm->ResetGameBroadcastPending();

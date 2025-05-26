@@ -229,12 +229,12 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           case BNETProtocol::Magic::ENTERCHAT: {
             BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
             if (enterChatResult.success) {
+              PRINT_IF(LOG_LEVEL_DEBUG, GetLogPrefix() + "entered chat")
               m_ChatNickName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
               ResetGameBroadcastData(); // m_EnteringChat guards against ENTERCHAT network loop
               AutoJoinChat();
-              m_EnteringChat = false;
             }
-
+            m_EnteringChat = false;
             break;
           }
 
@@ -257,6 +257,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             }
             if (!m_GameBroadcast.expired()) {
               if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
+                DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "Game published OK <<" + GetGameBroadcastName() + ">>")
                 m_Aura->EventBNETGameRefreshSuccess(shared_from_this());
               } else {
                 PRINT_IF(LOG_LEVEL_NOTICE, GetLogPrefix() + "Failed to publish game <<" + GetGameBroadcastName() + ">> Try another name")
@@ -1071,6 +1072,7 @@ void CRealm::AutoJoinChat()
 
 void CRealm::SendEnterChat()
 {
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "entering chat...");
   Send(BNETProtocol::SEND_SID_ENTERCHAT());
   m_EnteringChat = true;
 }
@@ -1388,11 +1390,11 @@ void CRealm::QueueGameUncreate()
 
 void CRealm::ResetGameBroadcastData()
 {
+  DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "game broadcast cleared")
   m_GameBroadcastName.clear();
   m_GameBroadcast.reset();
   ResetGameBroadcastStatus();
   QueueGameUncreate();
-  TrySendEnterChat();
 }
 
 bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
@@ -1433,7 +1435,7 @@ bool CRealm::TrySetGameBroadcastPending(shared_ptr<CGame> game)
 
 void CRealm::CheckPendingGameBroadcast()
 {
-  if (!m_LoggedIn || !GetIsGameBroadcastPending() || GetIsGameBroadcastInFlight()) {
+  if (!m_LoggedIn || !GetIsGameBroadcastPending() || GetIsGameBroadcastInFlight() || (GetIsPvPGN() && m_EnteringChat)) {
     return;
   }
 
@@ -1453,6 +1455,7 @@ void CRealm::CheckPendingGameBroadcast()
   ResetGameBroadcastData();
 
   if (pendingGame->GetDisplayMode() == GAME_DISPLAY_PUBLIC && pendingChat.value_or(GetAnnounceHostToChat())) {
+    TrySendEnterChat();
     QueueGameChatAnnouncement(pendingGame);
   } else {
     // Send STARTADVEX3
@@ -1623,6 +1626,7 @@ void CRealm::StopConnection(bool hadError)
   }
 
   m_LoggedIn = false;
+  m_EnteringChat = false;
   m_CurrentChannel.clear();
   m_AnchorChannel.clear();
   m_WaitingToConnect = true;
@@ -1734,6 +1738,7 @@ void CRealm::ReloadConfig(CRealmConfig* realmConfig)
   if (auto game = GetGameBroadcast()) {
     if (!GetCanSetGameBroadcastPending(game)) {
       ResetGameBroadcastData();
+      TrySendEnterChat();
     }
   }
   SetGameBroadcastWantsRename();

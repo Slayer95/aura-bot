@@ -825,7 +825,7 @@ void CGame::StartGameOverTimer(bool isMMD)
       m_GameDiscoveryActive = false;
     }
     if (m_DisplayMode != GAME_DISPLAY_NONE) {
-      AnnounceDecreateToRealms(); // ResetGameBroadcastData(), STOPADV
+      AnnounceDecreateToRealms(); // STOPADV @ ResetGameBroadcastData(), SEND_ENTERCHAT
     }
     m_ChatOnly = true;
     StopCountDown();
@@ -4213,6 +4213,7 @@ void CGame::AnnounceDecreateToRealms()
     if (realm->GetGameBroadcast() == shared_from_this()) {
       realm->ResetGameChatAnnouncement();
       realm->ResetGameBroadcastData(); // STOPADV
+      realm->TrySendEnterChat();
     }
 
     if (realm->GetGameBroadcastPending() == shared_from_this()) {

@@ -5068,11 +5068,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           if (!realm->GetCanSetGameBroadcastPending(targetGame)) continue;
           realm->ResetGameBroadcastData();
           realm->ResetGameBroadcastPending();
+          realm->TrySendEnterChat();
           realm->QueueGameChatAnnouncement(targetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
         }
       } else {
         targetRealm->ResetGameBroadcastData();
         targetRealm->ResetGameBroadcastPending();
+        targetRealm->TrySendEnterChat();
         targetRealm->QueueGameChatAnnouncement(targetGame, shared_from_this(), true)->SetEarlyFeedback(earlyFeedback);
       }
       break;
