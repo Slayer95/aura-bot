@@ -2424,7 +2424,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   m_AHCL.playerName = CFG.GetString("map.ahcl.player_name", 1, 15, "HostBot");
   m_AHCL.fileName = CFG.GetString("map.ahcl.file_name", 1, 15, "Asuna.Dat");
   m_AHCL.mission = CFG.GetString("map.ahcl.mission", 1, 15, "HostBot");
-  m_AHCL.charset = CFG.GetString("map.ahcl.charset");
+  m_AHCL.charset = CFG.GetString("map.ahcl.charset"); // FIXME: Wide string support. Default: AHCL_DEFAULT_CHARSET
 
   if (m_AHCL.toggle != MAP_FEATURE_TOGGLE_DISABLED) {
     if (!m_AHCL.supported) {
