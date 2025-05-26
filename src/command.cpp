@@ -3367,6 +3367,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     // !START
     //
 
+    case HashCode("star"):
     case HashCode("start"):
     case HashCode("vs"):
     case HashCode("go"):
@@ -3395,6 +3396,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
+      if (cmdHash == HashCode("star")) {
+        SendAll("Twinkle \u263C, twinkle \u263C, little star \u263C\u263C\u263C");
+      }
       targetGame->StartCountDown(true, IsForce);
       break;
     }
