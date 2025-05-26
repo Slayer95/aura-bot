@@ -1150,9 +1150,7 @@ void CRealm::OnLoginOkay()
   TrySendGetGamesList();
   SendGetFriendsList();
   SendGetClanList();
-
   TrySendEnterChat();
-  TryQueueGameChatAnnouncement(m_Aura->GetMostRecentLobby());
 }
 
 void CRealm::OnSignupOkay()
@@ -1254,35 +1252,6 @@ CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& us
 
   DPRINT_IF(LOG_LEVEL_TRACE, GetLogPrefix() + "queued whisper to [" + user + "] - \"" + entry->GetInnerMessage() + "\"")
   return entry;
-}
-
-void CRealm::TryQueueGameChatAnnouncement(shared_ptr<const CGame> game)
-{
-  if (!game || !m_LoggedIn) {
-    return;
-  }
-
-  if (game->GetIsMirror() && GetIsMirror()) {
-    // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
-    // Do not display external games in those realms.
-    return;
-  }
-
-  if (game->GetIsRealmExcluded(GetServer())) {
-    return;
-  }
-
-  if (
-    (game->GetIsExpansion() != GetGameIsExpansion()) ||
-    !(game->GetIsSupportedGameVersion(GetGameVersion()))
-  ) {
-    return;
-  }
-
-  if (game->GetDisplayMode() == GAME_DISPLAY_PUBLIC && GetAnnounceHostToChat()) {
-    QueueGameChatAnnouncement(game);
-    return;
-  }
 }
 
 CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(shared_ptr<const CGame> game, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
@@ -1630,6 +1599,7 @@ void CRealm::StopConnection(bool hadError)
   m_CurrentChannel.clear();
   m_AnchorChannel.clear();
   m_WaitingToConnect = true;
+  SetGameBroadcastPending(GetGameBroadcast());
   ResetGameBroadcastInFlight();
   ResetGameBroadcastStatus();
 
@@ -1738,7 +1708,7 @@ void CRealm::ReloadConfig(CRealmConfig* realmConfig)
   if (auto game = GetGameBroadcast()) {
     if (!GetCanSetGameBroadcastPending(game)) {
       ResetGameBroadcastData();
-      TrySendEnterChat();
+      //TrySendEnterChat();
     }
   }
   SetGameBroadcastWantsRename();

@@ -240,7 +240,6 @@ public:
   CQueuedChatMessage* QueueWhisper(const std::string& message, const std::string& user, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   CQueuedChatMessage* QueueGameChatAnnouncement(std::shared_ptr<const CGame> game, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   void TryQueueChat(const std::string& chatCommand, const std::string& user, bool isPrivate, std::shared_ptr<CCommandContext> ctx = nullptr, const uint8_t ctxFlags = 0);
-  void TryQueueGameChatAnnouncement(std::shared_ptr<const CGame> game);
   void RunMessageCallbackRefreshGame(CQueuedChatMessage* message);
   bool TrySendGameRefresh(std::shared_ptr<CGame> game);
   bool SendGameRefresh(std::shared_ptr<CGame> game);
