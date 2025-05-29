@@ -292,19 +292,19 @@ CStreamIOSocket::~CStreamIOSocket()
 
 void CStreamIOSocket::SetNoDelay(const bool noDelay)
 {
-  int32_t OptVal = noDelay;
-  setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  int32_t optVal = noDelay;
+  setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
 }
 
 void CStreamIOSocket::SetQuickAck(const bool quickAck)
 {
 #ifdef _WIN32
-  int32_t OptVal = quickAck;
+  int32_t optVal = quickAck;
   DWORD bytesReturned;
-	WSAIoctl(m_Socket, SIO_TCP_SET_ACK_FREQUENCY, &OptVal, sizeof(OptVal), nullptr, 0, &bytesReturned, nullptr, nullptr);
+	WSAIoctl(m_Socket, SIO_TCP_SET_ACK_FREQUENCY, &optVal, sizeof(optVal), nullptr, 0, &bytesReturned, nullptr, nullptr);
 #else
-  int32_t OptVal = quickAck;
-  setsockopt(m_Socket, IPPROTO_TCP, TCP_QUICKACK, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  int32_t optVal = quickAck;
+  setsockopt(m_Socket, IPPROTO_TCP, TCP_QUICKACK, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
 #endif
 }
 
@@ -319,8 +319,8 @@ void CStreamIOSocket::SetKeepAlive(const bool keepAlive, const uint32_t seconds)
   DWORD bytesReturned;
   WSAIoctl(m_Socket, SIO_KEEPALIVE_VALS, &keepAliveSettings, sizeof(keepAliveSettings), nullptr, 0, &bytesReturned, nullptr, nullptr);
 #else
-  int32_t OptVal = keepAlive;
-  setsockopt(m_Socket, IPPROTO_TCP, SO_KEEPALIVE, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  int32_t optVal = keepAlive;
+  setsockopt(m_Socket, IPPROTO_TCP, SO_KEEPALIVE, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
 
   if (keepAlive) {
     setsockopt(m_Socket, IPPROTO_TCP, TCP_KEEPIDLE, reinterpret_cast<const char*>(&seconds), sizeof(seconds));
@@ -613,32 +613,34 @@ CTCPServer::CTCPServer(uint8_t nFamily)
   fcntl(m_Socket, F_SETFL, fcntl(m_Socket, F_GETFL) | O_NONBLOCK);
 #endif
 
-  // set the socket to reuse the address in case it hasn't been released yet
-  int32_t optval = 1;
 #ifndef _WIN32
-  setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int32_t));
+  // set the socket to reuse the address in case it hasn't been released yet
+  {
+    int32_t optVal = 1;
+    setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (const void*)&optVal, sizeof(int32_t));
+  }
 #endif
 
   // accept IPv4 additionally to IPv6
   if (m_Family == AF_INET6) {
-    int32_t OptVal = 0;
-    setsockopt(m_Socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+    int32_t optVal = 0;
+    setsockopt(m_Socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
   }
 
   // disable Nagle's algorithm
   {
-    int32_t OptVal = 1;
-    setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+    int32_t optVal = 1;
+    setsockopt(m_Socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
   }
 
   // disable Delayed Ack algorithm
   {
-    int32_t OptVal = 1;
+    int32_t optVal = 1;
 #ifdef _WIN32
     DWORD bytesReturned;
-    WSAIoctl(m_Socket, SIO_TCP_SET_ACK_FREQUENCY, &OptVal, sizeof(OptVal), nullptr, 0, &bytesReturned, nullptr, nullptr);
+    WSAIoctl(m_Socket, SIO_TCP_SET_ACK_FREQUENCY, &optVal, sizeof(optVal), nullptr, 0, &bytesReturned, nullptr, nullptr);
 #else
-    setsockopt(m_Socket, IPPROTO_TCP, TCP_QUICKACK, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+    setsockopt(m_Socket, IPPROTO_TCP, TCP_QUICKACK, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
 #endif
   }
 }
@@ -766,8 +768,8 @@ CUDPSocket::CUDPSocket(uint8_t nFamily)
   Allocate(m_Family, SOCK_DGRAM);
 
   if (m_Family == AF_INET6) {
-    int32_t OptVal = 0;
-    setsockopt(m_Socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+    int32_t optVal = 0;
+    setsockopt(m_Socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
   }
 }
 
@@ -836,11 +838,11 @@ void CUDPSocket::SetBroadcastEnabled(const bool nEnable)
 {
   // Broadcast is only defined over IPv4, but a subset of IPv6 maps to IPv6.
 
-  int32_t OptVal = nEnable;
+  int32_t optVal = nEnable;
 #ifdef _WIN32
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&OptVal, sizeof(int32_t));
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST, (const char*)&optVal, sizeof(int32_t));
 #else
-  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&OptVal, sizeof(int32_t));
+  setsockopt(m_Socket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (const void*)&optVal, sizeof(int32_t));
 #endif
 }
 
@@ -848,8 +850,8 @@ void CUDPSocket::SetDontRoute(bool dontRoute)
 {
   // whether to let packets ignore routes set by routing table
   // if DONTROUTE is enabled, packets are sent directly to the interface belonging to the target address
-  int32_t OptVal = dontRoute;
-  setsockopt(m_Socket, SOL_SOCKET, SO_DONTROUTE, reinterpret_cast<const char*>(&OptVal), sizeof(int32_t));
+  int32_t optVal = dontRoute;
+  setsockopt(m_Socket, SOL_SOCKET, SO_DONTROUTE, reinterpret_cast<const char*>(&optVal), sizeof(int32_t));
 }
 
 void CUDPSocket::Reset()
