@@ -1255,8 +1255,6 @@ CIncomingAction::CIncomingAction(uint8_t nUID, vector<uint8_t>& nAction)
     pair<bool, uint16_t> checkResult = CIncomingAction::CountAPMAtomic(m_Action);
     m_Error = checkResult.first;
     m_Count = checkResult.second;
-  } else {
-    Print("Error: CIncomingAction too large");
   }
 }
 
@@ -1329,19 +1327,22 @@ pair<bool, uint16_t> CIncomingAction::CountAPMAtomic(const vector<uint8_t>& acti
     actionType = action[pos];
     isDeselect = false;
     if (actionType == ACTION_SELECTION || actionType == ACTION_GROUP_HOTKEY_ASSIGN) {
-      if (size <= pos + 4 || (actionType == ACTION_SELECTION && action[pos + 1] > ACTION_SELECTION_MODE_REMOVE)) {
+      if (size < pos + 4 || (actionType == ACTION_SELECTION && action[pos + 1] > ACTION_SELECTION_MODE_REMOVE)) {
         result.first = true;
         break;
       }
     }
-    if (actionType == ACTION_W3API && size <= pos + 13) {
+
+    if (actionType == ACTION_W3API && size < pos + 13) {
       result.first = true;
       break;
     }
-    if (actionType == ACTION_ALLIANCE_SETTINGS && size <= pos + 6) {
+
+    if (actionType == ACTION_ALLIANCE_SETTINGS && size < pos + 6) {
       result.first = true;
       break;
     }
+
     if (GameProtocol::GetActionIsCountable(actionType)) {
       if (actionType == ACTION_SELECTION) {
         isDeselect = action[pos + 1] == ACTION_SELECTION_MODE_REMOVE;
@@ -1376,12 +1377,16 @@ vector<const uint8_t*> CIncomingAction::SplitAtomic() const
     delimiters.push_back(m_Action.data() + pos);
     actionType = m_Action[pos];
     if (actionType == ACTION_SELECTION || actionType == ACTION_GROUP_HOTKEY_ASSIGN) {
-      if (size <= pos + 4) {
+      if (size < pos + 4) {
         break;
       }
     }
 
-    if (actionType == ACTION_W3API && size <= pos + 13) {
+    if (actionType == ACTION_W3API && size < pos + 13) {
+      break;
+    }
+
+    if (actionType == ACTION_ALLIANCE_SETTINGS && size < pos + 6) {
       break;
     }
 
