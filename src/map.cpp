@@ -2294,6 +2294,17 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   }
   --m_MapCustomizableObserverTeam;
 
+  if (CFG.Exists("map.auto_commands.init")) {
+    vector<string> initCommands = CFG.GetList("map.auto_commands.init", ',', false, {});
+    for (const auto& execEntry : initCommands) {
+      bool padding = false;
+      string cmdToken, command, target;
+      if (ExtractMessageTokens(execEntry, cmdToken, padding, command, target)) {
+        m_InitCommands.emplace_back(command, target);
+      }
+    }
+  }
+
   // HostBot Command Library (HCL)
   //
   // https://gist.github.com/Slayer95/a15fc75f38d0b3fdf356613ede96cf7f

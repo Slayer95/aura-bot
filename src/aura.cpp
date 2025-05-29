@@ -2325,6 +2325,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 
   if (createdLobby->GetUDPEnabled()) {
     createdLobby->SendGameDiscoveryCreate();
+    createdLobby->SetGameDiscoveryActive(true);
   }
 
   for (auto& realm : m_Realms) {
@@ -2369,6 +2370,17 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     Print("[AURA] warning - hosting game that MAY require version " + ToVersionString(createdLobby->GetMap()->GetMapMinSuggestedGameVersion()));
   }
 
+  for (const auto& entry : createdLobby->GetMap()->GetInitCommands()) {
+    string cmdToken;
+    shared_ptr<CCommandContext> ctx = nullptr;
+    try {
+      ctx = make_shared<CCommandContext>(
+        ServiceType::kCLI, this, m_Config.m_LANCommandCFG, createdLobby, createdLobby->GetLobbyVirtualHostName(), false, &std::cout
+      );
+      ctx->SetPermissions(USER_PERMISSIONS_GAME_OWNER | USER_PERMISSIONS_GAME_PLAYER);
+    } catch (...) {}
+    if (ctx) ctx->Run(cmdToken, entry.first, entry.second);
+  }
   return true;
 }
 

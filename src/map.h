@@ -362,6 +362,7 @@ private:
   std::map<Version, std::array<uint8_t, 20>>   m_MapScriptsSHA1;         // config value: <map.scripts_hash.sha1> (20 bytes)
   std::map<Version, std::array<uint8_t, 4>>    m_MapScriptsBlizz;        // config value: <map.scripts_hash.crc32> (4 bytes) -> this is not the real CRC, it's the "xoro" value
   std::vector<CGameSlot>                       m_Slots;
+  std::vector<std::pair<std::string, std::string>> m_InitCommands;
   std::string                     m_CFGName;
   std::string                     m_ClientMapPath;       // config value: map path
   std::string                     m_MapType;       // config value: map type (for stats class)
@@ -496,6 +497,7 @@ public:
   [[nodiscard]] inline uint8_t                    GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
   [[nodiscard]] inline std::vector<CGameSlot>     GetSlots() const { return m_Slots; }
   [[nodiscard]] inline const std::vector<CGameSlot>&     InspectSlots() const { return m_Slots; }
+  [[nodiscard]] inline const std::vector<std::pair<std::string, std::string>>&   GetInitCommands() const { return m_InitCommands; }
   [[nodiscard]] uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
   [[nodiscard]] bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
   void                                            ClearMapFileContents() { m_MapFileContents.reset(); }
