@@ -3629,57 +3629,61 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
       if (chatMessageStart < chatMessageEnd) {
         GameUser::CGameUser* user = GetUserFromUID(UID);
         const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
-        EventChatTrigger(user, chatMessage, ByteArrayToUInt32(actionStart + 1u, false), ByteArrayToUInt32(actionStart + 5u, false));
+        if (user) {
+          EventChatTrigger(user, chatMessage, ByteArrayToUInt32(actionStart + 1u, false), ByteArrayToUInt32(actionStart + 5u, false));
+        }
       }
     }
   }
 
   if (actionType == ACTION_ALLIANCE_SETTINGS && (actionEnd >= actionStart + 6u) && actionStart[1] < MAX_SLOTS_MODERN) {
     GameUser::CGameUser* user = GetUserFromUID(UID);
-    const bool wantsShare = (ByteArrayToUInt32(actionStart + 2u, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
-    const uint8_t targetSID = actionStart[1];
-    if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
-      if (wantsShare) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
-      } else {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
-      }
-      user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
-      GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
-      if (targetUser) {
-        if (
-          (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam()) &&
-          (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS)
-        ) {
-          targetUser->SetHasControlOverUnitsFromSlot(user->GetSID(), wantsShare);
-          if (wantsShare && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
-            int64_t timeout = user->GetAntiAbuseTimeout();
-            if (!user->GetAntiShareKicked()) {
-              user->AddKickReason(GameUser::KickReason::ANTISHARE);
-              user->KickAtLatest(GetTicks() + timeout);
-              user->AddAbuseCounter();
+    if (user) {
+      const bool wantsShare = (ByteArrayToUInt32(actionStart + 2u, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+      const uint8_t targetSID = actionStart[1];
+      if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
+        if (wantsShare) {
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+        } else {
+          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+        }
+        user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
+        GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
+        if (targetUser) {
+          if (
+            (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam()) &&
+            (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS)
+          ) {
+            targetUser->SetHasControlOverUnitsFromSlot(user->GetSID(), wantsShare);
+            if (wantsShare && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
+              int64_t timeout = user->GetAntiAbuseTimeout();
+              if (!user->GetAntiShareKicked()) {
+                user->AddKickReason(GameUser::KickReason::ANTISHARE);
+                user->KickAtLatest(GetTicks() + timeout);
+                user->AddAbuseCounter();
+              }
+              user->SetLeftCode(PLAYERLEAVE_LOST);
+              user->SetLeftReason("autokicked - antishare");
+              SendChat(user, "[ANTISHARE] You will be kicked out of the game unless you remove Shared Unit Control within " + ToDurationString(timeout / 1000) + ".");
+              SendChat(targetUser, "[ANTISHARE] You may not perform further actions until [" + user->GetDisplayName() + "] removes Shared Unit Control.");
             }
-            user->SetLeftCode(PLAYERLEAVE_LOST);
-            user->SetLeftReason("autokicked - antishare");
-            SendChat(user, "[ANTISHARE] You will be kicked out of the game unless you remove Shared Unit Control within " + ToDurationString(timeout / 1000) + ".");
-            SendChat(targetUser, "[ANTISHARE] You may not perform further actions until [" + user->GetDisplayName() + "] removes Shared Unit Control.");
-          }
-          if (!wantsShare) {
-            targetUser->CheckReleaseOnHoldActions();
+            if (!wantsShare) {
+              targetUser->CheckReleaseOnHoldActions();
+            }
           }
         }
-      }
-      if (!wantsShare && user->GetAntiShareKicked() && !user->GetIsSharingUnitsWithAnyAllies()) {
-        user->ResetLeftReason();
-        user->RemoveKickReason(GameUser::KickReason::ANTISHARE);
-        user->CheckStillKicked();
+        if (!wantsShare && user->GetAntiShareKicked() && !user->GetIsSharingUnitsWithAnyAllies()) {
+          user->ResetLeftReason();
+          user->RemoveKickReason(GameUser::KickReason::ANTISHARE);
+          user->CheckStillKicked();
+        }
       }
     }
   }
 
   if (actionType == ACTION_MINIMAPSIGNAL) {
     GameUser::CGameUser* user = GetUserFromUID(UID);
-    if (user->GetIsObserver()) {
+    if (user && user->GetIsObserver()) {
       SendObserverChat("[" + user->GetName() + "] sent a minimap signal.");
     }
   }
@@ -5023,6 +5027,28 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
     }
   }
   return anyStopped;
+}
+
+bool CGame::SendFakeUsersShareControlWithTeam()
+{
+  bool anyShared = false;
+  for (auto& fakeUser : m_FakeUsers) {
+    if (fakeUser.GetIsObserver()) continue;
+    const uint8_t fromUID = fakeUser.GetUID();
+    const CGameController* gameController = GetGameControllerFromUID(fromUID);
+    const uint8_t team = gameController->GetTeam();
+    uint8_t toSID = static_cast<uint8_t>(m_Slots.size());
+    while (toSID--) {
+      const CGameSlot* toSlot = InspectSlot(toSID);
+      if (!toSlot->GetIsPlayerOrFake()) continue;
+      if (team != toSlot->GetTeam() || toSID == gameController->GetSID()) continue;
+      if (!fakeUser.GetCanShare(toSID)) continue;
+      if (ShareUnits(fromUID, toSID, GetLastActionFrame())) {
+        anyShared = true;
+      }
+    }
+  }
+  return anyShared;
 }
 
 bool CGame::GetIsHiddenPlayerNames() const
@@ -7039,6 +7065,10 @@ void CGame::EventGameLoaded()
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.
     // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags), correctly untracks lastrefugeamai.ini --observers=no
     SendEveryoneElseLeftAndDisconnect("single-player game untracked");
+  } else if (m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_NATIVE) {
+    if (SendFakeUsersShareControlWithTeam()) {
+      SendAllChat("Virtual players will share unit control with their allies");
+    }
   }
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {

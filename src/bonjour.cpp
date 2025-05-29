@@ -80,7 +80,7 @@ void CBonjour::Destroy(DNSServiceRef service)
 
 vector<uint8_t> CBonjour::GetGameBroadcastData(shared_ptr<const CGame> game, const string& gameName)
 {
-  uint8_t slotsOff = static_cast<uint32_t>(game->GetNumSlots() == game->GetSlotsOpen() ? game->GetNumSlots() : game->GetSlotsOpen() + 1);
+  uint8_t slotsOff = static_cast<uint8_t>(game->GetNumSlots() == game->GetSlotsOpen() ? game->GetNumSlots() : game->GetSlotsOpen() + 1);
   uint32_t slotsTotal = game->GetNumSlots();
   uint16_t hostPort = game->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
 

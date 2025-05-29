@@ -6150,8 +6150,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      string inputLower = target;
-      transform(begin(inputLower), end(inputLower), begin(inputLower), [](char c) { return static_cast<char>(std::tolower(c)); });
+      string inputLower = ToLowerCase(target);
 
       if (inputLower == "fill") {
         targetGame->DeleteVirtualHost();
