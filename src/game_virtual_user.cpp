@@ -103,13 +103,13 @@ bool CGameVirtualUser::GetCanSaveEnded() const
   return true;
 }
 
-bool CGameVirtualUser::GetCanShare(const uint8_t SID) const
+bool CGameVirtualUser::GetCanShare(const uint8_t /*SID*/) const
 {
   if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
   return true;
 }
 
-bool CGameVirtualUser::GetCanTrade(const uint8_t SID) const
+bool CGameVirtualUser::GetCanTrade(const uint8_t /*SID*/) const
 {
   if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_TRADE)) return false;
   return true;

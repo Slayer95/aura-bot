@@ -232,7 +232,7 @@ GameDiscoveryInterface::~GameDiscoveryInterface()
 {
 }
 
-void GameDiscoveryInterface::AddBonjour(CAura* nAura, shared_ptr<CGame> game, const Version& version)
+void GameDiscoveryInterface::AddBonjour(CAura* nAura, const CGame* game, const Version& version)
 {
   SetBonjour(version, make_shared<CBonjour>(nAura, game, type, port, version));
 }

@@ -503,15 +503,31 @@ bool CGame::InitNet()
 
   m_HostPort = m_Socket->GetPort();
   vector<pair<uint8_t, GameDiscoveryInterface>> interfaces;
-  uint16_t port = CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_LOOPBACK);
-  interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_LOOPBACK, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_LOOPBACK, port));
-  port = CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
-  interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV4, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV4, port));
-  port = CalcHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV6);
-  interfaces.emplace_back(GAME_DISCOVERY_INTERFACE_IPV6, GameDiscoveryInterface(GAME_DISCOVERY_INTERFACE_IPV6, port));
+  interfaces.resize(3);
+  {
+    uint8_t type = GAME_DISCOVERY_INTERFACE_LOOPBACK;
+    interfaces[0].first = type;
+    interfaces[0].second.SetType(type);
+    interfaces[0].second.SetPort(CalcHostPortFromType(type));
+  }
+  {
+    uint8_t type = GAME_DISCOVERY_INTERFACE_IPV4;
+    interfaces[1].first = type;
+    interfaces[1].second.SetType(type);
+    interfaces[1].second.SetPort(CalcHostPortFromType(type));
+  }
+  {
+    uint8_t type = GAME_DISCOVERY_INTERFACE_IPV6;
+    interfaces[2].first = type;
+    interfaces[2].second.SetType(type);
+    interfaces[2].second.SetPort(CalcHostPortFromType(type));
+  }
 
   for (auto& entry : interfaces) {
-    InitBonjour(entry.second);
+    // Bonjour doesn't distinguish between IPv4 and IPv6.
+    GameDiscoveryInterface& interface = entry.second;
+    if (interface.GetType() == GAME_DISCOVERY_INTERFACE_IPV6) continue;
+    InitBonjour(interface);
   }
 
   m_NetInterfaces = FlatMap<uint8_t, GameDiscoveryInterface>(move(interfaces));
@@ -523,7 +539,8 @@ void CGame::InitBonjour(GameDiscoveryInterface& interface)
   Version version = std::max(m_SupportedGameVersionsMin, GAMEVER(1u, 30u));
   while (version <= m_SupportedGameVersionsMax) {
     if (!GetIsSupportedGameVersion(version)) continue;
-    interface.AddBonjour(m_Aura, shared_from_this(), version);
+    // called from the constructor, so can't use shared_from_this
+    interface.AddBonjour(m_Aura, this, version);
     version = GetNextVersion(version);
   }
 }
@@ -1703,7 +1720,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     }
 
     if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
-      // Bonjour
+      SendGameDiscoveryInfoMDNS();
       m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_SLOTS;
     }
 
@@ -3040,7 +3057,7 @@ optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const
   return result;
 }
 
-Version CGame::GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest& joinRequest, shared_ptr<const CRealm> fromRealm) const
+Version CGame::GuessIncomingPlayerVersion(const CConnection* /*user*/, const CIncomingJoinRequest& joinRequest, shared_ptr<const CRealm> fromRealm) const
 {
   string lowerName = ToLowerCase(joinRequest.GetName());
   auto versionErrors = m_VersionErrors.find(lowerName);
@@ -3289,7 +3306,7 @@ void CGame::SendJoinedPlayersInfo(CConnection* connection) const
   }
 }
 
-void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version, const string& name) const
+void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version) const
 {
   // When the game client receives MAPCHECK packet, it remains if the map is OK.
   // Otherwise, they immediately leave the lobby.
@@ -4327,6 +4344,18 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
   }
 }
 
+void CGame::SendGameDiscoveryInfoMDNS() const
+{
+#ifndef DISABLE_BONJOUR
+  for (const auto& intEntry : m_NetInterfaces.get()) {
+    const GameDiscoveryInterface& interface = intEntry.second;
+    for (const auto& bonEntry : interface.bonjours) {
+      bonEntry.second->PushRecord(shared_from_this());
+    }
+  }
+#endif
+}
+
 void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
 {
   array<uint8_t, 4> IP = {0, 0, 0, 0};
@@ -5153,7 +5182,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   SendJoinedPlayersInfo(Player);
 
   // send a map check packet to the new user.
-  SendMapAndVersionCheck(Player, Player->GetGameVersion(), Player->GetName());
+  SendMapAndVersionCheck(Player, Player->GetGameVersion());
 
   m_Users.push_back(Player);
 
@@ -5228,7 +5257,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest& jo
 
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFOJOIN(observer->GetUID(), observer->GetSocket()->GetPortLE(), observer->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
   observer->SendOtherPlayersInfo();
-  SendMapAndVersionCheck(observer, observer->GetGameVersion(), observer->GetName());
+  SendMapAndVersionCheck(observer, observer->GetGameVersion());
   Send(observer, GameProtocol::SEND_W3GS_SLOTINFO(m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
   observer->SendChat("This game is in progress. You can join as an spectator.");
@@ -8031,7 +8060,7 @@ uint8_t CGame::GetHostUID() const
   }
 }
 
-uint8_t CGame::CheckCanTransferMap(const CConnection* connection, shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission)
+uint8_t CGame::CheckCanTransferMap(const CConnection* /*connection*/, shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission)
 {
   if (!m_Map->GetMapFileIsValid()) {
     return m_Map->HasMismatch() ? MAP_TRANSFER_CHECK_INVALID : MAP_TRANSFER_CHECK_MISSING;
@@ -10123,17 +10152,17 @@ bool CGame::GetHasReferees() const
   return m_Map->GetMapObservers() == MAPOBS_REFEREES;
 }
 
-bool CGame::GetIsSupportedGameVersion(const Version& nVersion) const
+bool CGame::GetIsSupportedGameVersion(const Version& version) const
 {
-  if (nVersion.first > 1 || nVersion.second > 36) return false;
-  return m_SupportedGameVersions.test(ToVersionOrdinal(nVersion));
+  if (!GetIsValidVersion(version)) return false;
+  return m_SupportedGameVersions.test(ToVersionOrdinal(version));
 }
 
-void CGame::SetSupportedGameVersion(const Version& nVersion) {
-  if (nVersion.first > 1 || nVersion.second > 36) return;
-  m_SupportedGameVersions.set(ToVersionOrdinal(nVersion));
-  if (nVersion < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = nVersion;
-  if (nVersion > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = nVersion;
+void CGame::SetSupportedGameVersion(const Version& version) {
+  if (!GetIsValidVersion(version)) return;
+  m_SupportedGameVersions.set(ToVersionOrdinal(version));
+  if (version < m_SupportedGameVersionsMin) m_SupportedGameVersionsMin = version;
+  if (version > m_SupportedGameVersionsMax) m_SupportedGameVersionsMax = version;
 }
 
 void CGame::OpenObserverSlots()

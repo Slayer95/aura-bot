@@ -228,14 +228,23 @@ template <typename T>
   return ToDecString(version.first) + "." + ToDecString(version.second);
 }
 
-[[nodiscard]] inline uint32_t ToVersionFlattened(const Version& version)
+[[nodiscard]] inline uint32_t ToVersionFlattened(const Version& version) // Bonjour protocol
 {
   return 10000u + 100u * (uint32_t)(version.first - 1) + (uint32_t)(version.second);
 }
 
-[[nodiscard]] inline uint8_t ToVersionOrdinal(const Version& version)
+[[nodiscard]] inline uint8_t ToVersionOrdinal(const Version& version) // Aura internal
 {
   return (version.first - 1) * 37 + version.second;
+}
+
+[[nodiscard]] inline bool GetIsValidVersion(const Version& version)
+{
+  switch (version.first) {
+    case 2: return true;
+    case 1: return version.second <= 36;
+    default: return false;
+  }
 }
 
 [[nodiscard]] inline std::string ToOrdinalName(const size_t number)

@@ -492,7 +492,7 @@ public:
   void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;
   void                                                   SendFakeUsersInfo(CConnection* user) const;
   void                                                   SendJoinedPlayersInfo(CConnection* user) const;
-  void                                                   SendMapAndVersionCheck(CConnection* user, const Version& gameVersion, const std::string& name) const;
+  void                                                   SendMapAndVersionCheck(CConnection* user, const Version& gameVersion) const;
   void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
   void                                                   SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
   void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
@@ -530,6 +530,7 @@ public:
   void                                                   ReplySearch(sockaddr_storage* address, CSocket* socket, const std::optional<Version>& customGameVersion);
   void                                                   SendGameDiscoveryInfo(const Version& gameVersion);
   void                                                   SendGameDiscoveryInfo();
+  void                                                   SendGameDiscoveryInfoMDNS() const;
   void                                                   SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const;
   void                                                   SendGameDiscoveryRefresh() const;
   void                                                   SendGameDiscoveryCreate(const Version& gameVersion) const;

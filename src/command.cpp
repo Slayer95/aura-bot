@@ -270,8 +270,9 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
     m_GameSource(GameSource()),
     m_ServiceSource(ServiceType::kIRC, userName),
     m_InteractionSource(nullptr),
-    m_FromWhisper(false),
+    m_FromWhisper(isWhisper),
     m_IsBroadcast(nIsBroadcast),
+
     m_Permissions(USER_PERMISSIONS_NONE),
 
     m_ServerName(nAura->m_IRC.m_Config.m_HostName),
@@ -3566,14 +3567,14 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      bool onlyDraft = false;
-      if (!GetIsSudo()) {
-        if ((targetGame->GetMap()->GetMapOptions() & MAPOPT_CUSTOMFORCES) && (onlyDraft = targetGame->GetIsDraftMode())) {
-          if (!GetIsGameUser() || !GetGameUser()->GetIsDraftCaptain()) {
-            ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
-            break;
-          }
-        } else if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+      const bool checkDraft = (targetGame->GetMap()->GetMapOptions() & MAPOPT_CUSTOMFORCES) && targetGame->GetIsDraftMode();
+      const bool isDraftCaptain = GetIsGameUser() && GetGameUser()->GetIsDraftCaptain();
+      const bool isGameOwner = CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER);
+      if (!isGameOwner && (!checkDraft || !isDraftCaptain)) {
+        if (checkDraft) {
+          ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
+          break;
+        } else {
           ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
           break;
         }
@@ -3606,7 +3607,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (onlyDraft) {
+      if (!isGameOwner) {
 
         //
         // Swapping is allowed in these circumstances
@@ -3633,42 +3634,45 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         // - OPEN, OCCUPIED
         // - OCCUPIED, OPEN
 
-        if (slotOne->GetTeam() != slotTwo->GetTeam()) {
-          // Ensure user is already captain of the targetted player, or captain of the team we want to move it to.
-          if (!GetIsGameUser() || (!GetGameUser()->GetIsDraftCaptainOf(slotOne->GetTeam()) && !GetGameUser()->GetIsDraftCaptainOf(slotTwo->GetTeam()))) {
-            // Attempting to swap two slots of different unauthorized teams.
-            ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
-            break;
-          }
-          // One targetted slot is authorized. The other one belongs to another team.
-          // Allow snatching or donating the player, but not trading it for another player.
-          // Non-players cannot be transferred.
-          if ((userOne == nullptr) == (userTwo == nullptr)) {
-            ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
-            break;
-          }
-          if (userOne == nullptr) {
-            // slotOne is guaranteed to be occupied by a non-user
-            // slotTwo is guaranteed to be occupied by a user
-            if (slotOne->GetSlotStatus() != SLOTSTATUS_OPEN) {
+        if (checkDraft) {
+          if (slotOne->GetTeam() != slotTwo->GetTeam()) {
+            // Ensure user is already captain of the targetted player, or captain of the team we want to move it to.
+            if (!GetIsGameUser() || (!GetGameUser()->GetIsDraftCaptainOf(slotOne->GetTeam()) && !GetGameUser()->GetIsDraftCaptainOf(slotTwo->GetTeam()))) {
+              // Attempting to swap two slots of different unauthorized teams.
               ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
               break;
             }
+            // One targetted slot is authorized. The other one belongs to another team.
+            // Allow snatching or donating the player, but not trading it for another player.
+            // Non-players cannot be transferred.
+            if ((userOne == nullptr) == (userTwo == nullptr)) {
+              ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+              break;
+            }
+            if (userOne == nullptr) {
+              // slotOne is guaranteed to be occupied by a non-user
+              // slotTwo is guaranteed to be occupied by a user
+              if (slotOne->GetSlotStatus() != SLOTSTATUS_OPEN) {
+                ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+                break;
+              }
+            } else {
+              // slotTwo is guaranteed to be occupied by a non-user
+              // slotOne is guaranteed to be occupied by a user
+              if (slotTwo->GetSlotStatus() != SLOTSTATUS_OPEN) {
+                ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
+                break;
+              }
+            }
+          } else if (!GetIsGameUser() || !GetGameUser()->GetIsDraftCaptainOf(slotOne->GetTeam())) {
+            // Both targetted slots belong to the same team, but not to the authorized team.
+            ErrorReply("You are not draft captain for team " + ToDecString(slotOne->GetTeam() + 1) + ".");
+            break;
           } else {
-            // slotTwo is guaranteed to be occupied by a non-user
-            // slotOne is guaranteed to be occupied by a user
-            if (slotTwo->GetSlotStatus() != SLOTSTATUS_OPEN) {
-              ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
-              break;
-            }
+            // OK. Attempting to swap two slots within own team.
+            // They could actually do it themselves,
+            // but not if their team is full (or if they are AFK.)
           }
-        } else if (!GetIsGameUser() || !GetGameUser()->GetIsDraftCaptainOf(slotOne->GetTeam())) {
-          // Both targetted slots belong to the same team, but not to the authorized team.
-          ErrorReply("You are not the game owner, and therefore cannot edit game slots.");
-          break;
-        } else {
-          // OK. Attempting to swap two slots within own team.
-          // They could do it themselves tbh. But let's think of the afks.
         }
       }
 
@@ -5457,9 +5461,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      bool onlyDraft = false;
       if (!GetIsSudo()) {
-        if ((onlyDraft = targetGame->GetIsDraftMode())) {
+        if (targetGame->GetIsDraftMode()) {
           if (!GetIsGameUser() || !GetGameUser()->GetIsDraftCaptain()) {
             ErrorReply("Draft mode is enabled. Only draft captains may assign teams.");
             break;
@@ -5515,7 +5518,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
       }
-      if (onlyDraft && !GetGameUser()->GetIsDraftCaptainOf(targetTeam)) {
+      if (targetGame->GetIsDraftMode() && !GetGameUser()->GetIsDraftCaptainOf(targetTeam) && !GetIsSudo()) {
         ErrorReply("You are not the captain of team " + ToDecString(targetTeam + 1));
         break;
       }

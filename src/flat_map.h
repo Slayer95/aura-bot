@@ -107,6 +107,7 @@ public:
 
   size_t size() const noexcept { return data_.size(); }
   bool empty() const noexcept { return data_.empty(); }
+  const std::vector<KVPair>& get() const noexcept { return data_; }
 
 private:
   std::vector<KVPair> data_;

@@ -15,6 +15,7 @@
 class CBonjour
 {
 public:
+  CAura*                      m_Aura;
   DNSServiceRef               m_Service;
   DNSRecordRef                m_Record;
   uint8_t                     m_InterfaceType;
@@ -22,7 +23,7 @@ public:
   bool                        m_GameIsExpansion;
   Version                     m_GameVersion;
 
-  CBonjour(CAura* nAura, std::shared_ptr<CGame> nGame, uint8_t interfaceType, uint16_t port, const Version& version);
+  CBonjour(CAura* nAura, const CGame* nGame, uint8_t interfaceType, uint16_t port, const Version& version);
   ~CBonjour();
 
 #ifdef DISABLE_BONJOUR
@@ -34,8 +35,8 @@ public:
 #endif
 
 #ifndef DISABLE_BONJOUR
-  void PushRecord(std::shared_ptr<CGame> nGame);
-  std::vector<uint8_t> GetGameBroadcastData(std::shared_ptr<CGame> nGame, const std::string& gameName);
+  void PushRecord(std::shared_ptr<const CGame> nGame);
+  std::vector<uint8_t> GetGameBroadcastData(std::shared_ptr<const CGame> nGame, const std::string& gameName);
 #endif
 
   bool static CheckLibrary();
