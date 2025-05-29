@@ -1255,6 +1255,8 @@ CIncomingAction::CIncomingAction(uint8_t nUID, vector<uint8_t>& nAction)
     pair<bool, uint16_t> checkResult = CIncomingAction::CountAPMAtomic(m_Action);
     m_Error = checkResult.first;
     m_Count = checkResult.second;
+  } else {
+    Print("Error: CIncomingAction too large");
   }
 }
 
@@ -1285,8 +1287,10 @@ CIncomingAction::CIncomingAction(CIncomingAction&& other) noexcept
 CIncomingAction& CIncomingAction::operator=(CIncomingAction&& other) noexcept
 {
   if (this != &other) {
-    m_Action = std::move(other.m_Action);
+    m_Error = other.m_Error;
     m_UID = other.m_UID;
+    m_Count = other.m_Count;
+    m_Action = std::move(other.m_Action);
   }
   return *this;
 }
