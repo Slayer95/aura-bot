@@ -592,6 +592,7 @@
     <ClCompile Include="pjass.cpp" />
     <ClCompile Include="realm.cpp" />
     <ClCompile Include="realm_chat.cpp" />
+    <ClCompile Include="realm_games.cpp" />
     <ClCompile Include="map.cpp" />
     <ClCompile Include="packed.cpp" />
     <ClCompile Include="save_game.cpp" />
@@ -662,6 +663,7 @@
     <ClInclude Include="pjass.h" />
     <ClInclude Include="realm.h" />
     <ClInclude Include="realm_chat.h" />
+    <ClInclude Include="realm_games.h" />
     <ClInclude Include="map.h" />
     <ClInclude Include="packed.h" />
     <ClInclude Include="save_game.h" />

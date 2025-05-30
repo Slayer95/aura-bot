@@ -108,6 +108,9 @@
     <ClCompile Include="realm_chat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="realm_games.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -312,6 +315,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="realm_chat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="realm_games.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="map.h">

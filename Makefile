@@ -141,6 +141,7 @@ OBJS = lib/base64/base64.o \
        src/net.o \
        src/realm.o \
        src/realm_chat.o \
+       src/realm_games.o \
        src/async_observer.o \
        src/game_controller_data.o \
        src/game_interactive_host.o \
