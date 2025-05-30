@@ -78,6 +78,7 @@ struct CGameVirtualUser
   [[nodiscard]] bool                            GetCanResume() const;
   [[nodiscard]] bool                            GetCanSave() const;
   [[nodiscard]] bool                            GetCanSaveEnded() const;
+  [[nodiscard]] bool                            GetCanShare() const;
   [[nodiscard]] bool                            GetCanShare(const uint8_t SID) const;
   [[nodiscard]] bool                            GetCanTrade(const uint8_t SID) const;
   [[nodiscard]] bool                            GetCanMiniMapSignal(const GameUser::CGameUser* /*user*/) const;
@@ -120,6 +121,7 @@ struct CGameVirtualUser
   inline void SetCannotSave() { m_RemainingSaves = 0; }
   inline void DropRemainingPauses() { --m_RemainingPauses; }
   inline void SetCannotPause() { m_RemainingPauses = 0; }
+  inline void SetCannotShareUnits() { m_AllowedActions &= ~VIRTUAL_USER_ALLOW_ACTIONS_SHARE_UNITS; }
 
   void RefreshUID();
 };

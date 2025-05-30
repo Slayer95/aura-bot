@@ -1513,18 +1513,6 @@ server connectivity or are safe to run in an offline context.
 Use this flag when the command is purely local or when immediate execution is desired regardless 
 of connection status.
 
-## \`--exec-game \<IDENTIFIER\>\`
-
-This parameter determines where the command specified by --exec will be run.
-
-**Options:**
-
-- lobby: The command runs in the hosted lobby.
-- game#\<GAME\>: The command runs in the game with the specified ID.
-
-Set the appropriate game based on where you want the command to be executed, or
-leave empty.
-
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://gitlab.com/ivojulca/aura-bot/NETWORKING.md
 [3]: https://owasp.org/www-community/attacks/Path_Traversal

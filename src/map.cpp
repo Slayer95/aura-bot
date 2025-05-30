@@ -2202,6 +2202,9 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.load_in_game.enabled")) {
     m_LoadInGame = CFG.GetBool("map.hosting.load_in_game.enabled", false);
   }
+  if (CFG.Exists("map.hosting.fake_users.share_units.mode")) {
+    m_FakeUsersShareUnitsMode = CFG.GetStringIndex("map.hosting.fake_users.share_units.mode", {"never", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_TEAM);
+  }
   if (CFG.Exists("map.hosting.join_in_progress.observers")) {
     m_EnableJoinObserversInProgress = CFG.GetBool("map.hosting.join_in_progress.observers", false);
   }

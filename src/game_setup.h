@@ -197,6 +197,7 @@ public:
   std::optional<bool>                             m_GameIsExpansion;
   std::optional<Version>                          m_GameVersion;
   std::optional<bool>                             m_LoadInGame;
+  std::optional<uint8_t>                          m_FakeUsersShareUnitsMode;
   std::optional<bool>                             m_EnableJoinObserversInProgress;
   std::optional<bool>                             m_EnableJoinPlayersInProgress;
   std::optional<bool>                             m_LogCommands;
@@ -392,6 +393,7 @@ public:
   inline void SetGameIsExpansion(const bool nGameIsExpansion) { m_GameIsExpansion = nGameIsExpansion; }
   inline void SetGameVersion(const Version& nGameVersion) { m_GameVersion = nGameVersion; }
   inline void SetLoadInGame(const bool nGameLoadInGame) { m_LoadInGame = nGameLoadInGame; }
+  inline void SetFakeUsersShareUnitsMode(const bool nShareUnitsMode) { m_FakeUsersShareUnitsMode = nShareUnitsMode; }
   inline void SetEnableJoinObserversInProgress(const bool nGameEnableJoinObserversInProgress) { m_EnableJoinObserversInProgress = nGameEnableJoinObserversInProgress; }
   inline void SetEnableJoinPlayersInProgress(const bool nGameEnableJoinPlayersInProgress) { m_EnableJoinPlayersInProgress = nGameEnableJoinPlayersInProgress; }
 

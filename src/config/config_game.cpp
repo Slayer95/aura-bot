@@ -180,6 +180,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_HideLobbyNames                         = CFG.GetBool("hosting.nicknames.hide_lobby", false);
   m_HideInGameNames                        = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoadInGame                             = CFG.GetBool("hosting.load_in_game.enabled", false);
+  m_FakeUsersShareUnitsMode                = CFG.GetStringIndex("hosting.fake_users.share_units.mode", {"never", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_TEAM);
   m_EnableJoinObserversInProgress          = CFG.GetBool("hosting.join_in_progress.observers", false);
   m_EnableJoinPlayersInProgress            = CFG.GetBool("hosting.join_in_progress.players", false);
 
@@ -315,6 +316,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_HideLobbyNames, m_HideLobbyNames, m_HideLobbyNames)
   INHERIT_MAP_OR_CUSTOM(m_HideInGameNames, m_HideInGameNames, m_HideInGameNames)
   INHERIT_MAP_OR_CUSTOM(m_LoadInGame, m_LoadInGame, m_LoadInGame)
+  INHERIT_MAP_OR_CUSTOM(m_FakeUsersShareUnitsMode, m_FakeUsersShareUnitsMode, m_FakeUsersShareUnitsMode)
   INHERIT_MAP_OR_CUSTOM(m_EnableJoinObserversInProgress, m_EnableJoinObserversInProgress, m_EnableJoinObserversInProgress)
   INHERIT_MAP_OR_CUSTOM(m_EnableJoinPlayersInProgress, m_EnableJoinPlayersInProgress, m_EnableJoinPlayersInProgress)
 

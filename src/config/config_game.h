@@ -112,6 +112,7 @@ struct CGameConfig
   bool                     m_HideLobbyNames;
   uint8_t                  m_HideInGameNames;
   bool                     m_LoadInGame;
+  uint8_t                  m_FakeUsersShareUnitsMode;
   bool                     m_EnableJoinObserversInProgress;
   bool                     m_EnableJoinPlayersInProgress;
 

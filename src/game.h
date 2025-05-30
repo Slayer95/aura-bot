@@ -756,7 +756,7 @@ public:
   void StartCountDownFast(bool force);
   void StopCountDown();
   bool SendEveryoneElseLeftAndDisconnect(const std::string& reason) const;
-  bool SendFakeUsersShareControlWithTeam();
+  bool TrySendFakeUsersShareControl();
   void ShowPlayerNamesGameStartLoading();
   void ShowPlayerNamesInGame();
   bool StopPlayers(const std::string& reason);

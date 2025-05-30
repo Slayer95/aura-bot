@@ -24,6 +24,7 @@
  */
 
 #include "game_virtual_user.h"
+#include "game_controller_data.h"
 
 #include "protocol/game_protocol.h"
 #include "game.h"
@@ -103,9 +104,29 @@ bool CGameVirtualUser::GetCanSaveEnded() const
   return true;
 }
 
-bool CGameVirtualUser::GetCanShare(const uint8_t /*SID*/) const
+bool CGameVirtualUser::GetCanShare() const
 {
-  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE)) return false;
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE_UNITS)) return false;
+  return true;
+}
+
+bool CGameVirtualUser::GetCanShare(const uint8_t SID) const
+{
+  if (SID == m_SID) return false;
+  if (!(m_AllowedActions & VIRTUAL_USER_ALLOW_ACTIONS_SHARE_UNITS)) return false;
+  const CGameController* gameController = m_Game.get().GetGameControllerFromUID(m_UID);
+  const CGameSlot* slot = m_Game.get().InspectSlot(SID);
+  if (!slot || !m_Game.get().GetIsRealPlayerSlot(SID)) return false;
+  switch (m_Game.get().m_Config.m_FakeUsersShareUnitsMode) {
+    case FAKE_USERS_SHARE_UNITS_MODE_TEAM: {
+      return slot->GetTeam() == gameController->GetTeam();
+    }
+    case FAKE_USERS_SHARE_UNITS_MODE_ALL: {
+      return true;
+    }
+    default:
+      return false;
+  }
   return true;
 }
 

@@ -1713,6 +1713,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameHideLoadedNames.has_value()) SetHideInGameNames(nCLI->GetGameHideLoadedNames());
   if (nCLI->m_GameResultSource.has_value()) SetResultSource(nCLI->GetGameResultSource());
   if (nCLI->m_GameLoadInGame.has_value()) SetLoadInGame(nCLI->m_GameLoadInGame.value());
+  if (nCLI->m_GameFakeUsersShareUnitsMode.has_value()) SetFakeUsersShareUnitsMode(nCLI->GetGameFakeUsersShareUnitsMode());
   if (nCLI->m_GameEnableJoinObserversInProgress.has_value()) SetEnableJoinObserversInProgress(nCLI->m_GameEnableJoinObserversInProgress.value());
   if (nCLI->m_GameEnableJoinPlayersInProgress.has_value()) SetEnableJoinPlayersInProgress(nCLI->m_GameEnableJoinPlayersInProgress.value());
 

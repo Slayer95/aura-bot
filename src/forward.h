@@ -120,6 +120,8 @@ struct GameControllerSearchResult;
 struct GameDiscoveryInterface;
 struct GameHistory;
 struct GameInteraction;
+struct GameSearchMatch;
+struct GameSearchQuery;
 struct GameSource;
 struct GameUserSearchResult;
 struct GameResults;

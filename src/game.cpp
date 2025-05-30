@@ -5029,21 +5029,15 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
   return anyStopped;
 }
 
-bool CGame::SendFakeUsersShareControlWithTeam()
+bool CGame::TrySendFakeUsersShareControl()
 {
   bool anyShared = false;
   for (auto& fakeUser : m_FakeUsers) {
-    if (fakeUser.GetIsObserver()) continue;
-    const uint8_t fromUID = fakeUser.GetUID();
-    const CGameController* gameController = GetGameControllerFromUID(fromUID);
-    const uint8_t team = gameController->GetTeam();
+    if (!fakeUser.GetCanShare()) continue;
     uint8_t toSID = static_cast<uint8_t>(m_Slots.size());
     while (toSID--) {
-      const CGameSlot* toSlot = InspectSlot(toSID);
-      if (!toSlot->GetIsPlayerOrFake()) continue;
-      if (team != toSlot->GetTeam() || toSID == gameController->GetSID()) continue;
       if (!fakeUser.GetCanShare(toSID)) continue;
-      if (ShareUnits(fromUID, toSID, GetLastActionFrame())) {
+      if (ShareUnits(fakeUser.GetUID(), toSID, GetLastActionFrame())) {
         anyShared = true;
       }
     }
@@ -7065,10 +7059,8 @@ void CGame::EventGameLoaded()
     // Tested at 793b88d5 (2024-09-07): caused the WC3 client to straight up quit the game.
     // Tested at e6fd6133 (2024-09-25): correctly untracks wormwar.ini (yet lags), correctly untracks lastrefugeamai.ini --observers=no
     SendEveryoneElseLeftAndDisconnect("single-player game untracked");
-  } else if (m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_NATIVE) {
-    if (SendFakeUsersShareControlWithTeam()) {
-      SendAllChat("Virtual players will share unit control with their allies");
-    }
+  } else if (TrySendFakeUsersShareControl()) {
+    SendAllChat("Virtual players will share unit control with their allies");
   }
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
@@ -7831,6 +7823,12 @@ void CGame::ResolveVirtualUsers()
     if (CreateFakePlayer(nullopt)) {
       ++m_JoinedVirtualHosts;
       LOG_APP_IF(LOG_LEVEL_DEBUG, "Added filler virtual player")
+    }
+  }
+
+  for (auto& fakeUser : m_FakeUsers) {
+    if (fakeUser.GetIsObserver()) {
+      fakeUser.SetCannotShareUnits();
     }
   }
 }

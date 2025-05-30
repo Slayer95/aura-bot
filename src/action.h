@@ -65,7 +65,6 @@ struct LazyCommandContext
   int64_t queuedTicks;
   std::string command;
   std::string target;
-  std::string targetGame;
   std::string identityName;
   std::string identityLoc;
   CommandAuth auth;
@@ -81,8 +80,6 @@ struct LazyCommandContext
      auth(nAuth)
   {
   };
-
-  inline void SetTargetGame(const std::string& nTargetGame) { targetGame = nTargetGame; }
 
   ~LazyCommandContext() = default;
 };

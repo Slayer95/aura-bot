@@ -173,6 +173,7 @@ public:
   std::optional<bool>                   m_GameHideLobbyNames;
   std::optional<std::string>            m_GameHideLoadedNames;
   std::optional<bool>                   m_GameLoadInGame;
+  std::optional<std::string>            m_GameFakeUsersShareUnitsMode;
   std::optional<bool>                   m_GameEnableJoinObserversInProgress;
   std::optional<bool>                   m_GameEnableJoinPlayersInProgress;
   std::optional<bool>                   m_GameLogCommands;
@@ -186,7 +187,6 @@ public:
   // Command queue
   std::optional<std::string>            m_ExecAs;
   CommandAuth                           m_ExecAuth;
-  std::string                           m_ExecGame;
   std::vector<std::string>              m_ExecCommands;
   bool                                  m_ExecBroadcast;
   bool                                  m_ExecOnline;
@@ -214,6 +214,7 @@ public:
   [[nodiscard]] uint8_t GetGameCrossPlayMode() const;
   [[nodiscard]] uint8_t GetGameHideLoadedNames() const;
   [[nodiscard]] uint8_t GetGameResultSource() const;
+  [[nodiscard]] uint8_t GetGameFakeUsersShareUnitsMode() const;
   [[nodiscard]] std::optional<Version> GetGameVersion() const;
   [[nodiscard]] bool CheckGameParameters() const;
   [[nodiscard]] bool RunGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;

@@ -333,6 +333,7 @@ public:
   std::optional<bool>                   m_HideLobbyNames;
   std::optional<uint8_t>                m_HideInGameNames;
   std::optional<bool>                   m_LoadInGame;
+  std::optional<uint8_t>                m_FakeUsersShareUnitsMode;
   std::optional<bool>                   m_EnableJoinObserversInProgress;
   std::optional<bool>                   m_EnableJoinPlayersInProgress;
 

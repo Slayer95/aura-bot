@@ -8238,13 +8238,6 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
     return APP_ACTION_ERROR;
   }
 
-  if (!lazyCtx.targetGame.empty()) {
-    targetGame = nAura->GetGameByString(lazyCtx.targetGame);
-    if (!targetGame) {
-      return APP_ACTION_WAIT;
-    }
-  }
-
   switch (serviceType) {
     case ServiceType::kGame:
     case ServiceType::kDiscord:

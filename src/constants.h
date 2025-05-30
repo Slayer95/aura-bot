@@ -644,7 +644,7 @@ constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_NONE = 0u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_PAUSE = 1u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_RESUME = 2u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_SAVE = 4u;
-constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_SHARE = 8u;
+constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_SHARE_UNITS = 8u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_TRADE = 16u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_MINIMAP_SIGNAL = 32u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_CHAT_TRIGGER = 64u;
@@ -791,6 +791,10 @@ constexpr uint8_t HIDE_IGN_NEVER = 0u;
 constexpr uint8_t HIDE_IGN_HOST = 1u;
 constexpr uint8_t HIDE_IGN_ALWAYS = 2u;
 constexpr uint8_t HIDE_IGN_AUTO = 3u;
+
+constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_NEVER = 0u;
+constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_TEAM = 1u;
+constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_ALL = 2u;
 
 constexpr uint8_t ON_ADV_ERROR_IGNORE_ERRORS = 0u;
 constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAIN_ERROR = 1u;
