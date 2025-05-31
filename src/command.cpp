@@ -2935,14 +2935,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      targetPlayer->CloseConnection();
-      //targetPlayer->SetDeleteMe(true);
       targetPlayer->SetLeftReason("was kicked by [" + GetSender() + "]");
-
       if (targetGame->GetIsLobbyStrict())
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
       else
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOST);
+
+      if (targetPlayer->GetIsLagging()) {
+        StopLagger(targetPlayer, targetPlayer->GetLeftReason());
+      } else {
+        targetPlayer->DisableReconnect();
+        targetPlayer->CloseConnection();
+        //targetPlayer->SetDeleteMe(true);
+      }
 
       if (targetGame->GetIsLobbyStrict()) {
         bool KickAndClose = cmdHash == HashCode("ckick") || cmdHash == HashCode("closekick");
