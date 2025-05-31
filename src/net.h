@@ -123,7 +123,7 @@ public:
   sockaddr_storage*                                           m_MainBroadcastTarget;
   sockaddr_storage*                                           m_ProxyBroadcastTarget;
 
-  std::map<uint16_t, std::weak_ptr<CTCPServer>>               m_GameServers;
+  std::map<uint16_t, std::shared_ptr<CTCPServer>>             m_GameServers;
   std::map<uint16_t, std::vector<CConnection*>>               m_IncomingConnections;        // connections that haven't identified their protocol yet
   std::map<uint16_t, std::vector<CTCPProxy*>>                 m_GameProxies;
   std::map<uint16_t, std::vector<CGameSeeker*>>               m_GameSeekers;                // connections that use complementary protocols, such as VLAN, or UDP over TCP

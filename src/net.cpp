@@ -537,7 +537,7 @@ uint32_t CNet::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds)
   }
 
   for (const auto& entry : m_GameServers) {
-    if (auto server = entry.second.lock()) {
+    if (auto server = entry.second) {
       server->SetFD(fd, send_fd, nfds);
       ++NumFDs;
     }
@@ -579,7 +579,7 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
   // if hosting a lobby, accept new connections to its game server
 
   for (const auto& entry : m_GameServers) {
-    if (auto server = entry.second.lock()) {
+    if (auto server = entry.second) {
       if (m_Aura->m_ExitingSoon) {
         server->Discard(fd);
         continue;
@@ -1848,11 +1848,8 @@ shared_ptr<CTCPServer> CNet::GetOrCreateTCPServer(uint16_t inputPort, const stri
   {
     auto it = m_GameServers.find(inputPort);
     if (it != m_GameServers.end()) {
-      if (!it->second.expired()) {
-        Print("[TCP] " + name + " assigned to port " + to_string(inputPort));
-        return it->second.lock();
-      }
-      m_GameServers.erase(it);
+      Print("[TCP] " + name + " assigned to port " + to_string(inputPort));
+      return it->second;
     }
     // it maybe invalidated
   }
@@ -2000,6 +1997,8 @@ void CNet::EventRealmDeleted(shared_ptr<const CRealm> realm)
 
 void CNet::ClearStaleServers()
 {
+  // noop, hold onto our ports
+  /*
   for (auto it = begin(m_GameServers); it != end(m_GameServers);) {
     if (it->second.expired()) {
       it = m_GameServers.erase(it);
@@ -2007,6 +2006,7 @@ void CNet::ClearStaleServers()
       ++it;
     }
   }
+  */
 }
 
 void CNet::GracefulExit()
