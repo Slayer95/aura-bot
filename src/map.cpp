@@ -442,6 +442,67 @@ bool CMap::SetMapSpeed(const uint8_t nMapSpeed)
   return true;
 }
 
+bool CMap::SetGameConvertedFlags(const uint32_t gameFlags)
+{
+  m_GameFlags = 0;
+
+  // speed
+
+  if (gameFlags & 0x00000002) {
+    m_MapSpeed = MAPSPEED_FAST;
+  } else if (gameFlags & 0x00000001) {
+    m_MapSpeed = MAPSPEED_NORMAL;
+  } else {
+    m_MapSpeed = MAPSPEED_SLOW;
+  }
+
+  // visibility
+
+  if (gameFlags & 0x00000800) {
+    m_MapVisibility = MAPVIS_DEFAULT;
+  } else if (gameFlags & 0x00000400) {
+    m_MapVisibility = MAPVIS_ALWAYSVISIBLE;
+  } else if (gameFlags & 0x00000200) {
+    m_MapVisibility = MAPVIS_EXPLORED;
+  } else if (gameFlags & 0x00000100) {
+    m_MapVisibility = MAPVIS_HIDETERRAIN;
+  }
+
+  // observers
+
+  if (gameFlags & 0x40000000) {
+    m_MapObservers = MAPOBS_REFEREES;
+  } else if (gameFlags & 0x00003000) {
+    m_MapObservers = MAPOBS_ALLOWED;
+  } else if (gameFlags & 0x00002000) {
+    m_MapObservers = MAPOBS_ONDEFEAT;
+  }
+
+  // teams/units/hero/race
+
+  if (gameFlags & 0x00004000) {
+    m_GameFlags |= MAPFLAG_TEAMSTOGETHER;
+  }
+
+  if (gameFlags & 0x00060000) {
+    m_GameFlags |= MAPFLAG_FIXEDTEAMS;
+  }
+
+  if (gameFlags & 0x01000000) {
+    m_GameFlags |= MAPFLAG_UNITSHARE;
+  }
+
+  if (gameFlags & 0x02000000) {
+    m_GameFlags |= MAPFLAG_RANDOMHERO;
+  }
+
+  if (gameFlags & 0x04000000) {
+    m_GameFlags |= MAPFLAG_RANDOMRACES;
+  }
+
+  return true;
+}
+
 bool CMap::SetTeamsLocked(const bool nEnable)
 {
   if (nEnable) {
@@ -2203,7 +2264,7 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_LoadInGame = CFG.GetBool("map.hosting.load_in_game.enabled", false);
   }
   if (CFG.Exists("map.hosting.fake_users.share_units.mode")) {
-    m_FakeUsersShareUnitsMode = CFG.GetStringIndex("map.hosting.fake_users.share_units.mode", {"never", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_TEAM);
+    m_FakeUsersShareUnitsMode = CFG.GetStringIndex("map.hosting.fake_users.share_units.mode", {"never", "auto", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_AUTO);
   }
   if (CFG.Exists("map.hosting.join_in_progress.observers")) {
     m_EnableJoinObserversInProgress = CFG.GetBool("map.hosting.join_in_progress.observers", false);

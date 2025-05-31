@@ -584,6 +584,7 @@
     <ClCompile Include="socket.cpp" />
     <ClCompile Include="net.cpp" />
     <ClCompile Include="game_controller_data.cpp" />
+    <ClCompile Include="game_host.cpp" />
     <ClCompile Include="game_interactive_host.cpp" />
     <ClCompile Include="auradb.cpp" />
     <ClCompile Include="bncsutil_interface.cpp" />
@@ -655,6 +656,7 @@
     <ClInclude Include="net.h" />
     <ClInclude Include="action.h" />
     <ClInclude Include="game_controller_data.h" />
+    <ClInclude Include="game_host.h" />
     <ClInclude Include="game_interactive_host.h" />
     <ClInclude Include="auradb.h" />
     <ClInclude Include="bncsutil_interface.h" />

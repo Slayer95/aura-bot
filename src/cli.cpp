@@ -213,7 +213,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")->check(CLI::IsMember({"never", "host", "always", "auto"}));
   app.add_flag(  "--hide-ign,--no-hide-ign{false}", m_GameHideLobbyNames, "Whether to hide player names in a hosted game lobby.");
   app.add_flag(  "--load-in-game,--no-load-in-game{false}", m_GameLoadInGame, "Whether to allow players chat in the game while waiting for others to finish loading.");
-  app.add_option("--fake-users-shared-control", m_GameFakeUsersShareUnitsMode, "Whether to automatically let fake users share unit control with players. Values: never, team, all")->check(CLI::IsMember({"never", "team", "all"}));
+  app.add_option("--fake-users-shared-control", m_GameFakeUsersShareUnitsMode, "Whether to automatically let fake users share unit control with players. Values: never, auto, team, all")->check(CLI::IsMember({"never", "auto", "team", "all"}));
   app.add_flag(  "--join-in-progress-observers,--no-join-in-progress-observers{false}", m_GameEnableJoinObserversInProgress, "Whether to allow observers to watch the game after it has already started.");
   app.add_flag(  "--join-in-progress-players,--no-join-in-progress-players{false}", m_GameEnableJoinPlayersInProgress, "Whether to allow players to join the game after it has already started.");
   app.add_flag(  "--log-game-commands,--no-log-game-commands{false}", m_GameLogCommands, "Whether to log usage of chat triggers in a hosted game lobby.");
@@ -554,6 +554,8 @@ uint8_t CCLI::GetGameFakeUsersShareUnitsMode() const
   if (m_GameFakeUsersShareUnitsMode.has_value()) {
     if (m_GameFakeUsersShareUnitsMode.value() == "never") {
       fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_NEVER;
+    } else if (m_GameFakeUsersShareUnitsMode.value() == "auto") {
+      fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_AUTO;
     } else if (m_GameFakeUsersShareUnitsMode.value() == "team") {
       fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_TEAM;
     } else if (m_GameFakeUsersShareUnitsMode.value() == "all") {

@@ -84,6 +84,9 @@
     <ClCompile Include="game_controller_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game_host.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="game_interactive_host.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -291,6 +294,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_controller_data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_host.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_interactive_host.h">

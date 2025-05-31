@@ -53,12 +53,14 @@
 #include "config/config_realm.h"
 #include "file_util.h"
 #include "game.h"
+#include "game_host.h"
 #include "protocol/game_protocol.h"
 #include "game_user.h"
 #include "protocol/gps_protocol.h"
 #include "hash.h"
 #include "map.h"
 #include "realm_chat.h"
+#include "realm_games.h"
 #include "socket.h"
 #include "util.h"
 
@@ -116,7 +118,8 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
     m_HostName(nRealmConfig->m_HostName),
 
     m_ChatQueueJoinCallback(nullptr),
-    m_ChatQueueGameHostWhois(nullptr)
+    m_ChatQueueGameHostWhois(nullptr),
+    m_GameSearchQuery(nullptr)
 {
 }
 
@@ -211,8 +214,9 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             // official battle.net servers do not respond to NULL packets
             break;
 
-          case BNETProtocol::Magic::GETADVLISTEX:
-            if (m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
+          case BNETProtocol::Magic::GETADVLISTEX: {
+            vector<GameHost> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(Data);
+            if (!thirdPartyHostedGames.empty() && m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
               AppendByteArrayString(relayPacket, ipString, true);
@@ -224,7 +228,18 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               m_Aura->m_Net.Send(&(m_Aura->m_Net.m_Config.m_UDPForwardAddress), relayPacket);
             }
 
+            if (m_GameSearchQuery) {
+              for (const auto& gameHost : thirdPartyHostedGames) {
+                if (m_GameSearchQuery->GetIsMatch(gameHost)) {
+                  if (!m_GameSearchQuery->EventMatch(gameHost)) {
+                    break;
+                  }
+                }
+              }
+            }
+
             break;
+          }
 
           case BNETProtocol::Magic::ENTERCHAT: {
             BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);

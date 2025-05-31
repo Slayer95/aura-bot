@@ -30,11 +30,17 @@
 
 struct GameSearchQuery
 {
-  std::shared_ptr<CRealm>                             m_Realm;
+  std::shared_ptr<CMap>                               m_Map;
+  Version                                             m_GameVersion;
+  std::string                                         m_GameName;
+  std::string                                         m_HostName;
 
   GameSearchQuery();
-  GameSearchQuery(std::shared_ptr<CRealm> nRealm);
+  GameSearchQuery(const Version& gameVersion, const std::string& gameName, const std::string& hostName, std::shared_ptr<CMap> map);
   ~GameSearchQuery();
+
+  [[nodiscard]] bool GetIsMatch(const GameHost& gameHost) const;
+  [[nodiscard]] bool EventMatch(const GameHost& gameHost);
 };
 
 #endif // AURA_REALM_GAMES_H_

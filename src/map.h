@@ -502,6 +502,7 @@ public:
   [[nodiscard]] uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
   [[nodiscard]] bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
   void                                            ClearMapFileContents() { m_MapFileContents.reset(); }
+  bool                                            SetGameConvertedFlags(const uint32_t nFlags);
   bool                                            SetTeamsLocked(const bool nEnable);
   bool                                            SetTeamsTogether(const bool nEnable);
   bool                                            SetAdvancedSharedUnitControl(const bool nEnable);

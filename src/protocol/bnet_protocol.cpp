@@ -46,6 +46,7 @@
 #include "bnet_protocol.h"
 
 #include "../util.h"
+#include "../socket.h"
 
 #include <utility>
 
@@ -68,47 +69,81 @@ namespace BNETProtocol
     return ValidateLength(packet);
   }
 
-  CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& packet)
+  vector<GameHost> RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& data)
   {
-    // DEBUG_Print( "RECEIVED SID_GETADVLISTEX" );
-    // DEBUG_Print( packet );
-
-    // 2 bytes					-> Header
-    // 2 bytes					-> Length
-    // 4 bytes					-> GamesFound
-    // if( GamesFound > 0 )
-    //		10 bytes			-> ???
-    //		2 bytes				-> Port
-    //		4 bytes				-> IP
-    //		null term string		-> GameName
-    //		2 bytes				-> ???
-    //		8 bytes				-> HostCounter
-
-    if (ValidateLength(packet) && packet.size() >= 8)
-    {
-      if (ByteArrayToUInt32(packet, false, 4) > 0 && packet.size() >= 25)
-      {
-        uint16_t Port = ByteArrayToUInt16(packet, false, 18);
-
-        array<uint8_t, 4> IP;
-        copy_n(packet.begin() + 20, 4, IP.begin());
-
-        const vector<uint8_t> GameName = ExtractCString(packet, 24);
-        if (GameName.size() > 0xFF) return nullptr;
-
-        if (packet.size() >= GameName.size() + 35) {
-          array<uint8_t, 4> HostCounter = {
-            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 27, true),
-            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 29, true),
-            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 31, true),
-            ExtractHex(packet, static_cast<uint32_t>(GameName.size()) + 33, true)
-          };
-          return new CIncomingGameHost(IP, Port, GameName, HostCounter);
-        }
-      }
+    vector<GameHost> games;
+    size_t byteCount = data.size();
+    if (!ValidateLength(data) || byteCount < 8) {
+      return games;
     }
 
-    return nullptr;
+    const uint32_t totalGames = ByteArrayToUInt32(data, false, 4);
+    if (totalGames == 0 || totalGames > 100) {
+      return games;
+    }
+
+    games.resize(totalGames);
+    uint32_t gameIndex = 0;
+    size_t cursor = 8;
+    size_t cursorEnd = cursor;
+
+    while (gameIndex < totalGames) {
+      if (byteCount < cursor + 33) {
+        break;
+      }
+      cursor += 4;
+
+      GameHost& gameHost = games[gameIndex];
+      gameHost.SetGameType(ByteArrayToUInt16(data, false, cursor));
+      cursor += 2;
+      cursor += 4; // <0x01 0x00 0x02 0x00>
+
+      uint16_t port = ByteArrayToUInt16(data, true, cursor);
+      cursor += 2;
+      sockaddr_storage address = IPv4BytesToAddress(data.data() + cursor);
+      cursor += 4;
+      SetAddressPort(&address, port);
+      gameHost.SetAddress(address);
+
+      cursor += 4; // zeroes
+      cursor += 4; // zeroes
+
+      gameHost.SetStatus(ByteArrayToUInt32(data, false, cursor));
+      cursor += 4;
+
+      cursor += 4; // <0x2b 0x00 0x00 0x00>
+
+      cursorEnd = FindNullDelimiterOrStart(data, cursor);
+      string gameName = GetStringAddressRange(data, cursor, cursorEnd);
+      if (gameName.empty()) {
+        //Print("[BNETPROTO] Game name was empty #" + to_string(gameIndex + 1) + " at " + gameHost.GetHostDetails());
+        return games/*vector<GameHost>()*/;
+      }
+      //Print("[BNETPROTO] Got game #" + to_string(gameIndex + 1) + " name <" + gameName + "> at " + gameHost.GetHostDetails());
+      gameHost.SetGameName(gameName);
+      cursor += gameName.size() + 1;
+
+      cursorEnd = FindNullDelimiterOrStart(data, cursor);
+      string passWord = GetStringAddressRange(data, cursor, cursorEnd);
+      gameHost.SetPassword(passWord);
+      cursor += passWord.size() + 1;
+
+      cursorEnd = FindNullDelimiterOrEnd(data, cursor);
+      string gameInfo = GetStringAddressRange(data, cursor, cursorEnd);
+      if (gameInfo.empty()) {
+        //Print("[BNETPROTO] Game info was empty");
+        return games/*vector<GameHost>()*/;
+      }
+      if (!gameHost.SetBNETGameInfo(gameInfo)) {
+        //Print("[BNETPROTO] Failed to set BNET game info <" + gameInfo + ">");
+        return games/*vector<GameHost>()*/;
+      }
+      cursor += gameInfo.size() + 1;
+
+      gameIndex++;
+    }
+
+    return games;
   }
 
   EnterChatResult RECEIVE_SID_ENTERCHAT(const vector<uint8_t>& packet)
@@ -1229,35 +1264,3 @@ namespace BNETProtocol
     return vector<uint8_t>{BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::CLANMEMBERLIST, 8, 0, 0, 0, 0, 0};
   }
 };
-
-//
-// CIncomingGameHost
-//
-
-CIncomingGameHost::CIncomingGameHost(array<uint8_t, 4>& nIP, uint16_t nPort, const std::vector<uint8_t>& nGameName, array<uint8_t, 4>& nHostCounter)
-  : m_GameName(string(begin(nGameName), end(nGameName))),
-    m_IP(move(nIP)),
-    m_HostCounter(move(nHostCounter)),
-    m_Port(nPort)
-{
-}
-
-CIncomingGameHost::~CIncomingGameHost() = default;
-
-string CIncomingGameHost::GetIPString() const
-{
-  string Result;
-
-  if (m_IP.size() >= 4)
-  {
-    for (uint32_t i = 0; i < 4; ++i)
-    {
-      Result += to_string(static_cast<uint32_t>(m_IP[i]));
-
-      if (i < 3)
-        Result += ".";
-    }
-  }
-
-  return Result;
-}

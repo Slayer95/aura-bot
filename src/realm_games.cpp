@@ -26,16 +26,9 @@
 #include "realm_games.h"
 
 #include "protocol/bnet_protocol.h"
-#include "command.h"
-#include "config/config.h"
-#include "config/config_realm.h"
-#include "file_util.h"
-#include "game.h"
 #include "includes.h"
-#include "realm.h"
-#include "util.h"
-
-#include "aura.h"
+#include "map.h"
+#include "game_host.h"
 
 using namespace std;
 
@@ -44,15 +37,34 @@ using namespace std;
 //
 
 GameSearchQuery::GameSearchQuery()
- : m_Realm(nullptr)
- {
- }
+{
+}
 
-GameSearchQuery::GameSearchQuery(shared_ptr<CRealm> realm)
- : m_Realm(realm)
+GameSearchQuery::GameSearchQuery(const Version& gameVersion, const string& gameName, const string& hostName, shared_ptr<CMap> map)
+ : m_GameVersion(gameVersion),
+   m_Map(map),
+   m_GameName(gameName),
+   m_HostName(hostName)
 {
 }
 
 GameSearchQuery::~GameSearchQuery()
 {
+}
+
+bool GameSearchQuery::GetIsMatch(const GameHost& gameHost) const
+{
+  if (!m_GameName.empty() && gameHost.GetGameName() != m_GameName) return false;
+  if (!m_HostName.empty() && gameHost.GetHostName() != m_HostName) return false;
+  if (m_Map) {
+    if (m_Map->GetMapScriptsBlizz(m_GameVersion) != gameHost.GetMapScriptsBlizz()) return false;
+    if (m_Map->GetClientFileName() != gameHost.GetMapClientFileName()) return false;
+  }
+  return true;
+}
+
+bool GameSearchQuery::EventMatch(const GameHost& gameHost)
+{
+  if (m_Map) m_Map->SetGameConvertedFlags(gameHost.GetMapFlags());
+  return false; // stop searching
 }

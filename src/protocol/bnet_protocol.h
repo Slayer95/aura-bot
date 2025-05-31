@@ -55,6 +55,7 @@
 #include "../includes.h"
 #include "../config/config.h"
 #include "../hash.h"
+#include "../game_host.h"
 
 namespace BNETProtocol
 {
@@ -329,7 +330,7 @@ namespace BNETProtocol
   // receive functions
 
   [[nodiscard]] bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingGameHost* RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
+  [[nodiscard]] std::vector<GameHost> RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::IncomingChatResult RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
   [[nodiscard]] bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);
@@ -372,29 +373,6 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::array<uint8_t, 20>& clientPasswordProof);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_FRIENDLIST();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CLANMEMBERLIST();
-};
-
-//
-// CIncomingGameHost
-//
-
-class CIncomingGameHost
-{
-private:
-  std::string                 m_GameName;
-  std::array<uint8_t, 4>      m_IP;
-  std::array<uint8_t, 4>      m_HostCounter;
-  uint16_t                    m_Port;
-
-public:
-  CIncomingGameHost(std::array<uint8_t, 4>& nIP, uint16_t nPort, const std::vector<uint8_t>& nGameName, std::array<uint8_t, 4>& nHostCounter);
-  ~CIncomingGameHost();
-
-  [[nodiscard]] std::string                           GetIPString() const;
-  [[nodiscard]] inline const std::array<uint8_t, 4>&  GetIP() const { return m_IP; }
-  [[nodiscard]] inline const uint16_t&                GetPort() const { return m_Port; }
-  [[nodiscard]] inline const std::string&             GetGameName() const { return m_GameName; }
-  [[nodiscard]] inline const std::array<uint8_t, 4>&  GetHostCounter() const { return m_HostCounter; }
 };
 
 #endif // AURA_BNETPROTOCOL_H_

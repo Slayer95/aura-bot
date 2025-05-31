@@ -790,9 +790,6 @@ inline void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, con
 
 [[nodiscard]] inline size_t FindNullDelimiterOrStart(const std::vector<uint8_t>& b, const size_t start)
 {
-  // start searching the byte array at position 'start' for the first null value
-  // if found, return the subarray from 'start' to the null value but not including the null value
-
   size_t end = b.size();
   if (start >= end) return start;
   for (size_t i = start; i < end; ++i) {
@@ -830,10 +827,28 @@ inline void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, con
   return end;
 }
 
+[[nodiscard]] inline const uint8_t* FindNullDelimiterOrEnd(const uint8_t* start, const uint8_t* end)
+{
+  const uint8_t* needle = start;
+  while (needle < end) {
+    if (*needle == 0) {
+      return needle;
+    }
+    ++needle;
+  }
+  return end;
+}
+
 [[nodiscard]] inline std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end)
 {
   if (end == start) return std::string();
   return std::string(reinterpret_cast<const char*>(start), end - start);
+}
+
+[[nodiscard]] inline std::string GetStringAddressRange(const std::vector<uint8_t>& b, const size_t start, const size_t end)
+{
+  if (end == start) return std::string();
+  return std::string(reinterpret_cast<const char*>(b.data() + start), end - start);
 }
 
 [[nodiscard]] inline std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start)
@@ -1163,7 +1178,8 @@ inline void AssignLength(std::vector<uint8_t>& content)
   return result;
 }
 
-[[nodiscard]] inline std::vector<uint8_t> DecodeStatString(const std::vector<uint8_t>& data)
+template <typename T>
+[[nodiscard]] inline std::vector<uint8_t> DecodeStatString(const T& data)
 {
   uint8_t mask = 1u;
   uint8_t bitOrder = 0u;
@@ -1179,25 +1195,25 @@ inline void AssignLength(std::vector<uint8_t>& content)
   result.reserve(outSize);
 
   for (i = 0; i < fullBlockLen; i += 8) {
-    mask = data[i];
+    mask = (uint8_t)data[i];
     for (j = 1; j < 8; j++) {
       bitOrder = (uint8_t)j;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back(data[i + j] - 1);
+        result.push_back((uint8_t)data[i + j] - 1);
       } else {
-        result.push_back(data[i + j]);
+        result.push_back((uint8_t)data[i + j]);
       }
     }
   }
 
   if (fullBlockLen < len) {
-    mask = data[fullBlockLen];
+    mask = (uint8_t)data[fullBlockLen];
     for (i = fullBlockLen + 1; i < len; i++) {
       bitOrder = (uint8_t)i % 8;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back(data[i] - 1);
+        result.push_back((uint8_t)data[i] - 1);
       } else {
-        result.push_back(data[i]);
+        result.push_back((uint8_t)data[i]);
       }
     }
   }
@@ -1560,6 +1576,49 @@ constexpr std::array<std::string, N> StringArray(const char* const (&strings)[N]
     }
   }
   return true;
+}
+
+[[nodiscard]] inline uint32_t ASCIIHexToNum(const std::array<uint8_t, 8>& data, bool reverse)
+{
+  std::string ascii;
+  if (reverse) {
+    ascii = std::string(data.rbegin(), data.rend());
+  } else {
+    ascii = std::string(data.begin(), data.end());
+  }
+  size_t size = ascii.size();
+  uint32_t result = 0;
+  for (size_t j = 0; j < 4; j++) {
+    unsigned int c;
+    std::stringstream SS;
+    SS << ascii.substr(j * 2, 2);
+    SS >> std::hex >> c;
+    result |= c << (24 - j * 8);
+  }
+  return result;
+}
+
+[[nodiscard]] inline std::array<uint8_t, 8> NumToASCIIHex(uint32_t num, bool reverse)
+{
+  std::array<uint8_t, 8> result;
+  result.fill(0x30);
+
+  for (size_t j = 0; j < 4; j++) {
+    unsigned char c;
+    if (reverse) {
+      c = num >> (24 - j * 8);
+    } else {
+      c = num >> (j * 8);
+    }
+    std::string fragment = ToHexString(c);
+    if (c > 0xF) {
+      result[7 - (j * 2)] = fragment[0];
+      result[6 - (j * 2)] = fragment[1];
+    } else {
+      result[6 - (j * 2)] = fragment[0];
+    }
+  }
+  return result;
 }
 
 [[nodiscard]] inline std::string PreparePatternForFuzzySearch(const std::string& rawPattern)

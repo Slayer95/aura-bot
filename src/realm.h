@@ -50,7 +50,6 @@
 #include "socket.h"
 #include "config/config_realm.h"
 #include "protocol/bnet_protocol.h"
-#include "realm_games.h"
 
 #include <fstream>
 
@@ -129,7 +128,7 @@ private:
   std::queue<CQueuedChatMessage*>             m_ChatSentWhispers;
   std::vector<std::pair<int64_t, uint8_t>>    m_ChatQuotaInUse;
 
-  GameSearchQuery                             m_GameSearchQuery;
+  GameSearchQuery*                            m_GameSearchQuery;
 
   friend class CCommandContext;
 

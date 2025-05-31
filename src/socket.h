@@ -378,6 +378,14 @@ inline void SetAddressPort(sockaddr_storage* address, const uint16_t port)
   return address;
 }
 
+[[nodiscard]] inline sockaddr_storage IPv4BytesToAddress(const uint8_t* ipBytes) {
+  sockaddr_storage address;
+  address.ss_family = AF_INET;
+  sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&address);
+  memcpy(&(addr4->sin_addr.s_addr), ipBytes, 4);
+  return address;
+}
+
 //
 // CSocket
 //

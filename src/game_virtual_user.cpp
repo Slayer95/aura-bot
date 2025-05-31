@@ -118,6 +118,11 @@ bool CGameVirtualUser::GetCanShare(const uint8_t SID) const
   const CGameSlot* slot = m_Game.get().InspectSlot(SID);
   if (!slot || !m_Game.get().GetIsRealPlayerSlot(SID)) return false;
   switch (m_Game.get().m_Config.m_FakeUsersShareUnitsMode) {
+    case FAKE_USERS_SHARE_UNITS_MODE_AUTO:
+      if (!(m_Game.get().GetMap()->GetMapDataSet() == MAP_DATASET_MELEE && (m_Game.get().GetMap()->GetMapFlags() & MAPFLAG_FIXEDTEAMS))) {
+        return false;
+      }
+      // falls through
     case FAKE_USERS_SHARE_UNITS_MODE_TEAM: {
       return slot->GetTeam() == gameController->GetTeam();
     }

@@ -793,8 +793,9 @@ constexpr uint8_t HIDE_IGN_ALWAYS = 2u;
 constexpr uint8_t HIDE_IGN_AUTO = 3u;
 
 constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_NEVER = 0u;
-constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_TEAM = 1u;
-constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_ALL = 2u;
+constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_AUTO = 1u;
+constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_TEAM = 2u;
+constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_ALL = 3u;
 
 constexpr uint8_t ON_ADV_ERROR_IGNORE_ERRORS = 0u;
 constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAIN_ERROR = 1u;

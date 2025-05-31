@@ -180,7 +180,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_HideLobbyNames                         = CFG.GetBool("hosting.nicknames.hide_lobby", false);
   m_HideInGameNames                        = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
   m_LoadInGame                             = CFG.GetBool("hosting.load_in_game.enabled", false);
-  m_FakeUsersShareUnitsMode                = CFG.GetStringIndex("hosting.fake_users.share_units.mode", {"never", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_TEAM);
+  m_FakeUsersShareUnitsMode                = CFG.GetStringIndex("hosting.fake_users.share_units.mode", {"never", "auto", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_AUTO);
   m_EnableJoinObserversInProgress          = CFG.GetBool("hosting.join_in_progress.observers", false);
   m_EnableJoinPlayersInProgress            = CFG.GetBool("hosting.join_in_progress.players", false);
 
