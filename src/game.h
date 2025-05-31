@@ -430,6 +430,7 @@ public:
   uint8_t                                                GetIPFloodHandler() const;
   bool                                                   GetAllowsIPFlood() const;
   void                                                   UpdateReadyCounters();
+  bool                                                   GetCanDropOwnerMissing() const;
   void                                                   ResetDropVotes();
   void                                                   ResetOwnerSeen();
   [[nodiscard]] inline bool                              GetIsGameDiscoveryActive() const { return m_GameDiscoveryActive; }

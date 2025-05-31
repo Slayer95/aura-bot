@@ -3795,7 +3795,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       bool hasPermissions = CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER);
-      if (!hasPermissions) {
+      if (!hasPermissions && !GetCanDropOwnerMissing()) {
         GameUser::CGameUser* gameOwner = targetGame->GetOwner();
         if (gameOwner && !gameOwner->GetIsLagging()) {
           ErrorReply("You are not the game owner, and therefore cannot drop laggers.");
@@ -3805,10 +3805,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("This command is not available for this game. Please wait for automatic drop.");
           break;
         }
-        if (targetGame->GetStartedLaggingTime() + 20 >= GetTime()) {
-          ErrorReply(cmdToken + "drop command is not yet available. Please allow some leeway for network conditions to improve.");
-          break;
-        }
+        ErrorReply(cmdToken + "drop command is not freely available yet. Please allow some leeway for network conditions to improve.");
+        break;
       }
 
       if (GetIsGameUser() && GetGameUser()->GetIsOwner(nullopt)) {

@@ -4599,10 +4599,22 @@ void CGame::ReportAllPings() const
         }
       }
     }
-    if (m_StartedLaggingTime + 20 < GetTime()) {
-      SendAllChat(GetCmdToken() + "drop command is available");
+    if (GetCanDropOwnerMissing()) {
+      SendAllChat(GetCmdToken() + "drop command is now freely available");
     }
   }
+}
+
+bool CGame::GetCanDropOwnerMissing() const
+{
+  GameUser::CGameUser* gameOwner = GetOwner();
+  if (gameOwner && !gameOwner->GetIsLagging()) {
+    return false;
+  }
+  if (GetLockedOwnerLess()) {
+    return false;
+  }
+  return m_StartedLaggingTime + 20 < GetTime();
 }
 
 void CGame::ResetDropVotes()
