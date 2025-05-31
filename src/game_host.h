@@ -52,7 +52,7 @@ struct GameHost
   std::string               m_HostName;
 
   GameHost();
-	~GameHost();
+  ~GameHost();
 
   void SetGameType(uint16_t gameType);
   void SetAddress(const sockaddr_storage& address);
