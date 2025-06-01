@@ -2969,6 +2969,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
+      if (targetGame->GetGameLoaded() && !targetPlayer->GetIsLagging() && !GetIsSudo()) {
+        ErrorReply("You are not allowed to kick a player in-game");
+        break;
+      }
+
       targetPlayer->SetLeftReason("was kicked by [" + GetSender() + "]");
       if (targetGame->GetIsLobbyStrict())
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
@@ -4368,7 +4373,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       GameUser::CGameUser* targetPlayer = targetGame->GetUserFromName(targetName, false);
-      if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
+      if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm && (!targetGame->GetCountDownStarted() || targetPlayer->GetIsLagging() || GetIsSudo())) {
+        targetPlayer->DisableReconnect();
         targetPlayer->CloseConnection();
         //targetPlayer->SetDeleteMe(true);
         targetPlayer->SetLeftReason("was banned by [" + GetSender() + "]");
@@ -4499,7 +4505,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       GameUser::CGameUser* targetPlayer = targetGame ? targetGame->GetUserFromName(targetName, false) : nullptr;
-      if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm) {
+      if (targetPlayer && targetPlayer->GetRealm(false) == targetRealm && (!targetGame->GetCountDownStarted() || targetPlayer->GetIsLagging() || GetIsSudo())) {
+        targetPlayer->DisableReconnect();
         targetPlayer->CloseConnection();
         //targetPlayer->SetDeleteMe(true);
         targetPlayer->SetLeftReason("was persistently banned by [" + GetSender() + "]");
@@ -4817,6 +4824,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetGame->GetIsHiddenPlayerNames()) {
         GameUser::CGameUser* targetPlayer = targetGame->GetUserFromName(targetName, false);
         if (!targetPlayer->GetGameVersionIsExact() || targetPlayer->GetGameVersion() != targetVersion) {
+          targetPlayer->DisableReconnect();
           targetPlayer->CloseConnection();
           targetPlayer->SetLeftReason("was automatically kicked (game version mismatch)");
           targetPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
