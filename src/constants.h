@@ -1,6 +1,6 @@
 /*
 
-  Copyright [2024] [Leonardo Julca]
+  Copyright [2024-2025] [Leonardo Julca]
 
   Permission is hereby granted, free of charge, to any person obtaining
   a copy of this software and associated documentation files (the
@@ -42,10 +42,33 @@ constexpr uint8_t LOG_LEVEL_TRACE = 9;
 constexpr uint8_t LOG_LEVEL_TRACE2 = 10;
 constexpr uint8_t LOG_LEVEL_TRACE3 = 11;
 
+enum class LogLevel : uint8_t {
+  kEmergency = 1,
+  kAlert = 2,
+  kCritical = 3,
+  kError = 4,
+  kWarning = 5,
+  kNotice = 6,
+  kInfo = 7,
+  kDebug = 8,
+  kTrace = 9,
+  kTrace2 = 10,
+  kTrace3 = 11,
+  LAST = 12,
+};
+
 constexpr uint8_t ANTI_SPOOF_NONE = 0;
 constexpr uint8_t ANTI_SPOOF_BASIC = 1;
 constexpr uint8_t ANTI_SPOOF_EXTENDED = 2;
 constexpr uint8_t ANTI_SPOOF_FULL = 3;
+
+enum class AntiSpoof : uint8_t {
+  kNone = 0,
+  kBasic = 1,
+  kExtended = 2,
+  kFull = 3,
+  LAST = 4,
+};
 
 constexpr size_t MAX_READ_FILE_SIZE = 0x18000000;
 
@@ -61,11 +84,31 @@ constexpr uint8_t APP_ACTION_ERROR = 1u;
 constexpr uint8_t APP_ACTION_WAIT = 2u;
 constexpr uint8_t APP_ACTION_TIMEOUT = 3u;
 
+enum class AppActionStatus : uint8_t {
+  kDone = 0,
+  kError = 1,
+  kWait = 2,
+  kTimeout = 3,
+  LAST = 4,
+};
+
 constexpr uint8_t APP_ACTION_TYPE_UPNP = 0u;
 constexpr uint8_t APP_ACTION_TYPE_HOST = 1u;
 
+enum class AppActionType : uint8_t {
+  kUPnP = 0,
+  kHost = 1,
+  LAST = 2,
+};
+
 constexpr uint8_t APP_ACTION_MODE_TCP = 0u;
 constexpr uint8_t APP_ACTION_MODE_UDP = 1u;
+
+enum class AppActionMode : uint8_t {
+  kTCP = 0,
+  kUDP = 1,
+  LAST = 2,
+};
 
 enum class OptionalDependencyMode : uint8_t
 {
@@ -73,6 +116,7 @@ enum class OptionalDependencyMode : uint8_t
   kNotUseful = 1u,
   kOptEnhancement = 2u,
   kRequired = 3u,
+  LAST = 4,
 };
 
 enum class ServiceType : uint8_t
@@ -92,6 +136,7 @@ enum class GameCommandSource : uint8_t
   kUser = 1u,
   kSpectator = 2u,
   kReplay = 3u,
+  LAST = 4,
 };
 
 constexpr uint8_t TASK_TYPE_GAME_FRAME = 0;
@@ -100,6 +145,16 @@ constexpr uint8_t TASK_TYPE_MAP_DOWNLOAD = 2;
 constexpr uint8_t TASK_TYPE_HMC_HTTP = 3;
 constexpr uint8_t TASK_TYPE_DB_READ = 4;
 constexpr uint8_t TASK_TYPE_DB_WRITE = 5;
+
+enum class TaskType : uint8_t {
+  kGameFrame = 0,
+  kCheckJoinable = 1,
+  kMapDownload = 2,
+  kHMCHTTP = 3,
+  kDBRead = 4,
+  kDBWrite = 5,
+  LAST = 6,
+};
 
 constexpr uint8_t LOG_C = 1u;
 constexpr uint8_t LOG_P = 2u;
@@ -136,15 +191,38 @@ constexpr uint8_t MAPSPEED_SLOW = 1u;
 constexpr uint8_t MAPSPEED_NORMAL = 2u;
 constexpr uint8_t MAPSPEED_FAST = 3u;
 
+enum class MapSpeed : uint8_t {
+  kSlow = 1,
+  kNormal = 2,
+  kFast = 3,
+  LAST = 4,
+};
+
 constexpr uint8_t MAPVIS_HIDETERRAIN = 1u;
 constexpr uint8_t MAPVIS_EXPLORED = 2u;
 constexpr uint8_t MAPVIS_ALWAYSVISIBLE = 3u;
 constexpr uint8_t MAPVIS_DEFAULT = 4u;
 
+enum class MapVisibility : uint8_t {
+  kHideterrain = 1,
+  kExplored = 2,
+  kAlwaysvisible = 3,
+  kDefault = 4,
+  LAST = 5,
+};
+
 constexpr uint8_t MAPOBS_NONE = 1u;
 constexpr uint8_t MAPOBS_ONDEFEAT = 2u;
 constexpr uint8_t MAPOBS_ALLOWED = 3u;
 constexpr uint8_t MAPOBS_REFEREES = 4u;
+
+enum class MapObservers : uint8_t {
+  kNone = 1,
+  kOndefeat = 2,
+  kAllowed = 3,
+  kReferees = 4,
+  LAST = 5,
+};
 
 constexpr uint8_t MAPFLAG_TEAMSTOGETHER = 1u;
 constexpr uint8_t MAPFLAG_FIXEDTEAMS = 2u;
@@ -172,8 +250,20 @@ constexpr uint32_t MAPOPT_ABILITYSKINS = (1 << 17);
 constexpr uint8_t MAPFILTER_MAKER_USER = 1;
 constexpr uint8_t MAPFILTER_MAKER_BLIZZARD = 2;
 
+enum class MapfilterMaker : uint8_t {
+  kUser = 1,
+  kBlizzard = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t MAPFILTER_TYPE_MELEE = 1;
 constexpr uint8_t MAPFILTER_TYPE_SCENARIO = 2;
+
+enum class MapFilterType : uint8_t {
+  kMelee = 1,
+  kScenario = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t MAPFILTER_SIZE_SMALL = 1;
 constexpr uint8_t MAPFILTER_SIZE_MEDIUM = 2;
@@ -207,13 +297,34 @@ constexpr uint8_t MAP_DATASET_DEFAULT = 0u;
 constexpr uint8_t MAP_DATASET_CUSTOM = 1u;
 constexpr uint8_t MAP_DATASET_MELEE = 2u;
 
+enum class MapDataset : uint8_t {
+  kDefault = 0,
+  kCustom = 1,
+  kMelee = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t CACHE_REVALIDATION_NEVER = 0;
 constexpr uint8_t CACHE_REVALIDATION_ALWAYS = 1u;
 constexpr uint8_t CACHE_REVALIDATION_MODIFIED = 2u;
 
+enum class CacheRevalidation : uint8_t {
+  kNever = 0,
+  kAlways = 1,
+  kModified = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t MAP_FEATURE_TOGGLE_DISABLED = 0u;
 constexpr uint8_t MAP_FEATURE_TOGGLE_OPTIONAL = 1u;
 constexpr uint8_t MAP_FEATURE_TOGGLE_REQUIRED = 2u;
+
+enum class MapFeatureToggle : uint8_t {
+  kDisabled = 0,
+  kOptional = 1,
+  kRequired = 2,
+  LAST = 3,
+};
 
 // Load map fragments in memory max 8 MB at a time.
 constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;
@@ -226,9 +337,23 @@ constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_NONE = 0u;
 constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_MPQ = 1u;
 constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_FS = 2u;
 
+enum class MapFileSourceCategory : uint8_t {
+  kNone = 0,
+  kMpq = 1,
+  kFs = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t MAP_ALLOW_LUA_NEVER = 0u;
 constexpr uint8_t MAP_ALLOW_LUA_ALWAYS = 1u;
 constexpr uint8_t MAP_ALLOW_LUA_AUTO = 2u;
+
+enum class MapAllowLuaMode : uint8_t {
+  kNever = 0,
+  kAlways = 1,
+  kAuto = 2,
+  LAST = 3,
+};
 
 constexpr const char* HCL_CHARSET_STANDARD = "abcdefghijklmnopqrstuvwxyz0123456789 -=,."; // 41 characters
 constexpr const char* HCL_CHARSET_SMALL = "0123456789abcdef-\" \\"; // 20 characters
@@ -236,10 +361,24 @@ constexpr const char* HCL_CHARSET_SMALL = "0123456789abcdef-\" \\"; // 20 charac
 constexpr uint8_t MMD_TYPE_STANDARD = 0u;
 constexpr uint8_t MMD_TYPE_DOTA = 1u;
 
+enum class MMDType : uint8_t {
+  kStandard = 0,
+  kDota = 1,
+  LAST = 2,
+};
+
 constexpr uint8_t AI_TYPE_NONE = 0u;
 constexpr uint8_t AI_TYPE_MELEE = 1u;
 constexpr uint8_t AI_TYPE_AMAI = 2u;
 constexpr uint8_t AI_TYPE_CUSTOM = 3u;
+
+enum class AIType : uint8_t {
+  kNone = 0,
+  kMelee = 1,
+  kAmai = 2,
+  kCustom = 3,
+  LAST = 4,
+};
 
 // 142 UTF-16 chracters, including Latin, Cyrillic, digits, and punctuation
 constexpr const wchar_t* AHCL_DEFAULT_CHARSET = L"\u0030\u0031\u0032\u0033\u0034\u0035\u0036\u0037\u0038\u0039\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006a\u006b\u006c\u006d\u006e\u006f\u0070\u0071\u0072\u0073\u0074\u0075\u0076\u0077\u0078\u0079\u007a\u0041\u0042\u0043\u0044\u0045\u0046\u0047\u0048\u0049\u004a\u004b\u004c\u004d\u004e\u004f\u0050\u0051\u0052\u0053\u0054\u0055\u0056\u0057\u0058\u0059\u005a\u0430\u0431\u0432\u0433\u0434\u0435\u0451\u0436\u0437\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447\u0448\u0449\u044a\u044b\u044c\u044d\u044e\u044f\u0410\u0411\u0412\u0413\u0414\u0415\u0401\u0416\u0417\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427\u0428\u0429\u042a\u042b\u042c\u042d\u042e\u042f\u0020\u002d\u003d\u002c\u002e\u0021\u003f\u002a\u005f\u002b\u003d\u007c\u003a\u003b";
@@ -251,6 +390,16 @@ constexpr uint8_t MAP_TRANSFER_RATE_LIMITED = 3u;
 constexpr uint8_t MAP_TRANSFER_MISSING = 4u;
 constexpr uint8_t MAP_TRANSFER_INVALID = 5u;
 
+enum class MapTransferStatus : uint8_t {
+  kNone = 0,
+  kDone = 1,
+  kInProgress = 2,
+  kRateLimited = 3,
+  kMissing = 4,
+  kInvalid = 5,
+  LAST = 6,
+};
+
 constexpr uint8_t MAP_TRANSFER_CHECK_ALLOWED = 0u;
 constexpr uint8_t MAP_TRANSFER_CHECK_INVALID = 1u;
 constexpr uint8_t MAP_TRANSFER_CHECK_MISSING = 2u;
@@ -258,6 +407,17 @@ constexpr uint8_t MAP_TRANSFER_CHECK_DISABLED = 3u;
 constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE_VERSION = 4u;
 constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG = 5u;
 constexpr uint8_t MAP_TRANSFER_CHECK_BUFFERBLOAT = 6u;
+
+enum class MapTransferCheckResult : uint8_t {
+  kAllowed = 0,
+  kInvalid = 1,
+  kMissing = 2,
+  kDisabled = 3,
+  kTooLargeVersion = 4,
+  kTooLargeConfig = 5,
+  kBufferBloat = 6,
+  LAST = 7,
+};
 
 // game.h
 constexpr uint8_t SLOTS_UNCHANGED = 0;
@@ -268,6 +428,13 @@ constexpr uint8_t SLOTS_HCL_INJECTED = (1 << 2);
 constexpr uint8_t SAVE_ON_LEAVE_NEVER = 0u;
 constexpr uint8_t SAVE_ON_LEAVE_AUTO = 1u;
 constexpr uint8_t SAVE_ON_LEAVE_ALWAYS = 2u;
+
+enum class SaveOnLeaveMode : uint8_t {
+  kNever = 0,
+  kAuto = 1,
+  kAlways = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t CUSTOM_LAYOUT_NONE = 0u;
 constexpr uint8_t CUSTOM_LAYOUT_ONE_VS_ALL = 1u;
@@ -294,14 +461,37 @@ constexpr uint8_t GAME_DISCOVERY_INTERFACE_LOOPBACK = 1u;
 constexpr uint8_t GAME_DISCOVERY_INTERFACE_IPV4 = 2u;
 constexpr uint8_t GAME_DISCOVERY_INTERFACE_IPV6 = 3u;
 
+enum class GameDiscoveryInterfaceType : uint8_t {
+  kNone = 0,
+  kLoopback = 1,
+  kIPv4 = 2,
+  kIPv6 = 3,
+  LAST = 4,
+};
+
 constexpr uint8_t GAME_ONGOING = 0u;
 constexpr uint8_t GAME_OVER_TRUSTED = 1u;
 constexpr uint8_t GAME_OVER_MMD = 2u;
 
+enum class GameOverStatus : uint8_t {
+  kOngoing = 0,
+  kTrusted = 1,
+  kMMD = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t HIDDEN_PLAYERS_NONE = 0u;
-constexpr uint8_t HIDDEN_PLAYERS_LOBBY = 1u;
-constexpr uint8_t HIDDEN_PLAYERS_GAME = 2u;
-constexpr uint8_t HIDDEN_PLAYERS_ALL = 3u;
+constexpr uint8_t HIDDEN_PLAYERS_LOBBY = 1 << 0;
+constexpr uint8_t HIDDEN_PLAYERS_GAME = 1 << 1;
+constexpr uint8_t HIDDEN_PLAYERS_ALL = HIDDEN_PLAYERS_LOBBY | HIDDEN_PLAYERS_GAME;
+
+enum class HiddenPlayersMode : uint8_t {
+  kNone = 0,
+  kLobby = 1,
+  kGame = 2,
+  kAll = 3,
+  LAST = 4,
+};
 
 constexpr int64_t HIGH_PING_KICK_DELAY = 10000;
 constexpr uint8_t MAX_SCOPE_BANS = 100u;
@@ -311,6 +501,13 @@ constexpr int64_t AUTO_REHOST_COOLDOWN_TICKS = 180000;
 constexpr uint8_t ON_SEND_ACTIONS_NONE = 0u;
 constexpr uint8_t ON_SEND_ACTIONS_PAUSE = 1u;
 constexpr uint8_t ON_SEND_ACTIONS_RESUME = 2u;
+
+enum class OnSendActions : uint8_t {
+  kNone = 0,
+  kPause = 1,
+  kResume = 2,
+  LAST = 3,
+};
 
 constexpr int64_t PING_EQUALIZER_PERIOD_TICKS = 10000;
 constexpr uint8_t PING_EQUALIZER_DEFAULT_FRAMES = 7u;
@@ -334,6 +531,16 @@ constexpr uint8_t GAME_FRAME_TYPE_CHAT = 3u;
 constexpr uint8_t GAME_FRAME_TYPE_LATENCY = 4u;
 constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 5u;
 
+enum class GameFrameType : uint8_t {
+  kActions = 0,
+  kPaused = 1,
+  kLeaver = 2,
+  kChat = 3,
+  kLatency = 4,
+  kGProxy = 5,
+  LAST = 6,
+};
+
 constexpr uint8_t GAME_DISCOVERY_CHANGED_NONE = 0u;
 constexpr uint8_t GAME_DISCOVERY_CHANGED_SLOTS = 1u;
 constexpr uint8_t GAME_DISCOVERY_CHANGED_STAT = 2u;
@@ -345,16 +552,27 @@ constexpr uint8_t GAME_RESULT_SOURCE_NONE = 0u;
 constexpr uint8_t GAME_RESULT_SOURCE_LEAVECODE = 1u;
 constexpr uint8_t GAME_RESULT_SOURCE_MMD = 2u;
 
+enum class GameResultSource : uint8_t {
+  kNone = 0,
+  kLeaveCode = 1,
+  kMMD = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t GAME_RESULT_SOURCE_SELECT_NONE = 0u;
 constexpr uint8_t GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE = 1u;
 constexpr uint8_t GAME_RESULT_SOURCE_SELECT_ONLY_MMD = 2u;
 constexpr uint8_t GAME_RESULT_SOURCE_SELECT_PREFER_LEAVECODE = 3u;
 constexpr uint8_t GAME_RESULT_SOURCE_SELECT_PREFER_MMD = 4u;
 
-constexpr uint8_t GAME_RESULT_CONSTRAINTS_NONE = 0u;
-constexpr uint8_t GAME_RESULT_CONSTRAINTS_NODRAW = 1u;
-constexpr uint8_t GAME_RESULT_CONSTRAINTS_SAME_TEAM_WINNERS = 2u;
-constexpr uint8_t GAME_RESULT_CONSTRAINTS_ALL = GAME_RESULT_CONSTRAINTS_NODRAW | GAME_RESULT_CONSTRAINTS_SAME_TEAM_WINNERS;
+enum class GameResultSourceSelect : uint8_t {
+  kNone = 0,
+  kOnlyLeaveCode = 1,
+  kOnlyMMD = 2,
+  kPreferLeaveCode = 3,
+  kPreferMMD = 4,
+  LAST = 5,
+};
 
 constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_VOID = 0u; // vulnerable to griefing
 constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_PESSIMISTIC = 1u; // protects against self-boosting, but vulnerable to griefing
@@ -367,23 +585,62 @@ constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_VOID = 3u;
 constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_PESSIMISTIC = 4u;
 constexpr uint8_t GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_OPTIMISTIC = 5u;
 
+enum class GameResultConflictHandler : uint8_t {
+  kVoid = 0,
+  kPessimistic = 1,
+  kOptimistic = 2,
+  kMajorityOrVoid = 3,
+  kMajorityOrPessimistic = 4,
+  kMajorityOrOptimistic = 5,
+  LAST = 6,
+};
+
 constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_NONE = 0u;
 constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_LOSER_SELF = 1u;
 constexpr uint8_t GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO = 2u;
 
+enum class GameResultVirtualUndecidedHandler : uint8_t {
+  kNone = 0,
+  kLoserSelf = 1,
+  kAuto = 2,
+  LAST = 3,
+};
+
 // Note: We ignore "leaver" flag and just treat them as undecided
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_NONE = 0u;
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF = 1u;
+
+enum class GameResultUserUndecidedHandler : uint8_t {
+  kNone = 0,
+  kLoserSelf = 1,
+  LAST = 2,
+};
+
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES = 2u; // causes allied computers/virtual users to lose
 
 constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_NONE = 0u;
 constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_LOSER_SELF = 1u;
+
+enum class GameResultComputerUndecidedHandler : uint8_t {
+  kNone = 0,
+  kLoserself = 1,
+  LAST = 2,
+};
+
 constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO = 2u; // can win!
 
 constexpr uint8_t GAME_RESULT_LOSER = 0u;
 constexpr uint8_t GAME_RESULT_DRAWER = 1u;
 constexpr uint8_t GAME_RESULT_WINNER = 2u;
 constexpr uint8_t GAME_RESULT_UNDECIDED = 3u;
+
+enum class GamePlayerResult : uint8_t {
+  kLoser = 0,
+  kDrawer = 1,
+  kWinner = 2,
+  kUndecided = 3,
+  LAST = 4,
+};
 
 constexpr uint8_t ACTION_SOURCE_NONE = 0u;
 constexpr uint8_t ACTION_SOURCE_PLAYER = 1u;
@@ -441,6 +698,7 @@ enum class GameControllerType : uint8_t
   kVirtual = 0u,
   kUser = 1u,
   kComputer = 2u,
+  LAST = 3,
 };
 
 // connection.h
@@ -449,11 +707,27 @@ constexpr uint8_t JOIN_RESULT_FAIL = 0u;
 constexpr uint8_t JOIN_RESULT_PLAYER = 1u;
 constexpr uint8_t JOIN_RESULT_OBSERVER = 2u;
 
+enum class JoinResult : uint8_t {
+  kFail = 0,
+  kPlayer = 1,
+  kObserver = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t INCON_UPDATE_OK = 0u;
 constexpr uint8_t INCON_UPDATE_DESTROY = 1u;
 constexpr uint8_t INCON_UPDATE_PROMOTED = 2u;
 constexpr uint8_t INCON_UPDATE_PROMOTED_PASSTHROUGH = 3u;
 constexpr uint8_t INCON_UPDATE_RECONNECTED = 4u;
+
+enum class InconUpdate : uint8_t {
+  kOk = 0,
+  kDestroy = 1,
+  kPromoted = 2,
+  kPromotedPassThrough = 3,
+  kReconnected = 4,
+  LAST = 5,
+};
 
 constexpr uint8_t INCON_TYPE_NONE = 0u;
 constexpr uint8_t INCON_TYPE_UDP_TUNNEL = 1u;
@@ -461,6 +735,16 @@ constexpr uint8_t INCON_TYPE_PLAYER = 2u;
 constexpr uint8_t INCON_TYPE_KICKED_PLAYER = 3u;
 constexpr uint8_t INCON_TYPE_VLAN = 4u;
 constexpr uint8_t INCON_TYPE_OBSERVER = 5u;
+
+enum class InconType : uint8_t {
+  kNone = 0,
+  kUDPTunnel = 1,
+  kPlayer = 2,
+  kKickedPlayer = 3,
+  kVLAN = 4,
+  kObserver = 5,
+  LAST = 6,
+};
 
 // game_user.h
 
@@ -470,6 +754,12 @@ constexpr uint32_t MAX_PING_WEIGHT = 4u;
 
 constexpr uint8_t SMART_COMMAND_NONE = 0u;
 constexpr uint8_t SMART_COMMAND_GO = 1u;
+
+enum class SmartCommand : uint8_t {
+  kNone = 0,
+  kGo = 1,
+  LAST = 2,
+};
 
 constexpr int64_t GAME_USER_UNVERIFIED_KICK_TICKS = 60000;
 constexpr int64_t AUTO_REALM_VERIFY_LATENCY = 5000;
@@ -484,14 +774,36 @@ constexpr uint8_t USERSTATUS_PLAYING = 2u;
 constexpr uint8_t USERSTATUS_ENDING = 3u;
 constexpr uint8_t USERSTATUS_ENDED = 4u;
 
+enum class Userstatus : uint8_t {
+  kLobby = 0,
+  kLoadingScreen = 1,
+  kPlaying = 2,
+  kEnding = 3,
+  kEnded = 4,
+  LAST = 5,
+};
+
 // game_async_observer.h
 
 constexpr uint8_t ASYNC_OBSERVER_GOAL_OBSERVER = 0u;
 constexpr uint8_t ASYNC_OBSERVER_GOAL_PLAYER = 1u;
 
+enum class AsyncObserverGoal : uint8_t {
+  kObserver = 0,
+  kPlayer = 1,
+  LAST = 2,
+};
+
 constexpr uint8_t ASYNC_OBSERVER_OK = 0u;
 constexpr uint8_t ASYNC_OBSERVER_DESTROY = 1u;
 constexpr uint8_t ASYNC_OBSERVER_PROMOTED = 2u;
+
+enum class AsyncObserver : uint8_t {
+  kOk = 0,
+  kDestroy = 1,
+  kPromoted = 2,
+  LAST = 3,
+};
 
 // game_setup.h
 
@@ -510,6 +822,13 @@ constexpr uint8_t RESOLUTION_OK = 0;
 constexpr uint8_t RESOLUTION_ERR = 1;
 constexpr uint8_t RESOLUTION_BAD_NAME = 2;
 
+enum class MapResolutionStatus : uint8_t {
+  kOk = 0,
+  kErr = 1,
+  kBadName = 2,
+  LAST = 3,
+};
+
 constexpr bool SETUP_USE_STANDARD_PATHS = true;
 constexpr bool SETUP_PROTECT_ARBITRARY_TRAVERSAL = false;
 
@@ -526,9 +845,24 @@ constexpr uint8_t GAMESETUP_STEP_RESOLUTION = 1;
 constexpr uint8_t GAMESETUP_STEP_SUGGESTIONS = 2;
 constexpr uint8_t GAMESETUP_STEP_DOWNLOAD = 3;
 
+enum class GameSetupStep : uint8_t {
+  kMain = 0,
+  kResolution = 1,
+  kSuggestions = 2,
+  kDownload = 3,
+  LAST = 4,
+};
+
 constexpr uint8_t MAP_ONREADY_SET_ACTIVE = 1;
 constexpr uint8_t MAP_ONREADY_HOST = 2;
 constexpr uint8_t MAP_ONREADY_ALIAS = 3;
+
+enum class MapOnready : uint8_t {
+  kSetActive = 1,
+  kHost = 2,
+  kAlias = 3,
+  LAST = 4,
+};
 
 constexpr int64_t SUGGESTIONS_TIMEOUT = 3000;
 constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
@@ -635,6 +969,13 @@ constexpr uint8_t CHAT_RECV_ALL = 0;
 constexpr uint8_t CHAT_RECV_ALLY = 1;
 constexpr uint8_t CHAT_RECV_OBS = 2;
 
+enum class ChatRecv : uint8_t {
+  kAll = 0,
+  kAlly = 1,
+  kObs = 2,
+  LAST = 3,
+};
+
 constexpr std::string::size_type MAX_LOBBY_CHAT_SIZE = 220;
 constexpr std::string::size_type MAX_IN_GAME_CHAT_SIZE = 120;
 
@@ -654,6 +995,14 @@ constexpr uint8_t VIRTUAL_USER_ALLOW_ACTIONS_ANY = 255u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_NONE = 0u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER = 1u;
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_PLAYER = 2u;
+
+enum class VirtualUserAllowConnections : uint8_t {
+  kNone = 0,
+  kObserver = 1,
+  kPlayer = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t VIRTUAL_USER_ALLOW_CONNECTIONS_ANY = VIRTUAL_USER_ALLOW_CONNECTIONS_OBSERVER | VIRTUAL_USER_ALLOW_CONNECTIONS_PLAYER;
 
 // game_interactive_host.h
@@ -662,13 +1011,34 @@ constexpr uint8_t GAME_INTERACTION_STATUS_PENDING = 0u;
 constexpr uint8_t GAME_INTERACTION_STATUS_RUNNING = 1u;
 constexpr uint8_t GAME_INTERACTION_STATUS_DONE = 2u;
 
+enum class GameInteractionStatus : uint8_t {
+  kPending = 0,
+  kRunning = 1,
+  kDone = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t W3HMC_REQUEST_INIT = 1;
 constexpr uint8_t W3HMC_REQUEST_HTTP = 2;
 constexpr uint8_t W3HMC_REQUEST_PLAYERREALM = 3;
 constexpr uint8_t W3HMC_REQUEST_DATETIME = 4;
 
+enum class W3HMCRequest : uint8_t {
+  kInit = 1,
+  kHTTP = 2,
+  kPlayerRealm = 3,
+  kDateTime = 4,
+  LAST = 5,
+};
+
 constexpr uint8_t W3HMC_PROCEDURE_SET_ARGS = 1;
 constexpr uint8_t W3HMC_PROCEDURE_EXEC = 2;
+
+enum class W3hmcProcedure : uint8_t {
+  kSetArgs = 1,
+  kExec = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t W3HMC_ARG_CURL_URL = 1;
 constexpr uint8_t W3HMC_ARG_CURL_POST = 2;
@@ -679,6 +1049,19 @@ constexpr uint8_t W3HMC_ARG_CURL_APPENDREALM = 6;
 constexpr uint8_t W3HMC_ARG_CURL_APPENDNAME = 7;
 constexpr uint8_t W3HMC_ARG_CURL_ADDHEADER = 8;
 constexpr uint8_t W3HMC_ARG_CURL_FOLLOWLOC = 9;
+
+enum class W3hmcArgCurl : uint8_t {
+  kUrl = 1,
+  kPost = 2,
+  kNoReply = 3,
+  kAppendSecret = 4,
+  kParameters = 5,
+  kAppendRealm = 6,
+  kAppendName = 7,
+  kAddHeader = 8,
+  kFollowLoc = 9,
+  LAST = 10,
+};
 
 // gps_protocol.h
 
@@ -712,27 +1095,68 @@ constexpr uint8_t COMMAND_TOKEN_MATCH_NONE = 0;
 constexpr uint8_t COMMAND_TOKEN_MATCH_PRIVATE = 1;
 constexpr uint8_t COMMAND_TOKEN_MATCH_BROADCAST = 2;
 
+enum class CommandTokenMatch : uint8_t {
+  kNone = 0,
+  kPrivate = 1,
+  kBroadcast = 2,
+  LAST = 3,
+};
+
 // config_bot.h
 constexpr uint8_t LOG_GAME_CHAT_NEVER = 0u;
 constexpr uint8_t LOG_GAME_CHAT_ALLOWED = 1u;
 constexpr uint8_t LOG_GAME_CHAT_ALWAYS = 2u;
+
+enum class LogGameChat : uint8_t {
+  kNever = 0,
+  kAllowed = 1,
+  kAlways = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t LOG_REMOTE_MODE_NONE = 0u;
 constexpr uint8_t LOG_REMOTE_MODE_FILE = 1u;
 constexpr uint8_t LOG_REMOTE_MODE_NETWORK = 2u;
 constexpr uint8_t LOG_REMOTE_MODE_MIXED = 3u;
 
+enum class LogRemoteMode : uint8_t {
+  kNone = 0,
+  kFile = 1,
+  kNetwork = 2,
+  kMixed = 3,
+  LAST = 4,
+};
+
 // config_realm.h
 
 constexpr uint8_t REALM_TYPE_PVPGN = 0u;
 constexpr uint8_t REALM_TYPE_BATTLENET_CLASSIC = 1u;
 
+enum class RealmType : uint8_t {
+  kPvPGN = 0,
+  kBattleNetClassic = 1,
+  LAST = 2,
+};
+
 constexpr uint8_t REALM_AUTH_PVPGN = 0u;
 constexpr uint8_t REALM_AUTH_BATTLENET = 1u;
+
+enum class RealmAuth : uint8_t {
+  kPvPGN = 0,
+  kBattleNet = 1,
+  LAST = 2,
+};
 
 constexpr uint8_t REALM_OBSERVER_DISPLAY_NONE = 0u;
 constexpr uint8_t REALM_OBSERVER_DISPLAY_LOW_PRIORITY = 1u;
 constexpr uint8_t REALM_OBSERVER_DISPLAY_ALWAYS = 2u;
+
+enum class RealmObserverDisplay : uint8_t {
+  kNone = 0,
+  kLowPriority = 1,
+  kAlways = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t PVPGN_LOCALE_EN_US = 0u;
 constexpr uint8_t PVPGN_LOCALE_CS_CZ = 1u;
@@ -747,11 +1171,34 @@ constexpr uint8_t PVPGN_LOCALE_RU_RU = 9u;
 constexpr uint8_t PVPGN_LOCALE_ZH_CN = 10u;
 constexpr uint8_t PVPGN_LOCALE_ZH_TW = 11u;
 
+enum class PvPGNLocale : uint8_t {
+  kENUS = 0,
+  kCSCZ = 1,
+  kDEDE = 2,
+  kESES = 3,
+  kFRFR = 4,
+  kITIT = 5,
+  kJAJA = 6,
+  kKOKR = 7,
+  kPLPL = 8,
+  kRURU = 9,
+  kZHZN = 10,
+  kZHTW = 11,
+  LAST = 12,
+};
+
 // config_net.h 
 
 constexpr uint8_t MAP_TRANSFERS_NEVER = 0u;
 constexpr uint8_t MAP_TRANSFERS_AUTOMATIC = 1u;
 constexpr uint8_t MAP_TRANSFERS_MANUAL = 2u;
+
+enum class MapTransfersMode : uint8_t {
+  kNever = 0,
+  kAutomatic = 1,
+  kManual = 2,
+  LAST = 3,
+};
 
 // config_game.h
 
@@ -759,43 +1206,115 @@ constexpr uint8_t ON_DESYNC_NONE = 0u;
 constexpr uint8_t ON_DESYNC_NOTIFY = 1u;
 constexpr uint8_t ON_DESYNC_DROP = 2u;
 
+enum class OnDesyncHandler : uint8_t {
+  kNone = 0,
+  kNotify = 1,
+  kDrop = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t ON_IPFLOOD_NONE = 0u;
 constexpr uint8_t ON_IPFLOOD_NOTIFY = 1u;
 constexpr uint8_t ON_IPFLOOD_DENY = 2u;
+
+enum class OnIPFloodHandler : uint8_t {
+  kNone = 0,
+  kNotify = 1,
+  kDeny = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t ON_UNSAFE_NAME_NONE = 0u;
 constexpr uint8_t ON_UNSAFE_NAME_CENSOR_MAY_DESYNC = 1u;
 constexpr uint8_t ON_UNSAFE_NAME_DENY = 2u;
 
+enum class OnUnsafeNameHandler : uint8_t {
+  kNone = 0,
+  kCensormaydesync = 1,
+  kDeny = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t ON_PLAYER_LEAVE_NONE = 0u;
 constexpr uint8_t ON_PLAYER_LEAVE_NATIVE = 1u;
 constexpr uint8_t ON_PLAYER_LEAVE_SHARE_UNITS = 2u;
+
+enum class OnPlayerLeaveHandler : uint8_t {
+  kNone = 0,
+  kNative = 1,
+  kShareunits = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t ON_SHARE_UNITS_NATIVE = 0u;
 constexpr uint8_t ON_SHARE_UNITS_KICK = 1u;
 constexpr uint8_t ON_SHARE_UNITS_RESTRICT = 2u;
 
+enum class OnShareUnitsHandler : uint8_t {
+  kNative = 0,
+  kKick = 1,
+  kRestrict = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t SELECT_EXPANSION_ROC = 0u;
 constexpr uint8_t SELECT_EXPANSION_TFT = 1u;
+
+enum class GameExpansionCode : uint8_t {
+  kRoC = 0,
+  kTFT = 1,
+  LAST = 2,
+};
 
 constexpr uint8_t CROSSPLAY_MODE_NONE = 0u;
 constexpr uint8_t CROSSPLAY_MODE_CONSERVATIVE = 1u;
 constexpr uint8_t CROSSPLAY_MODE_OPTIMISTIC = 2u;
 constexpr uint8_t CROSSPLAY_MODE_FORCE = 3u;
 
+enum class CrossplayMode : uint8_t {
+  kNone = 0,
+  kConservative = 1,
+  kOptimistic = 2,
+  kForce = 3,
+  LAST = 4,
+};
+
 constexpr uint8_t READY_MODE_FAST = 0u;
 constexpr uint8_t READY_MODE_EXPECT_RACE = 1u;
 constexpr uint8_t READY_MODE_EXPLICIT = 2u;
+
+enum class ReadyMode : uint8_t {
+  kFast = 0,
+  kExpectrace = 1,
+  kExplicit = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t HIDE_IGN_NEVER = 0u;
 constexpr uint8_t HIDE_IGN_HOST = 1u;
 constexpr uint8_t HIDE_IGN_ALWAYS = 2u;
 constexpr uint8_t HIDE_IGN_AUTO = 3u;
 
+enum class HideIgn : uint8_t {
+  kNever = 0,
+  kHost = 1,
+  kAlways = 2,
+  kAuto = 3,
+  LAST = 4,
+};
+
 constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_NEVER = 0u;
 constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_AUTO = 1u;
 constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_TEAM = 2u;
 constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_ALL = 3u;
+
+enum class FakeUsersShareUnitsMode : uint8_t {
+  kNever = 0,
+  kAuto = 1,
+  kTeam = 2,
+  kAll = 3,
+  LAST = 4,
+};
 
 constexpr uint8_t ON_ADV_ERROR_IGNORE_ERRORS = 0u;
 constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAIN_ERROR = 1u;
@@ -804,21 +1323,59 @@ constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR = 3u;
 constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY = 4u;
 constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAX_ERRORS = 5u;
 
+enum class OnAdvError : uint8_t {
+  kIgnoreErrors = 0,
+  kExitOnMainerror = 1,
+  kExitOnMainerrorifempty = 2,
+  kExitOnAnyerror = 3,
+  kExitOnAnyerrorifempty = 4,
+  kExitOnMaxerrors = 5,
+  LAST = 6,
+};
+
 constexpr uint8_t LOBBY_TIMEOUT_NEVER = 0u;
 constexpr uint8_t LOBBY_TIMEOUT_EMPTY = 1u;
 constexpr uint8_t LOBBY_TIMEOUT_OWNERLESS = 2u;
 constexpr uint8_t LOBBY_TIMEOUT_STRICT = 3u;
 
+enum class LobbyTimeout : uint8_t {
+  kNever = 0,
+  kEmpty = 1,
+  kOwnerless = 2,
+  kStrict = 3,
+  LAST = 4,
+};
+
 constexpr uint8_t LOBBY_OWNER_TIMEOUT_NEVER = 0u;
 constexpr uint8_t LOBBY_OWNER_TIMEOUT_ABSENT = 1u;
 constexpr uint8_t LOBBY_OWNER_TIMEOUT_STRICT = 2u;
 
+enum class LobbyOwnerTimeout : uint8_t {
+  kNever = 0,
+  kAbsent = 1,
+  kStrict = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t GAME_LOADING_TIMEOUT_NEVER = 0u;
 constexpr uint8_t GAME_LOADING_TIMEOUT_STRICT = 1u;
+
+enum class GameLoadingTimeout : uint8_t {
+  kNever = 0,
+  kStrict = 1,
+  LAST = 2,
+};
 
 constexpr uint8_t GAME_PLAYING_TIMEOUT_NEVER = 0u;
 constexpr uint8_t GAME_PLAYING_TIMEOUT_DRY = 1u;
 constexpr uint8_t GAME_PLAYING_TIMEOUT_STRICT = 2u;
+
+enum class GamePlayingTimeout : uint8_t {
+  kNever = 0,
+  kDry = 1,
+  kStrict = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t LOG_CHAT_TYPE_ASCII = 1u;
 constexpr uint8_t LOG_CHAT_TYPE_NON_ASCII = 2u;
@@ -844,6 +1401,14 @@ constexpr uint8_t FILTER_DENY_ALL = 1;
 constexpr uint8_t FILTER_ALLOW_LIST = 2;
 constexpr uint8_t FILTER_DENY_LIST = 3;
 
+enum class PermissionsFilterMode : uint8_t {
+  kAllowAll = 0,
+  kDenyAll = 1,
+  kAllowList = 2,
+  kDenyList = 3,
+  LAST = 4,
+};
+
 // config_commands.h
 
 constexpr uint8_t COMMAND_PERMISSIONS_DISABLED = 0;
@@ -859,16 +1424,23 @@ constexpr uint8_t COMMAND_PERMISSIONS_POTENTIAL_OWNER = 9;
 constexpr uint8_t COMMAND_PERMISSIONS_START_GAME = 10;
 constexpr uint8_t COMMAND_PERMISSIONS_UNVERIFIED = 11;
 
-constexpr uint8_t COMMANDS_ALLOWED_NONE = 0;
-constexpr uint8_t COMMANDS_ALLOWED_UNVERIFIED = 1;
-constexpr uint8_t COMMANDS_ALLOWED_VERIFIED = 2;
+enum class CommandPermissions : uint8_t {
+  kDisabled = 0,
+  kSudo = 1,
+  kSudoUnsafe = 2,
+  kRootAdmin = 3,
+  kAdmin = 4,
+  kVerifiedOwner = 5,
+  kOwner = 6,
+  kVerified = 7,
+  kAuto = 8,
+  kPotentialOwner = 9,
+  kStartGame = 10,
+  kUnverified = 11,
+  LAST = 12,
+};
 
 // net.h
-
-constexpr uint8_t HEALTH_STANDBY = 0;
-constexpr uint8_t HEALTH_PROGRESS = 1;
-constexpr uint8_t HEALTH_OKAY = 2;
-constexpr uint8_t HEALTH_ERROR = 3;
 
 constexpr uint8_t CONNECTION_TYPE_DEFAULT = 0;
 constexpr uint8_t CONNECTION_TYPE_LOOPBACK = (1 << 0);
@@ -881,6 +1453,14 @@ constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE = 0;
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL = 1;
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_API = 2;
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID = 3;
+
+enum class NetPublicIpAddressAlgorithm : uint8_t {
+  kNone = 0,
+  kManual = 1,
+  kApi = 2,
+  kInvalid = 3,
+  LAST = 4,
+};
 
 constexpr uint8_t ACCEPT_IPV4 = (1 << 0);
 constexpr uint8_t ACCEPT_IPV6 = (1 << 1);
@@ -913,6 +1493,12 @@ constexpr uint8_t UDP_DISCOVERY_MAX_EXTRA_ADDRESSES = 30u;
 constexpr uint8_t NET_PROTOCOL_TCP = 0u;
 constexpr uint8_t NET_PROTOCOL_UDP = 1u;
 
+enum class NetProtocol : uint8_t {
+  kTCP = 0,
+  kUDP = 1,
+  LAST = 2,
+};
+
 // Exponential backoff starts at twice this value (45x2=90 seconds)
 constexpr int64_t NET_BASE_RECONNECT_DELAY = 45;
 constexpr uint8_t NET_RECONNECT_MAX_BACKOFF = 12;
@@ -932,23 +1518,60 @@ constexpr uint8_t RECV_SELECTOR_ONLY_PUBLIC = 3;
 constexpr uint8_t RECV_SELECTOR_ONLY_PUBLIC_OR_DROP = 4;
 constexpr uint8_t RECV_SELECTOR_PREFER_PUBLIC = 5;
 
+enum class ChatRecvSelector : uint8_t {
+  kSystem = 1,
+  kOnlyWhisper = 2,
+  kOnlyPublic = 3,
+  kOnlyPublicOrDrop = 4,
+  kPreferPublic = 5,
+  LAST = 6,
+};
+
 constexpr uint8_t CHAT_RECV_SELECTED_NONE = 0;
 constexpr uint8_t CHAT_RECV_SELECTED_SYSTEM = 1;
 constexpr uint8_t CHAT_RECV_SELECTED_PUBLIC = 2;
 constexpr uint8_t CHAT_RECV_SELECTED_WHISPER = 3;
 constexpr uint8_t CHAT_RECV_SELECTED_DROP = 4;
 
+enum class ChatRecvSelected : uint8_t {
+  kNone = 0,
+  kSystem = 1,
+  kPublic = 2,
+  kWhisper = 3,
+  kDrop = 4,
+  LAST = 5,
+};
+
 constexpr uint8_t CHAT_CALLBACK_NONE = 0;
 constexpr uint8_t CHAT_CALLBACK_REFRESH_GAME = 1;
 constexpr uint8_t CHAT_CALLBACK_RESET = 2;
 
+enum class QueuedChatMessageSendCallback : uint8_t {
+  kNone = 0,
+  kRefreshGame = 1,
+  kReset = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t CHAT_VALIDATOR_NONE = 0;
 constexpr uint8_t CHAT_VALIDATOR_LOBBY_JOINABLE = 1;
+
+enum class QueuedChatMessageValidator : uint8_t {
+  kNone = 0,
+  kLobbyJoinable = 1,
+  LAST = 2,
+};
 
 // pjass.h
 
 constexpr uint8_t PJASS_PERMISSIVE = 0u;
 constexpr uint8_t PJASS_STRICT = 1u;
+
+enum class PJassStrictLevel : uint8_t {
+  kPermissive = 0,
+  kStrict = 1,
+  LAST = 2,
+};
 
 constexpr uint8_t PJASS_OPTIONS_NOSYNTAXERROR = 0u;
 constexpr uint8_t PJASS_OPTIONS_NOSEMANTICERROR = 1u;
@@ -962,6 +1585,21 @@ constexpr uint8_t PJASS_OPTIONS_CHECKGLOBALSINIT = 8u;
 constexpr uint8_t PJASS_OPTIONS_CHECKSTRINGHASH = 9u;
 constexpr uint8_t PJASS_OPTIONS_CHECKNUMBERLITERALS = 10u;
 
+enum class PjassOptions : uint8_t {
+  kNoSyntaxError = 0,
+  kNoSemanticError = 1,
+  kNoRuntimeError = 2,
+  kRB = 3,
+  kNoModuloOperator = 4,
+  kShadow = 5,
+  kCheckLongNames = 6,
+  kFilter = 7,
+  kCheckGlobalsInit = 8,
+  kCheckStringHash = 9,
+  kCheckNumberLiterals = 10,
+  LAST = 11,
+};
+
 // w3mmd.h
 
 constexpr uint8_t MMD_ACTION_TYPE_VAR = 0u;
@@ -970,26 +1608,71 @@ constexpr uint8_t MMD_ACTION_TYPE_EVENT = 2u;
 constexpr uint8_t MMD_ACTION_TYPE_BLANK = 3u;
 constexpr uint8_t MMD_ACTION_TYPE_CUSTOM = 4u;
 
+enum class MmdActionType : uint8_t {
+  kVar = 0,
+  kFlag = 1,
+  kEvent = 2,
+  kBlank = 3,
+  kCustom = 4,
+  LAST = 5,
+};
+
 constexpr uint8_t MMD_DEFINITION_TYPE_INIT = 0u;
 constexpr uint8_t MMD_DEFINITION_TYPE_VAR = 1u;
 constexpr uint8_t MMD_DEFINITION_TYPE_EVENT = 2u;
 
+enum class MmdDefinitionType : uint8_t {
+  kInit = 0,
+  kVar = 1,
+  kEvent = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t MMD_INIT_TYPE_VERSION = 0u;
 constexpr uint8_t MMD_INIT_TYPE_PLAYER = 1u;
+
+enum class MmdInitType : uint8_t {
+  kVersion = 0,
+  kPlayer = 1,
+  LAST = 2,
+};
 
 constexpr uint8_t MMD_VALUE_TYPE_INT = 0u;
 constexpr uint8_t MMD_VALUE_TYPE_REAL = 1u;
 constexpr uint8_t MMD_VALUE_TYPE_STRING = 2u;
 
+enum class MmdValueType : uint8_t {
+  kInt = 0,
+  kReal = 1,
+  kString = 2,
+  LAST = 3,
+};
+
 constexpr uint8_t MMD_OPERATOR_SET = 0u;
 constexpr uint8_t MMD_OPERATOR_ADD = 1u;
 constexpr uint8_t MMD_OPERATOR_SUBTRACT = 2u;
+
+enum class MmdOperator : uint8_t {
+  kSet = 0,
+  kAdd = 1,
+  kSubtract = 2,
+  LAST = 3,
+};
 
 constexpr uint8_t MMD_FLAG_LOSER = 0u;
 constexpr uint8_t MMD_FLAG_DRAWER = 1u;
 constexpr uint8_t MMD_FLAG_WINNER = 2u;
 constexpr uint8_t MMD_FLAG_LEAVER = 3u;
 constexpr uint8_t MMD_FLAG_PRACTICE = 4u;
+
+enum class MmdFlag : uint8_t {
+  kLoser = 0,
+  kDrawer = 1,
+  kWinner = 2,
+  kLeaver = 3,
+  kPractice = 4,
+  LAST = 5,
+};
 
 constexpr int64_t MMD_PROCESSING_INITIAL_DELAY = 60000;
 constexpr int64_t MMD_PROCESSING_STREAM_DEF_DELAY = 60000;
