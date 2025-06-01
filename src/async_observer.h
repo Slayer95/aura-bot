@@ -44,8 +44,8 @@ public:
   std::weak_ptr<CGame>                                          m_Game;
   MapTransfer                                                   m_MapTransfer;
   CommandHistory                                                m_CommandHistory;
-  std::weak_ptr<CRealm>                                         m_FromRealm;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
+  std::weak_ptr<CRealm>                                         m_FromRealm;
   bool                                                          m_MapChecked;                   // if we received any W3GS_MAPSIZE packet from the client
   bool                                                          m_MapReady;                     // if we received a valid W3GS_MAPSIZE packet from the client matching the map size
   bool                                                          m_StateSynchronized;

@@ -30,8 +30,8 @@
 
 struct GameSearchQuery
 {
-  std::shared_ptr<CMap>                               m_Map;
   Version                                             m_GameVersion;
+  std::shared_ptr<CMap>                               m_Map;
   std::string                                         m_GameName;
   std::string                                         m_HostName;
 

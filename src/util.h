@@ -1586,7 +1586,6 @@ constexpr std::array<std::string, N> StringArray(const char* const (&strings)[N]
   } else {
     ascii = std::string(data.begin(), data.end());
   }
-  size_t size = ascii.size();
   uint32_t result = 0;
   for (size_t j = 0; j < 4; j++) {
     unsigned int c;
