@@ -80,19 +80,35 @@
 using namespace std;
 
 #define LOG_APP_IF(T, U) \
-    static_assert(T < LOG_LEVEL_TRACE, "Use DLOG_APP_IF for tracing log levels");\
+    static_assert(T < LogLevel::LAST, "Use DLOG_APP_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
         LogApp(U, LOG_C); \
     }
 
+#define LOG_APP_IF_CUSTOM(T, U, V) \
+    static_assert(T < LogLevel::LAST, "Use DLOG_APP_IF_CUSTOM for tracing log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        LogApp(U, V); \
+    }
+
+
 #ifdef DEBUG
 #define DLOG_APP_IF(T, U) \
-    static_assert(T >= LOG_LEVEL_TRACE, "Use LOG_APP_IF for regular log levels");\
+    static_assert(T < LogLevel::LAST, "Invalid tracing log level");\
+    static_assert(T >= LogLevel::kTrace, "Use LOG_APP_IF for regular log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
         LogApp(U, LOG_C); \
     }
+
+#define DLOG_APP_IF_CUSTOM(T, U, V) \
+    static_assert(T < LogLevel::LAST, "Invalid tracing log level");\
+    static_assert(T >= LogLevel::kTrace, "Use LOG_APP_IF_CUSTOM for regular log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        LogApp(U, V); \
+    }
 #else
 #define DLOG_APP_IF(T, U)
+#define DLOG_APP_IF_CUSTOM(T, U, V)
 #endif
 
 //
@@ -752,18 +768,18 @@ void CGame::TrySaveStats() const
   // add non-dota stats
   if (!m_GameControllers.empty()) {
     int64_t Ticks = GetTicks();
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] saving game end player data to database")
+    LOG_APP_IF(LogLevel::kDebug, "[STATS] saving game end player data to database")
     if (m_Aura->m_DB->Begin()) {
       for (auto& controllerData : m_GameControllers) {
         m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, m_EffectiveTicks / 1000);
       }
       if (!m_Aura->m_DB->Commit()) {
-        LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit game end player data")
+        LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to commit game end player data")
       } else {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] commited game end player data in " + to_string(GetTicks() - Ticks) + " ms")
+        LOG_APP_IF(LogLevel::kDebug, "[STATS] commited game end player data in " + to_string(GetTicks() - Ticks) + " ms")
       }
     } else {
-      LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to begin transaction game end player data")
+      LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to begin transaction game end player data")
     }
   }
 
@@ -1268,7 +1284,7 @@ string CGame::GetLogPrefix() const
   if (SecString.size() == 1)
     SecString.insert(0, "0");
 
-  if (m_GameLoaded && m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+  if (m_GameLoaded && m_Aura->GetIsLoggingTrace()) {
     return "[" + GetCategory() + ": " + GetShortNameLAN() + " | Frame " + to_string(m_SyncCounter) + "] ";
   } else {
     return "[" + GetCategory() + ": " + GetShortNameLAN() + "] ";
@@ -1411,7 +1427,7 @@ bool CGame::UpdateLobby()
       // Some operations may remove fake users during countdown.
       // Ensure that the game doesn't start if there are neither real nor fake users.
       // (If a user leaves or joins, the countdown is stopped elsewhere.)
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "countdown stopped - lobby is empty.")
+      LOG_APP_IF(LogLevel::kDebug, "countdown stopped - lobby is empty.")
       StopCountDown();
     }
 
@@ -1529,7 +1545,7 @@ void CGame::UpdateLoaded()
 
         if (!laggingPlayers.empty()) {
           // start the lag screen
-          DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+          DLOG_APP_IF(LogLevel::kTrace, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
           SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
           ResetDropVotes();
 
@@ -1539,7 +1555,7 @@ void CGame::UpdateLoaded()
 
           // print debug information
           double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_LatencyTicks) / static_cast<double>(1000.);
-          if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+          if (m_Aura->MatchLogLevel(LogLevel::kInfo)) {
             LogApp("started lagging on " + ToNameListSentence(laggingPlayers, true) + ".", LOG_ALL);
             LogApp("worst lagger is [" + m_Users[worstLaggerIndex]->GetName() + "] (" + ToFormattedString(worstLaggerSeconds) + " seconds behind)", LOG_C);
           }
@@ -1602,17 +1618,17 @@ void CGame::UpdateLoaded()
       if (user->GetDisconnectedUnrecoverably()) {
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
+        DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
         SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
-        LOG_APP_IF(LOG_LEVEL_INFO, "lagging user disconnected [" + user->GetName() + "]")
+        LOG_APP_IF(LogLevel::kInfo, "lagging user disconnected [" + user->GetName() + "]")
       } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
         ++playersLaggingCounter;
       } else {
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
+        DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
         SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
-        LOG_APP_IF(LOG_LEVEL_INFO, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
+        LOG_APP_IF(LogLevel::kInfo, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
       }
     }
 
@@ -1621,7 +1637,7 @@ void CGame::UpdateLoaded()
       m_LastActionSentTicks = Ticks - m_LatencyTicks;
       m_LastActionLateBy = 0;
       m_PingReportedSinceLagTimes = 0;
-      LOG_APP_IF(LOG_LEVEL_INFO, "stopped lagging after " + ToFormattedString(static_cast<double>(Time - m_StartedLaggingTime)) + " seconds")
+      LOG_APP_IF(LogLevel::kInfo, "stopped lagging after " + ToFormattedString(static_cast<double>(Time - m_StartedLaggingTime)) + " seconds")
     }
   }
 
@@ -1797,7 +1813,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   if (m_Users.empty() && (m_GameLoading || m_GameLoaded || m_ExitingSoon)) {
     if (!m_Exiting) {
       //FlushStatsQueue();
-      LOG_APP_IF(LOG_LEVEL_INFO, "is over (no users left)")
+      LOG_APP_IF(LogLevel::kInfo, "is over (no users left)")
       m_Exiting = true;
     }
     return m_Exiting;
@@ -1809,7 +1825,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 
   // expire the votekick
   if (!m_KickVotePlayer.empty() && Time - m_StartedKickVoteTime >= 60) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "votekick against user [" + m_KickVotePlayer + "] expired")
+    LOG_APP_IF(LogLevel::kDebug, "votekick against user [" + m_KickVotePlayer + "] expired")
     SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has expired");
     m_KickVotePlayer.clear();
     m_StartedKickVoteTime = 0;
@@ -1821,10 +1837,10 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   uint8_t RemainingPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
   if (RemainingPlayers != m_StartPlayers && !GetIsGameOverTrusted() && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: 0 p | " + ToDecString(GetNumJoinedObservers()) + " obs | 0 fake")
+      LOG_APP_IF(LogLevel::kInfo, "gameover timer started: 0 p | " + ToDecString(GetNumJoinedObservers()) + " obs | 0 fake")
       StartGameOverTimer();
     } else if (RemainingPlayers <= m_Config.m_NumPlayersToStartGameOver) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
+      LOG_APP_IF(LogLevel::kInfo, "gameover timer started: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
       StartGameOverTimer();
     }
   }
@@ -2135,7 +2151,7 @@ bool CGame::SendObserversAsChat(const std::vector<uint8_t>& data) const
   return success;
 }
 
-void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& message, const uint8_t logLevel) const
+void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& message, const LogLevelExtra logLevel) const
 {
   // send a private message to one user - it'll be marked [Private] in Warcraft 3
 
@@ -2175,22 +2191,22 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
   SendAsChat(user, packet);
 }
 
-void CGame::SendChat(uint8_t fromUID, uint8_t toUID, const string& message, const uint8_t logLevel) const
+void CGame::SendChat(uint8_t fromUID, uint8_t toUID, const string& message, const LogLevelExtra logLevel) const
 {
   SendChat(fromUID, GetUserFromUID(toUID), message, logLevel);
 }
 
-void CGame::SendChat(GameUser::CGameUser* user, const string& message, const uint8_t logLevel) const
+void CGame::SendChat(GameUser::CGameUser* user, const string& message, const LogLevelExtra logLevel) const
 {
   SendChat(GetHostUID(), user, message, logLevel);
 }
 
-void CGame::SendChat(uint8_t toUID, const string& message, const uint8_t logLevel) const
+void CGame::SendChat(uint8_t toUID, const string& message, const LogLevelExtra logLevel) const
 {
   SendChat(GetHostUID(), toUID, message, logLevel);
 }
 
-void CGame::SendChat(CAsyncObserver* spectator, const string& message, const uint8_t /*logLevel*/) const
+void CGame::SendChat(CAsyncObserver* spectator, const string& message, const LogLevelExtra /*logLevel*/) const
 {
   spectator->SendChat(message);
 }
@@ -2208,7 +2224,7 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
     return false;
   }
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+  if (m_Aura->GetIsLoggingTrace()) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
     if (fromUser) {
       LogApp("sent as [" + fromUser->GetName() + "] <<" + message + ">>", LOG_C);
@@ -2218,7 +2234,7 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
       LogApp("sent as [UID:" + ToDecString(fromUID) + "] <<" + message + ">>", LOG_C);
     }
   } else {
-    LOG_APP_IF(LOG_LEVEL_INFO, "sent <<" + message + ">>")
+    LOG_APP_IF(LogLevel::kInfo, "sent <<" + message + ">>")
   }
 
   // send a public message to all users - it'll be marked [All] in Warcraft 3
@@ -2250,7 +2266,7 @@ bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
     return false;
   }
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_TRACE)) {
+  if (m_Aura->GetIsLoggingTrace()) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
     if (fromUser) {
       LogApp("sent as [" + fromUser->GetName() + "] <<" + message + ">>", LOG_C);
@@ -2260,7 +2276,7 @@ bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
       LogApp("sent as [UID:" + ToDecString(fromUID) + "] <<" + message + ">>", LOG_C);
     }
   } else {
-    LOG_APP_IF(LOG_LEVEL_INFO, "sent <<" + message + ">>")
+    LOG_APP_IF(LogLevel::kInfo, "sent <<" + message + ">>")
   }
 
   // send a public message to all observers - it'll be marked [Observers] or [Referees] in Warcraft 3
@@ -3312,7 +3328,7 @@ void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version) co
   // Otherwise, they immediately leave the lobby.
   const uint32_t clampedMapSize = m_Map->GetMapSizeClamped(version);
   if (clampedMapSize < m_Map->GetMapSize()) {
-    DLOG_APP_IF(LOG_LEVEL_TRACE,  "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedMapSize / (float)(1024. * 1024.)) + " MB")
+    DLOG_APP_IF(LogLevel::kTrace, "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedMapSize / (float)(1024. * 1024.)) + " MB")
   }
   if (version >= GAMEVER(1u, 23u)) {
     user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
@@ -3583,34 +3599,34 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
     while ((matchIndex = Line.find("{READYSTATUS}")) != string::npos) {
       Line.replace(matchIndex, 13, GetReadyStatusText());
     }
-    SendChat(user, Line, LOG_LEVEL_TRACE);
+    SendChat(user, Line, LogLevelExtra::kTrace);
   }
 }
 
 void CGame::SendOwnerCommandsHelp(const string& cmdToken, GameUser::CGameUser* user) const
 {
-  SendChat(user, cmdToken + "open [NUMBER] - opens a slot", LOG_LEVEL_TRACE);
-  SendChat(user, cmdToken + "close [NUMBER] - closes a slot", LOG_LEVEL_TRACE);
-  SendChat(user, cmdToken + "fill [DIFFICULTY] - adds computers", LOG_LEVEL_TRACE);
+  SendChat(user, cmdToken + "open [NUMBER] - opens a slot", LogLevelExtra::kTrace);
+  SendChat(user, cmdToken + "close [NUMBER] - closes a slot", LogLevelExtra::kTrace);
+  SendChat(user, cmdToken + "fill [DIFFICULTY] - adds computers", LogLevelExtra::kTrace);
   if (m_Map->GetMapNumTeams() > 2) {
-    SendChat(user, cmdToken + "ffa - sets free for all game mode", LOG_LEVEL_TRACE);
+    SendChat(user, cmdToken + "ffa - sets free for all game mode", LogLevelExtra::kTrace);
   }
-  SendChat(user, cmdToken + "vsall - sets one vs all game mode", LOG_LEVEL_TRACE);
-  SendChat(user, cmdToken + "terminator - sets humans vs computers", LOG_LEVEL_TRACE);
+  SendChat(user, cmdToken + "vsall - sets one vs all game mode", LogLevelExtra::kTrace);
+  SendChat(user, cmdToken + "terminator - sets humans vs computers", LogLevelExtra::kTrace);
 }
 
 void CGame::SendCommandsHelp(const string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const
 {
   if (isIntro) {
-    SendChat(user, "Welcome, " + user->GetName() + ". Please use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LOG_LEVEL_TRACE);
+    SendChat(user, "Welcome, " + user->GetName() + ". Please use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LogLevelExtra::kTrace);
   } else {
-    SendChat(user, "Use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LOG_LEVEL_TRACE);
+    SendChat(user, "Use " + cmdToken + GetTokenName(cmdToken) + " for commands.", LogLevelExtra::kTrace);
   }
   if (!isIntro) return;
-  SendChat(user, cmdToken + "ping - view your latency", LOG_LEVEL_TRACE);
-  SendChat(user, cmdToken + "go - starts the game", LOG_LEVEL_TRACE);
+  SendChat(user, cmdToken + "ping - view your latency", LogLevelExtra::kTrace);
+  SendChat(user, cmdToken + "go - starts the game", LogLevelExtra::kTrace);
   if (!m_OwnerLess && m_OwnerName.empty()) {
-    SendChat(user, cmdToken + "owner - acquire permissions over this game", LOG_LEVEL_TRACE);
+    SendChat(user, cmdToken + "owner - acquire permissions over this game", LogLevelExtra::kTrace);
   }
   if (MatchOwnerName(user->GetName())) {
     SendOwnerCommandsHelp(cmdToken, user);
@@ -3643,9 +3659,9 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
       const uint8_t targetSID = actionStart[1];
       if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
         if (wantsShare) {
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+          LOG_APP_IF(LogLevel::kDebug, "Player [" + user->GetName() + "] granted shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
         } else {
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+          LOG_APP_IF(LogLevel::kDebug, "Player [" + user->GetName() + "] took away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
         }
         user->SetIsSharingUnitsWithSlot(targetSID, wantsShare);
         GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
@@ -3720,7 +3736,7 @@ void CGame::SendAllActionsCallback()
   }
 
   for (GameUser::CGameUser* user : frame.leavers) {
-    DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] running scheduled deletion")
+    DLOG_APP_IF(LogLevel::kTrace, "[" + user->GetName() + "] running scheduled deletion")
     user->SetDeleteMe(true);
   }
 
@@ -4319,7 +4335,7 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 
   if (!m_Aura->m_Net.SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4)))) {
     // Ensure the game is available at loopback.
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
+    LOG_APP_IF(LogLevel::kDebug, "sending IPv4 GAMEINFO packet to IPv4 Loopback (game port " + to_string(m_HostPort) + ")")
     m_Aura->m_Net.SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
   }
 
@@ -4417,9 +4433,9 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
   }
 
   if (m_Exiting) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
+    LOG_APP_IF(LogLevel::kDebug, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
   } else {
-    LOG_APP_IF(LOG_LEVEL_INFO, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
+    LOG_APP_IF(LogLevel::kInfo, "deleting user [" + user->GetName() + "]: " + user->GetLeftReason())
   }
 
   if (!user->GetIsObserver()) {
@@ -4470,7 +4486,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
   // it may only be prematurely sent if this is a lobby
   if (!user->GetLeftMessageSent()) {
     if (user->GetIsLagging()) {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (-" + user->GetName() + ")")
+      DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
       SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
     }
     SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetIsLeaver() && user->GetAnyKicked()));
@@ -4494,7 +4510,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
       CGameSlot* slot = GetSlot(replaceSID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
       slot->SetColor(m_Map->GetVersionMaxSlots());
-      LOG_APP_IF(LOG_LEVEL_INFO, "replaced leaving observer by fake user (SID=" + ToDecString(replaceSID) + "|UID=" + ToDecString(replaceUID) + ")")
+      LOG_APP_IF(LogLevel::kInfo, "replaced leaving observer by fake user (SID=" + ToDecString(replaceSID) + "|UID=" + ToDecString(replaceUID) + ")")
     }
   }
 
@@ -4537,11 +4553,11 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
     // this allows parties of 2+ observers to watch AI vs AI
     const uint8_t numJoinedPlayers = GetNumJoinedPlayers();
     if (numJoinedPlayers == 0) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: no players left")
+      LOG_APP_IF(LogLevel::kInfo, "gameover timer started: no players left")
       StartGameOverTimer();
     } else if (!GetIsGameOverTrusted()) {
       if (numJoinedPlayers == 1 && GetNumComputers() == 0) {
-        LOG_APP_IF(LOG_LEVEL_INFO, "gameover timer started: remaining 1 p | 0 comp | " + ToDecString(GetNumJoinedObservers()) + " obs")
+        LOG_APP_IF(LogLevel::kInfo, "gameover timer started: remaining 1 p | 0 comp | " + ToDecString(GetNumJoinedObservers()) + " obs")
         StartGameOverTimer();
       }
     }
@@ -4655,7 +4671,7 @@ void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
       laggingPlayer->SetStartedLaggingTicks(Ticks);
       laggingPlayer->ClearStalePings();
     }
-    DLOG_APP_IF(LOG_LEVEL_TRACE, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+    DLOG_APP_IF(LogLevel::kTrace, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
     SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
   }
 }
@@ -4947,7 +4963,7 @@ void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
   CQueuedActionsFrame& frame = user->GetPingEqualizerFrame();
   frame.leavers.push_back(user);
   user->TrySetEnding();
-  DLOG_APP_IF(LOG_LEVEL_TRACE, "[" + user->GetName() + "] scheduled for deletion in " + ToDecString(user->GetPingEqualizerOffset()) + " frames")
+  DLOG_APP_IF(LogLevel::kTrace, "[" + user->GetName() + "] scheduled for deletion in " + ToDecString(user->GetPingEqualizerOffset()) + " frames")
 }
 
 void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const
@@ -5237,7 +5253,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
       continue;
     }
     if (otherPlayer->GetHasPinnedMessage()) {
-      SendChat(otherPlayer->GetUID(), Player, otherPlayer->GetPinnedMessage(), LOG_LEVEL_DEBUG);
+      SendChat(otherPlayer->GetUID(), Player, otherPlayer->GetPinnedMessage(), LogLevelExtra::kDebug);
     }
   }
 
@@ -5256,12 +5272,12 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   }
 
   if (notifyString.empty()) {
-    LOG_APP_IF(LOG_LEVEL_INFO, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest.GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
+    LOG_APP_IF(LogLevel::kInfo, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest.GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
   } else {
-    LOG_APP_IF(LOG_LEVEL_NOTICE, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest.GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
+    LOG_APP_IF(LogLevel::kNotice, "user joined (P" + to_string(SID + 1) + "): [" + joinRequest.GetName() + "@" + Player->GetRealmHostName() + "#" + to_string(Player->GetUID()) + "] from [" + Player->GetIPString() + "] (" + Player->GetSocket()->GetName() + ")" + notifyString)
   }
   if (joinRequest.GetIsCensored()) {
-    LOG_APP_IF(LOG_LEVEL_NOTICE, "user [" + joinRequest.GetName() + "] is censored name - was [" + joinRequest.GetOriginalName() + "]")
+    LOG_APP_IF(LogLevel::kNotice, "user [" + joinRequest.GetName() + "] is censored name - was [" + joinRequest.GetOriginalName() + "]")
   }
 
   return Player;
@@ -5296,7 +5312,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest& jo
 
   string realmHostName;
   if (fromRealm) realmHostName = fromRealm->GetServer();
-  LOG_APP_IF(LOG_LEVEL_INFO, "spectator joined [" + joinRequest.GetName() + "@" + realmHostName + "#" + to_string(observer->GetUID()) + "] from [" + observer->GetIPString() + "]")
+  LOG_APP_IF(LogLevel::kInfo, "spectator joined [" + joinRequest.GetName() + "@" + realmHostName + "#" + to_string(observer->GetUID()) + "] from [" + observer->GetIPString() + "]")
 }
 
 void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSize& clientMap)
@@ -5316,7 +5332,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
       if (!mapTransfer.GetStarted() && clientMap.GetFlag() == 1) {
         // inform the client that we are willing to send the map
 
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "map download started for observer [" + user->GetName() + "]")
+        LOG_APP_IF(LogLevel::kDebug, "map download started for observer [" + user->GetName() + "]")
         Send(user, GameProtocol::SEND_W3GS_STARTDOWNLOAD(GetHostUID()));
         mapTransfer.Start();
       } else {
@@ -5344,7 +5360,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
             reason = "disabled";
             break;
           case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
+            LOG_APP_IF(LogLevel::kDebug, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
             // falls through
           case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
             reason = "too large";
@@ -5359,7 +5375,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
   } else if (user->GetMapTransfer().GetStarted()) {
     // calculate download rate
     const double seconds = static_cast<double>(Ticks - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "map download finished for observer [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
+    LOG_APP_IF(LogLevel::kDebug, "map download finished for observer [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
     user->SendChat("You downloaded the map in " + ToFormattedString(seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
     user->GetMapTransfer().Finish();
     user->EventMapReady();
@@ -5404,12 +5420,12 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
     return JOIN_RESULT_FAIL;
   }
   if (joinRequest.GetName().empty() || joinRequest.GetName().size() > 15) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetOriginalName() + "] invalid name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   }
   if (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_DENY) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetOriginalName() + "] unsafe name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetOriginalName() + "] unsafe name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   }
@@ -5437,7 +5453,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
 
   if (HostCounterID < 0x10 && joinRequest.GetEntryKey() != m_EntryKey) {
     // check if the user joining via LAN knows the entry key
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest.GetEntryKey()) + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "@" + JoinedRealm + "] used a wrong LAN key (" + to_string(joinRequest.GetEntryKey()) + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
     return JOIN_RESULT_FAIL;
   }
@@ -5453,7 +5469,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
   }
 
   if (HostCounterID < 0x10 && HostCounterID != 0) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "@" + JoinedRealm + "] is trying to join over reserved realm " + to_string(HostCounterID) + " - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     if (HostCounterID > 0x2) {
       connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
       return JOIN_RESULT_FAIL;
@@ -5469,25 +5485,25 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
       }
       m_ReportedJoinFailNames.insert(joinRequest.GetName());
     }
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "] invalid name (taken) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   } else if (joinRequest.GetName() == GetLobbyVirtualHostName()) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "] spoofer (matches host name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "] spoofer (matches host name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   } else if (joinRequest.GetName().length() >= 7 && joinRequest.GetName().substr(0, 5) == "User[") {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "] spoofer (matches fake users) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "] spoofer (matches fake users) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   } else if (GetHMCEnabled() && joinRequest.GetName() == m_Map->GetHMCPlayerName()) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "] spoofer (matches HMC name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "] spoofer (matches HMC name) - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   } else if (joinRequest.GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "@" + JoinedRealm + "] spoofer (matches owner name, but realm mismatch, expected " + m_OwnerRealm + ") - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   }
@@ -5513,14 +5529,14 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
   const bool isReserved = reservedIndex < m_Reserved.size() || (!m_RestoredGame && MatchOwnerName(joinRequest.GetName()) && JoinedRealm == m_OwnerRealm);
 
   if (m_CheckReservation && !isReserved) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "] missing reservation - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "] missing reservation - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   }
 
   if (!GetAllowsIPFlood()) {
     if (!CheckIPFlood(joinRequest.GetName(), &(connection->GetSocket()->m_RemoteHost))) {
-      LOG_APP_IF(LOG_LEVEL_WARNING, "ipflood rejected from " + AddressToStringStrict(connection->GetSocket()->m_RemoteHost))
+      LOG_APP_IF(LogLevel::kWarning, "ipflood rejected from " + AddressToStringStrict(connection->GetSocket()->m_RemoteHost))
       connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
       return JOIN_RESULT_FAIL;
     }
@@ -5644,13 +5660,13 @@ bool CGame::CheckUserBanned(CConnection* connection, const CIncomingJoinRequest&
 
     // don't allow the user to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest.GetName()) == end(m_ReportedJoinFailNames)) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - banned " + scopeFragment)
+      LOG_APP_IF(LogLevel::kInfo, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - banned " + scopeFragment)
       if (!m_IsHiddenPlayerNames) {
         SendAllChat("[" + joinRequest.GetName() + "@" + hostName + "] is trying to join the game, but is banned");
       }
       m_ReportedJoinFailNames.insert(joinRequest.GetName());
     } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - banned " + scopeFragment)
+      LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - banned " + scopeFragment)
     }
   }
   return isBanned;
@@ -5682,13 +5698,13 @@ bool CGame::CheckIPBanned(CConnection* connection, const CIncomingJoinRequest& j
 
     // don't allow the user to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest.GetName()) == end(m_ReportedJoinFailNames)) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - IP-banned " + scopeFragment)
+      LOG_APP_IF(LogLevel::kInfo, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - IP-banned " + scopeFragment)
       if (!m_IsHiddenPlayerNames) {
         SendAllChat("[" + joinRequest.GetName() + "@" + hostName + "] is trying to join the game, but is IP-banned");
       }
       m_ReportedJoinFailNames.insert(joinRequest.GetName());
     } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - IP-banned " + scopeFragment)
+      LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetName() + "@" + hostName + "|" + connection->GetIPString() + "] entry denied - IP-banned " + scopeFragment)
     }
   }
   return isBanned;
@@ -5698,7 +5714,7 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
 {
   if (user->GetDisconnected()) return;
   if (m_GameLoading || m_GameLoaded || clientReason == PLAYERLEAVE_GPROXY) {
-    LOG_APP_IF(LOG_LEVEL_INFO, "user [" + user->GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
+    LOG_APP_IF(LogLevel::kInfo, "user [" + user->GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
   }
 
   if (m_GameLoaded && !user->GetIsObserver() && GetGameResultSourceOfTruth() == GAME_RESULT_SOURCE_LEAVECODE) {
@@ -5734,7 +5750,7 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
 void CGame::EventUserLoaded(GameUser::CGameUser* user)
 {
   string role = user->GetIsObserver() ? "observer" : "player";
-  LOG_APP_IF(LOG_LEVEL_DEBUG, role + " [" + user->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds")
+  LOG_APP_IF(LogLevel::kDebug, role + " [" + user->GetName() + "] finished loading in " + ToFormattedString(static_cast<double>(user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f) + " seconds")
 
   // Update stats
   const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
@@ -5778,7 +5794,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
       m_IsLagging = false;
     }
     if (m_IsLagging) {
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+      DLOG_APP_IF(LogLevel::kTrace, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
       Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
       LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...", LOG_C);
 
@@ -5812,18 +5828,18 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
     const size_t actionSize = delimiters[j] - delimiters[i];
     if (actionType == ACTION_ALLIANCE_SETTINGS && actionSize >= 6) {
       if (delimiters[i][1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] synchronizing JNLoader data");
+        LOG_APP_IF(LogLevel::kDebug, "Player [" + user->GetName() + "] synchronizing JNLoader data");
       } else if (delimiters[i][1] == MH_DOTA_SETTINGS_SYNC_DATA) {
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] synchronizing DotA data");
+        LOG_APP_IF(LogLevel::kDebug, "Player [" + user->GetName() + "] synchronizing DotA data");
       } else if (delimiters[i][1] < MAX_SLOTS_MODERN) {
         const bool wantsShare = (ByteArrayToUInt32(delimiters[i] + 2, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
         const uint8_t targetSID = delimiters[i][1];
 
         if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
           if (wantsShare) {
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to grant shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
+            LOG_APP_IF(LogLevel::kDebug, "Player [" + user->GetName() + "] intends to grant shared unit control to [" + GetUserNameFromSID(targetSID) + "]");
           } else {
-            LOG_APP_IF(LOG_LEVEL_DEBUG, "Player [" + user->GetName() + "] intends to take away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
+            LOG_APP_IF(LogLevel::kDebug, "Player [" + user->GetName() + "] intends to take away shared unit control from [" + GetUserNameFromSID(targetSID) + "]");
           }
           GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
           if (targetUser && wantsShare) {
@@ -5886,7 +5902,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
 
   switch (action.GetSniffedType()) {
     case ACTION_SAVE:
-      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] is saving the game")
+      LOG_APP_IF(LogLevel::kInfo, "[" + user->GetName() + "] is saving the game")
       SendAllChat("[" + user->GetDisplayName() + "] is saving the game");
       SaveEnded(0xFF, actionFrame);
       if (user->GetCanSave()) {
@@ -5901,10 +5917,10 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
       }
       break;
     case ACTION_SAVE_ENDED:
-      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] finished saving the game")
+      LOG_APP_IF(LogLevel::kInfo, "[" + user->GetName() + "] finished saving the game")
       break;
     case ACTION_PAUSE:
-      LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] paused the game")
+      LOG_APP_IF(LogLevel::kInfo, "[" + user->GetName() + "] paused the game")
       if (!user->GetIsNativeReferee()) {
         user->DropRemainingPauses();
       }
@@ -5915,9 +5931,9 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
       break;
     case ACTION_RESUME:
       if (m_PauseUser) {
-        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game (was paused by [" + m_PauseUser->GetName() + "])")
+        LOG_APP_IF(LogLevel::kInfo, "[" + user->GetName() + "] resumed the game (was paused by [" + m_PauseUser->GetName() + "])")
       } else {
-        LOG_APP_IF(LOG_LEVEL_INFO, "[" + user->GetName() + "] resumed the game")
+        LOG_APP_IF(LogLevel::kInfo, "[" + user->GetName() + "] resumed the game")
       }
       actionFrame.callback = ON_SEND_ACTIONS_RESUME;
       break;
@@ -5997,7 +6013,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
     m_GameHistory->SetDesynchronized();
     string syncListText = ToNameListSentence(m_SyncPlayers[user]);
     string desyncListText = ToNameListSentence(DesyncedPlayers);
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
       LogApp("===== !! Desync detected !! ======================================", LOG_ALL);
       if (m_Config.m_LoadInGame) {
         LogApp("Frame " + to_string(m_SyncCounterChecked) + " | Load in game: ENABLED", LOG_C | LOG_P);
@@ -6026,7 +6042,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
 
 void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessage, const uint32_t first, const uint32_t second)
 {
-  bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG));
+  bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LogLevel::kDebug));
   if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
     m_Aura->LogPersistent(GetLogPrefix() + "[" + m_Map->GetServerFileName() + "] [CMD] ["+ user->GetExtendedName() + "] " + chatMessage);
   }
@@ -6058,7 +6074,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessag
   //
 
   if (canLogChatTriggers) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[" + m_Map->GetServerFileName() + "] Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered : [0x" + ToHexString(first) + " | 0x" + ToHexString(second) + "]")
+    LOG_APP_IF(LogLevel::kDebug, "[" + m_Map->GetServerFileName() + "] Message by [" + user->GetName() + "]: <<" + chatMessage + ">> triggered : [0x" + ToHexString(first) + " | 0x" + ToHexString(second) + "]")
   }
 
   if (m_Map->GetMapType() == "microtraining") {
@@ -6340,7 +6356,7 @@ void CGame::EventUserRequestColor(GameUser::CGameUser* user, uint8_t colour)
     }
 
     if (!SetSlotColor(SID, colour, false)) {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, user->GetName() + " failed to switch to color " + to_string(static_cast<uint16_t>(colour)))
+      LOG_APP_IF(LogLevel::kDebug, user->GetName() + " failed to switch to color " + to_string(static_cast<uint16_t>(colour)))
     }
   }
 }
@@ -6409,7 +6425,7 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
   }
 
   if (m_IsLagging) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] voted to drop laggers")
+    LOG_APP_IF(LogLevel::kDebug, "user [" + user->GetName() + "] voted to drop laggers")
     SendAllChat("Player [" + user->GetDisplayName() + "] voted to drop laggers");
 
     // check if at least half the users voted to drop
@@ -6443,7 +6459,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
       if (!mapTransfer.GetStarted() && clientMap.GetFlag() == 1) {
         // inform the client that we are willing to send the map
 
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "map download started for user [" + user->GetName() + "]")
+        LOG_APP_IF(LogLevel::kDebug, "map download started for user [" + user->GetName() + "]")
         Send(user, GameProtocol::SEND_W3GS_STARTDOWNLOAD(GetHostUID()));
         mapTransfer.Start();
       } else {
@@ -6479,7 +6495,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
               reason = "disabled";
               break;
             case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
-              LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
+              LOG_APP_IF(LogLevel::kDebug, "user [" + user->GetName() + "] running v" + ToVersionString(user->GetGameVersion()) + " cannot download " + ToFormattedString(m_Map->GetMapSizeMB()) + " MB map in-game")
               // falls through
             case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
               reason = "too large";
@@ -6496,7 +6512,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
     // calculate download rate
     const double seconds = static_cast<double>(Ticks - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
     //const double Rate    = static_cast<double>(expectedMapSize) / 1024.f / seconds;
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "map download finished for user [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
+    LOG_APP_IF(LogLevel::kDebug, "map download finished for user [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
     SendAllChat("Player [" + user->GetDisplayName() + "] downloaded the map in " + ToFormattedString(seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
     user->GetMapTransfer().Finish();
     EventUserMapReady(user);
@@ -6512,7 +6528,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   }
 
   if (!user->GetLatencySent() && user->GetIsRTTMeasuredConsistent()) {
-    SendChat(user, user->GetName() + ", your latency is " + user->GetDelayText(false), LOG_LEVEL_DEBUG);
+    SendChat(user, user->GetName() + ", your latency is " + user->GetDelayText(false), LogLevelExtra::kDebug);
     user->SetLatencySent(true);
   }
 
@@ -6685,7 +6701,7 @@ void CGame::EventGameStartedLoading()
   // record the starting users
   // fake observers are counted, this is a feature to prevent premature game ending
   m_StartPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
-  LOG_APP_IF(LOG_LEVEL_INFO, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
+  LOG_APP_IF(LogLevel::kInfo, "started loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost | " + ToDecString(m_ControllersWithMap) + " controllers")
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
     AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetFakeUsersLoadedInfo());
@@ -6986,7 +7002,7 @@ void CGame::EventGameLoaded()
 
   RunPlayerObfuscation();
 
-  LOG_APP_IF(LOG_LEVEL_INFO, "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
+  LOG_APP_IF(LogLevel::kInfo, "finished loading: " + ToDecString(GetNumJoinedPlayers()) + " p | " + ToDecString(GetNumComputers()) + " comp | " + ToDecString(GetNumJoinedObservers()) + " obs | " + to_string(m_FakeUsers.size() - m_JoinedVirtualHosts) + " fake | " + ToDecString(m_JoinedVirtualHosts) + " vhost")
 
   m_IsSinglePlayer = GetIsSinglePlayerMode();
 
@@ -7133,7 +7149,7 @@ void CGame::HandleGameLoadedStats()
 
   int64_t Ticks = GetTicks();
   if (!m_Aura->m_DB->Begin()) {
-    LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to begin transaction for game loaded data")
+    LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to begin transaction for game loaded data")
     return;
   }
   m_Aura->m_DB->UpdateLatestHistoryGameId(m_PersistentId);
@@ -7154,9 +7170,9 @@ void CGame::HandleGameLoadedStats()
     m_Aura->m_DB->UpdateGamePlayerOnStart(m_PersistentId, controllerData);
   }
   if (!m_Aura->m_DB->Commit()) {
-    LOG_APP_IF(LOG_LEVEL_WARNING, "[STATS] failed to commit transaction for game loaded data")
+    LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to commit transaction for game loaded data")
   } else {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "[STATS] commited game loaded data in " + to_string(GetTicks() - Ticks) + " ms")
+    LOG_APP_IF(LogLevel::kDebug, "[STATS] commited game loaded data in " + to_string(GetTicks() - Ticks) + " ms")
   }
 }
 
@@ -7269,7 +7285,7 @@ void CGame::Remake()
   m_KickVotePlayer.clear();
 
   m_LobbyLoading = false;
-  LOG_APP_IF(LOG_LEVEL_INFO, "finished loading after remake")
+  LOG_APP_IF(LogLevel::kInfo, "finished loading after remake")
   CreateVirtualHost();
 }
 
@@ -7667,9 +7683,9 @@ void CGame::ResolveVirtualUsers()
         // Restored games do not allow custom fake users, so we should only reach this point with actual users joined.
         // This code path is triggered by !fp enable.
         const uint8_t addedCounter = FakeAllSlots();
-        LOG_APP_IF(LOG_LEVEL_INFO, "resuming " + to_string(expectedPlayers) + "-user game. " + to_string(addedCounter) + " virtual users added.")
+        LOG_APP_IF(LogLevel::kInfo, "resuming " + to_string(expectedPlayers) + "-user game. " + to_string(addedCounter) + " virtual users added.")
       } else {
-        LOG_APP_IF(LOG_LEVEL_INFO, "resuming " + to_string(expectedPlayers) + "-user game. " + ToDecString(expectedPlayers - activePlayers) + " missing.")
+        LOG_APP_IF(LogLevel::kInfo, "resuming " + to_string(expectedPlayers) + "-user game. " + ToDecString(expectedPlayers - activePlayers) + " missing.")
       }
     }
     return;
@@ -7684,7 +7700,7 @@ void CGame::ResolveVirtualUsers()
         if (GetNumControllers() < m_Map->GetMapNumControllers()) {
           const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
           m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LOG_LEVEL_INFO, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
+          LOG_APP_IF(LogLevel::kInfo, "W3HMC virtual user added at slot " + ToDecString(SID + 1))
         }
       } else {
         CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
@@ -7696,7 +7712,7 @@ void CGame::ResolveVirtualUsers()
         }
         if (virtualUser && !virtualUser->GetIsObserver()) {
           m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LOG_LEVEL_INFO, "W3HMC virtual user assigned to slot " + ToDecString(SID + 1))
+          LOG_APP_IF(LogLevel::kInfo, "W3HMC virtual user assigned to slot " + ToDecString(SID + 1))
         }
       }
     }
@@ -7711,7 +7727,7 @@ void CGame::ResolveVirtualUsers()
         if (GetNumControllers() < m_Map->GetMapNumControllers()) {
           const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
           m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LOG_LEVEL_INFO, "AHCL virtual user added at slot " + ToDecString(SID + 1))
+          LOG_APP_IF(LogLevel::kInfo, "AHCL virtual user added at slot " + ToDecString(SID + 1))
         }
       } else {
         CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
@@ -7723,7 +7739,7 @@ void CGame::ResolveVirtualUsers()
         }
         if (virtualUser && !virtualUser->GetIsObserver()) {
           m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LOG_LEVEL_INFO, "AHCL virtual user assigned to slot " + ToDecString(SID + 1))
+          LOG_APP_IF(LogLevel::kInfo, "AHCL virtual user assigned to slot " + ToDecString(SID + 1))
         }
       }
     }
@@ -7747,7 +7763,7 @@ void CGame::ResolveVirtualUsers()
           virtualUser.DisableAllActions();
           m_InertVirtualUser = CGameVirtualUserReference(virtualUser);
           ++m_JoinedVirtualHosts;
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual player for WC3Stats workaround [" + virtualPlayerName.value() + "]")
+          LOG_APP_IF(LogLevel::kDebug, "Added virtual player for WC3Stats workaround [" + virtualPlayerName.value() + "]")
         }// else {
         break;
         //}
@@ -7792,14 +7808,14 @@ void CGame::ResolveVirtualUsers()
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
           joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
           if (isEmptyAvailable) {
-            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " [" + virtualUser->GetName() + "]")
+            LOG_APP_IF(LogLevel::kInfo, "Join-in-progress observer virtual user added at slot " + ToDecString(SID + 1) + " [" + virtualUser->GetName() + "]")
           } else {
-            LOG_APP_IF(LOG_LEVEL_INFO, "Join-in-progress observer virtual user assigned to slot " + ToDecString(SID + 1) + " [" + virtualUser->GetName() + "]")
+            LOG_APP_IF(LogLevel::kInfo, "Join-in-progress observer virtual user assigned to slot " + ToDecString(SID + 1) + " [" + virtualUser->GetName() + "]")
           }
         }
       }
     } else {
-      LOG_APP_IF(LOG_LEVEL_WARNING, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>, <map.w3mmd.features.prioritize_players = no>")
+      LOG_APP_IF(LogLevel::kWarning, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>, <map.w3mmd.features.prioritize_players = no>")
     }
   }
 
@@ -7818,14 +7834,14 @@ void CGame::ResolveVirtualUsers()
       if (CreateFakeObserver(nullopt)) {
         ++m_JoinedVirtualHosts;
         // As a referee, the virtual host can send messages and receive messages from any player.
-        LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as referee")
+        LOG_APP_IF(LogLevel::kDebug, "Added virtual host as referee")
       }
     } else if (m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
       if ((joinInProgressIsNativeObserver && beforeFakeObserverCount <= 1) || (GetNumJoinedObservers() > 0 && beforeFakeObserverCount == 0)) {
         if (CreateFakeObserver(nullopt)) {
           ++m_JoinedVirtualHosts;
           // As a full observer, the virtual host can send messages and receive messages from other full observers.
-          LOG_APP_IF(LOG_LEVEL_DEBUG, "Added virtual host as full observer")
+          LOG_APP_IF(LogLevel::kDebug, "Added virtual host as full observer")
         }
       }
     }
@@ -7834,7 +7850,7 @@ void CGame::ResolveVirtualUsers()
   if (m_IsAutoVirtualPlayers && GetNumJoinedPlayersOrFake() < 2) {
     if (CreateFakePlayer(nullopt)) {
       ++m_JoinedVirtualHosts;
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "Added filler virtual player")
+      LOG_APP_IF(LogLevel::kDebug, "Added filler virtual player")
     }
   }
 
@@ -9182,11 +9198,11 @@ bool CGame::CheckScopeBanned(const string& rawName, const string& hostName, cons
 {
   if (GetIsScopeBanned(rawName, hostName, addressLiteral)) {
     if (m_ReportedJoinFailNames.find(rawName) == end(m_ReportedJoinFailNames)) {
-      LOG_APP_IF(LOG_LEVEL_INFO, "user [" + rawName + "@" + hostName + "|" + addressLiteral + "] entry denied: game-scope banned")
+      LOG_APP_IF(LogLevel::kInfo, "user [" + rawName + "@" + hostName + "|" + addressLiteral + "] entry denied: game-scope banned")
       SendAllChat("[" + rawName + "@" + hostName + "] is trying to join the game, but is banned");
       m_ReportedJoinFailNames.insert(rawName);
     } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "user [" + rawName + "@" + hostName + "|" + addressLiteral + "] entry denied: game-scope banned")
+      LOG_APP_IF(LogLevel::kDebug, "user [" + rawName + "@" + hostName + "|" + addressLiteral + "] entry denied: game-scope banned")
     }
     return true;
   }
@@ -9296,7 +9312,7 @@ void CGame::RemoveFromLagScreens(GameUser::CGameUser* user) const
     if (user == otherUser || otherUser->GetIsInLoadingScreen()) {
       continue;
     }
-    DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + otherUser->GetName() + "] lagger update (-" + user->GetName() + ")")
+    DLOG_APP_IF(LogLevel::kTrace, "@[" + otherUser->GetName() + "] lagger update (-" + user->GetName() + ")")
     Send(otherUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
   }
 }
@@ -9318,7 +9334,7 @@ void CGame::ResetLagScreen()
     if (user->GetFinishedLoading()) {
       for (auto& otherUser : m_Users) {
         if (!otherUser->GetIsLagging()) continue;
-        DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (-" + otherUser->GetName() + ")")
+        DLOG_APP_IF(LogLevel::kTrace, "@[" + user->GetName() + "] lagger update (-" + otherUser->GetName() + ")")
         Send(user, GameProtocol::SEND_W3GS_STOP_LAG(otherUser));
       }
 
@@ -9339,7 +9355,7 @@ void CGame::ResetLagScreen()
         */
       }
 
-      DLOG_APP_IF(LOG_LEVEL_TRACE, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
+      DLOG_APP_IF(LogLevel::kTrace, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
       Send(user, startLagPacket);
 
       if (m_GameLoading) {
@@ -9452,7 +9468,7 @@ void CGame::ReleaseOwner()
   if (m_Exiting) {
     return;
   }
-  LOG_APP_IF(LOG_LEVEL_INFO, "Owner \"" + m_OwnerName + "@" + ToFormattedRealm(m_OwnerRealm) + "\" removed.")
+  LOG_APP_IF(LogLevel::kInfo, "Owner \"" + m_OwnerName + "@" + ToFormattedRealm(m_OwnerRealm) + "\" removed.")
   m_LastOwner = m_OwnerName;
   m_OwnerName.clear();
   m_OwnerRealm.clear();
@@ -9519,7 +9535,7 @@ void CGame::CountKickVotes()
       Log("votekick against user [" + m_KickVotePlayer + "] passed with " + to_string(Votes) + "/" + to_string(GetNumJoinedPlayers()) + " votes");
       SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has passed");
     } else {
-      LOG_APP_IF(LOG_LEVEL_ERROR, "votekick against user [" + m_KickVotePlayer + "] errored")
+      LOG_APP_IF(LogLevel::kError, "votekick against user [" + m_KickVotePlayer + "] errored")
     }
 
     m_KickVotePlayer.clear();
@@ -9924,7 +9940,7 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
   if (UID == 0xFF) return false;
 
   string fileName = GetSaveFileName(UID);
-  LOG_APP_IF(LOG_LEVEL_INFO, "saving as " + fileName)
+  LOG_APP_IF(LogLevel::kInfo, "saving as " + fileName)
 
   {
     const uint32_t success = 1;
@@ -10171,7 +10187,7 @@ bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntar
     SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
     return true;
   } else {
-    LOG_APP_IF(LOG_LEVEL_WARNING, "Failed to automatically save game on leave")
+    LOG_APP_IF(LogLevel::kWarning, "Failed to automatically save game on leave")
   }
 
   return false;
@@ -10209,7 +10225,7 @@ void CGame::OpenObserverSlots()
 {
   const uint8_t enabledCount = m_Map->GetVersionMaxSlots() - GetMap()->GetMapNumDisabled();
   if (m_Slots.size() >= enabledCount) return;
-  LOG_APP_IF(LOG_LEVEL_DEBUG, "adding " + to_string(enabledCount - m_Slots.size()) + " observer slots")
+  LOG_APP_IF(LogLevel::kDebug, "adding " + to_string(enabledCount - m_Slots.size()) + " observer slots")
   while (m_Slots.size() < enabledCount) {
     m_Slots.emplace_back(GetIsCustomForces() ? SLOTTYPE_NONE : SLOTTYPE_USER, UID_ZERO, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, m_Map->GetVersionMaxSlots(), m_Map->GetVersionMaxSlots(), SLOTRACE_RANDOM);
   }
@@ -10225,7 +10241,7 @@ void CGame::CloseObserverSlots()
       ++count;
     }
   }
-  if (count > 0 && m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (count > 0 && m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     LogApp("deleted " + to_string(count) + " observer slots", LOG_C);
   }
 }
@@ -10240,7 +10256,7 @@ bool CGame::CreateVirtualHost()
   if (m_GameLoading || m_GameLoaded) {
     // In principle, CGame::CreateVirtualHost() should not be called when the game has started loading,
     // but too many times has that asssumption broke due to faulty logic.
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Rejected creation of virtual host after game started");
+    LOG_APP_IF(LogLevel::kDebug, "Rejected creation of virtual host after game started");
     return false;
   }
 
@@ -10746,7 +10762,7 @@ uint8_t CGame::ResolveUndecidedController(CGameController* controllerData, const
     }
   }
 
-  LOG_APP_IF(LOG_LEVEL_DEBUG, "ResolveUndecidedController unhandled path");
+  LOG_APP_IF(LogLevel::kDebug, "ResolveUndecidedController unhandled path");
   return GAME_RESULT_UNDECIDED;
 }
 
@@ -10854,9 +10870,9 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
 uint8_t CGame::TryConfirmResults(optional<GameResults> gameResults, uint8_t resultsSource) {
   if (!gameResults.has_value() || !CheckGameResults(gameResults.value())) {
     if (resultsSource == GAME_RESULT_SOURCE_MMD) {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "MMD failed to provide valid game results")
+      LOG_APP_IF(LogLevel::kDebug, "MMD failed to provide valid game results")
     } else {
-      LOG_APP_IF(LOG_LEVEL_DEBUG, "Players failed to provide valid game results")
+      LOG_APP_IF(LogLevel::kDebug, "Players failed to provide valid game results")
     }
     return GAME_RESULT_SOURCE_NONE;
   }
@@ -10864,9 +10880,9 @@ uint8_t CGame::TryConfirmResults(optional<GameResults> gameResults, uint8_t resu
   m_GameResults.swap(gameResults);
   m_GameResults->Confirm();
   if (resultsSource == GAME_RESULT_SOURCE_MMD) {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners (MMD): " + JoinVector(m_GameResults->GetWinnersNames(), false))
+    LOG_APP_IF(LogLevel::kDebug, "Resolved winners (MMD): " + JoinVector(m_GameResults->GetWinnersNames(), false))
   } else {
-    LOG_APP_IF(LOG_LEVEL_DEBUG, "Resolved winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
+    LOG_APP_IF(LogLevel::kDebug, "Resolved winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
   }
   return m_GameResultsSource;
 }
@@ -10967,7 +10983,7 @@ void CGame::RunHCLEncoding()
   }
 
   if (m_HCLCommandString.size() > GetSlotsOccupied()) {
-    LOG_APP_IF(LOG_LEVEL_INFO, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because there aren't enough occupied slots")
+    LOG_APP_IF(LogLevel::kInfo, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because there aren't enough occupied slots")
     return;
   }
 
@@ -10975,7 +10991,7 @@ void CGame::RunHCLEncoding()
   string HCLChars = encodeVirtualPlayers ? HCL_CHARSET_SMALL : HCL_CHARSET_STANDARD;
 
   if (m_HCLCommandString.find_first_not_of(HCLChars) != string::npos) {
-    LOG_APP_IF(LOG_LEVEL_ERROR, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because it contains invalid characters")
+    LOG_APP_IF(LogLevel::kError, "failed to encode game mode as HCL string [" + m_HCLCommandString + "] because it contains invalid characters")
     return;
   }
 
@@ -11021,8 +11037,8 @@ void CGame::RunHCLEncoding()
   // handicap = encodedHandicap - (value * K) - (virtual ? 6 : 0)
 
   m_SlotInfoChanged |= SLOTS_HCL_INJECTED;
-  LOG_APP_IF(LOG_LEVEL_DEBUG, "using game mode [" + m_HCLCommandString + "]")
-  DLOG_APP_IF(LOG_LEVEL_TRACE, "mode [" + m_HCLCommandString + "] encoded as handicaps <" + ByteArrayToDecString(GetHandicaps()) + ">")
+  LOG_APP_IF(LogLevel::kDebug, "using game mode [" + m_HCLCommandString + "]")
+  DLOG_APP_IF(LogLevel::kTrace, "mode [" + m_HCLCommandString + "] encoded as handicaps <" + ByteArrayToDecString(GetHandicaps()) + ">")
 }
 
 bool CGame::SendHMC(const string& message)

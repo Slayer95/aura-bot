@@ -30,31 +30,50 @@
 
 // includes.h
 
-constexpr uint8_t LOG_LEVEL_EMERGENCY = 1;
-constexpr uint8_t LOG_LEVEL_ALERT = 2;
-constexpr uint8_t LOG_LEVEL_CRITICAL = 3;
-constexpr uint8_t LOG_LEVEL_ERROR = 4;
-constexpr uint8_t LOG_LEVEL_WARNING = 5;
-constexpr uint8_t LOG_LEVEL_NOTICE = 6;
-constexpr uint8_t LOG_LEVEL_INFO = 7;
-constexpr uint8_t LOG_LEVEL_DEBUG = 8;
-constexpr uint8_t LOG_LEVEL_TRACE = 9;
-constexpr uint8_t LOG_LEVEL_TRACE2 = 10;
-constexpr uint8_t LOG_LEVEL_TRACE3 = 11;
+constexpr uint8_t LOG_LEVEL_EMERGENCY = 0;
+constexpr uint8_t LOG_LEVEL_ALERT = 1;
+constexpr uint8_t LOG_LEVEL_CRITICAL = 2;
+constexpr uint8_t LOG_LEVEL_ERROR = 3;
+constexpr uint8_t LOG_LEVEL_WARNING = 4;
+constexpr uint8_t LOG_LEVEL_NOTICE = 5;
+constexpr uint8_t LOG_LEVEL_INFO = 6;
+constexpr uint8_t LOG_LEVEL_DEBUG = 7;
+constexpr uint8_t LOG_LEVEL_TRACE = 8;
+constexpr uint8_t LOG_LEVEL_TRACE2 = 9;
+constexpr uint8_t LOG_LEVEL_TRACE3 = 10;
 
 enum class LogLevel : uint8_t {
-  kEmergency = 1,
-  kAlert = 2,
-  kCritical = 3,
-  kError = 4,
-  kWarning = 5,
-  kNotice = 6,
-  kInfo = 7,
-  kDebug = 8,
-  kTrace = 9,
-  kTrace2 = 10,
-  kTrace3 = 11,
-  LAST = 12,
+  kEmergency = LOG_LEVEL_EMERGENCY,
+  kAlert = LOG_LEVEL_ALERT,
+  kCritical = LOG_LEVEL_CRITICAL,
+  kError = LOG_LEVEL_ERROR,
+  kWarning = LOG_LEVEL_WARNING,
+  kNotice = LOG_LEVEL_NOTICE,
+  kInfo = LOG_LEVEL_INFO,
+  kDebug = LOG_LEVEL_DEBUG,
+#ifdef DEBUG
+  kTrace = LOG_LEVEL_TRACE,
+  kTrace2 = LOG_LEVEL_TRACE2,
+  kTrace3 = LOG_LEVEL_TRACE3,
+  LAST = LOG_LEVEL_TRACE3 + 1,
+#else
+  LAST = LOG_LEVEL_DEBUG + 1,
+#endif
+};
+
+enum class LogLevelExtra : uint8_t {
+  kEmergency = LOG_LEVEL_EMERGENCY,
+  kAlert = LOG_LEVEL_ALERT,
+  kCritical = LOG_LEVEL_CRITICAL,
+  kError = LOG_LEVEL_ERROR,
+  kWarning = LOG_LEVEL_WARNING,
+  kNotice = LOG_LEVEL_NOTICE,
+  kInfo = LOG_LEVEL_INFO,
+  kDebug = LOG_LEVEL_DEBUG,
+  kTrace = LOG_LEVEL_TRACE,
+  kTrace2 = LOG_LEVEL_TRACE2,
+  kTrace3 = LOG_LEVEL_TRACE3,
+  kExtra = LOG_LEVEL_TRACE3 + 1,
 };
 
 constexpr uint8_t ANTI_SPOOF_NONE = 0;
@@ -62,7 +81,7 @@ constexpr uint8_t ANTI_SPOOF_BASIC = 1;
 constexpr uint8_t ANTI_SPOOF_EXTENDED = 2;
 constexpr uint8_t ANTI_SPOOF_FULL = 3;
 
-enum class AntiSpoof : uint8_t {
+enum class AntiSpoofDepth : uint8_t {
   kNone = 0,
   kBasic = 1,
   kExtended = 2,
@@ -809,8 +828,9 @@ enum class AsyncObserver : uint8_t {
 
 constexpr uint8_t SEARCH_TYPE_ONLY_MAP = 1;
 constexpr uint8_t SEARCH_TYPE_ONLY_CONFIG = 2;
-constexpr uint8_t SEARCH_TYPE_ONLY_FILE = 3;
-constexpr uint8_t SEARCH_TYPE_ANY = 7;
+constexpr uint8_t SEARCH_TYPE_ONLY_FILE = SEARCH_TYPE_ONLY_MAP | SEARCH_TYPE_ONLY_CONFIG;
+constexpr uint8_t SEARCH_TYPE_NETWORK = 4;
+constexpr uint8_t SEARCH_TYPE_ANY = SEARCH_TYPE_ONLY_FILE | SEARCH_TYPE_NETWORK;
 
 constexpr uint8_t MATCH_TYPE_NONE = 0u;
 constexpr uint8_t MATCH_TYPE_MAP = 1u;
@@ -1198,6 +1218,17 @@ enum class MapTransfersMode : uint8_t {
   kAutomatic = 1,
   kManual = 2,
   LAST = 3,
+};
+
+constexpr uint8_t UDP_DISCOVERY_MODE_FREE = 0u;
+constexpr uint8_t UDP_DISCOVERY_MODE_LAX = 1u;
+constexpr uint8_t UDP_DISCOVERY_MODE_STRICT = 2u;
+
+enum class UDPDiscoveryMode : uint8_t {
+  kFree = 0,
+  kLax = 1,
+  kStrict = 2,
+  LAST = 4,
 };
 
 // config_game.h

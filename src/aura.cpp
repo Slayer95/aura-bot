@@ -477,7 +477,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_AutoReHosted(false),
     m_MetaDataNeedsUpdate(false),
 
-    m_LogLevel(LOG_LEVEL_DEBUG),
+    m_LogLevel(LogLevel::kDebug),
     m_LoopTicks(APP_MIN_TICKS),
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
     m_StartedFastPollingTicks(APP_MIN_TICKS),
@@ -720,7 +720,7 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
       m_RealmsByInputID[entry.first] = matchingRealm;
       m_RealmsIdentifiers.push_back(entry.first);
       // m_RealmsIdentifiers[matchingRealm->GetInternalID()] == matchingRealm->GetInputID();
-      if (MatchLogLevel(LOG_LEVEL_DEBUG)) {
+      if (MatchLogLevel(LogLevel::kDebug)) {
         Print("[AURA] server found: " + matchingRealm->GetUniqueDisplayName());
       }
     } else {
@@ -796,10 +796,10 @@ void CAura::CheckScripts()
     }
     bool commonExists = FileExists(autoExtractedCommonPath);
     bool blizzardExists = FileExists(autoExtractedBlizzardPath);
-    if (!commonExists && MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (!commonExists && MatchLogLevel(LogLevel::kWarning)) {
       Print("[AURA] Support for v" + ToVersionString(version) + " requires missing file [" + PathToString(autoExtractedCommonPath) + "]");
     }
-    if (!blizzardExists && MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (!blizzardExists && MatchLogLevel(LogLevel::kWarning)) {
       Print("[AURA] Support for v" + ToVersionString(version) + " requires missing file [" + PathToString(autoExtractedBlizzardPath) + "]");
     }
     checkedPaths.insert(autoExtractedCommonPath);
@@ -1042,9 +1042,9 @@ uint8_t CAura::HandleAction(const AppAction& action)
       uint16_t externalPort = static_cast<uint16_t>(action.value_1);
       uint16_t internalPort = static_cast<uint16_t>(action.value_2);
       if (action.type == APP_ACTION_MODE_TCP) {
-        m_Net.RequestUPnP(NET_PROTOCOL_TCP, externalPort, internalPort, LOG_LEVEL_DEBUG);
+        m_Net.RequestUPnP(NET_PROTOCOL_TCP, externalPort, internalPort, LogLevel::kDebug);
       } else if (action.type == APP_ACTION_MODE_UDP) {
-        m_Net.RequestUPnP(NET_PROTOCOL_UDP, externalPort, internalPort, LOG_LEVEL_DEBUG);
+        m_Net.RequestUPnP(NET_PROTOCOL_UDP, externalPort, internalPort, LogLevel::kDebug);
       }
       return APP_ACTION_DONE;
     }
@@ -2063,7 +2063,7 @@ void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, c
   // something is going terribly wrong - Aura is probably starved of resources
   // print a message because even though this will take more resources it should provide some information to the administrator for future reference
   // other solutions - dynamically modify the latency, request higher priority, terminate other games, ???
-  if (!MatchLogLevel(LOG_LEVEL_WARNING)) {
+  if (!MatchLogLevel(LogLevel::kWarning)) {
     return;
   }
   int64_t Ticks = m_LoopTicks;
@@ -2254,7 +2254,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 
   if (!gameSetup->m_Map->GetMapHasTargetGameVersion()) {
     gameSetup->m_Ctx->ErrorReply("The game version has not been specified", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
-    if (MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (MatchLogLevel(LogLevel::kWarning)) {
       Print("[CONFIG] Game cannot be hosted because <hosting.game_versions.main> is missing.");
     }
     return false;
@@ -2306,7 +2306,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 #ifndef DISABLE_MINIUPNP
   if (m_Net.m_Config.m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // FIXME? This is a long synchronous network call.
-    m_Net.RequestUPnP(NET_PROTOCOL_TCP, createdLobby->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4), createdLobby->GetHostPort(), LOG_LEVEL_INFO);
+    m_Net.RequestUPnP(NET_PROTOCOL_TCP, createdLobby->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4), createdLobby->GetHostPort(), LogLevel::kInfo);
   }
 #endif
 
@@ -2466,7 +2466,7 @@ FileChunkTransient CAura::ReadFileChunkCacheable(const std::filesystem::path& fi
   }
 
 #ifdef DEBUG
-  if (MatchLogLevel(LOG_LEVEL_TRACE)) {
+  if (GetIsLoggingTrace()) {
     Print("[AURA] Cached map file contents in-memory for [" + PathToString(filePath) + ":" + to_string(start) + "] ( " + to_string(actualReadSize / 1024) + " / " + to_string(fileSize / 1024) + " KB)");
   }
 #endif

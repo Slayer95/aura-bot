@@ -73,8 +73,8 @@ public:
   std::optional<bool>                   m_UseMapCFGCache;
   std::optional<std::string>            m_BindAddress;
   std::optional<uint16_t>               m_HostPort;
-  std::optional<std::string>            m_LANMode;
-  std::optional<std::string>            m_LogLevel;
+  std::optional<UDPDiscoveryMode>       m_UDPDiscoveryMode;
+  std::optional<LogLevel>               m_LogLevel;
   std::optional<bool>                   m_InitSystem;
 
   std::optional<std::string>            m_War3DataVersion;
@@ -89,7 +89,7 @@ public:
 
   // Host flags
   std::optional<std::string>            m_SearchTarget;
-  std::optional<std::string>            m_SearchType;
+  std::optional<uint8_t>                m_SearchType;
   std::optional<std::string>            m_GameName;
   std::optional<std::string>            m_GameVersion;
   std::optional<bool>                   m_GameIsExpansion;
@@ -199,7 +199,6 @@ public:
   // Parsing stuff
   //CLI::Validator GetIsFullyQualifiedUserValidator();
   CLIResult Parse(const int argc, char** argv);
-  [[nodiscard]] uint8_t GetGameSearchType() const;
   [[nodiscard]] uint8_t GetGameLobbyTimeoutMode() const;
   [[nodiscard]] uint8_t GetGameLobbyOwnerTimeoutMode() const;
   [[nodiscard]] uint8_t GetGameLoadingTimeoutMode() const;

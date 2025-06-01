@@ -6986,7 +6986,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
       }
 
       default: {
-        if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+        if (m_Game.get().m_Aura->MatchLogLevel(LogLevel::kDebug)) {
           Print(GetLogPrefix() + "unhandled dota event: [" + key + "] for " + to_string(cacheValue));
         }
       }

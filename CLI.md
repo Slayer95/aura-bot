@@ -346,9 +346,10 @@ Note that \`0.0.0.0\` is a special value that will allow connections from every 
 
 This option is equivalent to ``<net.host_port.only>`` in `config.ini`
 
-## \`--lan-mode \<MODE\>\`
+## \`--udp-lan-mode \<MODE\>\`
 
-Specifies how hosted games available for "Local Area Network" should be made known to potential players.
+Specifies how hosted games available for "Local Area Network" should be made known to potential players 
+running game clients up to v1.29.
 
 **Options:**
 

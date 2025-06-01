@@ -70,7 +70,7 @@ CDiscord::~CDiscord()
 
 #ifndef DISABLE_DPP
   // dpp has a tendency to crash on shutdown
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[DISCORD] shutting down");
   }
   if (m_Client) {
@@ -80,7 +80,7 @@ CDiscord::~CDiscord()
     m_Client = nullptr;
   }
 #endif
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     // CDiscord deallocation is the last step of CAura deallocation
     Print("[AURA] shutdown finished");
   }
@@ -120,7 +120,7 @@ bool CDiscord::Init()
       LeaveServer(event.created.id, event.created.name, true);
       return;
     }
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_INFO)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kInfo)) {
       Print("[DISCORD] Joined server <<" + event.created.name + ">> (#" + to_string(event.created.id) + ").");
     }
   });
@@ -244,9 +244,9 @@ void CDiscord::SendUser(const string& message, const uint64_t target)
   m_PendingCallbackCount++;
   m_Client->direct_message_create(target, dpp::message(message), [this](const dpp::confirmation_callback_t& result) {
     if (result.is_error()) {
-      PRINT_IF(LOG_LEVEL_WARNING, "[DISCORD] Failed to send direct message.");
+      PRINT_IF(LogLevel::kWarning, "[DISCORD] Failed to send direct message.");
     } else {
-      PRINT_IF(LOG_LEVEL_INFO, "[DISCORD] Direct message sent OK.");
+      PRINT_IF(LogLevel::kInfo, "[DISCORD] Direct message sent OK.");
     }
     m_PendingCallbackCount--;
   });
@@ -289,7 +289,7 @@ void CDiscord::LeaveServer(const uint64_t target, const string& name, const bool
   if (m_ExitingSoon) return;
   m_PendingCallbackCount++;
   m_Client->current_user_leave_guild(target, [this, target, name, isJoining](const dpp::confirmation_callback_t& result) {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kNotice)) {
       if (result.is_error()) {
         Print("[DISCORD] Error while trying to leave server <<" + name + ">> (#" + to_string(target) + ").");
       } else if (isJoining) {
@@ -336,9 +336,9 @@ void CDiscord::SendAllChannels(const string& text)
     m_PendingCallbackCount++;
     m_Client->message_create(dpp::message(dpp::snowflake(channel), text), [this](const dpp::confirmation_callback_t& result) {
       if (result.is_error()) {
-        PRINT_IF(LOG_LEVEL_WARNING, "[DISCORD] Failed to send message to channel.");
+        PRINT_IF(LogLevel::kWarning, "[DISCORD] Failed to send message to channel.");
       } else {
-        PRINT_IF(LOG_LEVEL_INFO, "[DISCORD] Message sent to channel OK.");
+        PRINT_IF(LogLevel::kInfo, "[DISCORD] Message sent to channel OK.");
       }
       m_PendingCallbackCount--;
     });

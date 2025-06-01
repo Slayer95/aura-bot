@@ -54,7 +54,7 @@ bool CommandHistory::CheckSudoMode(CAura* nAura, shared_ptr<CGame> game, const s
   if (GetIsSudoMode()) return true;
   if (m_SudoMode.has_value()) {
     m_SudoMode.reset();
-    if (nAura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (nAura->MatchLogLevel(LogLevel::kWarning)) {
       string prefix;
       if (game) {
         prefix = game->GetLogPrefix();
@@ -69,7 +69,7 @@ bool CommandHistory::CheckSudoMode(CAura* nAura, shared_ptr<CGame> game, const s
 
 void CommandHistory::SudoModeStart(CAura* nAura, shared_ptr<CGame> game, const string& userName)
 {
-  if (nAura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+  if (nAura->MatchLogLevel(LogLevel::kWarning)) {
     string prefix;
     if (game) {
       prefix = game->GetLogPrefix();
@@ -86,7 +86,7 @@ void CommandHistory::SudoModeEnd(CAura* nAura, shared_ptr<CGame> game, const str
   if (!GetIsSudoMode()) {
     return;
   }
-  if (nAura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+  if (nAura->MatchLogLevel(LogLevel::kWarning)) {
     string prefix;
     if (game) {
       prefix = game->GetLogPrefix();

@@ -88,7 +88,7 @@ public:
   bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
   bool                                               m_MetaDataNeedsUpdate;
 
-  uint8_t                                            m_LogLevel;
+  LogLevel                                           m_LogLevel;
   int64_t                                            m_LoopTicks;
   int64_t                                            m_LastPerformanceWarningTicks;
   int64_t                                            m_StartedFastPollingTicks;
@@ -252,7 +252,9 @@ public:
   void ClearStaleContexts();
   void ClearStaleFileChunks();
   
-  inline bool MatchLogLevel(const uint8_t logLevel) { return logLevel <= m_LogLevel; } // 1: emergency ... 9: trace
+  inline bool MatchLogLevel(const LogLevel logLevel) const { return (const uint8_t)logLevel <= (const uint8_t)m_LogLevel; } // 0: emergency ... 8: trace ... 10 trace3
+  inline bool MatchLogLevel(const LogLevelExtra logLevel) const { return (const uint8_t)logLevel <= (const uint8_t)m_LogLevel; } // 0: emergency ... 8: trace ... 10 trace 3 ... 11 extra
+  inline bool GetIsLoggingTrace() const { return (const uint8_t)LogLevelExtra::kTrace <= (const uint8_t)m_LogLevel; }
   void LogPersistent(const std::string& logText);
   void LogRemoteFile(const std::string& logText);
   void LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t adjustedInterval);

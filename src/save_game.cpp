@@ -52,7 +52,7 @@ bool CSaveGame::Load()
 {
   m_Packed->Load(m_ServerPath, false);
   if (!m_Packed->GetValid() || m_Packed->GetFlags() != 0) {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kWarning)) {
       Print("[SAVEGAME] invalid file type (flags mismatch)");
     }
     Unload();
@@ -100,14 +100,14 @@ bool CSaveGame::Parse()
 	ISS.read(reinterpret_cast<char*>(&m_NumSlots), 1);			// number of slots
 
 	if (m_NumSlots == 0 || m_NumSlots > MAX_SLOTS_MODERN) {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kWarning)) {
       Print("[SAVEGAME] invalid savegame (slot count invalid)");
     }
 		return false;
 	}
 
   if (m_NumSlots > MAX_SLOTS_LEGACY && !m_Aura->m_SupportsModernSlots) {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kWarning)) {
       Print("[SAVEGAME] invalid savegame (more than 12 slots requires support for v1.29+)");
     }
 		return false;
@@ -125,7 +125,7 @@ bool CSaveGame::Parse()
 	ISS.read(reinterpret_cast<char*>(&SaveHash), 4);			// magic number
 
 	if (ISS.eof() || ISS.fail()) {
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_WARNING)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kWarning)) {
       Print( "[SAVEGAME] failed to parse savegame header" );
     }
 		return false;

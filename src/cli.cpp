@@ -124,14 +124,51 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--jassdir", m_JASSPath, "Customizes the directory where extracted JASS files are stored.");
   app.add_option("--savedir", m_GameSavePath, "Customizes the game save directory.");
   app.add_option("--data-version", m_War3DataVersion, "Customizes the game version to be used when reading the game install directory.");
-  app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")->check(CLI::IsMember({"map", "config", "local", "any"}))->default_val("any");
+
+  app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")
+  ->transform(CLI::CheckedTransformer(map<string, uint8_t>{
+    {"map", SEARCH_TYPE_ONLY_MAP},
+    {"config", SEARCH_TYPE_ONLY_CONFIG},
+    {"local", SEARCH_TYPE_ONLY_FILE},
+    {"any", SEARCH_TYPE_ANY}
+  }));
+
   app.add_option("--bind-address", m_BindAddress, "Restricts connections to the game server, only allowing the input IPv4 address.")->check(CLI::ValidIPV4);
   app.add_option("--host-port", m_HostPort, "Customizes the game server to only listen in the specified port.");
-  app.add_option("--lan-mode", m_LANMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")->check(CLI::IsMember({"strict", "lax", "free"}));
+  app.add_option("--udp-lan-mode", m_UDPDiscoveryMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")
+  ->transform(CLI::CheckedTransformer(map<string, UDPDiscoveryMode>{
+    {"strict", UDPDiscoveryMode::kStrict},
+    {"lax", UDPDiscoveryMode::kLax},
+    {"free", UDPDiscoveryMode::kFree}
+  }));
+
 #ifdef DEBUG
-  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: notice, info, debug, trace, trace2, trace3.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"}));
+  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: notice, info, debug, trace, trace2, trace3.")
+  ->transform(CLI::CheckedTransformer(map<string, LogLevel>{
+    {"emergency", LogLevel::kEmergency},
+    {"alert", LogLevel::kAlert},
+    {"critical", LogLevel::kCritical},
+    {"error", LogLevel::kError},
+    {"warning", LogLevel::kWarning},
+    {"notice", LogLevel::kNotice},
+    {"info", LogLevel::kInfo},
+    {"debug", LogLevel::kDebug},
+    {"trace", LogLevel::kTrace},
+    {"trace2", LogLevel::kTrace2},
+    {"trace3", LogLevel::kTrace3},
+  }));
 #else
-  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: notice, info, debug.")->check(CLI::IsMember({"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"}));
+  app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: notice, info, debug.")
+  ->transform(CLI::CheckedTransformer(map<string, LogLevel>{
+    {"emergency", LogLevel::kEmergency},
+    {"alert", LogLevel::kAlert},
+    {"critical", LogLevel::kCritical},
+    {"error", LogLevel::kError},
+    {"warning", LogLevel::kWarning},
+    {"notice", LogLevel::kNotice},
+    {"info", LogLevel::kInfo},
+    {"debug", LogLevel::kDebug}
+  }));
 #endif
 
   // Game hosting
@@ -225,16 +262,18 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--exec", m_ExecCommands, "Runs a command from the CLI. Repeatable.");
   app.add_option("--exec-as", m_ExecAs, "Customizes the user identity when running commands from the CLI.")/*->check(IsFullyQualifiedUser)*/;
 
-  map<string, CommandAuth> commandAuths{
-    {"auto", CommandAuth::kAuto},
-    {"spoofed", CommandAuth::kSpoofed},
-    {"verified", CommandAuth::kVerified},
-    {"admin", CommandAuth::kAdmin},
-    {"rootadmin", CommandAuth::kRootAdmin},
-    {"sudo", CommandAuth::kSudo}
-  };
+  app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")
+  ->transform(
+    CLI::CheckedTransformer(map<string, CommandAuth>{
+      {"auto", CommandAuth::kAuto},
+      {"spoofed", CommandAuth::kSpoofed},
+      {"verified", CommandAuth::kVerified},
+      {"admin", CommandAuth::kAdmin},
+      {"rootadmin", CommandAuth::kRootAdmin},
+      {"sudo", CommandAuth::kSudo}
+    })
+  );
 
-  app.add_option("--exec-auth", m_ExecAuth, "Customizes the user permissions when running commands from the CLI.")->transform(CLI::CheckedTransformer(commandAuths));
   app.add_flag(  "--exec-broadcast", m_ExecBroadcast, "Enables broadcasting the command execution to all users in the channel");
   app.add_flag(  "--exec-online,--exec-offline{false}", m_ExecOnline, "Customizes whether the bot should be connected to a service before running a CLI command using an identity from that service.");
 
@@ -297,25 +336,6 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   }
 
   return CLIResult::kOk;
-}
-
-uint8_t CCLI::GetGameSearchType() const
-{
-  uint8_t searchType = SEARCH_TYPE_ANY;
-  if (m_SearchType.has_value()) {
-    if (m_SearchType.value() == "map") {
-      searchType = SEARCH_TYPE_ONLY_MAP;
-    } else if (m_SearchType.value() == "config") {
-      searchType = SEARCH_TYPE_ONLY_CONFIG;
-    } else if (m_SearchType.value() == "local") {
-      searchType = SEARCH_TYPE_ONLY_FILE;
-    } else {
-      searchType = SEARCH_TYPE_ANY;
-    }
-  } else if (m_UseStandardPaths) {
-    searchType = SEARCH_TYPE_ONLY_FILE;
-  }
-  return searchType;
 }
 
 uint8_t CCLI::GetGameLobbyTimeoutMode() const
@@ -660,21 +680,14 @@ void CCLI::OverrideConfig(CAura* nAura) const
     nAura->m_Config.m_EnableCFGCache = m_UseMapCFGCache.value();
   }
   if (m_LogLevel.has_value()) {
-    vector<string> logLevels = {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"};
-    uint8_t maxIndex = static_cast<uint8_t>(logLevels.size());
-    for (uint8_t i = 0; i < maxIndex; ++i) {
-      if (m_LogLevel.value() == logLevels[i]) {
-        nAura->m_Config.m_LogLevel = 1 + i;
-        break;
-      }
-    }
+    nAura->m_Config.m_LogLevel = m_LogLevel.value();
   }
 
-  if (m_LANMode.has_value()) {
-    const bool isMainServerEnabled = m_LANMode.value() != "free";
+  if (m_UDPDiscoveryMode.has_value()) {
+    const bool isMainServerEnabled = m_UDPDiscoveryMode.value() != UDPDiscoveryMode::kFree;
     nAura->m_Net.m_Config.m_UDPMainServerEnabled = isMainServerEnabled;
     if (!isMainServerEnabled) {
-      nAura->m_Net.m_Config.m_UDPBroadcastStrictMode = m_LANMode.value() == "strict";
+      nAura->m_Net.m_Config.m_UDPBroadcastStrictMode = m_UDPDiscoveryMode.value() == UDPDiscoveryMode::kStrict;
     }
   }
 
@@ -715,7 +728,8 @@ bool CCLI::QueueActions(CAura* nAura) const
       return false;
     }
 
-    const uint8_t searchType = GetGameSearchType();
+    const uint8_t searchType = m_SearchType.value_or(m_UseStandardPaths ? SEARCH_TYPE_ONLY_FILE : SEARCH_TYPE_ANY);
+
     optional<string> userName = GetUserMultiPlayerName();
     shared_ptr<CCommandContext> ctx = nullptr;
     try {

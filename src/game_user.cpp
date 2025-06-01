@@ -62,6 +62,37 @@
 using namespace std;
 using namespace GameUser;
 
+#define LOG_APP_IF(T, U) \
+    static_assert(T < LogLevel::LAST, "Use DLOG_APP_IF for tracing log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        m_Game.get().LogApp(U, LOG_C); \
+    }
+
+#define LOG_APP_CUSTOM(T, U, V) \
+    static_assert(T < LogLevel::LAST, "Use DLOG_APP_CUSTOM for tracing log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        m_Game.get().LogApp(U, V); \
+    }
+
+#ifdef DEBUG
+#define DLOG_APP_IF(T, U) \
+    static_assert(T < LogLevel::LAST, "Invalid tracing log level");\
+    static_assert(T >= LogLevel::kTrace, "Use LOG_APP_IF for regular log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        m_Game.get().LogApp(U, LOG_C); \
+    }
+
+#define DLOG_APP_CUSTOM(T, U, V) \
+    static_assert(T < LogLevel::LAST, "Invalid tracing log level");\
+    static_assert(T >= LogLevel::kTrace, "Use LOG_APP_CUSTOM for regular log levels");\
+    if (m_Aura->MatchLogLevel(T)) {\
+        m_Game.get().LogApp(U, V); \
+    }
+#else
+#define DLOG_APP_IF(T, U)
+#define DLOG_APP_CUSTOM(T, U, V)
+#endif
+
 //
 // CGameUser
 //
@@ -532,7 +563,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
           case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
             if (m_SyncCounter >= m_Game.get().GetSyncCounter()) {
-              m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] incorrectly ahead of sync", LOG_C | LOG_P);
+              LOG_APP_CUSTOM(LogLevel::kWarning, "player [" + m_Name + "] incorrectly ahead of sync", LOG_C | LOG_P);
               m_Game.get().EventUserDisconnectGameProtocolError(this, false);
               Abort = true;
             } else {
@@ -628,32 +659,32 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::DESYNC: {
-            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::DESYNC", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::DESYNC", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::GAME_OVER: {
-            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::GAME_OVER", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::GAME_OVER", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::LEAVE_ACK: {
-            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::LEAVE_ACK", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::LEAVE_ACK", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::CLIENT_INFO: {
-            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::CLIENT_INFO", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::CLIENT_INFO", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::PEER_SET: {
-            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::PEER_SET", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::PEER_SET", LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::MAPPART_ERR: {
-            m_Game.get().LogApp(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_ERR", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_ERR", LOG_C | LOG_P);
             break;
           }
 
@@ -943,7 +974,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
     m_TotalDisconnectTicks += GetTicks() - m_LastDisconnectTicks.value();
   }
   m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
-  if (m_Game.get().m_Aura->MatchLogLevel(LOG_LEVEL_NOTICE)) {
+  if (m_Game.get().m_Aura->MatchLogLevel(LogLevel::kNotice)) {
     Print(m_Game.get().GetLogPrefix() + "user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
   }
 }

@@ -4093,7 +4093,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       uint16_t intPort = static_cast<uint16_t>(Args[1]);
 
       SendReply("Trying to forward external port " + to_string(extPort) + " to internal port " + to_string(intPort) + "...");
-      uint8_t result = m_Aura->m_Net.RequestUPnP(NET_PROTOCOL_TCP, extPort, intPort, LOG_LEVEL_INFO, true);
+      uint8_t result = m_Aura->m_Net.RequestUPnP(NET_PROTOCOL_TCP, extPort, intPort, LogLevel::kInfo, true);
       if (result == 0) {
         ErrorReply("Universal Plug and Play is not supported by the host router.");
       } else if (0 != (result & 1)) {

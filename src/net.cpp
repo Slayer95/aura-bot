@@ -460,7 +460,7 @@ bool CNet::Init()
     }
 #ifndef DISABLE_MINIUPNP
     if (m_Config.m_EnableUPnP) {
-      RequestUPnP(NET_PROTOCOL_UDP, 6112, 6112, LOG_LEVEL_DEBUG);
+      RequestUPnP(NET_PROTOCOL_UDP, 6112, 6112, LogLevel::kDebug);
     }
 #endif
   }
@@ -593,18 +593,18 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
       if (socket) {
         if (m_Config.m_ProxyReconnect > 0) {
           CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
-          DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+          DPRINT_IF(LogLevel::kTrace2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
           m_IncomingConnections[localPort].push_back(incomingConnection);
         } else if (m_Aura->m_Lobbies.empty() && m_Aura->m_JoinInProgressGames.empty()) {
-          DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] connection to port " + to_string(localPort) + " rejected.")
+          DPRINT_IF(LogLevel::kTrace2, "[AURA] connection to port " + to_string(localPort) + " rejected.")
           delete socket;
         } else {
           CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
-          DPRINT_IF(LOG_LEVEL_TRACE2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+          DPRINT_IF(LogLevel::kTrace2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
           m_IncomingConnections[localPort].push_back(incomingConnection);
         }
         if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-          PRINT_IF(LOG_LEVEL_WARNING, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections")
+          PRINT_IF(LogLevel::kWarning, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections")
         }
       }
 
@@ -1053,7 +1053,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
 
   const Version requestVersion = GAMEVER(1, pkt->buf[8]);
 
-  DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
+  DPRINT_IF(LogLevel::kTrace3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
 
   for (const auto& game : m_Aura->GetJoinableGames()) {
     if (!game->GetUDPEnabled() || !game->GetIsStageAcceptingJoins()) {
@@ -1063,7 +1063,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
       continue;
     }
     if (pkt->buf[8] == 0 || game->GetIsSupportedGameVersion(requestVersion)) {
-      DPRINT_IF(LOG_LEVEL_TRACE3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
+      DPRINT_IF(LogLevel::kTrace3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
       game->ReplySearch(pkt->sender, pkt->socket, requestVersion);
 
       // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.
@@ -1189,7 +1189,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
 }
 
 #ifndef DISABLE_MINIUPNP
-uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const uint8_t logLevel, bool ignoreCache)
+uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const LogLevel logLevel, bool ignoreCache)
 {
   struct UPNPDev* devlist = nullptr;
   struct UPNPDev* device;
@@ -1219,7 +1219,7 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
     return 0;
   }
 
-  PRINT_IF(LOG_LEVEL_NOTICE, "[NET] Requesting UPnP port-mapping (" + protocol + ") " + to_string(externalPort) + " -> " + to_string(internalPort))
+  PRINT_IF(LogLevel::kNotice, "[NET] Requesting UPnP port-mapping (" + protocol + ") " + to_string(externalPort) + " -> " + to_string(internalPort))
 
   devlist = upnpDiscover(2000, nullptr, nullptr, 0, 0, 2, 0);
   uint8_t success = 0;
@@ -1237,16 +1237,16 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
       case UPNP_NO_IGD: // 0
       case UPNP_DISCONNECTED_IGD: // 3
       case UPNP_UNKNOWN_DEVICE: { // 4
-        if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] unsupported device found: <" + string(device->descURL) + ">");
+        if (logLevel >= LogLevel::kDebug) Print("[UPNP] unsupported device found: <" + string(device->descURL) + ">");
         break;
       }
       case UPNP_CONNECTED_IGD: { // 1
-        if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] connected gateway found: <" + string(urls.controlURL) + ">");
+        if (logLevel >= LogLevel::kDebug) Print("[UPNP] connected gateway found: <" + string(urls.controlURL) + ">");
         isSupported = true;
         break;
       }
       case UPNP_PRIVATEIP_IGD: { // 2
-        if (logLevel >= LOG_LEVEL_DEBUG) Print("[UPNP] NAT3 found: <" + string(urls.controlURL) + ">");
+        if (logLevel >= LogLevel::kDebug) Print("[UPNP] NAT3 found: <" + string(urls.controlURL) + ">");
         isSupported = true;
         break;
       }
@@ -1255,12 +1255,12 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
       continue;
     }
 
-    if (logLevel >= LOG_LEVEL_INFO) Print("[UPNP] trying to forward traffic to LAN address " + string(lanaddr) + "...");
+    if (logLevel >= LogLevel::kInfo) Print("[UPNP] trying to forward traffic to LAN address " + string(lanaddr) + "...");
 
     int result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), nullptr, "86400");
     if (result == UPNPCOMMAND_SUCCESS) {
       success = success | (1 << (type - 1));
-    } else if (logLevel >= LOG_LEVEL_INFO) {
+    } else if (logLevel >= LogLevel::kInfo) {
       switch (result) {
         case UPNPCOMMAND_UNKNOWN_ERROR:
           Print("[UPNP] failed to add port mapping - unknown error");
@@ -1288,7 +1288,7 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
   // Free the UPnP device list
   freeUPNPDevlist(devlist);
 
-  if (logLevel >= LOG_LEVEL_INFO) {
+  if (logLevel >= LogLevel::kInfo) {
     if (success == 0) {
       Print("[UPNP] Universal Plug and Play is not supported by the host router.");
     } else if (0 != (success & 1)) {
@@ -1409,7 +1409,7 @@ void CNet::ResetHealthCheck()
   if (!m_HealthCheckInProgress)
     return;
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[NET] Reset health check");
   }
 
@@ -1578,7 +1578,7 @@ void CNet::ResetIPAddressFetch()
   if (!m_IPAddressFetchInProgress)
     return;
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[NET] Reset IP address fetch");
   }
 
@@ -1873,7 +1873,7 @@ shared_ptr<CTCPServer> CNet::GetOrCreateTCPServer(uint16_t inputPort, const stri
 
 void CNet::FlushDNSCache()
 {
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[NET] Flushing DNS cache");
   }
   for (auto& entry : m_IPv4DNSCache) {
@@ -1894,7 +1894,7 @@ void CNet::FlushDNSCache()
 
 void CNet::FlushSelfIPCache()
 {
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[NET] Flushing self IP cache");
   }
   if (m_IPv4SelfCacheV.second != nullptr)
@@ -2096,7 +2096,7 @@ bool CNet::GetIsStandby() const
 
 CNet::~CNet()
 {
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[NET] shutting down");
   }
 
@@ -2124,7 +2124,7 @@ CNet::~CNet()
 
   CBonjour::Destroy(m_Bonjour);
 
-  if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+  if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[NET] shutdown ok");
   }
 }

@@ -86,7 +86,7 @@ struct CBotConfig
   std::string                             m_LANWatchableNameTemplate;    // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended
   size_t                                  m_MaxGameNameFixedCharsSize;
 
-  uint8_t                                 m_LogLevel;
+  LogLevel                                m_LogLevel;
   bool                                    m_ExitOnStandby;
   std::optional<bool>                     m_EnableBNET;                  // master switch to enable/disable ALL bnet configs on startup
 

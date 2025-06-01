@@ -162,9 +162,9 @@ CBotConfig::CBotConfig(CConfig& CFG)
   );
 
 #ifdef DEBUG
-  m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"}, LOG_LEVEL_INFO - 1);
+  m_LogLevel                     = CFG.GetEnum<LogLevel>("bot.log_level", TO_ARRAY("emergency", "alert", "critical", "error", "warning", "notice", "info", "debug", "trace", "trace2", "trace3"), LogLevel::kInfo);
 #else
-  m_LogLevel                     = 1 + CFG.GetStringIndex("bot.log_level", {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"}, LOG_LEVEL_INFO - 1);
+  m_LogLevel                     = CFG.GetEnum<LogLevel>("bot.log_level", TO_ARRAY("emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"), LogLevel::kInfo);
 #endif
   m_ExitOnStandby                = CFG.GetBool("bot.exit_on_standby", false);
 

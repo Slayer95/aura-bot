@@ -19,7 +19,7 @@ CBonjour::CBonjour(CAura* nAura, const CGame* game, uint8_t interfaceType, uint1
 #ifndef DISABLE_BONJOUR
   string regType = GetRegisterType();
   string gameName = game->GetDiscoveryNameLAN();
-  DPRINT_IF(LOG_LEVEL_TRACE, "[MDNS] Initializing for <" + gameName + "> [" + ToVersionString(m_GameVersion) + "] ...");
+  DPRINT_IF(LogLevel::kTrace, "[MDNS] Initializing for <" + gameName + "> [" + ToVersionString(m_GameVersion) + "] ...");
   uint32_t interface = m_InterfaceType == GAME_DISCOVERY_INTERFACE_LOOPBACK ? kDNSServiceInterfaceIndexLocalOnly : kDNSServiceInterfaceIndexAny;
 
   /*
@@ -45,7 +45,7 @@ CBonjour::CBonjour(CAura* nAura, const CGame* game, uint8_t interfaceType, uint1
     Print("[MDNS] DNSServiceRegister ERR: " + CBonjour::ErrorCodeToString(err));
     m_Service = nullptr;
   } else {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[MDNS] DNSServiceRegister OK for <" + gameName + "> [" + ToVersionString(m_GameVersion) + "]");
+    DPRINT_IF(LogLevel::kTrace, "[MDNS] DNSServiceRegister OK for <" + gameName + "> [" + ToVersionString(m_GameVersion) + "]");
   }
 #endif
 }
@@ -203,7 +203,7 @@ void CBonjour::PushRecord(shared_ptr<const CGame> game)
     if (err) Print("[MDNS] DNSServiceAddRecord ERR: " + CBonjour::ErrorCodeToString(err));
   }
   if (!err) {
-    PRINT_IF(LOG_LEVEL_INFO, "[MDNS] Recorded <" + gameName + ">")
+    PRINT_IF(LogLevel::kInfo, "[MDNS] Recorded <" + gameName + ">")
   }
 }
 

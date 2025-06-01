@@ -708,7 +708,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
   if (fileName.empty()) return nullptr;
   if (m_Aura->m_Config.m_EnableCFGCache) {
     bool cacheSuccess = false;
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
       Print("[AURA] Searching map in cache [" + PathToString(fileName) + "]");
     }
     if (m_Aura->m_CFGCacheNamesByMapNames.find(fileName) != m_Aura->m_CFGCacheNamesByMapNames.end()) {
@@ -724,7 +724,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
         cacheSuccess = true;
       }
       if (cacheSuccess) {
-        if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+        if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
           Print("[AURA] Map cache success");
         }
         if (!silent) m_Ctx->SendReply("Loaded OK [" + PathToString(fileName) + "]", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
@@ -733,7 +733,7 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
         m_Aura->m_CFGCacheNamesByMapNames.erase(fileName);
       }
     }
-    if (m_Aura->MatchLogLevel(LOG_LEVEL_DEBUG)) {
+    if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
       Print("[AURA] Map cache miss");
     }
   }
@@ -946,7 +946,7 @@ void CGameSetup::OnResolveMapSuccess()
   if (PrepareDownloadMap()) {
     RunDownloadMap();
   } else {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Unable to start map download.")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Unable to start map download.")
     OnLoadMapError();
   }  
 }
@@ -1107,7 +1107,7 @@ vector<pair<string, string>> CGameSetup::GetMapRepositorySuggestions(const strin
 void CGameSetup::LoadMap()
 {
   if (m_Map) {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map is already loaded.")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Map is already loaded.")
     OnLoadMapSuccess();
     return;
   }
@@ -1126,7 +1126,7 @@ void CGameSetup::LoadMap()
   }
   if (searchResult.first != MATCH_TYPE_MAP && searchResult.first != MATCH_TYPE_CONFIG) {
     if (m_SearchType != SEARCH_TYPE_ANY || !m_IsDownloadable) {
-      PRINT_IF(LOG_LEVEL_DEBUG, "[GAMESETUP] No results found matching search criteria.")
+      PRINT_IF(LogLevel::kDebug, "[GAMESETUP] No results found matching search criteria.")
       OnLoadMapError();
       return;
     }
@@ -1134,7 +1134,7 @@ void CGameSetup::LoadMap()
       filesystem::path cachePath = m_Aura->m_Config.m_MapCachePath / filesystem::path(m_SearchTarget.first + "-" + m_SearchTarget.second + ".ini");
       m_Map = GetBaseMapFromConfigFile(cachePath, true, true);
       if (m_Map) {
-        DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map loaded from cache.")
+        DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Map loaded from cache.")
         OnLoadMapSuccess();
         return;
       }
@@ -1144,23 +1144,23 @@ void CGameSetup::LoadMap()
     RunResolveMapRepository();
     return;
 #else
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map downloads not supported in this Aura distribution")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Map downloads not supported in this Aura distribution")
     OnLoadMapError();
     return;
 #endif
   }
   if (searchResult.first == MATCH_TYPE_CONFIG) {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Loading config...")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Loading config...")
     m_Map = GetBaseMapFromConfigFile(searchResult.second, false, false);
   } else {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Loading from map or cache...")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Loading from map or cache...")
     m_Map = GetBaseMapFromMapFileOrCache(searchResult.second, false);
   }
   if (m_Map) {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map loaded successfully.")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Map loaded successfully.")
     OnLoadMapSuccess();
   } else {
-    PRINT_IF(LOG_LEVEL_DEBUG, "[GAMESETUP] Map failed to load")
+    PRINT_IF(LogLevel::kDebug, "[GAMESETUP] Map failed to load")
     OnLoadMapError();
   }
 //
@@ -1173,7 +1173,7 @@ void CGameSetup::OnLoadMapSuccess()
     return;
   }
   if (m_Ctx->GetPartiallyDestroyed()) {
-    PRINT_IF(LOG_LEVEL_ERROR, "[GAMESETUP] Game setup aborted - context destroyed")
+    PRINT_IF(LogLevel::kError, "[GAMESETUP] Game setup aborted - context destroyed")
     m_DeleteMe = true;
     return;
   }
@@ -1247,10 +1247,10 @@ void CGameSetup::OnDownloadMapSuccess()
   m_IsMapDownloaded = true;
   m_Map = GetBaseMapFromMapFileOrCache(m_DownloadFilePath, false);
   if (m_Map) {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Downloaded map loaded successfully.")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Downloaded map loaded successfully.")
     OnLoadMapSuccess();
   } else {
-    DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Downloaded map failed to load.")
+    DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Downloaded map failed to load.")
     OnLoadMapError();
   }
 }
@@ -1319,9 +1319,9 @@ void CGameSetup::SetActive()
 {
   if (m_Aura->m_GameSetup) {
     if (!m_Aura->m_AutoRehostGameSetup || m_Aura->m_AutoRehostGameSetup.get() != m_Aura->m_GameSetup.get()) {
-      DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Pending game setup destroyed")
+      DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Pending game setup destroyed")
     } else if (this != m_Aura->m_AutoRehostGameSetup.get()) {
-      DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Auto-rehost game setup deprioritized")
+      DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Auto-rehost game setup deprioritized")
     }
   }
   m_Aura->m_GameSetup = shared_from_this();
@@ -1534,21 +1534,21 @@ bool CGameSetup::Update()
   m_AsyncStep = GAMESETUP_STEP_MAIN;
   if (!success && finishedStep != GAMESETUP_STEP_SUGGESTIONS) {
     m_Ctx->ErrorReply(m_ErrorMessage, CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
-    PRINT_IF(LOG_LEVEL_DEBUG, "[GAMESETUP] Task failed. Releasing game setup...")
+    PRINT_IF(LogLevel::kDebug, "[GAMESETUP] Task failed. Releasing game setup...")
     m_DeleteMe = true;
     return m_DeleteMe;
   }
   switch (finishedStep) {
     case GAMESETUP_STEP_RESOLUTION:
-      DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map resolution completed")
+      DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Map resolution completed")
       OnResolveMapSuccess();
       break;
     case GAMESETUP_STEP_DOWNLOAD:
-      DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map download completed")
+      DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Map download completed")
       OnDownloadMapSuccess();
       break;
     case GAMESETUP_STEP_SUGGESTIONS:
-      DPRINT_IF(LOG_LEVEL_TRACE, "[GAMESETUP] Map suggestions fetched")
+      DPRINT_IF(LogLevel::kTrace, "[GAMESETUP] Map suggestions fetched")
       OnFetchSuggestionsEnd();
       break;
     default:
