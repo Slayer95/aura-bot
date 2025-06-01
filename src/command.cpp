@@ -2976,7 +2976,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         targetPlayer->SetLeftCode(PLAYERLEAVE_LOST);
 
       if (targetPlayer->GetIsLagging()) {
-        StopLagger(targetPlayer, targetPlayer->GetLeftReason());
+        targetGame->StopLagger(targetPlayer, targetPlayer->GetLeftReason());
       } else {
         targetPlayer->DisableReconnect();
         targetPlayer->CloseConnection();
@@ -3829,7 +3829,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       bool hasPermissions = CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER);
-      if (!hasPermissions && !GetCanDropOwnerMissing()) {
+      if (!hasPermissions && !targetGame->GetCanDropOwnerMissing()) {
         GameUser::CGameUser* gameOwner = targetGame->GetOwner();
         if (gameOwner && !gameOwner->GetIsLagging()) {
           ErrorReply("You are not the game owner, and therefore cannot drop laggers.");
