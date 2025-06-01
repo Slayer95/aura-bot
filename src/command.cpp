@@ -2873,9 +2873,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
 #ifdef DEBUG
     //
-    // !DISCONNECT (disconnect a user)
+    // !TESTDC (disconnect a user)
     //
-    case HashCode("disconnect"): {
+    case HashCode("testdc"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
 
@@ -2897,6 +2897,40 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       break;
     }
 #endif
+
+    //
+    // !KICKME (disconnect self)
+    //
+    case HashCode("disconnect"):
+    case HashCode("dc"):
+    case HashCode("kickme"): {
+      UseImplicitHostedGame();
+      shared_ptr<CGame> targetGame = GetTargetGame();
+
+      if (!targetGame || targetGame->GetIsMirror())
+        break;
+
+      if (!GetIsGameUser()) {
+        ErrorReply("You are not a player and cannot disconnect yourself.");
+        break;
+      }
+
+      GameUser::CGameUser* selfPlayer = GetGameUser();
+
+      selfPlayer->SetLeftReason("forcibly disconnected themselves");
+      if (targetGame->GetIsLobbyStrict())
+        selfPlayer->SetLeftCode(PLAYERLEAVE_LOBBY);
+      else
+        selfPlayer->SetLeftCode(PLAYERLEAVE_LOST);
+
+      if (selfPlayer->GetIsLagging()) {
+        targetGame->StopLagger(selfPlayer, selfPlayer->GetLeftReason());
+      } else {
+        selfPlayer->DisableReconnect();
+        selfPlayer->CloseConnection();
+      }
+      break;
+    }
 
     //
     // !KICK (kick a user)
