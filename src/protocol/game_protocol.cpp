@@ -1126,9 +1126,9 @@ CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntr
 
 CIncomingJoinRequest::~CIncomingJoinRequest() = default;
 
-void CIncomingJoinRequest::UpdateCensored(uint8_t unsafeNameHandler, const bool pipeConsideredHarmful)
+void CIncomingJoinRequest::UpdateCensored(OnUnsafeNameHandler unsafeNameHandler, const bool pipeConsideredHarmful)
 {
-  if (unsafeNameHandler == ON_UNSAFE_NAME_NONE) {
+  if (unsafeNameHandler == OnUnsafeNameHandler::kNone) {
     return;
   }
 

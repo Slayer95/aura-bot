@@ -64,17 +64,16 @@ class CGameExtraOptions
 {
 public:
   CGameExtraOptions();
-  CGameExtraOptions(const std::optional<bool>& nRandomRaces, const std::optional<bool>& nRandomHeroes, const std::optional<uint8_t>& nVisibility, const std::optional<uint8_t>& nSpeed, const std::optional<uint8_t>& nObservers);
   ~CGameExtraOptions();
 
-  std::optional<bool>         m_TeamsLocked;
-  std::optional<bool>         m_TeamsTogether;
-  std::optional<bool>         m_AdvancedSharedUnitControl;
-  std::optional<bool>         m_RandomRaces;
-  std::optional<bool>         m_RandomHeroes;
-  std::optional<uint8_t>      m_Visibility;
-  std::optional<uint8_t>      m_Speed;
-  std::optional<uint8_t>      m_Observers;
+  std::optional<bool>                    m_TeamsLocked;
+  std::optional<bool>                    m_TeamsTogether;
+  std::optional<bool>                    m_AdvancedSharedUnitControl;
+  std::optional<bool>                    m_RandomRaces;
+  std::optional<bool>                    m_RandomHeroes;
+  std::optional<GameVisibilityMode>      m_Visibility;
+  std::optional<GameSpeed>               m_Speed;
+  std::optional<GameObserversMode>       m_Observers;
 
   bool ParseMapObservers(const std::string& s);
   bool ParseMapVisibility(const std::string& s);
@@ -137,7 +136,7 @@ public:
   std::optional<uint32_t>                         m_EntryKey;
   std::optional<bool>                             m_ChecksReservation;
   std::vector<std::string>                        m_Reservations;
-  std::optional<uint8_t>                          m_CrossPlayMode;
+  std::optional<CrossPlayMode>                    m_CrossPlayMode;
   bool                                            m_IsMirror;
   bool                                            m_IsMirrorProxy;
   uint8_t                                         m_RealmsDisplayMode;
@@ -149,10 +148,10 @@ public:
   uint16_t                                        m_CreationCounter;
   ServiceUser                                     m_Creator;
 
-  std::optional<uint8_t>                          m_LobbyTimeoutMode;
-  std::optional<uint8_t>                          m_LobbyOwnerTimeoutMode;
-  std::optional<uint8_t>                          m_LoadingTimeoutMode;
-  std::optional<uint8_t>                          m_PlayingTimeoutMode;
+  std::optional<LobbyTimeoutMode>                 m_LobbyTimeoutMode;
+  std::optional<LobbyOwnerTimeoutMode>            m_LobbyOwnerTimeoutMode;
+  std::optional<GameLoadingTimeoutMode>           m_LoadingTimeoutMode;
+  std::optional<GamePlayingTimeoutMode>           m_PlayingTimeoutMode;
 
   std::optional<uint32_t>                         m_LobbyTimeout;
   std::optional<uint32_t>                         m_LobbyOwnerTimeout;
@@ -176,11 +175,12 @@ public:
   std::optional<uint8_t>                          m_ReconnectionMode;
   std::optional<bool>                             m_EnableLobbyChat;
   std::optional<bool>                             m_EnableInGameChat;
-  std::optional<uint8_t>                          m_IPFloodHandler;
-  std::optional<uint8_t>                          m_LeaverHandler;
-  std::optional<uint8_t>                          m_ShareUnitsHandler;
-  std::optional<uint8_t>                          m_UnsafeNameHandler;
-  std::optional<uint8_t>                          m_BroadcastErrorHandler;
+  std::optional<OnIPFloodHandler>                 m_IPFloodHandler;
+  std::optional<OnPlayerLeaveHandler>             m_LeaverHandler;
+  std::optional<OnShareUnitsHandler>              m_ShareUnitsHandler;
+  std::optional<OnUnsafeNameHandler>              m_UnsafeNameHandler;
+  std::optional<OnRealmBroadcastErrorHandler>     m_BroadcastErrorHandler;
+
   std::optional<bool>                             m_EnableLagScreen;
   std::optional<uint16_t>                         m_LatencyAverage;
   std::optional<uint16_t>                         m_LatencyMaxFrames;
@@ -191,18 +191,20 @@ public:
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
   std::optional<bool>                             m_NotifyJoins;
-  std::optional<uint8_t>                          m_ResultSource;
+  std::optional<GameResultSourceSelect>           m_ResultSource;
   std::optional<bool>                             m_HideLobbyNames;
-  std::optional<uint8_t>                          m_HideInGameNames;
+  std::optional<HideIGNMode>                      m_HideInGameNames;
+
+
   std::optional<bool>                             m_GameIsExpansion;
   std::optional<Version>                          m_GameVersion;
   std::optional<bool>                             m_LoadInGame;
-  std::optional<uint8_t>                          m_FakeUsersShareUnitsMode;
+  std::optional<FakeUsersShareUnitsMode>          m_FakeUsersShareUnitsMode;
   std::optional<bool>                             m_EnableJoinObserversInProgress;
   std::optional<bool>                             m_EnableJoinPlayersInProgress;
   std::optional<bool>                             m_LogCommands;
   std::optional<uint8_t>                          m_NumPlayersToStartGameOver;
-  std::optional<uint8_t>                          m_PlayersReadyMode;
+  std::optional<PlayersReadyMode>                 m_PlayersReadyMode;
   std::optional<bool>                             m_AutoStartRequiresBalance;
   std::optional<uint32_t>                         m_AutoKickPing;
   std::optional<uint32_t>                         m_WarnHighPing;
@@ -321,10 +323,10 @@ public:
     m_Owner = std::make_pair(ownerName, ownerRealm);
   }
 
-  inline void SetLobbyTimeoutMode(const uint8_t nMode) { m_LobbyTimeoutMode = nMode; }
-  inline void SetLobbyOwnerTimeoutMode(const uint8_t nMode) { m_LobbyOwnerTimeoutMode = nMode; }
-  inline void SetLoadingTimeoutMode(const uint8_t nMode) { m_LoadingTimeoutMode = nMode; }
-  inline void SetPlayingTimeoutMode(const uint8_t nMode) { m_PlayingTimeoutMode = nMode; }
+  inline void SetLobbyTimeoutMode(const LobbyTimeoutMode nMode) { m_LobbyTimeoutMode = nMode; }
+  inline void SetLobbyOwnerTimeoutMode(const LobbyOwnerTimeoutMode nMode) { m_LobbyOwnerTimeoutMode = nMode; }
+  inline void SetLoadingTimeoutMode(const GameLoadingTimeoutMode nMode) { m_LoadingTimeoutMode = nMode; }
+  inline void SetPlayingTimeoutMode(const GamePlayingTimeoutMode nMode) { m_PlayingTimeoutMode = nMode; }
 
   inline void SetLobbyTimeout(const uint32_t nTimeout) { m_LobbyTimeout = nTimeout; }
   inline void SetLobbyOwnerTimeout(const uint32_t nTimeout) { m_LobbyOwnerTimeout = nTimeout; }
@@ -350,7 +352,7 @@ public:
 
   inline void SetSaveGameAllowed(const bool nSave) { m_SaveGameAllowed = nSave; }
 
-  inline void SetResultSource(const uint8_t nResultSource) { m_ResultSource = nResultSource; }
+  inline void SetResultSource(const GameResultSourceSelect nResultSource) { m_ResultSource = nResultSource; }
   inline void SetVerbose(const bool nVerbose) { m_Verbose = nVerbose; }
   inline void SetContext(std::shared_ptr<CCommandContext> nCtx) { m_Ctx = nCtx; }
   inline void SetMapReadyCallback(const uint8_t action, const std::string& data) {
@@ -361,17 +363,17 @@ public:
   inline void SetGameSavedFile(const std::filesystem::path& filePath);
   inline void SetCheckReservation(const bool nChecksReservation) { m_ChecksReservation = nChecksReservation; }
   inline void SetReservations(const std::vector<std::string>& nReservations) { m_Reservations = nReservations; }
-  inline void SetCrossPlayMode(const uint8_t nValue) { m_CrossPlayMode = nValue; }
+  inline void SetCrossPlayMode(const CrossPlayMode nValue) { m_CrossPlayMode = nValue; }
   inline void SetAutoStartPlayers(const uint8_t nValue) { m_AutoStartPlayers = nValue; }
   inline void SetAutoStartSeconds(const int64_t nValue) { m_AutoStartSeconds = nValue; }
   inline void SetReconnectionMode(const uint8_t nValue) { m_ReconnectionMode = nValue;}
-  inline void SetEnableLobbyChat(const uint8_t nValue) { m_EnableLobbyChat = nValue;}
-  inline void SetEnableInGameChat(const uint8_t nValue) { m_EnableInGameChat = nValue;}
-  inline void SetIPFloodHandler(const uint8_t nValue) { m_IPFloodHandler = nValue;}
-  inline void SetLeaverHandler(const uint8_t nValue) { m_LeaverHandler = nValue;}
-  inline void SetShareUnitsHandler(const uint8_t nValue) { m_ShareUnitsHandler = nValue; }
-  inline void SetUnsafeNameHandler(const uint8_t nValue) { m_UnsafeNameHandler = nValue;}
-  inline void SetBroadcastErrorHandler(const uint8_t nValue) { m_BroadcastErrorHandler = nValue;}
+  inline void SetEnableLobbyChat(const bool nValue) { m_EnableLobbyChat = nValue;}
+  inline void SetEnableInGameChat(const bool nValue) { m_EnableInGameChat = nValue;}
+  inline void SetIPFloodHandler(const OnIPFloodHandler nValue) { m_IPFloodHandler = nValue;}
+  inline void SetLeaverHandler(const OnPlayerLeaveHandler nValue) { m_LeaverHandler = nValue;}
+  inline void SetShareUnitsHandler(const OnShareUnitsHandler nValue) { m_ShareUnitsHandler = nValue; }
+  inline void SetUnsafeNameHandler(const OnUnsafeNameHandler nValue) { m_UnsafeNameHandler = nValue;}
+  inline void SetBroadcastErrorHandler(const OnRealmBroadcastErrorHandler nValue) { m_BroadcastErrorHandler = nValue;}
   inline void SetEnableLagScreen(const bool nValue) { m_EnableLagScreen = nValue; }
   inline void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
   inline void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
@@ -389,11 +391,11 @@ public:
   inline void SetMaxAPM(const uint16_t nMaxAPM) { m_MaxAPM = nMaxAPM; }
   inline void SetMaxBurstAPM(const uint16_t nMaxBurstAPM) { m_MaxBurstAPM = nMaxBurstAPM; }
   inline void SetHideLobbyNames(const bool nHideLobbyNames) { m_HideLobbyNames = nHideLobbyNames; }
-  inline void SetHideInGameNames(const uint8_t nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
+  inline void SetHideInGameNames(const HideIGNMode nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
   inline void SetGameIsExpansion(const bool nGameIsExpansion) { m_GameIsExpansion = nGameIsExpansion; }
   inline void SetGameVersion(const Version& nGameVersion) { m_GameVersion = nGameVersion; }
   inline void SetLoadInGame(const bool nGameLoadInGame) { m_LoadInGame = nGameLoadInGame; }
-  inline void SetFakeUsersShareUnitsMode(const bool nShareUnitsMode) { m_FakeUsersShareUnitsMode = nShareUnitsMode; }
+  inline void SetFakeUsersShareUnitsMode(const FakeUsersShareUnitsMode nShareUnitsMode) { m_FakeUsersShareUnitsMode = nShareUnitsMode; }
   inline void SetEnableJoinObserversInProgress(const bool nGameEnableJoinObserversInProgress) { m_EnableJoinObserversInProgress = nGameEnableJoinObserversInProgress; }
   inline void SetEnableJoinPlayersInProgress(const bool nGameEnableJoinPlayersInProgress) { m_EnableJoinPlayersInProgress = nGameEnableJoinPlayersInProgress; }
 

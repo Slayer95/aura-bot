@@ -257,7 +257,7 @@ public:
   [[nodiscard]] inline const std::string&     GetOriginalName() const { return m_OriginalName; }
   [[nodiscard]] inline std::array<uint8_t, 4> GetIPv4Internal() const { return m_IPv4Internal; }
 
-  void                                        UpdateCensored(uint8_t unsafeNameHandler, const bool pipeConsideredHarmful);
+  void                                        UpdateCensored(OnUnsafeNameHandler unsafeNameHandler, const bool pipeConsideredHarmful);
   [[nodiscard]] static std::string            CensorName(const std::string& originalName, const bool pipeConsideredHarmful);
 };
 

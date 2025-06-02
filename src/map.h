@@ -288,71 +288,71 @@ class CMap
 public:
   CAura* m_Aura;
 
-  std::optional<bool>                   m_MapTargetGameIsExpansion;
-  std::optional<Version>                m_MapTargetGameVersion;
-  std::optional<uint8_t>                m_NumPlayersToStartGameOver;
-  std::optional<uint8_t>                m_PlayersReadyMode;
-  std::optional<bool>                   m_AutoStartRequiresBalance;
-  std::optional<bool>                   m_EnableLagScreen;
-  std::optional<uint32_t>               m_LatencyMaxFrames;
-  std::optional<uint32_t>               m_LatencySafeFrames;
-  std::optional<uint32_t>               m_AutoKickPing;
-  std::optional<uint32_t>               m_WarnHighPing;
-  std::optional<uint32_t>               m_SafeHighPing;
+  std::optional<bool>                             m_MapTargetGameIsExpansion;
+  std::optional<Version>                          m_MapTargetGameVersion;
+  std::optional<uint8_t>                          m_NumPlayersToStartGameOver;
+  std::optional<PlayersReadyMode>                 m_PlayersReadyMode;
+  std::optional<bool>                             m_AutoStartRequiresBalance;
+  std::optional<bool>                             m_EnableLagScreen;
+  std::optional<uint32_t>                         m_LatencyMaxFrames;
+  std::optional<uint32_t>                         m_LatencySafeFrames;
+  std::optional<uint32_t>                         m_AutoKickPing;
+  std::optional<uint32_t>                         m_WarnHighPing;
+  std::optional<uint32_t>                         m_SafeHighPing;
 
-  std::optional<uint8_t>                m_LobbyTimeoutMode;
-  std::optional<uint8_t>                m_LobbyOwnerTimeoutMode;
-  std::optional<uint8_t>                m_LoadingTimeoutMode;
-  std::optional<uint8_t>                m_PlayingTimeoutMode;
+  std::optional<LobbyTimeoutMode>                 m_LobbyTimeoutMode;
+  std::optional<LobbyOwnerTimeoutMode>            m_LobbyOwnerTimeoutMode;
+  std::optional<GameLoadingTimeoutMode>           m_LoadingTimeoutMode;
+  std::optional<GamePlayingTimeoutMode>           m_PlayingTimeoutMode;
 
-  std::optional<uint32_t>               m_LobbyTimeout;
-  std::optional<uint32_t>               m_LobbyOwnerTimeout;
-  std::optional<uint32_t>               m_LoadingTimeout;
-  std::optional<uint32_t>               m_PlayingTimeout;
+  std::optional<uint32_t>                         m_LobbyTimeout;
+  std::optional<uint32_t>                         m_LobbyOwnerTimeout;
+  std::optional<uint32_t>                         m_LoadingTimeout;
+  std::optional<uint32_t>                         m_PlayingTimeout;
 
-  std::optional<uint8_t>                m_PlayingTimeoutWarningShortCountDown;
-  std::optional<uint32_t>               m_PlayingTimeoutWarningShortInterval;
-  std::optional<uint8_t>                m_PlayingTimeoutWarningLargeCountDown;
-  std::optional<uint32_t>               m_PlayingTimeoutWarningLargeInterval;
+  std::optional<uint8_t>                          m_PlayingTimeoutWarningShortCountDown;
+  std::optional<uint32_t>                         m_PlayingTimeoutWarningShortInterval;
+  std::optional<uint8_t>                          m_PlayingTimeoutWarningLargeCountDown;
+  std::optional<uint32_t>                         m_PlayingTimeoutWarningLargeInterval;
 
-  std::optional<bool>                   m_LobbyOwnerReleaseLANLeaver;
+  std::optional<bool>                             m_LobbyOwnerReleaseLANLeaver;
 
-  std::optional<uint32_t>               m_LobbyCountDownInterval;
-  std::optional<uint32_t>               m_LobbyCountDownStartValue;
+  std::optional<uint32_t>                         m_LobbyCountDownInterval;
+  std::optional<uint32_t>                         m_LobbyCountDownStartValue;
 
-  std::optional<bool>                   m_SaveGameAllowed;
+  std::optional<bool>                             m_SaveGameAllowed;
 
-  std::optional<uint16_t>               m_Latency;
-  std::optional<bool>                   m_LatencyEqualizerEnabled;
-  std::optional<uint8_t>                m_LatencyEqualizerFrames;
+  std::optional<uint16_t>                         m_Latency;
+  std::optional<bool>                             m_LatencyEqualizerEnabled;
+  std::optional<uint8_t>                          m_LatencyEqualizerFrames;
 
-  std::optional<int64_t>                m_AutoStartSeconds;
-  std::optional<uint8_t>                m_AutoStartPlayers;
-  std::optional<uint16_t>               m_MaxAPM;
-  std::optional<uint16_t>               m_MaxBurstAPM;
-  std::optional<bool>                   m_HideLobbyNames;
-  std::optional<uint8_t>                m_HideInGameNames;
-  std::optional<bool>                   m_LoadInGame;
-  std::optional<uint8_t>                m_FakeUsersShareUnitsMode;
-  std::optional<bool>                   m_EnableJoinObserversInProgress;
-  std::optional<bool>                   m_EnableJoinPlayersInProgress;
+  std::optional<int64_t>                          m_AutoStartSeconds;
+  std::optional<uint8_t>                          m_AutoStartPlayers;
+  std::optional<uint16_t>                         m_MaxAPM;
+  std::optional<uint16_t>                         m_MaxBurstAPM;
+  std::optional<bool>                             m_HideLobbyNames;
+  std::optional<HideIGNMode>                      m_HideInGameNames;
+  std::optional<bool>                             m_LoadInGame;
+  std::optional<FakeUsersShareUnitsMode>          m_FakeUsersShareUnitsMode;
+  std::optional<bool>                             m_EnableJoinObserversInProgress;
+  std::optional<bool>                             m_EnableJoinPlayersInProgress;
 
-  std::optional<bool>                   m_LogCommands;
-  std::optional<uint8_t>                m_ReconnectionMode;
-  std::optional<bool>                   m_EnableLobbyChat;
-  std::optional<bool>                   m_EnableInGameChat;
-  std::optional<uint8_t>                m_IPFloodHandler;
-  std::optional<uint8_t>                m_LeaverHandler;
-  std::optional<uint8_t>                m_ShareUnitsHandler;
-  std::optional<uint8_t>                m_UnsafeNameHandler;
-  std::optional<uint8_t>                m_BroadcastErrorHandler;
-  std::optional<bool>                   m_PipeConsideredHarmful;
+  std::optional<bool>                             m_LogCommands;
+  std::optional<uint8_t>                          m_ReconnectionMode;
+  std::optional<bool>                             m_EnableLobbyChat;
+  std::optional<bool>                             m_EnableInGameChat;
+  std::optional<OnIPFloodHandler>                 m_IPFloodHandler;
+  std::optional<OnPlayerLeaveHandler>             m_LeaverHandler;
+  std::optional<OnShareUnitsHandler>              m_ShareUnitsHandler;
+  std::optional<OnUnsafeNameHandler>              m_UnsafeNameHandler;
+  std::optional<OnRealmBroadcastErrorHandler>     m_BroadcastErrorHandler;
+  std::optional<bool>                             m_PipeConsideredHarmful;
 
-  GameResultConstraints                 m_GameResultConstraints;
-  HCLConfig                             m_HCL;
-  W3MMDConfig                           m_MMD;
-  W3HMCConfig                           m_HMC;
-  AHCLConfig                            m_AHCL;
+  GameResultConstraints                           m_GameResultConstraints;
+  HCLConfig                                       m_HCL;
+  W3MMDConfig                                     m_MMD;
+  W3HMCConfig                                     m_HMC;
+  AHCLConfig                                      m_AHCL;
 
 private:
   uint32_t                                     m_MapSize;                // config value: <map.size> (4 bytes)
@@ -386,9 +386,9 @@ private:
   uint8_t                         m_MapNumTeams;   // config value: max map number of teams
   uint8_t                         m_MapCustomizableObserverTeam;
   uint8_t                         m_MapVersionMaxSlots;
-  uint8_t                         m_MapSpeed;
-  uint8_t                         m_MapVisibility;
-  uint8_t                         m_MapObservers;
+  GameSpeed                       m_GameSpeed;
+  GameVisibilityMode              m_GameVisibility;
+  GameObserversMode               m_GameObservers;
   uint8_t                         m_GameFlags;
   uint8_t                         m_MapFilterMaker;
   uint8_t                         m_MapFilterType;
@@ -440,9 +440,9 @@ public:
   [[nodiscard]] const std::array<uint8_t, 4>&            GetMapScriptsBlizz(const Version& nVersion) const; // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
   [[nodiscard]] const std::array<uint8_t, 20>&           GetMapScriptsSHA1(const Version& nVersion) const; // <map.scripts_hash.sha1>, but also legacy <map.sha1>
   [[nodiscard]] bool                                     GetMapIsGameVersionSupported(const Version& nVersion) const;
-  [[nodiscard]] inline uint8_t                    GetMapVisibility() const { return m_MapVisibility; }
-  [[nodiscard]] inline uint8_t                    GetMapSpeed() const { return m_MapSpeed; }
-  [[nodiscard]] inline uint8_t                    GetMapObservers() const { return m_MapObservers; }
+  [[nodiscard]] inline GameVisibilityMode                GetGameVisibility() const { return m_GameVisibility; }
+  [[nodiscard]] inline GameSpeed                         GetGameSpeed() const { return m_GameSpeed; }
+  [[nodiscard]] inline GameObserversMode                 GetGameObservers() const { return m_GameObservers; }
   [[nodiscard]] inline uint8_t                    GetMapFlags() const { return m_GameFlags; }
   [[nodiscard]] uint32_t                          GetGameConvertedFlags() const;
   [[nodiscard]] uint32_t                          GetMapGameType() const;
@@ -503,14 +503,14 @@ public:
   [[nodiscard]] bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
   void                                            ClearMapFileContents() { m_MapFileContents.reset(); }
   bool                                            SetGameConvertedFlags(const uint32_t nFlags);
-  bool                                            SetTeamsLocked(const bool nEnable);
-  bool                                            SetTeamsTogether(const bool nEnable);
-  bool                                            SetAdvancedSharedUnitControl(const bool nEnable);
-  bool                                            SetRandomRaces(const bool nEnable);
-  bool                                            SetRandomHeroes(const bool nEnable);
-  bool                                            SetMapVisibility(const uint8_t nMapVisibility);
-  bool                                            SetMapSpeed(const uint8_t nMapSpeed);
-  bool                                            SetMapObservers(const uint8_t nMapObservers);
+  bool                                            SetGameTeamsLocked(const bool nEnable);
+  bool                                            SetGameTeamsTogether(const bool nEnable);
+  bool                                            SetGameAdvancedSharedUnitControl(const bool nEnable);
+  bool                                            SetGameRandomRaces(const bool nEnable);
+  bool                                            SetGameRandomHeroes(const bool nEnable);
+  bool                                            SetGameVisibility(const GameVisibilityMode nGameVisibility);
+  bool                                            SetGameSpeed(const GameSpeed nGameSpeed);
+  bool                                            SetGameObservers(const GameObserversMode nGameObservers);
   void                                            SetUseStandardPaths(const bool nValue) { m_UseStandardPaths = nValue; }
   [[nodiscard]] bool                              IsObserverSlot(const CGameSlot* slot) const;
   bool                                            NormalizeSlots();
@@ -545,7 +545,7 @@ public:
   [[nodiscard]] std::string                       CheckProblems();
 
   [[nodiscard]] inline const GameResultConstraints &     GetGameResultConstraints() const { return m_GameResultConstraints; }
-  [[nodiscard]] inline uint8_t                           GetGameResultSourceOfTruth() const { return m_GameResultConstraints.GetSourceOfTruth(); }
+  [[nodiscard]] inline GameResultSourceSelect            GetGameResultSourceOfTruth() const { return m_GameResultConstraints.GetSourceOfTruth(); }
 
   // HCL
   [[nodiscard]] inline bool                              GetHCLSupported() const { return m_HCL.supported; }

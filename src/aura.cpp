@@ -631,7 +631,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
-    Print("[CONFIG] warning - some keys are misnamed: " + JoinVector(invalidKeys, false));
+    Print("[CONFIG] warning - some keys are misnamed: " + JoinStrings(invalidKeys, false));
   }
 
   if (m_Realms.empty() && m_Config.m_EnableBNET.value_or(true))
@@ -1377,20 +1377,22 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
 
   bool earlyExit = false;
   switch (game->m_Config.m_BroadcastErrorHandler) {
-    case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR:
+    case OnRealmBroadcastErrorHandler::kExitOnMainError:
       if (!errorRealm->GetIsMain()) break;
       // fall through
-    case ON_ADV_ERROR_EXIT_ON_ANY_ERROR:
+    case OnRealmBroadcastErrorHandler::kExitOnAnyError:
       earlyExit = true;
       break;
-    case ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY:
+    case OnRealmBroadcastErrorHandler::kExitOnMainErrorIfEmpty:
       if (!errorRealm->GetIsMain()) break;
       // fall through
-    case ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY:
+    case OnRealmBroadcastErrorHandler::kExitOnAnyErrorIfEmpty:
       if (!game->GetHasAnyUser()) {
         // we only close the game if it has no players since we support game rehosting (via !priv and !pub in the lobby)
         earlyExit = true;
       }
+      break;
+    default:
       break;
   }
   if (earlyExit) {
@@ -1399,7 +1401,7 @@ void CAura::EventBNETGameRefreshError(shared_ptr<CRealm> errorRealm)
     return;
   }
 
-  if (game->m_Config.m_BroadcastErrorHandler == ON_ADV_ERROR_EXIT_ON_MAX_ERRORS) {
+  if (game->m_Config.m_BroadcastErrorHandler == OnRealmBroadcastErrorHandler::kExitOnMaxErrors) {
     for (auto& realm : m_Realms) {
       if (!realm->GetEnabled()) {
         continue;
@@ -1588,7 +1590,7 @@ bool CAura::ReloadConfigs()
   }
   vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
-    Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinVector(invalidKeys, false));
+    Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinStrings(invalidKeys, false));
   }
 
   optional<Version> NowDataVersion = m_Config.m_Warcraft3DataVersion;

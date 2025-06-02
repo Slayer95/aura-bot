@@ -225,7 +225,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_APMTrainerPaused(false),
     m_APMTrainerTicks(0),
     m_GameHistory(make_shared<GameHistory>()),
-    m_GameResultsSource(GAME_RESULT_SOURCE_NONE),
+    m_GameResultsSource(GameResultSource::kNone),
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
     m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
     m_GameDiscoveryActive(false),
@@ -235,15 +235,15 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
 {
   SetSupportedGameVersion(GetVersion());
   bool canCrossPlay = !(
-    (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_NONE) ||
-    (m_Config.m_CrossPlayMode == CROSSPLAY_MODE_CONSERVATIVE && m_Map->GetMapDataSet() == MAP_DATASET_MELEE)
+    (m_Config.m_CrossPlayMode == CrossPlayMode::kNone) ||
+    (m_Config.m_CrossPlayMode == CrossPlayMode::kConservative && m_Map->GetMapDataSet() == MAP_DATASET_MELEE)
   );
   if (canCrossPlay) {
     Version headVersion = GetScriptsVersionRangeHead(GetVersion());
     for (const auto& version : m_Aura->m_Config.m_SupportedGameVersions) {
       switch (m_Config.m_CrossPlayMode) {
-        case CROSSPLAY_MODE_CONSERVATIVE:
-        case CROSSPLAY_MODE_OPTIMISTIC:
+        case CrossPlayMode::kConservative:
+        case CrossPlayMode::kOptimistic:
           if (GetScriptsVersionRangeHead(version) != headVersion) {
             continue;
           }
@@ -367,7 +367,7 @@ void CGame::InitSlots()
 
   m_Slots = m_Map->GetSlots();
 
-  const bool useObservers = m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES;
+  const bool useObservers = m_Map->GetGameObservers() == GameObserversMode::kStartOrOnDefeat || m_Map->GetGameObservers() == GameObserversMode::kReferees;
 
   // Match actual observer slots to set map flags.
   if (!useObservers) {
@@ -462,8 +462,8 @@ void CGame::InitSlots()
       }
     }
 
-    // When Fixed Player Settings is enabled, MAPFLAG_RANDOMRACES cannot be turned on.
-    if (!fixedPlayers && (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES)) {
+    // When Fixed Player Settings is enabled, GAMEFLAG_RANDOMRACES cannot be turned on.
+    if (!fixedPlayers && (m_Map->GetMapFlags() & GAMEFLAG_RANDOMRACES)) {
       slot.SetRace(SLOTRACE_RANDOM);
     } else {
       // Ensure race is unambiguous. It's defined as a bitfield,
@@ -999,7 +999,7 @@ bool CGame::GetIsSinglePlayerMode() const
 
 bool CGame::GetHasAnyFullObservers() const
 {
-  return m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() >= 1;
+  return m_Map->GetGameObservers() == GameObserversMode::kStartOrOnDefeat && GetNumJoinedObservers() >= 1;
 }
 
 bool CGame::GetHasChatSendHost() const
@@ -1015,13 +1015,13 @@ bool CGame::GetHasChatSendHost() const
 bool CGame::GetHasChatRecvHost() const
 {
   if (GetHasChatRecvPermaHost()) return true;
-  if (m_Map->GetMapObservers() == MAPOBS_ALLOWED && GetNumJoinedObservers() == 1) return false;
+  if (m_Map->GetGameObservers() == GameObserversMode::kStartOrOnDefeat && GetNumJoinedObservers() == 1) return false;
   return GetNumJoinedPlayersOrFakeUsers() >= 2;
 }
 
 bool CGame::GetHasChatSendPermaHost() const
 {
-  return GetNumFakePlayers() > 0 || (m_Map->GetMapObservers() == MAPOBS_REFEREES && GetNumFakeObservers() > 0);
+  return GetNumFakePlayers() > 0 || (m_Map->GetGameObservers() == GameObserversMode::kReferees && GetNumFakeObservers() > 0);
 }
 
 bool CGame::GetHasChatRecvPermaHost() const
@@ -1481,7 +1481,7 @@ void CGame::UpdateLoading()
       SendAllActionsCallback();
     }
   } else {
-    if (m_Config.m_LoadingTimeoutMode == GAME_LOADING_TIMEOUT_STRICT) {
+    if (m_Config.m_LoadingTimeoutMode == GameLoadingTimeoutMode::kStrict) {
       if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config.m_LoadingTimeout)) {
         StopLoadPending("was automatically dropped after " + to_string(m_Config.m_LoadingTimeout / 1000) + " seconds");
       }
@@ -1663,17 +1663,17 @@ void CGame::UpdateLoaded()
   }
 
   switch (m_Config.m_PlayingTimeoutMode) {
-    case GAME_PLAYING_TIMEOUT_NEVER:
+    case GamePlayingTimeoutMode::kNever:
       break;
-    case GAME_PLAYING_TIMEOUT_DRY:
-    case GAME_PLAYING_TIMEOUT_STRICT:
+    case GamePlayingTimeoutMode::kDry:
+    case GamePlayingTimeoutMode::kStrict:
       if (Ticks - m_FinishedLoadingTicks > static_cast<int64_t>(m_Config.m_PlayingTimeout)) {
-        if (m_Config.m_PlayingTimeoutMode == GAME_PLAYING_TIMEOUT_STRICT) {
+        if (m_Config.m_PlayingTimeoutMode == GamePlayingTimeoutMode::kStrict) {
           m_GameOverTolerance = 0;
           StartGameOverTimer();
         } else {
           Log("game timed out after " + to_string(m_Config.m_PlayingTimeout / 1000) + " seconds");
-          m_Config.m_PlayingTimeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
+          m_Config.m_PlayingTimeoutMode = GamePlayingTimeoutMode::kNever;
         }
       }
       break;
@@ -1895,14 +1895,14 @@ void CGame::CheckLobbyTimeouts()
 {
   if (HasOwnerSet()) {
     switch (m_Config.m_LobbyOwnerTimeoutMode) {
-      case LOBBY_OWNER_TIMEOUT_NEVER:
+      case LobbyOwnerTimeoutMode::kNever:
         break;
-      case LOBBY_OWNER_TIMEOUT_ABSENT:
+      case LobbyOwnerTimeoutMode::kAbsent:
         if (m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout) < GetTicks()) {
           ReleaseOwner();
         }
         break;
-      case LOBBY_OWNER_TIMEOUT_STRICT:
+      case LobbyOwnerTimeoutMode::kStrict:
         if (m_LastOwnerAssigned + static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout) < GetTicks()) {
           ReleaseOwner();
         }
@@ -1910,18 +1910,18 @@ void CGame::CheckLobbyTimeouts()
     }
   }
 
-  if (!m_Aura->m_Net.m_HealthCheckInProgress && (!m_IsMirror || m_Config.m_LobbyTimeoutMode == LOBBY_TIMEOUT_STRICT)) {
+  if (!m_Aura->m_Net.m_HealthCheckInProgress && (!m_IsMirror || m_Config.m_LobbyTimeoutMode == LobbyTimeoutMode::kStrict)) {
     bool timedOut = false;
     switch (m_Config.m_LobbyTimeoutMode) {
-    case LOBBY_TIMEOUT_NEVER:
+    case LobbyTimeoutMode::kNever:
       break;
-    case LOBBY_TIMEOUT_EMPTY:
+    case LobbyTimeoutMode::kEmpty:
       timedOut = m_LastUserSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
       break;
-    case LOBBY_TIMEOUT_OWNERLESS:
+    case LobbyTimeoutMode::kOwnerMissing:
       timedOut = m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
       break;
-    case LOBBY_TIMEOUT_STRICT:
+    case LobbyTimeoutMode::kStrict:
       timedOut = m_CreationTime + (static_cast<int64_t>(m_Config.m_LobbyTimeout) / 1000) < GetTime();
       break;
     }
@@ -3148,7 +3148,7 @@ string CGame::GetAutoStartText() const
     return "Autostarts " + fragments[0] + ".";
   }
 
-  return "Autostarts " + JoinVector(fragments, "or", false) + ".";
+  return "Autostarts " + JoinStrings(fragments, "or", false) + ".";
 }
 
 string CGame::GetReadyStatusText() const
@@ -3668,10 +3668,10 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
         if (targetUser) {
           if (
             (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam()) &&
-            (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS)
+            (m_Map->GetMapFlags() & GAMEFLAG_FIXEDTEAMS)
           ) {
             targetUser->SetHasControlOverUnitsFromSlot(user->GetSID(), wantsShare);
-            if (wantsShare && m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT) {
+            if (wantsShare && m_Config.m_ShareUnitsHandler == OnShareUnitsHandler::kRestrictSharee) {
               int64_t timeout = user->GetAntiAbuseTimeout();
               if (!user->GetAntiShareKicked()) {
                 user->AddKickReason(GameUser::KickReason::ANTISHARE);
@@ -4016,7 +4016,7 @@ string CGame::GetActiveReconnectProtocolsDetails() const
       protocols.push_back("[" + user->GetName() + ": ON]");
     }
   }
-  return JoinVector(protocols, false);
+  return JoinStrings(protocols, false);
 }
 
 bool CGame::CalcAnyUsingGProxy() const
@@ -4040,7 +4040,7 @@ bool CGame::CalcAnyUsingGProxyLegacy() const
   return false;
 }
 
-uint8_t CGame::GetPlayersReadyMode() const {
+PlayersReadyMode CGame::GetPlayersReadyMode() const {
   return m_Config.m_PlayersReadyMode;
 }
 
@@ -4170,7 +4170,7 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
 {
   uint32_t slotsOff = static_cast<uint32_t>(m_Slots.size() == GetSlotsOpen() ? m_Slots.size() : GetSlotsOpen() + 1);
   uint32_t uptime = GetUptime();
-  if (m_Config.m_CrossPlayMode != CROSSPLAY_MODE_FORCE || (GAMEVER(1u, 24u) <= m_SupportedGameVersionsMin && m_SupportedGameVersionsMax <= GAMEVER(1u, 28u))) {
+  if (m_Config.m_CrossPlayMode != CrossPlayMode::kForce || (GAMEVER(1u, 24u) <= m_SupportedGameVersionsMin && m_SupportedGameVersionsMax <= GAMEVER(1u, 28u))) {
     vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
     WriteUint32(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
     WriteUint32(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
@@ -4592,7 +4592,7 @@ void CGame::ReportAllPings() const
     pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));
   }
   
-  SendAllChat(JoinVector(pingsText, false));
+  SendAllChat(JoinStrings(pingsText, false));
 
   if (m_IsLagging) {
     GameUser::CGameUser* worstLagger = SortedPlayers[0];
@@ -4936,7 +4936,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
 
   // Never allow observers/referees to send private messages to users.
   // Referee rulings/warnings are expected to be public.
-  if (user->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES && extraFlags != CHAT_RECV_OBS) {
+  if (user->GetIsObserver() && m_Map->GetGameObservers() == GameObserversMode::kReferees && extraFlags != CHAT_RECV_OBS) {
     vector<uint8_t> targetUIDs;
     if (m_UsesCustomReferees && !user->GetIsPowerObserver()) {
       // When custom referees are enabled, only designated referees can use [All] chat.
@@ -4982,22 +4982,22 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
   }
   LogRemote("[" + user->GetExtendedName() + "] " + user->GetLeftReason());
 
-  uint8_t leaverHandler = m_Config.m_LeaverHandler;
+  OnPlayerLeaveHandler leaverHandler = m_Config.m_LeaverHandler;
   if (!m_GameLoaded) {
-    leaverHandler = ON_PLAYER_LEAVE_NATIVE;
+    leaverHandler = OnPlayerLeaveHandler::kNative;
   }
 
   vector<uint8_t> packet = GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(user->GetUID(), GetIsLobbyStrict() ? PLAYERLEAVE_LOBBY : user->GetLeftCode());
   switch (leaverHandler) {
-    case ON_PLAYER_LEAVE_NONE:
-    case ON_PLAYER_LEAVE_SHARE_UNITS: {
+    case OnPlayerLeaveHandler::kNone:
+    case OnPlayerLeaveHandler::kShareUnits: {
       // Ensure the disconnected user's game client / GProxy fully exits.
       Send(user, packet);
       // TODO: ON_PLAYER_LEAVE_SHARE_UNITS - Turn into a CGameVirtualUser?
       break;
     }
 
-    case ON_PLAYER_LEAVE_NATIVE: {
+    case OnPlayerLeaveHandler::kNative: {
       SendAll(packet);
       if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
         m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LEAVER, packet);
@@ -5108,8 +5108,8 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
     return;
   }
 
-  bool hideNames = m_IsHiddenPlayerNames || m_Config.m_HideInGameNames == HIDE_IGN_ALWAYS || m_Config.m_HideInGameNames == HIDE_IGN_HOST;
-  if (m_Config.m_HideInGameNames == HIDE_IGN_AUTO && m_Map->GetMapNumControllers() >= 3) {
+  bool hideNames = m_IsHiddenPlayerNames || m_Config.m_HideInGameNames == HideIGNMode::kAlways || m_Config.m_HideInGameNames == HideIGNMode::kHost;
+  if (m_Config.m_HideInGameNames == HideIGNMode::kAuto && m_Map->GetMapNumControllers() >= 3) {
     hideNames = true;
   }
 
@@ -5238,7 +5238,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   SendAllSlotInfo();
   UpdateReadyCounters();
 
-  if (GetIPFloodHandler() == ON_IPFLOOD_NOTIFY) {
+  if (GetIPFloodHandler() == OnIPFloodHandler::kNotify) {
     CheckIPFlood(joinRequest.GetName(), &(Player->GetSocket()->m_RemoteHost));
   }
 
@@ -5405,7 +5405,7 @@ bool CGame::CheckIPFlood(const string joinName, const sockaddr_storage* sourceAd
 
   uint8_t maxPlayersFromSameIp = isLoopbackAddress(sourceAddress) ? m_Config.m_MaxPlayersLoopback : m_Config.m_MaxPlayersSameIP;
   if (static_cast<uint8_t>(usersSameIP.size()) >= maxPlayersFromSameIp) {
-    if (GetIPFloodHandler() == ON_IPFLOOD_NOTIFY) {
+    if (GetIPFloodHandler() == OnIPFloodHandler::kNotify) {
       SendAllChat("Player [" + joinName + "] has the same IP address as: " + ToNameListSentence(usersSameIP));
     }
     return false;
@@ -5424,7 +5424,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   }
-  if (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_DENY) {
+  if (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == OnUnsafeNameHandler::kDeny) {
     LOG_APP_IF(LogLevel::kDebug, "user [" + joinRequest.GetOriginalName() + "] unsafe name - [" + connection->GetSocket()->GetName() + "] (" + connection->GetIPString() + ")")
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
@@ -5717,8 +5717,9 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
     LOG_APP_IF(LogLevel::kInfo, "user [" + user->GetName() + "] left the game (" + GameProtocol::LeftCodeToString(clientReason) + ")");
   }
 
-  if (m_GameLoaded && !user->GetIsObserver() && GetGameResultSourceOfTruth() == GAME_RESULT_SOURCE_LEAVECODE) {
-    
+  if (m_GameLoaded && !user->GetIsObserver() && GetGameResultSourceOfTruth() == GameResultSourceSelect::kOnlyLeaveCode) {
+    // TODO?: EventUserLeft GetGameResultSourceOfTruth() 
+    // GameResultSourceSelect::kPreferLeaveCode, GameResultSourceSelect::kPreferMMD ?
   }
 
   // this function is only called when a client leave packet is received, not when there's a socket error or kick
@@ -5844,12 +5845,12 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
           GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
           if (targetUser && wantsShare) {
             switch (m_Config.m_ShareUnitsHandler) {
-              case ON_SHARE_UNITS_NATIVE:
+              case OnShareUnitsHandler::kNative:
                 break;
 
-              case ON_SHARE_UNITS_RESTRICT:
+              case OnShareUnitsHandler::kRestrictSharee:
                 if (
-                  (m_Map->GetMapFlags() & MAPFLAG_FIXEDTEAMS) &&
+                  (m_Map->GetMapFlags() & GAMEFLAG_FIXEDTEAMS) &&
                   (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
                 ) {
                   // This is a well-behaved map (at least if it's melee).
@@ -5860,7 +5861,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
                 // either the map is not well-behaved, or the client is rogue/griefer - instakick
                 // falls through
 
-              case ON_SHARE_UNITS_KICK:
+              case OnShareUnitsHandler::kKickSharer:
               default:
                 user->SetLeftCode(PLAYERLEAVE_LOST);
                 user->SetLeftReason("autokicked - antishare");
@@ -6285,7 +6286,7 @@ void CGame::EventUserRequestTeam(GameUser::CGameUser* user, uint8_t team)
   }
 
   if (team == m_Map->GetVersionMaxSlots()) {
-    if (m_Map->GetMapObservers() != MAPOBS_ALLOWED && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+    if (m_Map->GetGameObservers() != GameObserversMode::kStartOrOnDefeat && m_Map->GetGameObservers() != GameObserversMode::kReferees) {
       return;
     }
   } else if (team >= m_Map->GetMapNumTeams()) {
@@ -6372,7 +6373,7 @@ void CGame::EventUserRequestRace(GameUser::CGameUser* user, uint8_t race)
   if (m_Map->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS)
     return;
 
-  if (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+  if (m_Map->GetMapFlags() & GAMEFLAG_RANDOMRACES) {
     SendChat(user, "This game lobby has forced random races.");
     return;
   }
@@ -6537,11 +6538,11 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
     (user->GetReadyReminderIsDue() && user->GetIsRTTMeasuredConsistent())) {
     if (!m_AutoStartRequirements.empty()) {
       switch (GetPlayersReadyMode()) {
-        case READY_MODE_EXPECT_RACE: {
+        case PlayersReadyMode::kExpectRace: {
           SendChat(user, "Choose your race for the match to automatically start (or type " + GetCmdToken() + "ready)");
           break;
         }
-        case READY_MODE_EXPLICIT: {
+        case PlayersReadyMode::kExplicit: {
           SendChat(user, "Type " + GetCmdToken() + "ready for the match to automatically start.");
           break;
         }
@@ -6607,7 +6608,7 @@ void CGame::EventGameStartedLoading()
   // Remove the virtual host user to ensure consistent game state and networking.
   DeleteVirtualHost();
 
-  if (m_IsHiddenPlayerNames && m_Config.m_HideInGameNames != HIDE_IGN_ALWAYS) {
+  if (m_IsHiddenPlayerNames && m_Config.m_HideInGameNames != HideIGNMode::kAlways) {
     ShowPlayerNamesGameStartLoading();
   }
 
@@ -6641,7 +6642,7 @@ void CGame::EventGameStartedLoading()
 
   ResolveBuffering();
 
-  if (m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+  if (m_Map->GetGameObservers() != GameObserversMode::kReferees) {
     for (auto& user : m_Users) {
       if (user->GetIsObserver()) {
         // Full observers cannot pause nor save a WC3 game.
@@ -6899,10 +6900,10 @@ void CGame::UpdateUserMapProgression(CAsyncObserver* user, const double current,
 
 bool CGame::ResolvePlayerObfuscation() const
 {
-  if (m_Config.m_HideInGameNames == HIDE_IGN_ALWAYS || m_Config.m_HideInGameNames == HIDE_IGN_HOST) {
+  if (m_Config.m_HideInGameNames == HideIGNMode::kAlways || m_Config.m_HideInGameNames == HideIGNMode::kHost) {
     return true;
   }
-  if (m_Config.m_HideInGameNames == HIDE_IGN_NEVER) {
+  if (m_Config.m_HideInGameNames == HideIGNMode::kNever) {
     return false;
   }
 
@@ -7273,7 +7274,7 @@ void CGame::Remake()
   m_BeforePlayingEmptyActions = 0;
   m_APMTrainerPaused = false;
   m_APMTrainerTicks = 0;
-  m_GameResultsSource = GAME_RESULT_SOURCE_NONE;
+  m_GameResultsSource = GameResultSource::kNone;
   m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_NEW;
 
   NextCreationCounter();
@@ -7598,7 +7599,7 @@ uint8_t CGame::GetNewColor() const
 bool CGame::CheckActorRequirements(const GameUser::CGameUser* user, const uint8_t actorMask) const
 {
   if (!user->GetIsObserver()) return (actorMask & ACTION_SOURCE_PLAYER) > 0;
-  if (m_Map->GetMapObservers() == MAPOBS_REFEREES) return (actorMask & ACTION_SOURCE_REFEREE) > 0;
+  if (m_Map->GetGameObservers() == GameObserversMode::kReferees) return (actorMask & ACTION_SOURCE_REFEREE) > 0;
   return (actorMask & ACTION_SOURCE_OBSERVER) > 0;
 }
 
@@ -7659,7 +7660,7 @@ uint8_t CGame::SimulateActionUID(const uint8_t actionType, GameUser::CGameUser* 
             return fakeUser.GetUID();
           }
         } else {
-          if ((actorMask & (m_Map->GetMapObservers() == MAPOBS_REFEREES ? ACTION_SOURCE_REFEREE : ACTION_SOURCE_OBSERVER)) > 0) {
+          if ((actorMask & (m_Map->GetGameObservers() == GameObserversMode::kReferees ? ACTION_SOURCE_REFEREE : ACTION_SOURCE_OBSERVER)) > 0) {
             return fakeUser.GetUID();
           }
         }
@@ -7750,7 +7751,7 @@ void CGame::ResolveVirtualUsers()
   if (m_Map->GetMMDSupported() && m_Map->GetMMDAboutComputers()) {
     uint8_t remainingComputers = GetNumComputers();
     while (remainingComputers > 0) {
-      if (m_Map->GetMapObservers() == MAPOBS_REFEREES || m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
+      if (m_Map->GetGameObservers() == GameObserversMode::kReferees || m_Map->GetGameObservers() == GameObserversMode::kStartOrOnDefeat) {
         optional<string> virtualPlayerName;
         if (m_Map->GetMapType() == "evergreen") {
           virtualPlayerName = "AMAI Insane";
@@ -7830,13 +7831,13 @@ void CGame::ResolveVirtualUsers()
     virtualPlayerName = GetLobbyVirtualHostName();
     // Assign an available slot to our virtual host.
     // That makes it a fake user.
-    if (m_Map->GetMapObservers() == MAPOBS_REFEREES) {
+    if (m_Map->GetGameObservers() == GameObserversMode::kReferees) {
       if (CreateFakeObserver(nullopt)) {
         ++m_JoinedVirtualHosts;
         // As a referee, the virtual host can send messages and receive messages from any player.
         LOG_APP_IF(LogLevel::kDebug, "Added virtual host as referee")
       }
-    } else if (m_Map->GetMapObservers() == MAPOBS_ALLOWED) {
+    } else if (m_Map->GetGameObservers() == GameObserversMode::kStartOrOnDefeat) {
       if ((joinInProgressIsNativeObserver && beforeFakeObserverCount <= 1) || (GetNumJoinedObservers() > 0 && beforeFakeObserverCount == 0)) {
         if (CreateFakeObserver(nullopt)) {
           ++m_JoinedVirtualHosts;
@@ -8007,7 +8008,7 @@ uint8_t CGame::GetPublicHostUID() const
       return m_FakeUsers.back().GetUID();
     }
     for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-      if (fakeUser.GetIsObserver() && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+      if (fakeUser.GetIsObserver() && m_Map->GetGameObservers() != GameObserversMode::kReferees) {
         continue;
       }
       return fakeUser.GetUID();
@@ -8020,7 +8021,7 @@ uint8_t CGame::GetPublicHostUID() const
     if (user->GetLeftMessageSent()) {
       continue;
     }
-    if (user->GetIsObserver() && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+    if (user->GetIsObserver() && m_Map->GetGameObservers() != GameObserversMode::kReferees) {
       continue;
     }
     if (MatchOwnerName(user->GetName())) {
@@ -8061,7 +8062,7 @@ uint8_t CGame::GetHiddenHostUID() const
 
   if (!m_GameLoading && !m_FakeUsers.empty()) {
     for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
-      if (fakeUser.GetIsObserver() && m_Map->GetMapObservers() != MAPOBS_REFEREES) {
+      if (fakeUser.GetIsObserver() && m_Map->GetGameObservers() != GameObserversMode::kReferees) {
         continue;
       }
       if (fakeUser.GetIsObserver()) {
@@ -8377,14 +8378,14 @@ bool CGame::SwapSlots(const uint8_t SID1, const uint8_t SID2)
   if (PlayerOne) {
     PlayerOne->SetIsObserver(m_Slots[SID1].GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerOne->GetIsObserver()) {
-      PlayerOne->SetPowerObserver(PlayerOne->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
+      PlayerOne->SetPowerObserver(PlayerOne->GetIsObserver() && m_Map->GetGameObservers() == GameObserversMode::kReferees);
       PlayerOne->ClearUserReady();
     }
   }
   if (PlayerTwo) {
     PlayerTwo->SetIsObserver(m_Slots[SID2].GetTeam() == m_Map->GetVersionMaxSlots());
     if (PlayerTwo->GetIsObserver()) {
-      PlayerTwo->SetPowerObserver(PlayerTwo->GetIsObserver() && m_Map->GetMapObservers() == MAPOBS_REFEREES);
+      PlayerTwo->SetPowerObserver(PlayerTwo->GetIsObserver() && m_Map->GetGameObservers() == GameObserversMode::kReferees);
       PlayerTwo->ClearUserReady();
     }
   }
@@ -8581,7 +8582,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
         slot->SetRace(SLOTRACE_RANDOM);
       } else {
         slot->SetColor(GetNewColor());
-        if (m_Map->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+        if (m_Map->GetMapFlags() & GAMEFLAG_RANDOMRACES) {
           slot->SetRace(SLOTRACE_RANDOM);
         } else {
           slot->SetRace(SLOTRACE_RANDOM | SLOTRACE_SELECTABLE);
@@ -8592,7 +8593,7 @@ bool CGame::SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force)
       if (user) {
         user->SetIsObserver(toObservers);
         if (toObservers) {
-          user->SetPowerObserver(!m_UsesCustomReferees && m_Map->GetMapObservers() == MAPOBS_REFEREES);
+          user->SetPowerObserver(!m_UsesCustomReferees && m_Map->GetGameObservers() == GameObserversMode::kReferees);
           user->ClearUserReady();
         } else {
           user->SetPowerObserver(false);
@@ -9488,7 +9489,7 @@ void CGame::ResetDraft()
 
 void CGame::ResetTeams(const bool alsoCaptains)
 {
-  if (!(m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES)) {
+  if (!(m_Map->GetGameObservers() == GameObserversMode::kStartOrOnDefeat || m_Map->GetGameObservers() == GameObserversMode::kReferees)) {
     return;
   }
   uint8_t SID = static_cast<uint8_t>(m_Slots.size());
@@ -9599,7 +9600,7 @@ bool CGame::GetCanStartGracefulCountDown() const
   for (const auto& user : m_Users) {
     // Skip non-referee observers
     if (!user->GetIsOwner(nullopt) && user->GetIsObserver()) {
-      if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
+      if (m_Map->GetGameObservers() != GameObserversMode::kReferees) continue;
       if (m_UsesCustomReferees && !user->GetIsPowerObserver()) continue;
     }
 
@@ -9736,7 +9737,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
     for (const auto& user : m_Users) {
       // Skip non-referee observers
       if (!user->GetIsOwner(nullopt) && user->GetIsObserver()) {
-        if (m_Map->GetMapObservers() != MAPOBS_REFEREES) continue;
+        if (m_Map->GetGameObservers() != GameObserversMode::kReferees) continue;
         if (m_UsesCustomReferees && !user->GetIsPowerObserver()) continue;
       }
       shared_ptr<CRealm> realm = user->GetRealm(false);
@@ -9786,7 +9787,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
     }
   }
 
-  if (GetNumJoinedUsersOrFake() == 1 && (0 == GetSlotsOpen() || m_Map->GetMapObservers() != MAPOBS_REFEREES)) {
+  if (GetNumJoinedUsersOrFake() == 1 && (0 == GetSlotsOpen() || m_Map->GetGameObservers() != GameObserversMode::kReferees)) {
     SendAllChat("HINT: Single-user game detected. In-game commands will be DISABLED.");
     if (GetNumOccupiedSlots() != m_Map->GetVersionMaxSlots()) {
       SendAllChat("HINT: To avoid this, you may enable map referees, or add a fake user [" + GetCmdToken() + "fp]");
@@ -10112,7 +10113,7 @@ void CGame::TryActionsOnDisconnect(GameUser::CGameUser* user, const bool isVolun
 
 bool CGame::TryShareUnitsOnDisconnect(GameUser::CGameUser* user, const bool /*isVoluntary*/)
 {
-  if (m_Config.m_LeaverHandler != ON_PLAYER_LEAVE_SHARE_UNITS) return false;
+  if (m_Config.m_LeaverHandler != OnPlayerLeaveHandler::kShareUnits) return false;
   if (!m_GameLoaded) {
     return false;
   }
@@ -10205,7 +10206,7 @@ void CGame::SetIsCheckJoinable(const bool nCheckIsJoinable)
 
 bool CGame::GetHasReferees() const
 {
-  return m_Map->GetMapObservers() == MAPOBS_REFEREES;
+  return m_Map->GetGameObservers() == GameObserversMode::kReferees;
 }
 
 bool CGame::GetIsSupportedGameVersion(const Version& version) const
@@ -10397,7 +10398,7 @@ bool CGame::CreateFakePlayer(const optional<string> playerName)
 
 bool CGame::CreateFakeObserver(const optional<string> playerName)
 {
-  if (!(m_Map->GetMapObservers() == MAPOBS_ALLOWED || m_Map->GetMapObservers() == MAPOBS_REFEREES)) {
+  if (!(m_Map->GetGameObservers() == GameObserversMode::kStartOrOnDefeat || m_Map->GetGameObservers() == GameObserversMode::kReferees)) {
     return false;
   }
 
@@ -10595,22 +10596,22 @@ void CGame::SetUDPEnabled(bool toEnabled)
 
 bool CGame::GetHasDesyncHandler() const
 {
-  return m_Config.m_DesyncHandler == ON_DESYNC_DROP || m_Config.m_DesyncHandler == ON_DESYNC_NOTIFY;
+  return m_Config.m_DesyncHandler == OnDesyncHandler::kDrop || m_Config.m_DesyncHandler == OnDesyncHandler::kNotify;
 }
 
 bool CGame::GetAllowsDesync() const
 {
-  return m_Config.m_DesyncHandler != ON_DESYNC_DROP;
+  return m_Config.m_DesyncHandler != OnDesyncHandler::kDrop;
 }
 
-uint8_t CGame::GetIPFloodHandler() const
+OnIPFloodHandler CGame::GetIPFloodHandler() const
 {
   return m_Config.m_IPFloodHandler;
 }
 
 bool CGame::GetAllowsIPFlood() const
 {
-  return m_Config.m_IPFloodHandler != ON_IPFLOOD_DENY;
+  return m_Config.m_IPFloodHandler != OnIPFloodHandler::kDeny;
 }
 
 string CGame::GetCustomCreationCounterText(shared_ptr<const CRealm> realm, char counter) const
@@ -10867,63 +10868,63 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
   return gameResults;
 }
 
-uint8_t CGame::TryConfirmResults(optional<GameResults> gameResults, uint8_t resultsSource) {
+GameResultSource CGame::TryConfirmResults(optional<GameResults> gameResults, GameResultSource resultsSource) {
   if (!gameResults.has_value() || !CheckGameResults(gameResults.value())) {
-    if (resultsSource == GAME_RESULT_SOURCE_MMD) {
+    if (resultsSource == GameResultSource::kMMD) {
       LOG_APP_IF(LogLevel::kDebug, "MMD failed to provide valid game results")
     } else {
       LOG_APP_IF(LogLevel::kDebug, "Players failed to provide valid game results")
     }
-    return GAME_RESULT_SOURCE_NONE;
+    return GameResultSource::kNone;
   }
   m_GameResultsSource = resultsSource;
   m_GameResults.swap(gameResults);
   m_GameResults->Confirm();
-  if (resultsSource == GAME_RESULT_SOURCE_MMD) {
-    LOG_APP_IF(LogLevel::kDebug, "Resolved winners (MMD): " + JoinVector(m_GameResults->GetWinnersNames(), false))
+  if (resultsSource == GameResultSource::kMMD) {
+    LOG_APP_IF(LogLevel::kDebug, "Resolved winners (MMD): " + JoinStrings(m_GameResults->GetWinnersNames(), false))
   } else {
-    LOG_APP_IF(LogLevel::kDebug, "Resolved winners: " + JoinVector(m_GameResults->GetWinnersNames(), false))
+    LOG_APP_IF(LogLevel::kDebug, "Resolved winners: " + JoinStrings(m_GameResults->GetWinnersNames(), false))
   }
   return m_GameResultsSource;
 }
 
-uint8_t CGame::RunGameResults()
+GameResultSource CGame::RunGameResults()
 {
-  if (m_GameResultsSource != GAME_RESULT_SOURCE_NONE) return m_GameResultsSource;
+  if (m_GameResultsSource != GameResultSource::kNone) return m_GameResultsSource;
   
   FlushStatsQueue();
 
-  const uint8_t sourceOfTruth = GetGameResultSourceOfTruth();
+  const GameResultSourceSelect sourceOfTruth = GetGameResultSourceOfTruth();
 
-  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_ONLY_MMD) {
+  if (sourceOfTruth == GameResultSourceSelect::kOnlyMMD) {
     optional<GameResults> results = GetGameResultsMMD();
-    return TryConfirmResults(results, GAME_RESULT_SOURCE_MMD);
+    return TryConfirmResults(results, GameResultSource::kMMD);
   }
 
-  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE) {
+  if (sourceOfTruth == GameResultSourceSelect::kOnlyLeaveCode) {
     optional<GameResults> results = GetGameResultsLeaveCode();
-    return TryConfirmResults(results, GAME_RESULT_SOURCE_LEAVECODE);
+    return TryConfirmResults(results, GameResultSource::kLeaveCode);
   }
 
-  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_PREFER_MMD) {
+  if (sourceOfTruth == GameResultSourceSelect::kPreferMMD) {
     optional<GameResults> results = GetGameResultsMMD();
-    if (TryConfirmResults(results, GAME_RESULT_SOURCE_MMD)) {
+    if (TryConfirmResults(results, GameResultSource::kMMD) != GameResultSource::kNone) {
       return m_GameResultsSource;
     }
     results = GetGameResultsLeaveCode();
-    return TryConfirmResults(results, GAME_RESULT_SOURCE_LEAVECODE);
+    return TryConfirmResults(results, GameResultSource::kLeaveCode);
   }
 
-  if (sourceOfTruth == GAME_RESULT_SOURCE_SELECT_PREFER_LEAVECODE) {
+  if (sourceOfTruth == GameResultSourceSelect::kPreferLeaveCode) {
     optional<GameResults> results = GetGameResultsLeaveCode();
-    if (TryConfirmResults(results, GAME_RESULT_SOURCE_LEAVECODE)) {
+    if (TryConfirmResults(results, GameResultSource::kLeaveCode) != GameResultSource::kNone) {
       return m_GameResultsSource;
     }
     results = GetGameResultsMMD();
-    return TryConfirmResults(results, GAME_RESULT_SOURCE_MMD);
+    return TryConfirmResults(results, GameResultSource::kMMD);
   }
 
-  return GAME_RESULT_SOURCE_NONE;
+  return GameResultSource::kNone;
 }
 
 bool CGame::GetIsAPrioriCompatibleWithGameResultsConstraints(string& reason) const

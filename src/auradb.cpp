@@ -125,7 +125,7 @@ uint8_t CSearchableMapData::Search(string& rwSearchName, const uint8_t searchDat
       rwSearchName = inclusionMatches[0];
       return MAP_DATA_TYPE_ITEM;
     } else if (!inclusionMatches.empty()) {
-      rwSearchName = JoinVector(inclusionMatches, false);
+      rwSearchName = JoinStrings(inclusionMatches, false);
       return MAP_DATA_TYPE_ANY;
     } else if (!exactMatch) {
       for (const string& element : m_Items) {
@@ -1319,7 +1319,7 @@ vector<string> CAuraDB::GetAlts(const string& addressLiteral)
 bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const array<uint8_t, 4>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
 {
   string storageCRC32 = ByteArrayToDecString(mapCRC32);
-  string storagePlayerNames = JoinVector(playerNames, false);
+  string storagePlayerNames = JoinStrings(playerNames, false);
 
   vector<uint8_t> storageIDs;
   storageIDs.reserve(playerIDs.size() * 3);

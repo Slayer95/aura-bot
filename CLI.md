@@ -890,7 +890,7 @@ Slower settings make the gameplay more accessible, but are uncommon in competiti
 - normal: This is the recommended setting for players new to real-time strategy games.
 - fast: This is the most competitive setting. It's also the default game speed.
 
-## \`--list-visibility \<DISPLAY\>\`
+## \`--realm-visibility \<DISPLAY\>\`
 
 This parameter toggle whether the game is publicly visible in the game lists of
 PvPGN realms.
@@ -899,6 +899,7 @@ PvPGN realms.
 
 - private: The game can only be joined from PvPGN realms by typing the game name.
 - public: The game is visible and clickable in the game lists in PvPGN realms.
+- none: The game cannot be joined from PvPGN realms.
 
 ## \`--owner \<USER@SERVER>\`
 

@@ -86,8 +86,10 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapNumControllers(0),
     m_MapNumDisabled(0),
     m_MapNumTeams(0),
-    m_MapObservers(MAPOBS_NONE),
-    m_GameFlags(MAPFLAG_TEAMSTOGETHER | MAPFLAG_FIXEDTEAMS),
+    m_GameSpeed(GameSpeed::kFast),
+    m_GameVisibility(GameVisibilityMode::kDefault),
+    m_GameObservers(GameObserversMode::kNone),
+    m_GameFlags(GAMEFLAG_TEAMSTOGETHER | GAMEFLAG_FIXEDTEAMS),
     m_MapFilterType(MAPFILTER_TYPE_SCENARIO),
     m_MapFilterObs(MAPFILTER_OBS_NONE),
     m_MapPreviewImageSize(0),
@@ -157,55 +159,65 @@ uint32_t CMap::GetGameConvertedFlags() const
 {
   uint32_t gameFlags = 0;
 
-  // speed
+  switch (m_GameSpeed) {
+    case GameSpeed::kSlow:
+      gameFlags = 0x00000000;
+      break;
+    case GameSpeed::kNormal:
+      gameFlags = 0x00000001;
+      break;
+    default:
+      gameFlags = 0x00000002;
+  }
 
-  if (m_MapSpeed == MAPSPEED_SLOW)
-    gameFlags = 0x00000000;
-  else if (m_MapSpeed == MAPSPEED_NORMAL)
-    gameFlags = 0x00000001;
-  else
-    gameFlags = 0x00000002;
+  switch (m_GameVisibility) {
+    case GameVisibilityMode::kHideTerrain:
+      gameFlags = 0x00000100;
+      break;
+    case GameVisibilityMode::kExplored:
+      gameFlags = 0x00000200;
+      break;
+    case GameVisibilityMode::kAlwaysVisible:
+      gameFlags = 0x00000400;
+      break;
+    default:
+      gameFlags = 0x00000800;
+  }
 
-  // visibility
-
-  if (m_MapVisibility == MAPVIS_HIDETERRAIN)
-    gameFlags |= 0x00000100;
-  else if (m_MapVisibility == MAPVIS_EXPLORED)
-    gameFlags |= 0x00000200;
-  else if (m_MapVisibility == MAPVIS_ALWAYSVISIBLE)
-    gameFlags |= 0x00000400;
-  else
-    gameFlags |= 0x00000800;
-
-  // observers
-
-  if (m_MapObservers == MAPOBS_ONDEFEAT)
-    gameFlags |= 0x00002000;
-  else if (m_MapObservers == MAPOBS_ALLOWED)
-    gameFlags |= 0x00003000;
-  else if (m_MapObservers == MAPOBS_REFEREES)
-    gameFlags |= 0x40000000;
+  switch (m_GameObservers) {
+    case GameObserversMode::kOnDefeat:
+      gameFlags |= 0x00002000;
+      break;
+    case GameObserversMode::kStartOrOnDefeat:
+      gameFlags |= 0x00003000;
+      break;
+    case GameObserversMode::kReferees:
+      gameFlags |= 0x40000000;
+      break;
+    default:
+      break;
+  }
 
   // teams/units/hero/race
 
-  if (m_GameFlags & MAPFLAG_TEAMSTOGETHER) {
+  if (m_GameFlags & GAMEFLAG_TEAMSTOGETHER) {
     gameFlags |= 0x00004000;
   }
 
-  if (m_GameFlags & MAPFLAG_FIXEDTEAMS)
+  if (m_GameFlags & GAMEFLAG_FIXEDTEAMS)
     gameFlags |= 0x00060000;
 
-  if (m_GameFlags & MAPFLAG_UNITSHARE)
+  if (m_GameFlags & GAMEFLAG_UNITSHARE)
     gameFlags |= 0x01000000;
 
-  if (m_GameFlags & MAPFLAG_RANDOMHERO)
+  if (m_GameFlags & GAMEFLAG_RANDOMHERO)
     gameFlags |= 0x02000000;
 
   if (!(m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
     // WC3 GUI is misleading in displaying the Random Races tickbox when creating LAN games.
     // It even shows Random Races: Yes in the game lobby.
     // However, this flag is totally ignored when Fixed Player Settings is enabled.
-    if (m_GameFlags & MAPFLAG_RANDOMRACES)
+    if (m_GameFlags & GAMEFLAG_RANDOMRACES)
       gameFlags |= 0x04000000;
   }
 
@@ -407,38 +419,38 @@ bool CMap::NormalizeSlots()
   return updated;
 }
 
-bool CMap::SetMapObservers(const uint8_t nMapObservers)
+bool CMap::SetGameObservers(const GameObserversMode observerMode)
 {
-  switch (nMapObservers) {
-    case MAPOBS_ALLOWED:
-    case MAPOBS_REFEREES:
-      m_MapObservers = nMapObservers;
+  switch (observerMode) {
+    case GameObserversMode::kStartOrOnDefeat:
+    case GameObserversMode::kReferees:
+      m_GameObservers = observerMode;
       m_MapFilterObs = MAPFILTER_OBS_FULL;
       break;
-    case MAPOBS_NONE:
-      m_MapObservers = nMapObservers;
+    case GameObserversMode::kNone:
+      m_GameObservers = observerMode;
       m_MapFilterObs = MAPFILTER_OBS_NONE;
       break;
-    case MAPOBS_ONDEFEAT:
-      m_MapObservers = nMapObservers;
+    case GameObserversMode::kOnDefeat:
+      m_GameObservers = observerMode;
       m_MapFilterObs = MAPFILTER_OBS_ONDEATH;
       break;
     default:
-      m_MapObservers = nMapObservers;
+      m_GameObservers = observerMode;
       return false;
   }
   return true;
 }
 
-bool CMap::SetMapVisibility(const uint8_t nMapVisibility)
+bool CMap::SetGameVisibility(const GameVisibilityMode visibilityMode)
 {
-  m_MapVisibility = nMapVisibility;
+  m_GameVisibility = visibilityMode;
   return true;
 }
 
-bool CMap::SetMapSpeed(const uint8_t nMapSpeed)
+bool CMap::SetGameSpeed(const GameSpeed gameSpeed)
 {
-  m_MapSpeed = nMapSpeed;
+  m_GameSpeed = gameSpeed;
   return true;
 }
 
@@ -449,109 +461,111 @@ bool CMap::SetGameConvertedFlags(const uint32_t gameFlags)
   // speed
 
   if (gameFlags & 0x00000002) {
-    m_MapSpeed = MAPSPEED_FAST;
+    m_GameSpeed = GameSpeed::kFast;
   } else if (gameFlags & 0x00000001) {
-    m_MapSpeed = MAPSPEED_NORMAL;
+    m_GameSpeed = GameSpeed::kNormal;
   } else {
-    m_MapSpeed = MAPSPEED_SLOW;
+    m_GameSpeed = GameSpeed::kSlow;
   }
 
   // visibility
 
   if (gameFlags & 0x00000800) {
-    m_MapVisibility = MAPVIS_DEFAULT;
+    m_GameVisibility = GameVisibilityMode::kDefault;
   } else if (gameFlags & 0x00000400) {
-    m_MapVisibility = MAPVIS_ALWAYSVISIBLE;
+    m_GameVisibility = GameVisibilityMode::kAlwaysVisible;
   } else if (gameFlags & 0x00000200) {
-    m_MapVisibility = MAPVIS_EXPLORED;
+    m_GameVisibility = GameVisibilityMode::kExplored;
   } else if (gameFlags & 0x00000100) {
-    m_MapVisibility = MAPVIS_HIDETERRAIN;
+    m_GameVisibility = GameVisibilityMode::kHideTerrain;
   }
 
   // observers
 
   if (gameFlags & 0x40000000) {
-    m_MapObservers = MAPOBS_REFEREES;
+    m_GameObservers = GameObserversMode::kReferees;
   } else if (gameFlags & 0x00003000) {
-    m_MapObservers = MAPOBS_ALLOWED;
+    m_GameObservers = GameObserversMode::kStartOrOnDefeat;
   } else if (gameFlags & 0x00002000) {
-    m_MapObservers = MAPOBS_ONDEFEAT;
+    m_GameObservers = GameObserversMode::kOnDefeat;
+  } else {
+    m_GameObservers = GameObserversMode::kNone;
   }
 
   // teams/units/hero/race
 
   if (gameFlags & 0x00004000) {
-    m_GameFlags |= MAPFLAG_TEAMSTOGETHER;
+    m_GameFlags |= GAMEFLAG_TEAMSTOGETHER;
   }
 
   if (gameFlags & 0x00060000) {
-    m_GameFlags |= MAPFLAG_FIXEDTEAMS;
+    m_GameFlags |= GAMEFLAG_FIXEDTEAMS;
   }
 
   if (gameFlags & 0x01000000) {
-    m_GameFlags |= MAPFLAG_UNITSHARE;
+    m_GameFlags |= GAMEFLAG_UNITSHARE;
   }
 
   if (gameFlags & 0x02000000) {
-    m_GameFlags |= MAPFLAG_RANDOMHERO;
+    m_GameFlags |= GAMEFLAG_RANDOMHERO;
   }
 
   if (gameFlags & 0x04000000) {
-    m_GameFlags |= MAPFLAG_RANDOMRACES;
+    m_GameFlags |= GAMEFLAG_RANDOMRACES;
   }
 
   return true;
 }
 
-bool CMap::SetTeamsLocked(const bool nEnable)
+bool CMap::SetGameTeamsLocked(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= MAPFLAG_FIXEDTEAMS;
+    m_GameFlags |= GAMEFLAG_FIXEDTEAMS;
   } else {
-    m_GameFlags &= ~MAPFLAG_FIXEDTEAMS;
+    m_GameFlags &= ~GAMEFLAG_FIXEDTEAMS;
   }
   return true;
 }
 
-bool CMap::SetTeamsTogether(const bool nEnable)
+bool CMap::SetGameTeamsTogether(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= MAPFLAG_TEAMSTOGETHER;
+    m_GameFlags |= GAMEFLAG_TEAMSTOGETHER;
   } else {
-    m_GameFlags &= ~MAPFLAG_TEAMSTOGETHER;
+    m_GameFlags &= ~GAMEFLAG_TEAMSTOGETHER;
   }
   return true;
 }
 
-bool CMap::SetAdvancedSharedUnitControl(const bool nEnable)
+bool CMap::SetGameAdvancedSharedUnitControl(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= MAPFLAG_UNITSHARE;
+    m_GameFlags |= GAMEFLAG_UNITSHARE;
   } else {
-    m_GameFlags &= ~MAPFLAG_UNITSHARE;
+    m_GameFlags &= ~GAMEFLAG_UNITSHARE;
   }
   return true;
 }
 
-bool CMap::SetRandomHeroes(const bool nEnable)
+bool CMap::SetGameRandomHeroes(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= MAPFLAG_RANDOMHERO;
+    m_GameFlags |= GAMEFLAG_RANDOMHERO;
   } else {
-    m_GameFlags &= ~MAPFLAG_RANDOMHERO;
+    m_GameFlags &= ~GAMEFLAG_RANDOMHERO;
   }
   return true;
 }
 
-bool CMap::SetRandomRaces(const bool nEnable)
+bool CMap::SetGameRandomRaces(const bool nEnable)
 {
   if (m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS) {
     return false;
   }
   if (nEnable) {
-    m_GameFlags |= MAPFLAG_RANDOMRACES;
+    m_GameFlags |= GAMEFLAG_RANDOMRACES;
   } else {
-    m_GameFlags &= ~MAPFLAG_RANDOMRACES;
+    m_GameFlags &= ~GAMEFLAG_RANDOMRACES;
   }
   return true;
 }
@@ -1679,7 +1693,7 @@ void CMap::Load(CConfig* CFG)
   // Maps supporting observer slots enable them by default.
   m_MapCustomizableObserverTeam = m_MapVersionMaxSlots + 1;
   if (m_Slots.size() + m_MapNumDisabled < m_MapVersionMaxSlots) {
-    SetMapObservers(MAPOBS_ALLOWED);
+    SetGameObservers(GameObserversMode::kStartOrOnDefeat);
   }
 
   LoadGameConfigOverrides(*CFG);
@@ -1999,27 +2013,6 @@ string CMap::CheckProblems()
     return m_ErrorMessage;
   }*/
 
-  if (m_MapSpeed != MAPSPEED_SLOW && m_MapSpeed != MAPSPEED_NORMAL && m_MapSpeed != MAPSPEED_FAST)
-  {
-    m_Valid = false;
-    m_ErrorMessage = "invalid <map.speed> detected";
-    return m_ErrorMessage;
-  }
-
-  if (m_MapVisibility != MAPVIS_HIDETERRAIN && m_MapVisibility != MAPVIS_EXPLORED && m_MapVisibility != MAPVIS_ALWAYSVISIBLE && m_MapVisibility != MAPVIS_DEFAULT)
-  {
-    m_Valid = false;
-    m_ErrorMessage = "invalid <map.visibility> detected";
-    return m_ErrorMessage;
-  }
-
-  if (m_MapObservers != MAPOBS_NONE && m_MapObservers != MAPOBS_ONDEFEAT && m_MapObservers != MAPOBS_ALLOWED && m_MapObservers != MAPOBS_REFEREES)
-  {
-    m_Valid = false;
-    m_ErrorMessage = "invalid <map.observers> detected";
-    return m_ErrorMessage;
-  }
-
   if (m_MapNumDisabled > MAX_SLOTS_MODERN)
   {
     m_Valid = false;
@@ -2121,7 +2114,7 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_NumPlayersToStartGameOver = CFG.GetUint8("map.hosting.game_over.player_count", 1);
   }
   if (CFG.Exists("map.hosting.game_ready.mode")) {
-    m_PlayersReadyMode = CFG.GetStringIndex("map.hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
+    m_PlayersReadyMode = CFG.GetEnum<PlayersReadyMode>("map.hosting.game_ready.mode", TO_ARRAY("fast", "race", "explicit"), PlayersReadyMode::kExpectRace);
   }
   if (CFG.Exists("map.hosting.autostart.requires_balance")) {
     m_AutoStartRequiresBalance = CFG.GetBool("map.hosting.autostart.requires_balance", false);
@@ -2149,16 +2142,16 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   }
 
   if (CFG.Exists("map.hosting.expiry.lobby.mode")) {
-    m_LobbyTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.lobby.mode", {"never", "empty", "ownerless", "strict"}, LOBBY_TIMEOUT_OWNERLESS);
+    m_LobbyTimeoutMode = CFG.GetEnum<LobbyTimeoutMode>("map.hosting.expiry.lobby.mode", TO_ARRAY("never", "empty", "ownerless", "strict"), LobbyTimeoutMode::kOwnerMissing);
   }
   if (CFG.Exists("map.hosting.expiry.owner.mode")) {
-    m_LobbyOwnerTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.owner.mode", {"never", "absent", "strict"}, LOBBY_OWNER_TIMEOUT_ABSENT);
+    m_LobbyOwnerTimeoutMode = CFG.GetEnum<LobbyOwnerTimeoutMode>("map.hosting.expiry.owner.mode", TO_ARRAY("never", "absent", "strict"), LobbyOwnerTimeoutMode::kAbsent);
   }
   if (CFG.Exists("map.hosting.expiry.loading.mode")) {
-    m_LoadingTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.loading.mode", {"never", "strict"}, GAME_LOADING_TIMEOUT_STRICT);
+    m_LoadingTimeoutMode = CFG.GetEnum<GameLoadingTimeoutMode>("map.hosting.expiry.loading.mode", TO_ARRAY("never", "strict"), GameLoadingTimeoutMode::kStrict);
   }
   if (CFG.Exists("map.hosting.expiry.playing.mode")) {
-    m_PlayingTimeoutMode = CFG.GetStringIndex("map.hosting.expiry.playing.mode", {"never", "dry", "strict"}, GAME_PLAYING_TIMEOUT_STRICT);
+    m_PlayingTimeoutMode = CFG.GetEnum<GamePlayingTimeoutMode>("map.hosting.expiry.playing.mode", TO_ARRAY("never", "dry", "strict"), GamePlayingTimeoutMode::kStrict);
   }
 
   if (CFG.Exists("map.hosting.expiry.lobby.timeout")) {
@@ -2225,19 +2218,19 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   }
 
   if (CFG.Exists("map.hosting.ip_filter.flood_handler")) {
-    m_IPFloodHandler = CFG.GetStringIndex("map.hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
+    m_IPFloodHandler = CFG.GetEnum<OnIPFloodHandler>("map.hosting.ip_filter.flood_handler", TO_ARRAY("none", "notify", "deny"), OnIPFloodHandler::kDeny);
   }
   if (CFG.Exists("map.hosting.game_protocol.leaver_handler")) {
-    m_LeaverHandler = CFG.GetStringIndex("map.hosting.game_protocol.leaver_handler", {"none", "native", "share"}, ON_PLAYER_LEAVE_NATIVE);
+    m_LeaverHandler = CFG.GetEnum<OnPlayerLeaveHandler>("map.hosting.game_protocol.leaver_handler", TO_ARRAY("none", "native", "share"), OnPlayerLeaveHandler::kNative);
   }
   if (CFG.Exists("map.hosting.game_protocol.share_handler")) {
-    m_ShareUnitsHandler = CFG.GetStringIndex("map.hosting.game_protocol.share_handler", {"native", "kick", "restrict"}, ON_SHARE_UNITS_NATIVE);
+    m_ShareUnitsHandler = CFG.GetEnum<OnShareUnitsHandler>("map.hosting.game_protocol.share_handler", TO_ARRAY("native", "kick", "restrict"), OnShareUnitsHandler::kNative);
   }
   if (CFG.Exists("map.hosting.name_filter.unsafe_handler")) {
-    m_UnsafeNameHandler = CFG.GetStringIndex("map.hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);
+    m_UnsafeNameHandler = CFG.GetEnum<OnUnsafeNameHandler>("map.hosting.name_filter.unsafe_handler", TO_ARRAY("none", "censor", "deny"), OnUnsafeNameHandler::kDeny);
   }
   if (CFG.Exists("map.hosting.realm_broadcast.error_handler")) {
-    m_BroadcastErrorHandler = CFG.GetStringIndex("map.hosting.realm_broadcast.error_handler", {"ignore", "exit_main_error", "exit_empty_main_error", "exit_any_error", "exit_empty_any_error", "exit_max_errors"}, ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
+    m_BroadcastErrorHandler = CFG.GetEnum<OnRealmBroadcastErrorHandler>("map.hosting.realm_broadcast.error_handler", TO_ARRAY("ignore", "exit_main_error", "exit_empty_main_error", "exit_any_error", "exit_empty_any_error", "exit_max_errors"), OnRealmBroadcastErrorHandler::kExitOnMaxErrors);
   }
   if (CFG.Exists("map.hosting.name_filter.is_pipe_harmful")) {
     m_PipeConsideredHarmful = CFG.GetBool("map.hosting.name_filter.is_pipe_harmful", false);
@@ -2258,13 +2251,13 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_HideLobbyNames = CFG.GetBool("map.hosting.nicknames.hide_lobby", false);
   }
   if (CFG.Exists("map.hosting.nicknames.hide_in_game")) {
-    m_HideInGameNames = CFG.GetStringIndex("map.hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
+    m_HideInGameNames = CFG.GetEnum<HideIGNMode>("map.hosting.nicknames.hide_in_game", TO_ARRAY("never", "host", "always", "auto"), HideIGNMode::kAuto);
   }
   if (CFG.Exists("map.hosting.load_in_game.enabled")) {
     m_LoadInGame = CFG.GetBool("map.hosting.load_in_game.enabled", false);
   }
   if (CFG.Exists("map.hosting.fake_users.share_units.mode")) {
-    m_FakeUsersShareUnitsMode = CFG.GetStringIndex("map.hosting.fake_users.share_units.mode", {"never", "auto", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_AUTO);
+    m_FakeUsersShareUnitsMode = CFG.GetEnum<FakeUsersShareUnitsMode>("map.hosting.fake_users.share_units.mode", TO_ARRAY("never", "auto", "team", "all"), FakeUsersShareUnitsMode::kAuto);
   }
   if (CFG.Exists("map.hosting.join_in_progress.observers")) {
     m_EnableJoinObserversInProgress = CFG.GetBool("map.hosting.join_in_progress.observers", false);
@@ -2289,11 +2282,10 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
 
   // These aren't necessarily passed verbatim to CGameConfig
   // (CGameSetup members may be used instead)
-  m_MapSpeed = CFG.GetUint8("map.speed", MAPSPEED_FAST);
-  m_MapVisibility = CFG.GetUint8("map.visibility", MAPVIS_DEFAULT);
+  m_GameSpeed = CFG.GetEnum<GameSpeed>("map.speed", TO_ARRAY("slow", "normal", "fast"), GameSpeed::kFast);
+  m_GameVisibility = CFG.GetEnum<GameVisibilityMode>("map.visibility", TO_ARRAY("hide_terrain", "explored", "always_visible", "default"), GameVisibilityMode::kDefault);
   if (CFG.Exists("map.observers")) {
-    SetMapObservers(CFG.GetUint8("map.observers", m_MapObservers));
-    CFG.FailIfErrorLast();
+    SetGameObservers(CFG.GetEnum<GameObserversMode>("map.observers", TO_ARRAY("none", "on_defeat", "full", "referees"), m_GameObservers));
   }
   if (CFG.Exists("map.filter_obs")) {
     m_MapFilterObs = CFG.GetUint8("map.filter_obs", m_MapFilterObs);
@@ -2522,7 +2514,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
 uint8_t CMap::GetLobbyRace(const CGameSlot* slot) const
 {
   bool isFixedRace = GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS;
-  bool isRandomRace = GetMapFlags() & MAPFLAG_RANDOMRACES;
+  bool isRandomRace = GetMapFlags() & GAMEFLAG_RANDOMRACES;
   if (isFixedRace) return slot->GetRaceFixed();
   // If the map has fixed player settings, races cannot be randomized.
   if (isRandomRace) return SLOTRACE_RANDOM;

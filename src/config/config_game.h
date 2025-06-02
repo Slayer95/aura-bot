@@ -42,97 +42,98 @@
 
 struct CGameConfig
 {
-  uint8_t                  m_VoteKickPercentage;         // percentage of players required to vote yes for a votekick to pass
-  uint8_t                  m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
-  uint8_t                  m_MaxPlayersLoopback;
-  uint8_t                  m_MaxPlayersSameIP;
-  uint8_t                  m_PlayersReadyMode;
-  bool                     m_AutoStartRequiresBalance;
-  bool                     m_SaveStats;
+  uint8_t                          m_VoteKickPercentage;         // percentage of players required to vote yes for a votekick to pass
+  uint8_t                          m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
+  uint8_t                          m_MaxPlayersLoopback;
+  uint8_t                          m_MaxPlayersSameIP;
+  PlayersReadyMode                 m_PlayersReadyMode;
+  bool                             m_AutoStartRequiresBalance;
+  bool                             m_SaveStats;
   
-  uint32_t                 m_AutoKickPing;               // auto kick players with ping higher than this
-  uint32_t                 m_WarnHighPing;               // announce on chat when players have a ping higher than this value
-  uint32_t                 m_SafeHighPing;               // when players ping drops below this value, announce they no longer have high ping
+  uint32_t                         m_AutoKickPing;               // auto kick players with ping higher than this
+  uint32_t                         m_WarnHighPing;               // announce on chat when players have a ping higher than this value
+  uint32_t                         m_SafeHighPing;               // when players ping drops below this value, announce they no longer have high ping
 
-  uint8_t                  m_LobbyTimeoutMode;
-  uint8_t                  m_LobbyOwnerTimeoutMode;
-  uint8_t                  m_LoadingTimeoutMode;
-  uint8_t                  m_PlayingTimeoutMode;
+  LobbyTimeoutMode                 m_LobbyTimeoutMode;
+  LobbyOwnerTimeoutMode            m_LobbyOwnerTimeoutMode;
+  GameLoadingTimeoutMode           m_LoadingTimeoutMode;
+  GamePlayingTimeoutMode           m_PlayingTimeoutMode;
 
-  uint32_t                 m_LobbyTimeout;               // auto close the game lobby after this many minutes without any owner
-  uint32_t                 m_LobbyOwnerTimeout;          // relinquish game ownership after this many minutes
-  uint32_t                 m_LoadingTimeout;             // relinquish game ownership after this many minutes
-  uint32_t                 m_PlayingTimeout;             // relinquish game ownership after this many minutes
+  uint32_t                         m_LobbyTimeout;               // auto close the game lobby after this many minutes without any owner
+  uint32_t                         m_LobbyOwnerTimeout;          // relinquish game ownership after this many minutes
+  uint32_t                         m_LoadingTimeout;             // relinquish game ownership after this many minutes
+  uint32_t                         m_PlayingTimeout;             // relinquish game ownership after this many minutes
 
-  uint8_t                  m_PlayingTimeoutWarningShortCountDown;
-  uint32_t                 m_PlayingTimeoutWarningShortInterval;
-  uint8_t                  m_PlayingTimeoutWarningLargeCountDown;
-  uint32_t                 m_PlayingTimeoutWarningLargeInterval;
+  uint8_t                          m_PlayingTimeoutWarningShortCountDown;
+  uint32_t                         m_PlayingTimeoutWarningShortInterval;
+  uint8_t                          m_PlayingTimeoutWarningLargeCountDown;
+  uint32_t                         m_PlayingTimeoutWarningLargeInterval;
 
-  bool                     m_LobbyOwnerReleaseLANLeaver;
+  bool                             m_LobbyOwnerReleaseLANLeaver;
 
-  uint32_t                 m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
-  uint32_t                 m_LobbyCountDownStartValue;   // number at which !start count down begins
+  uint32_t                         m_LobbyCountDownInterval;     // ms between each number count down when !start is issued
+  uint32_t                         m_LobbyCountDownStartValue;   // number at which !start count down begins
 
-  bool                     m_SaveGameAllowed;
+  bool                             m_SaveGameAllowed;
 
-  uint16_t                 m_LatencyMin;                   // the minimum configurable game refresh latency
-  uint16_t                 m_LatencyMax;                   // the maximum configurable game refresh latency
-  uint16_t                 m_LatencyDriftMax;              // the maximum allowed frame drift in ms
-  uint32_t                 m_SyncLimitMaxMilliSeconds;     // constraint for configurable parameters m_SyncLimit * m_Latency
-  uint32_t                 m_SyncLimitSafeMinMilliSeconds; // constraint for configurable parameters m_SyncLimitSafe * m_Latency
+  uint16_t                         m_LatencyMin;                   // the minimum configurable game refresh latency
+  uint16_t                         m_LatencyMax;                   // the maximum configurable game refresh latency
+  uint16_t                         m_LatencyDriftMax;              // the maximum allowed frame drift in ms
+  uint32_t                         m_SyncLimitMaxMilliSeconds;     // constraint for configurable parameters m_SyncLimit * m_Latency
+  uint32_t                         m_SyncLimitSafeMinMilliSeconds; // constraint for configurable parameters m_SyncLimitSafe * m_Latency
 
-  uint16_t                 m_Latency;                    // the game refresh latency (by default)
-  bool                     m_LatencyEqualizerEnabled;    // whether to add a minimum delay proportional to m_Latency to all actions sent by players
-  uint8_t                  m_LatencyEqualizerFrames;     // how many frames should the latency equalizer use
+  uint16_t                         m_Latency;                    // the game refresh latency (by default)
+  bool                             m_LatencyEqualizerEnabled;    // whether to add a minimum delay proportional to m_Latency to all actions sent by players
+  uint8_t                          m_LatencyEqualizerFrames;     // how many frames should the latency equalizer use
 
-  bool                     m_EnableLagScreen;            // whether to pause the game with a lag screen whenever a player falls behind
-  bool                     m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
-  uint32_t                 m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
-  uint32_t                 m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
+  bool                             m_EnableLagScreen;            // whether to pause the game with a lag screen whenever a player falls behind
+  bool                             m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
+  uint32_t                         m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
+  uint32_t                         m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
 
-  int64_t                  m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
-  uint32_t                 m_LacksMapKickDelay;
-  uint32_t                 m_LogDelay;
+  int64_t                          m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
+  uint32_t                         m_LacksMapKickDelay;
+  uint32_t                         m_LogDelay;
 
-  bool                            m_CheckJoinable;
-  std::vector<sockaddr_storage>   m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
-  std::map<std::string, Version>  m_GameVersionsByLANPlayerNames;
-  uint8_t                         m_ReconnectionMode;
+  bool                             m_CheckJoinable;
+  std::vector<sockaddr_storage>    m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
+  std::map<std::string, Version>   m_GameVersionsByLANPlayerNames;
+  uint8_t                          m_ReconnectionMode;
 
-  std::string              m_PrivateCmdToken;            // a symbol prefix to identify commands and send a private reply
-  std::string              m_BroadcastCmdToken;          // a symbol prefix to identify commands and send the reply to everyone
-  bool                     m_EnableBroadcast;
-  std::string              m_IndexHostName;       // index virtual host name
-  std::string              m_LobbyVirtualHostName;       // lobby virtual host name
-  bool                     m_NotifyJoins;                // whether the bot should beep when a user joins a hosted game
-  std::set<std::string>    m_IgnoredNotifyJoinPlayers;
-  std::optional<uint16_t>  m_MaxAPM;
-  std::optional<uint16_t>  m_MaxBurstAPM;
-  bool                     m_HideLobbyNames;
-  uint8_t                  m_HideInGameNames;
-  bool                     m_LoadInGame;
-  uint8_t                  m_FakeUsersShareUnitsMode;
-  bool                     m_EnableJoinObserversInProgress;
-  bool                     m_EnableJoinPlayersInProgress;
+  std::string                      m_PrivateCmdToken;            // a symbol prefix to identify commands and send a private reply
+  std::string                      m_BroadcastCmdToken;          // a symbol prefix to identify commands and send the reply to everyone
+  bool                             m_EnableBroadcast;
+  std::string                      m_IndexHostName;       // index virtual host name
+  std::string                      m_LobbyVirtualHostName;       // lobby virtual host name
+  bool                             m_NotifyJoins;                // whether the bot should beep when a user joins a hosted game
+  std::set<std::string>            m_IgnoredNotifyJoinPlayers;
+  std::optional<uint16_t>          m_MaxAPM;
+  std::optional<uint16_t>          m_MaxBurstAPM;
+  bool                             m_HideLobbyNames;
+  HideIGNMode                      m_HideInGameNames;
+  bool                             m_LoadInGame;
+  FakeUsersShareUnitsMode          m_FakeUsersShareUnitsMode;
+  bool                             m_EnableJoinObserversInProgress;
+  bool                             m_EnableJoinPlayersInProgress;
 
-  std::set<std::string>    m_LoggedWords;
-  uint8_t                  m_LogChatTypes;
-  bool                     m_LogCommands;
-  bool                     m_EnableLobbyChat;
-  bool                     m_EnableInGameChat;
-  uint8_t                  m_DesyncHandler;
-  uint8_t                  m_IPFloodHandler;
-  uint8_t                  m_LeaverHandler;
-  uint8_t                  m_ShareUnitsHandler;
-  uint8_t                  m_UnsafeNameHandler;         // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care
-  uint8_t                  m_BroadcastErrorHandler;     // under which circumstances should a game lobby be closed given that we failed to announce the game in one or more realms
-  bool                     m_PipeConsideredHarmful;
+  std::set<std::string>            m_LoggedWords;
+  uint8_t                          m_LogChatTypes;
+  bool                             m_LogCommands;
+  bool                             m_EnableLobbyChat;
+  bool                             m_EnableInGameChat;
+  OnDesyncHandler                  m_DesyncHandler;
+  OnIPFloodHandler                 m_IPFloodHandler;
+  OnPlayerLeaveHandler             m_LeaverHandler;
+  OnShareUnitsHandler              m_ShareUnitsHandler;
+  OnUnsafeNameHandler              m_UnsafeNameHandler;      // whether to mutilate user names when they contain unsafe characters, or deny entry, or not to care
+  OnRealmBroadcastErrorHandler     m_BroadcastErrorHandler;  // under which circumstances should a game lobby be closed given that we failed to announce the game in one or more realms
 
-  bool                     m_UDPEnabled;                 // whether this game should be listed in "Local Area Network"
-  bool                     m_GameIsExpansion;
-  std::optional<Version>   m_GameVersion;
-  uint8_t                  m_CrossPlayMode;
+  bool                             m_PipeConsideredHarmful;
+
+  bool                             m_UDPEnabled;                 // whether this game should be listed in "Local Area Network"
+  bool                             m_GameIsExpansion;
+  std::optional<Version>           m_GameVersion;
+  CrossPlayMode                    m_CrossPlayMode;
 
   explicit CGameConfig(CConfig& CFG);
   explicit CGameConfig(CGameConfig* nRootConfig, std::shared_ptr<CMap> nMap, std::shared_ptr<CGameSetup> nGameSetup);

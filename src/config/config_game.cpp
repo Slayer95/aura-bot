@@ -65,7 +65,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_NumPlayersToStartGameOver              = CFG.GetUint8("hosting.game_over.player_count", 1);
   m_MaxPlayersLoopback                     = CFG.GetUint8("hosting.ip_filter.max_loopback", 8);
   m_MaxPlayersSameIP                       = CFG.GetUint8("hosting.ip_filter.max_same_ip", 8);
-  m_PlayersReadyMode                       = CFG.GetStringIndex("hosting.game_ready.mode", {"fast", "race", "explicit"}, READY_MODE_EXPECT_RACE);
+  m_PlayersReadyMode                       = CFG.GetEnum<PlayersReadyMode>("hosting.game_ready.mode", TO_ARRAY("fast", "race", "explicit"), PlayersReadyMode::kExpectRace);
   m_AutoStartRequiresBalance               = CFG.GetBool("hosting.autostart.requires_balance", true);
   m_SaveStats                              = CFG.GetBool("db.game_stats.enabled", true);
 
@@ -73,10 +73,10 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_WarnHighPing                           = CFG.GetUint32("hosting.high_ping.warn_ms", 175);
   m_SafeHighPing                           = CFG.GetUint32("hosting.high_ping.safe_ms", 130);
 
-  m_LobbyTimeoutMode                       = CFG.GetStringIndex("hosting.expiry.lobby.mode", {"never", "empty", "ownerless", "strict"}, LOBBY_TIMEOUT_OWNERLESS);
-  m_LobbyOwnerTimeoutMode                  = CFG.GetStringIndex("hosting.expiry.owner.mode", {"never", "absent", "strict"}, LOBBY_OWNER_TIMEOUT_ABSENT);
-  m_LoadingTimeoutMode                     = CFG.GetStringIndex("hosting.expiry.loading.mode", {"never", "strict"}, GAME_LOADING_TIMEOUT_STRICT);
-  m_PlayingTimeoutMode                     = CFG.GetStringIndex("hosting.expiry.playing.mode", {"never", "dry", "strict"}, GAME_PLAYING_TIMEOUT_STRICT);
+  m_LobbyTimeoutMode                       = CFG.GetEnum<LobbyTimeoutMode>("hosting.expiry.lobby.mode", TO_ARRAY("never", "empty", "ownerless", "strict"), LobbyTimeoutMode::kOwnerMissing);
+  m_LobbyOwnerTimeoutMode                  = CFG.GetEnum<LobbyOwnerTimeoutMode>("hosting.expiry.owner.mode", TO_ARRAY("never", "absent", "strict"), LobbyOwnerTimeoutMode::kAbsent);
+  m_LoadingTimeoutMode                     = CFG.GetEnum<GameLoadingTimeoutMode>("hosting.expiry.loading.mode", TO_ARRAY("never", "strict"), GameLoadingTimeoutMode::kStrict);
+  m_PlayingTimeoutMode                     = CFG.GetEnum<GamePlayingTimeoutMode>("hosting.expiry.playing.mode", TO_ARRAY("never", "dry", "strict"), GamePlayingTimeoutMode::kStrict);
 
   m_LobbyTimeout                           = CFG.GetUint32("hosting.expiry.lobby.timeout", 600);
   m_LobbyOwnerTimeout                      = CFG.GetUint32("hosting.expiry.owner.timeout", 120);
@@ -94,7 +94,6 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownStartValue               = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
 
   m_SaveGameAllowed                        = CFG.GetBool("hosting.save_game.allowed", true);
-  m_ShareUnitsHandler                      = CFG.GetStringIndex("hosting.game_protocol.share_handler", {"native", "kick", "restrict"}, ON_SHARE_UNITS_NATIVE);
 
   m_LatencyMin                             = CFG.GetUint16("hosting.latency.min", 10);
   m_LatencyMax                             = CFG.GetUint16("hosting.latency.max", 500);
@@ -178,9 +177,9 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_MaxAPM                                 = CFG.GetMaybeUint16("hosting.apm_limiter.max.average");
   m_MaxBurstAPM                            = CFG.GetMaybeUint16("hosting.apm_limiter.max.burst");
   m_HideLobbyNames                         = CFG.GetBool("hosting.nicknames.hide_lobby", false);
-  m_HideInGameNames                        = CFG.GetStringIndex("hosting.nicknames.hide_in_game", {"never", "host", "always", "auto"}, HIDE_IGN_AUTO);
+  m_HideInGameNames                        = CFG.GetEnum<HideIGNMode>("hosting.nicknames.hide_in_game", TO_ARRAY("never", "host", "always", "auto"), HideIGNMode::kAuto);
   m_LoadInGame                             = CFG.GetBool("hosting.load_in_game.enabled", false);
-  m_FakeUsersShareUnitsMode                = CFG.GetStringIndex("hosting.fake_users.share_units.mode", {"never", "auto", "team", "all"}, FAKE_USERS_SHARE_UNITS_MODE_AUTO);
+  m_FakeUsersShareUnitsMode                = CFG.GetEnum<FakeUsersShareUnitsMode>("hosting.fake_users.share_units.mode", TO_ARRAY("never", "auto", "team", "all"), FakeUsersShareUnitsMode::kAuto);
   m_EnableJoinObserversInProgress          = CFG.GetBool("hosting.join_in_progress.observers", false);
   m_EnableJoinPlayersInProgress            = CFG.GetBool("hosting.join_in_progress.players", false);
 
@@ -189,18 +188,19 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LogCommands                            = CFG.GetBool("hosting.log_commands", false);
   m_EnableLobbyChat                        = CFG.GetBool("hosting.chat_lobby.enabled", true);
   m_EnableInGameChat                       = CFG.GetBool("hosting.chat_in_game.enabled", true);
-  m_DesyncHandler                          = CFG.GetStringIndex("hosting.desync.handler", {"none", "notify", "drop"}, ON_DESYNC_NOTIFY);
-  m_IPFloodHandler                         = CFG.GetStringIndex("hosting.ip_filter.flood_handler", {"none", "notify", "deny"}, ON_IPFLOOD_DENY);
-  m_LeaverHandler                          = CFG.GetStringIndex("hosting.game_protocol.leaver_handler", {"none", "native", "share"}, ON_PLAYER_LEAVE_NATIVE);
-  m_UnsafeNameHandler                      = CFG.GetStringIndex("hosting.name_filter.unsafe_handler", {"none", "censor", "deny"}, ON_UNSAFE_NAME_DENY);
-  m_BroadcastErrorHandler                  = CFG.GetStringIndex("hosting.realm_broadcast.error_handler", {"ignore", "exit_main_error", "exit_empty_main_error", "exit_any_error", "exit_empty_any_error", "exit_max_errors"}, ON_ADV_ERROR_EXIT_ON_MAX_ERRORS);
+  m_DesyncHandler                          = CFG.GetEnum<OnDesyncHandler>("hosting.desync.handler", TO_ARRAY("none", "notify", "drop"), OnDesyncHandler::kNotify);
+  m_IPFloodHandler                         = CFG.GetEnum<OnIPFloodHandler>("hosting.ip_filter.flood_handler", TO_ARRAY("none", "notify", "deny"), OnIPFloodHandler::kDeny);
+  m_LeaverHandler                          = CFG.GetEnum<OnPlayerLeaveHandler>("hosting.game_protocol.leaver_handler", TO_ARRAY("none", "native", "share"), OnPlayerLeaveHandler::kNative);
+  m_ShareUnitsHandler                      = CFG.GetEnum<OnShareUnitsHandler>("hosting.game_protocol.share_handler", TO_ARRAY("native", "kick", "restrict"), OnShareUnitsHandler::kNative);
+  m_UnsafeNameHandler                      = CFG.GetEnum<OnUnsafeNameHandler>("hosting.name_filter.unsafe_handler", TO_ARRAY("none", "censor", "deny"), OnUnsafeNameHandler::kDeny);
+  m_BroadcastErrorHandler                  = CFG.GetEnum<OnRealmBroadcastErrorHandler>("hosting.realm_broadcast.error_handler", TO_ARRAY("ignore", "exit_main_error", "exit_empty_main_error", "exit_any_error", "exit_empty_any_error", "exit_max_errors"), OnRealmBroadcastErrorHandler::kExitOnMaxErrors);
   m_PipeConsideredHarmful                  = CFG.GetBool("hosting.name_filter.is_pipe_harmful", true);
   m_UDPEnabled                             = CFG.GetBool("net.game_discovery.udp.enabled", true);
 
   m_GameIsExpansion                        = static_cast<bool>(CFG.GetStringIndex("hosting.game_versions.expansion.default", {"roc", "tft"}, SELECT_EXPANSION_TFT));
   m_GameVersion                            = CFG.GetMaybeVersion("hosting.game_versions.main");
   CFG.FailIfErrorLast();
-  m_CrossPlayMode                          = CFG.GetStringIndex("hosting.game_versions.crossplay.mode", {"none", "conservative", "optimistic", "force"}, CROSSPLAY_MODE_CONSERVATIVE);
+  m_CrossPlayMode                          = CFG.GetEnum<CrossPlayMode>("hosting.game_versions.crossplay.mode", TO_ARRAY("none", "conservative", "optimistic", "force"), CrossPlayMode::kConservative);
 }
 
 CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared_ptr<CGameSetup> nGameSetup)
@@ -260,7 +260,6 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownStartValue, m_LobbyCountDownStartValue, m_LobbyCountDownStartValue)
 
   INHERIT_MAP_OR_CUSTOM(m_SaveGameAllowed, m_SaveGameAllowed, m_SaveGameAllowed)
-  INHERIT_MAP_OR_CUSTOM(m_ShareUnitsHandler, m_ShareUnitsHandler, m_ShareUnitsHandler)
 
   INHERIT(m_LatencyMin)
   INHERIT(m_LatencyMax)
@@ -328,6 +327,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT(m_DesyncHandler)
   INHERIT_MAP_OR_CUSTOM(m_IPFloodHandler, m_IPFloodHandler, m_IPFloodHandler)
   INHERIT_MAP_OR_CUSTOM(m_LeaverHandler, m_LeaverHandler, m_LeaverHandler)
+  INHERIT_MAP_OR_CUSTOM(m_ShareUnitsHandler, m_ShareUnitsHandler, m_ShareUnitsHandler)
   INHERIT_MAP_OR_CUSTOM(m_UnsafeNameHandler, m_UnsafeNameHandler, m_UnsafeNameHandler)
   INHERIT_MAP_OR_CUSTOM(m_BroadcastErrorHandler, m_BroadcastErrorHandler, m_BroadcastErrorHandler)
   INHERIT_MAP(m_PipeConsideredHarmful, m_PipeConsideredHarmful)

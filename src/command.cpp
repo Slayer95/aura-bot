@@ -744,7 +744,7 @@ vector<string> CCommandContext::JoinReplyListCompact(const vector<string>& strin
       bufferedLine.clear();
     }
   } else {
-    result.push_back(JoinVector(stringList, false));
+    result.push_back(JoinStrings(stringList, false));
   }
 
   return result;
@@ -1729,7 +1729,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
       if (anyPing) {
-        SendReply(JoinVector(pingsText, false), sendAll ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply(JoinStrings(pingsText, false), sendAll ? CHAT_SEND_TARGET_ALL : 0);
       } else if (m_Aura->m_Net.m_Config.m_HasBufferBloat && targetGame->IsDownloading()) {
         SendReply("Ping not measured yet (wait for map download.)", sendAll ? CHAT_SEND_TARGET_ALL : 0);
       } else {
@@ -2206,7 +2206,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (target.empty()) {
         SendReply(GetSender() + " rolled " + gotRolls[0] + ".", sendAll ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendReply(GetSender() + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinVector(gotRolls, false) + ".", sendAll ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply(GetSender() + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinStrings(gotRolls, false) + ".", sendAll ? CHAT_SEND_TARGET_ALL : 0);
       }
       break;
     }
@@ -2429,7 +2429,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         string intermediate = words[0];
         words[0] = words[words.size() - 1];
         words[words.size() - 1] = intermediate;
-        name = JoinVector(words, " ", false);
+        name = JoinStrings(words, " ", false);
         matchType = m_Aura->m_DB->FindData(MAP_TYPE_TWRPG, MAP_DATA_TYPE_ANY, name, false);
         if (matchType == MAP_DATA_TYPE_NONE) {
           ErrorReply("[" + target + "] not found.");
@@ -2613,7 +2613,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           SendReply("Closed " + to_string(Args.size()) + " slot(s).");
         }
       } else {
-        ErrorReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be closed.");
+        ErrorReply("Slot(s) " + JoinStrings(failedSlots, false) + " cannot be closed.");
       }
       break;
     }
@@ -2794,7 +2794,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
       }
 
-      SendAll("Added user(s) to the hold list: " + JoinVector(addedList, false));
+      SendAll("Added user(s) to the hold list: " + JoinStrings(addedList, false));
       break;
     }
 
@@ -2866,7 +2866,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           continue;
         targetGame->RemoveFromReserved(PlayerName);
       }
-      SendAll("Removed user(s) from the reservations list: " + JoinVector(Args, false));
+      SendAll("Removed user(s) from the reservations list: " + JoinStrings(Args, false));
       break;
     }
 
@@ -3219,7 +3219,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           SendReply("Opened " + to_string(Args.size()) + " slot(s).");
         }
       } else {
-        ErrorReply("Slot(s) " + JoinVector(failedSlots, false) + " cannot be opened.");
+        ErrorReply("Slot(s) " + JoinStrings(failedSlots, false) + " cannot be opened.");
       }
       break;
     }
@@ -3880,7 +3880,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetGame->GetMap()->GetMapObservers() != MAPOBS_REFEREES) {
+      if (targetGame->GetMap()->GetGameObservers() != GameObserversMode::kReferees) {
         ErrorReply("This game does not allow referees.");
         break;
       }
@@ -4160,7 +4160,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (CheckResult.empty()) {
         SendReply("[" + targetName + "@" + targetHostName + "] is not banned from any server.");
       } else {
-        SendReply("[" + targetName + "@" + targetHostName + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinVector(CheckResult, false));
+        SendReply("[" + targetName + "@" + targetHostName + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinStrings(CheckResult, false));
       }
       break;
     }
@@ -4190,7 +4190,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         SendReply("No users are banned on " + targetRealm->GetCanonicalDisplayName());
         break;
       }
-      SendReply("Banned: " + JoinVector(bannedUsers, false));
+      SendReply("Banned: " + JoinStrings(bannedUsers, false));
       break;
     }
 
@@ -4305,7 +4305,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         SendReply("No alternate accounts found.");
       } else {
         vector<string> allAltsVector = vector<string>(allAlts.begin(), allAlts.end());
-        SendReply("Alternate accounts: " + JoinVector(allAltsVector, false));
+        SendReply("Alternate accounts: " + JoinStrings(allAltsVector, false));
       }
       break;
     }
@@ -5465,7 +5465,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetGame->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+      if (targetGame->GetMap()->GetMapFlags() & GAMEFLAG_RANDOMRACES) {
         ErrorReply("This game has Random Races enabled.");
         break;
       }
@@ -5574,7 +5574,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       if (targetTeam == targetGame->GetMap()->GetVersionMaxSlots()) {
-        if (targetGame->GetMap()->GetMapObservers() != MAPOBS_ALLOWED && targetGame->GetMap()->GetMapObservers() != MAPOBS_REFEREES) {
+        if (targetGame->GetMap()->GetGameObservers() != GameObserversMode::kStartOrOnDefeat && targetGame->GetMap()->GetGameObservers() != GameObserversMode::kReferees) {
           ErrorReply("This game does not have observers enabled.");
           break;
         }
@@ -5639,7 +5639,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       uint8_t SID = searchResult.SID;
       GameUser::CGameUser* targetPlayer = searchResult.user;
 
-      if (!(targetGame->GetMap()->GetMapObservers() == MAPOBS_ALLOWED || targetGame->GetMap()->GetMapObservers() == MAPOBS_REFEREES)) {
+      if (!(targetGame->GetMap()->GetGameObservers() == GameObserversMode::kStartOrOnDefeat || targetGame->GetMap()->GetGameObservers() == GameObserversMode::kReferees)) {
         ErrorReply("This lobby does not allow observers.");
         break;
       }
@@ -5953,7 +5953,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (failPlayers.empty()) {
         SendReply("Draft captains assigned.");
       } else {
-        ErrorReply("Draft mode enabled, but failed to assign captains: " + JoinVector(failPlayers, false));
+        ErrorReply("Draft mode enabled, but failed to assign captains: " + JoinStrings(failPlayers, false));
       }
       break;
     }
@@ -7445,8 +7445,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("No staff has been designated in " + targetRealm->GetCanonicalDisplayName());
         break;
       }
-      if (!admins.empty()) SendReply("Root admins: " + JoinVector(admins, false));
-      if (!moderators.empty()) SendReply("Moderators: " + JoinVector(moderators, false));
+      if (!admins.empty()) SendReply("Root admins: " + JoinStrings(admins, false));
+      if (!moderators.empty()) SendReply("Moderators: " + JoinStrings(moderators, false));
       break;
     }
 
@@ -7570,7 +7570,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("Game #" + to_string(gameID) + " not found in database.");
         break;
       }
-      SendReply("Game players: " + JoinVector(gameSummary->GetPlayerNames(), false));
+      SendReply("Game players: " + JoinStrings(gameSummary->GetPlayerNames(), false));
       SendReply("Slot IDs: " + ByteArrayToDecString(gameSummary->GetSIDs()));
       SendReply("Player IDs: " + ByteArrayToDecString(gameSummary->GetUIDs()));
       SendReply("Colors: " + ByteArrayToDecString(gameSummary->GetColors()));
@@ -8049,12 +8049,12 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      uint8_t readyMode = targetGame->GetPlayersReadyMode();
-      bool isAlwaysReadyMode = readyMode == READY_MODE_FAST;
-      if (readyMode == READY_MODE_EXPECT_RACE) {
+      PlayersReadyMode readyMode = targetGame->GetPlayersReadyMode();
+      bool isAlwaysReadyMode = readyMode == PlayersReadyMode::kFast;
+      if (readyMode == PlayersReadyMode::kExpectRace) {
         if (targetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
           isAlwaysReadyMode = true;
-        } else if (targetGame->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+        } else if (targetGame->GetMap()->GetMapFlags() & GAMEFLAG_RANDOMRACES) {
           isAlwaysReadyMode = true;
         }
       }
@@ -8095,12 +8095,12 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      uint8_t readyMode = targetGame->GetPlayersReadyMode();
-      bool isAlwaysReadyMode = readyMode == READY_MODE_FAST;
-      if (readyMode == READY_MODE_EXPECT_RACE) {
+      PlayersReadyMode readyMode = targetGame->GetPlayersReadyMode();
+      bool isAlwaysReadyMode = readyMode == PlayersReadyMode::kFast;
+      if (readyMode == PlayersReadyMode::kExpectRace) {
         if (targetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
           isAlwaysReadyMode = true;
-        } else if (targetGame->GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+        } else if (targetGame->GetMap()->GetMapFlags() & GAMEFLAG_RANDOMRACES) {
           isAlwaysReadyMode = true;
         }
       }

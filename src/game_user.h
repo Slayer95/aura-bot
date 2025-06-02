@@ -453,7 +453,7 @@ namespace GameUser
         userNames.push_back("[" + user->GetDisplayName() + "]");
       }
     }
-    return JoinVector(userNames, ", ", false);
+    return JoinStrings(userNames, ", ", false);
   }
 
   [[nodiscard]] inline std::string ToNameListSentence(UserList userList, bool useRealNames = false) {
@@ -466,7 +466,7 @@ namespace GameUser
         userNames.push_back("[" + user->GetDisplayName() + "]");
       }
     }
-    return JoinVector(userNames, ", ", false);
+    return JoinStrings(userNames, ", ", false);
   }
 
   [[nodiscard]] inline bool SortUsersByDownloadProgressAscending(const GameUser::CGameUser* a, const GameUser::CGameUser* b) {

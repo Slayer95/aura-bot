@@ -359,7 +359,7 @@ void CGameUser::UpdateAPMQuota()
 bool CGameUser::GetShouldHoldActionInner()
 {
   if (m_Game.get().GetEffectiveTicks() < GetHandicapTicks()) return true;
-  if (m_Game.get().m_Config.m_ShareUnitsHandler == ON_SHARE_UNITS_RESTRICT && GetHasControlOverAnyAlliedUnits()) return true;
+  if (m_Game.get().m_Config.m_ShareUnitsHandler == OnShareUnitsHandler::kRestrictSharee && GetHasControlOverAnyAlliedUnits()) return true;
   if (GetHasAPMQuota()) {
     UpdateAPMQuota();
     if (GetAPMQuota().GetCurrentCapacity() < 1.) return true;
@@ -1076,14 +1076,14 @@ string CGameUser::GetSyncText() const
 
 bool CGameUser::GetIsNativeReferee() const
 {
-  return m_Observer && m_Game.get().GetMap()->GetMapObservers() == MAPOBS_REFEREES;
+  return m_Observer && m_Game.get().GetMap()->GetGameObservers() == GameObserversMode::kReferees;
 }
 
 bool CGameUser::GetCanUsePublicChat() const
 {
   if (GetIsInLoadingScreen()) return false;
   if (!m_Observer || m_PowerObserver || (!m_Game.get().GetGameLoading() && !m_Game.get().GetGameLoaded())) return true;
-  return !m_Game.get().GetUsesCustomReferees() && m_Game.get().GetMap()->GetMapObservers() == MAPOBS_REFEREES;
+  return !m_Game.get().GetUsesCustomReferees() && m_Game.get().GetMap()->GetGameObservers() == GameObserversMode::kReferees;
 }
 
 bool CGameUser::Mute(const int64_t seconds)
@@ -1127,13 +1127,13 @@ bool CGameUser::UpdateReady()
     return m_Ready;
   }
   switch (m_Game.get().GetPlayersReadyMode()) {
-    case READY_MODE_FAST:
+    case PlayersReadyMode::kFast:
       m_Ready = true;
       break;
-    case READY_MODE_EXPECT_RACE:
+    case PlayersReadyMode::kExpectRace:
       if (m_Game.get().GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
         m_Ready = true;
-      } else if (m_Game.get().GetMap()->GetMapFlags() & MAPFLAG_RANDOMRACES) {
+      } else if (m_Game.get().GetMap()->GetMapFlags() & GAMEFLAG_RANDOMRACES) {
         m_Ready = true;
       } else {
         const CGameSlot* slot = m_Game.get().InspectSlot(m_Game.get().GetSIDFromUID(GetUID()));
@@ -1144,7 +1144,7 @@ bool CGameUser::UpdateReady()
         }
       }
       break;
-    case READY_MODE_EXPLICIT:
+    case PlayersReadyMode::kExplicit:
     default: {
       m_Ready = false;
     }

@@ -147,7 +147,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       if (!SID.has_value()) return false;
 
       CW3MMDDefinition* def = new CW3MMDDefinition(GetGame(), fromUID, valueID, MMD_DEFINITION_TYPE_INIT, MMD_INIT_TYPE_PLAYER, (uint8_t)*SID);
-      if (m_Game.get().m_Config.m_UnsafeNameHandler == ON_UNSAFE_NAME_CENSOR_MAY_DESYNC) {
+      if (m_Game.get().m_Config.m_UnsafeNameHandler == OnUnsafeNameHandler::kCensorMayDesync) {
         def->SetName(CIncomingJoinRequest::CensorName(Tokens[3], m_Game.get().m_Config.m_PipeConsideredHarmful));
       } else {
         def->SetName(Tokens[3]);
@@ -268,7 +268,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   } else if (actionType == "Blank") {
     // ignore
   } else if (actionType == "Custom") {
-    LogMetaData(m_Game.get().GetEffectiveTicks(), "custom: " + JoinVector(Tokens, false));
+    LogMetaData(m_Game.get().GetEffectiveTicks(), "custom: " + JoinStrings(Tokens, false));
   } else {
     LogMetaData(m_Game.get().GetEffectiveTicks(), "unknown action type [" + actionType + "] found, ignoring");
   }

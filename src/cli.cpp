@@ -126,49 +126,57 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--data-version", m_War3DataVersion, "Customizes the game version to be used when reading the game install directory.");
 
   app.add_option("-s,--search-type", m_SearchType, "Restricts file searches when hosting from the CLI. Values: map, config, local, any")
-  ->transform(CLI::CheckedTransformer(map<string, uint8_t>{
-    {"map", SEARCH_TYPE_ONLY_MAP},
-    {"config", SEARCH_TYPE_ONLY_CONFIG},
-    {"local", SEARCH_TYPE_ONLY_FILE},
-    {"any", SEARCH_TYPE_ANY}
-  }));
+  ->transform(
+    CLI::CheckedTransformer(map<string, uint8_t>{
+      {"map", SEARCH_TYPE_ONLY_MAP},
+      {"config", SEARCH_TYPE_ONLY_CONFIG},
+      {"local", SEARCH_TYPE_ONLY_FILE},
+      {"any", SEARCH_TYPE_ANY}
+    })
+  );
 
   app.add_option("--bind-address", m_BindAddress, "Restricts connections to the game server, only allowing the input IPv4 address.")->check(CLI::ValidIPV4);
   app.add_option("--host-port", m_HostPort, "Customizes the game server to only listen in the specified port.");
   app.add_option("--udp-lan-mode", m_UDPDiscoveryMode, "Customizes the behavior of the game discovery service. Values: strict, lax, free.")
-  ->transform(CLI::CheckedTransformer(map<string, UDPDiscoveryMode>{
-    {"strict", UDPDiscoveryMode::kStrict},
-    {"lax", UDPDiscoveryMode::kLax},
-    {"free", UDPDiscoveryMode::kFree}
-  }));
+  ->transform(
+    CLI::CheckedTransformer(map<string, UDPDiscoveryMode>{
+      {"strict", UDPDiscoveryMode::kStrict},
+      {"lax", UDPDiscoveryMode::kLax},
+      {"free", UDPDiscoveryMode::kFree}
+    })
+  );
 
 #ifdef DEBUG
   app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: notice, info, debug, trace, trace2, trace3.")
-  ->transform(CLI::CheckedTransformer(map<string, LogLevel>{
-    {"emergency", LogLevel::kEmergency},
-    {"alert", LogLevel::kAlert},
-    {"critical", LogLevel::kCritical},
-    {"error", LogLevel::kError},
-    {"warning", LogLevel::kWarning},
-    {"notice", LogLevel::kNotice},
-    {"info", LogLevel::kInfo},
-    {"debug", LogLevel::kDebug},
-    {"trace", LogLevel::kTrace},
-    {"trace2", LogLevel::kTrace2},
-    {"trace3", LogLevel::kTrace3},
-  }));
+  ->transform(
+    CLI::CheckedTransformer(map<string, LogLevel>{
+      {"emergency", LogLevel::kEmergency},
+      {"alert", LogLevel::kAlert},
+      {"critical", LogLevel::kCritical},
+      {"error", LogLevel::kError},
+      {"warning", LogLevel::kWarning},
+      {"notice", LogLevel::kNotice},
+      {"info", LogLevel::kInfo},
+      {"debug", LogLevel::kDebug},
+      {"trace", LogLevel::kTrace},
+      {"trace2", LogLevel::kTrace2},
+      {"trace3", LogLevel::kTrace3},
+    })
+  );
 #else
   app.add_option("--log-level", m_LogLevel, "Customizes how detailed Aura's output should be. Values: notice, info, debug.")
-  ->transform(CLI::CheckedTransformer(map<string, LogLevel>{
-    {"emergency", LogLevel::kEmergency},
-    {"alert", LogLevel::kAlert},
-    {"critical", LogLevel::kCritical},
-    {"error", LogLevel::kError},
-    {"warning", LogLevel::kWarning},
-    {"notice", LogLevel::kNotice},
-    {"info", LogLevel::kInfo},
-    {"debug", LogLevel::kDebug}
-  }));
+  ->transform(
+    CLI::CheckedTransformer(map<string, LogLevel>{
+      {"emergency", LogLevel::kEmergency},
+      {"alert", LogLevel::kAlert},
+      {"critical", LogLevel::kCritical},
+      {"error", LogLevel::kError},
+      {"warning", LogLevel::kWarning},
+      {"notice", LogLevel::kNotice},
+      {"info", LogLevel::kInfo},
+      {"debug", LogLevel::kDebug}
+    })
+  );
 #endif
 
   // Game hosting
@@ -179,27 +187,147 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag("--share-advanced,--no-share-advanced{false}", m_GameAdvancedSharedUnitControl, "Toggles 'Advanced Shared Unit Control' setting when hosting from the CLI.");
   app.add_flag("--random-races,--no-random-races{false}", m_GameRandomRaces, "Toggles 'Random Races' setting when hosting from the CLI.");
   app.add_flag("--random-heroes,--no-random-heroes{false}", m_GameRandomHeroes, "Toggles 'Random Heroes' when hosting from the CLI.");
-  app.add_option("--observers", m_GameObservers, "Customizes observers when hosting from the CLI. Values: no, referees, defeat, full")->check(CLI::IsMember({"no", "referees", "defeat", "full"}));
-  app.add_option("--visibility", m_GameVisibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")->check(CLI::IsMember({"default", "hide", "explored", "visible"}));
-  app.add_option("--speed", m_GameSpeed, "Customizes game speed when hosting from the CLI. Values: slow, normal, fast")->check(CLI::IsMember({"slow", "normal", "fast"}));
-  app.add_option("--list-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")->check(CLI::IsMember({"public", "private", "none"}));
-  app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")->check(CLI::IsMember({"none", "notify", "deny"}));
-  app.add_option("--on-leave", m_GameLeaverHandler, "Customizes how to deal with leaver players. Values: none, native, share")->check(CLI::IsMember({"none", "native", "share"}));
-  app.add_option("--on-share-units", m_GameShareUnitsHandler, "Customizes how to deal with attempts to share control of units with teammates. Values: native, kick, restrict")->check(CLI::IsMember({"native", "kick", "restrict"}));
-  app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")->check(CLI::IsMember({"none", "censor", "deny"}));
-  app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")->check(CLI::IsMember({"ignore", "exit-main-error", "exit-empty-main-error", "exit-any-error", "exit-empty-any-error", "exit-max-errors"}));
-  app.add_option("--game-version", m_GameVersion, "Customizes the main version for the hosted lobby.");
+
+  app.add_option("--observers", m_GameObservers, "Customizes observers when hosting from the CLI. Values: none, referees, on-defeat, full")
+  ->transform(
+    CLI::CheckedTransformer(map<string, GameObserversMode>{
+      {"none", GameObserversMode::kNone},
+      {"on-defeat", GameObserversMode::kOnDefeat},
+      {"full", GameObserversMode::kStartOrOnDefeat},
+      {"referees", GameObserversMode::kReferees}
+    })
+  );
+
+  app.add_option("--visibility", m_GameVisibility, "Customizes visibility when hosting from the CLI. Values: default, hide, explored, visible")
+  ->transform(
+    CLI::CheckedTransformer(map<string, GameVisibilityMode>{
+      {"default", GameVisibilityMode::kDefault},
+      {"hide", GameVisibilityMode::kHideTerrain},
+      {"explored", GameVisibilityMode::kExplored},
+      {"visible", GameVisibilityMode::kAlwaysVisible}
+    })
+  );
+
+  app.add_option("--speed", m_GameSpeed, "Customizes game speed when hosting from the CLI. Values: slow, normal, fast")
+  ->transform(
+    CLI::CheckedTransformer(map<string, GameSpeed>{
+      {"slow", GameSpeed::kSlow},
+      {"normal", GameSpeed::kNormal},
+      {"fast", GameSpeed::kFast}
+    })
+  );
+
+  app.add_option("--realm-visibility", m_GameDisplayMode, "Customizes whether the game is displayed in any realms. Values: public, private, none")
+  ->transform(
+    CLI::CheckedTransformer(map<string, uint8_t>{
+      {"public", GAME_DISPLAY_PUBLIC},
+      {"private", GAME_DISPLAY_PRIVATE},
+      {"none", GAME_DISPLAY_NONE}
+    })
+  );
+
+  app.add_option("--on-ipflood", m_GameIPFloodHandler, "Customizes how to deal with excessive game connections from the same IP. Values: none, notify, deny")
+  ->transform(
+    CLI::CheckedTransformer(map<string, OnIPFloodHandler>{
+      {"none", OnIPFloodHandler::kNone},
+      {"notify", OnIPFloodHandler::kNotify},
+      {"deny", OnIPFloodHandler::kDeny}
+    })
+  );
+
+  app.add_option("--on-leave", m_GameLeaverHandler, "Customizes how to deal with leaver players. Values: none, native, share")
+  ->transform(
+    CLI::CheckedTransformer(map<string, OnPlayerLeaveHandler>{
+      {"none", OnPlayerLeaveHandler::kNone},
+      {"native", OnPlayerLeaveHandler::kNative},
+      {"share", OnPlayerLeaveHandler::kShareUnits}
+    })
+  );
+
+  app.add_option("--on-share-units", m_GameShareUnitsHandler, "Customizes how to deal with attempts to share control of units with teammates. Values: native, kick, restrict")
+  ->transform(
+    CLI::CheckedTransformer(map<string, OnShareUnitsHandler>{
+      {"native", OnShareUnitsHandler::kNative},
+      {"kick", OnShareUnitsHandler::kKickSharer},
+      {"restrict", OnShareUnitsHandler::kRestrictSharee}
+    })
+  );
+
+  app.add_option("--on-unsafe-name", m_GameUnsafeNameHandler, "Customizes how to deal with users that try to join with confusing, or otherwise problematic names. Values: none, censor, deny")
+  ->transform(
+    CLI::CheckedTransformer(map<string, OnUnsafeNameHandler>{
+      {"none", OnUnsafeNameHandler::kNone},
+      {"censor", OnUnsafeNameHandler::kCensorMayDesync},
+      {"deny", OnUnsafeNameHandler::kDeny}
+    })
+  );
+
+  app.add_option("--on-broadcast-error", m_GameBroadcastErrorHandler, "Customizes the judgment of when to close a game that couldn't be announced in a realm. Values: ignore, exit-main-error, exit-empty-main-error, exit-any-error, exit-empty-any-error, exit-max-errors")
+  ->transform(
+    CLI::CheckedTransformer(map<string, OnRealmBroadcastErrorHandler>{
+      {"ignore", OnRealmBroadcastErrorHandler::kIgnoreErrors},
+      {"exit-main-error", OnRealmBroadcastErrorHandler::kExitOnMainError},
+      {"exit-empty-main-error", OnRealmBroadcastErrorHandler::kExitOnMainErrorIfEmpty},
+      {"exit-any-error", OnRealmBroadcastErrorHandler::kExitOnAnyError},
+      {"exit-empty-any-error", OnRealmBroadcastErrorHandler::kExitOnAnyErrorIfEmpty},
+      {"exit-max-errors", OnRealmBroadcastErrorHandler::kExitOnMaxErrors}
+    })
+  );
+
+  optional<string> rawGameVersion;
+  app.add_option("--game-version", rawGameVersion, "Customizes the main version for the hosted lobby.");
+  
   app.add_flag(  "--tft,--roc{false}", m_GameIsExpansion, "Customizes whether the hosted lobby will target Reign of Chaos or Frozen Throne clients.");
-  app.add_option("--crossplay", m_GameCrossPlayMode, "Customizes the crossplay capabilities of the hosted lobby. Values: none, conservative, optimistic, force")->check(CLI::IsMember({"none", "conservative", "optimistic", "force"}));
+  app.add_option("--crossplay", m_GameCrossPlayMode, "Customizes the crossplay capabilities of the hosted lobby. Values: none, conservative, optimistic, force")
+  ->transform(
+    CLI::CheckedTransformer(map<string, CrossPlayMode>{
+      {"none", CrossPlayMode::kNone},
+      {"conservative", CrossPlayMode::kConservative},
+      {"optimistic", CrossPlayMode::kOptimistic},
+      {"force", CrossPlayMode::kForce}
+    })
+  );
+
   app.add_option("--alias", m_GameMapAlias, "Registers an alias for the map used when hosting from the CLI.");
   app.add_option("--mirror", m_GameMirrorSource, "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID.");
   app.add_option("--exclude", m_ExcludedRealms, "Hides the game in the listed realm(s). Repeatable.");
   app.add_flag(  "--proxy", m_GameMirrorProxy, "Proxies LAN connections towards the mirrored game.");
 
-  app.add_option("--lobby-timeout-mode", m_GameLobbyTimeoutMode, "Customizes under which circumstances should a game lobby timeout. Values: never, empty, ownerless, strict")->check(CLI::IsMember({"never", "empty", "ownerless", "strict"}));
-  app.add_option("--lobby-owner-timeout-mode", m_GameLobbyOwnerTimeoutMode, "Customizes under which circumstances should game ownership expire. Values: never, absent, strict")->check(CLI::IsMember({"never", "absent", "strict"}));
-  app.add_option("--loading-timeout-mode", m_GameLoadingTimeoutMode, "Customizes under which circumstances should players taking too long to load the game be kicked. Values: never, strict")->check(CLI::IsMember({"never", "strict"}));
-  app.add_option("--playing-timeout-mode", m_GamePlayingTimeoutMode, "Customizes under which circumstances should a started game expire. Values: never, dry, strict")->check(CLI::IsMember({"never", "dry", "strict"}));
+  app.add_option("--lobby-timeout-mode", m_GameLobbyTimeoutMode, "Customizes under which circumstances should a game lobby timeout. Values: never, empty, ownerless, strict")
+  ->transform(
+    CLI::CheckedTransformer(map<string, LobbyTimeoutMode>{
+      {"never", LobbyTimeoutMode::kNever},
+      {"empty", LobbyTimeoutMode::kEmpty},
+      {"no-owner", LobbyTimeoutMode::kOwnerMissing},
+      {"strict", LobbyTimeoutMode::kStrict}
+    })
+  );
+
+  app.add_option("--lobby-owner-timeout-mode", m_GameLobbyOwnerTimeoutMode, "Customizes under which circumstances should game ownership expire. Values: never, absent, strict")
+  ->transform(
+    CLI::CheckedTransformer(map<string, LobbyOwnerTimeoutMode>{
+      {"never", LobbyOwnerTimeoutMode::kNever},
+      {"absent", LobbyOwnerTimeoutMode::kAbsent},
+      {"strict", LobbyOwnerTimeoutMode::kStrict}
+    })
+  );
+
+  app.add_option("--loading-timeout-mode", m_GameLoadingTimeoutMode, "Customizes under which circumstances should players taking too long to load the game be kicked. Values: never, strict")
+  ->transform(
+    CLI::CheckedTransformer(map<string, GameLoadingTimeoutMode>{
+      {"never", GameLoadingTimeoutMode::kNever},
+      {"strict", GameLoadingTimeoutMode::kStrict}
+    })
+  );
+
+  app.add_option("--playing-timeout-mode", m_GamePlayingTimeoutMode, "Customizes under which circumstances should a started game expire. Values: never, dry, strict")
+  ->transform(
+    CLI::CheckedTransformer(map<string, GamePlayingTimeoutMode>{
+      {"never", GamePlayingTimeoutMode::kNever},
+      {"dry", GamePlayingTimeoutMode::kDry},
+      {"strict", GamePlayingTimeoutMode::kStrict}
+    })
+  );
 
   app.add_option("--lobby-timeout", m_GameLobbyTimeout, "Sets the time limit for the game lobby (seconds.)");
   app.add_option("--lobby-owner-timeout", m_GameLobbyOwnerTimeout, "Sets the time limit for an absent game owner to keep their power (seconds.)");
@@ -218,7 +346,15 @@ CLIResult CCLI::Parse(const int argc, char** argv)
 
   app.add_option("--download-timeout", m_GameMapDownloadTimeout, "Sets the time limit for the map download (seconds.)");
 
-  app.add_option("--players-ready", m_GamePlayersReadyMode, "Customizes when Aura will consider a player to be ready to start the game. Values: fast, race, explicit.")->check(CLI::IsMember({"fast", "race", "explicit"}));
+  app.add_option("--players-ready", m_GamePlayersReadyMode, "Customizes when Aura will consider a player to be ready to start the game. Values: fast, race, explicit.")
+  ->transform(
+    CLI::CheckedTransformer(map<string, PlayersReadyMode>{
+      {"fast", PlayersReadyMode::kFast},
+      {"race", PlayersReadyMode::kExpectRace},
+      {"explicit", PlayersReadyMode::kExplicit}
+    })
+  );
+
   app.add_option("--auto-start-players", m_GameAutoStartPlayers, "Sets an amount of occupied slots for automatically starting the game.");
   app.add_option("--auto-start-time", m_GameAutoStartSeconds, "Sets a time that should pass before automatically starting the game (seconds.)");
   app.add_flag(  "--auto-start-balanced,--no-auto-start-balanced{false}", m_GameAutoStartRequiresBalance, "Whether to require balanced teams before automatically starting the game.");
@@ -235,7 +371,16 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--latency-normalize,--no-latency-normalize{false}", m_GameSyncNormalize, "Whether Aura tries to automatically fix some game-start lag issues.");
   app.add_option("--max-apm", m_GameMaxAPM, "Limits the actions each player may perform per minute (APM).");
   app.add_option("--max-burst-apm", m_GameMaxBurstAPM, "Limits the actions each player may perform per minute (APM).");
-  app.add_option("--reconnection", m_GameReconnectionMode, "Customizes GProxy support for the hosted game. Values: disabled, basic, extended.")->check(CLI::IsMember({"disabled", "basic", "extended"}));
+
+  app.add_option("--reconnection", m_GameReconnectionMode, "Customizes GProxy support for the hosted game. Values: disabled, basic, extended.")
+  ->transform(
+    CLI::CheckedTransformer(map<string, uint8_t>{
+      {"disabled", RECONNECT_DISABLED},
+      {"basic", RECONNECT_ENABLED_GPROXY_BASIC},
+      {"extended", RECONNECT_ENABLED_GPROXY_ALL}
+    })
+  );
+
   app.add_flag(  "--lobby-chat,--no-lobby-chat{false}", m_GameEnableLobbyChat, "Whether to allow players to engage in chat in the hosted lobby.");
   app.add_flag(  "--in-game-chat,--no-in-game-chat{false}", m_GameEnableInGameChat, "Whether to allow players to engage in chat in the hosted game.");
   app.add_option("--load", m_GameSavedPath, "Sets the saved game .w3z file path for the game lobby.");
@@ -246,11 +391,41 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--hcl", m_GameHCL, "Customizes a hosted game using the HCL standard.");
   app.add_flag(  "--ffa", m_GameFreeForAll, "Sets free-for-all game mode - every player is automatically assigned to a different team.");
   app.add_flag(  "--allow-save,--no-allow-save{false}", m_GameSaveAllowed, "Customizes whether saving the game is allowed.");
-  app.add_option("--winners-source", m_GameResultSource, "Customizes how Aura will determine the winner(s) of the hosted lobby. Values: none, exit, mmd")->check(CLI::IsMember({"none", "exit", "mmd"}));
-  app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")->check(CLI::IsMember({"never", "host", "always", "auto"}));
+
+  app.add_option("--winners-source", m_GameResultSource, "Customizes how Aura will determine the winner(s) of the hosted lobby. Values: none, only-leave-code, only-mmd, prefer-leave-code, prefer-mmd")
+  ->transform(
+    CLI::CheckedTransformer(map<string, GameResultSourceSelect>{
+      {"none", GameResultSourceSelect::kNone},
+      {"only-leave-code", GameResultSourceSelect::kOnlyLeaveCode},
+      {"only-mmd", GameResultSourceSelect::kOnlyMMD},
+      {"prefer-leave-code", GameResultSourceSelect::kPreferLeaveCode},
+      {"prefer-mmd", GameResultSourceSelect::kPreferMMD}
+    })
+  );
+
+  app.add_option("--hide-ign-started", m_GameHideLoadedNames, "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto")
+  ->transform(
+    CLI::CheckedTransformer(map<string, HideIGNMode>{
+      {"never", HideIGNMode::kNever},
+      {"host", HideIGNMode::kHost},
+      {"always", HideIGNMode::kAlways},
+      {"auto", HideIGNMode::kAuto}
+    })
+  );
+
   app.add_flag(  "--hide-ign,--no-hide-ign{false}", m_GameHideLobbyNames, "Whether to hide player names in a hosted game lobby.");
   app.add_flag(  "--load-in-game,--no-load-in-game{false}", m_GameLoadInGame, "Whether to allow players chat in the game while waiting for others to finish loading.");
-  app.add_option("--fake-users-shared-control", m_GameFakeUsersShareUnitsMode, "Whether to automatically let fake users share unit control with players. Values: never, auto, team, all")->check(CLI::IsMember({"never", "auto", "team", "all"}));
+
+  app.add_option("--fake-users-shared-control", m_GameFakeUsersShareUnitsMode, "Whether to automatically let fake users share unit control with players. Values: never, auto, team, all")
+  ->transform(
+    CLI::CheckedTransformer(map<string, FakeUsersShareUnitsMode>{
+      {"never", FakeUsersShareUnitsMode::kNever},
+      {"auto", FakeUsersShareUnitsMode::kAuto},
+      {"team", FakeUsersShareUnitsMode::kTeam},
+      {"all", FakeUsersShareUnitsMode::kAll}
+    })
+  );
+
   app.add_flag(  "--join-in-progress-observers,--no-join-in-progress-observers{false}", m_GameEnableJoinObserversInProgress, "Whether to allow observers to watch the game after it has already started.");
   app.add_flag(  "--join-in-progress-players,--no-join-in-progress-players{false}", m_GameEnableJoinPlayersInProgress, "Whether to allow players to join the game after it has already started.");
   app.add_flag(  "--log-game-commands,--no-log-game-commands{false}", m_GameLogCommands, "Whether to log usage of chat triggers in a hosted game lobby.");
@@ -300,6 +475,15 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     return CLIResult::kError;
   }
 
+  if (rawGameVersion.has_value()) {
+    optional<Version> gameVersion = ParseGameVersion(rawGameVersion.value());
+    if (!gameVersion.has_value()) {
+      Print("[AURA] Invalid value for --game-version");
+      return CLIResult::kError;
+    }
+    m_GameVersion.swap(gameVersion);
+  }
+
   if (!m_ExecCommands.empty() && !m_ExecAs.has_value()) {
     Print("[AURA] Option --exec-as is required");
     return CLIResult::kError;
@@ -336,258 +520,6 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   }
 
   return CLIResult::kOk;
-}
-
-uint8_t CCLI::GetGameLobbyTimeoutMode() const
-{
-  uint8_t timeoutMode = LOBBY_TIMEOUT_OWNERLESS;
-  if (m_GameLobbyTimeoutMode.has_value()) {
-    if (m_GameLobbyTimeoutMode.value() == "never") {
-      timeoutMode = LOBBY_TIMEOUT_NEVER;
-    } else if (m_GameLobbyTimeoutMode.value() == "empty") {
-      timeoutMode = LOBBY_TIMEOUT_EMPTY;
-    } else if (m_GameLobbyTimeoutMode.value() == "ownerless") {
-      timeoutMode = LOBBY_TIMEOUT_OWNERLESS;
-    } else if (m_GameLobbyTimeoutMode.value() == "strict") {
-      timeoutMode = LOBBY_TIMEOUT_STRICT;
-    } else {
-      timeoutMode = LOBBY_TIMEOUT_OWNERLESS;
-    }
-  }
-  return timeoutMode;
-}
-
-uint8_t CCLI::GetGameLobbyOwnerTimeoutMode() const
-{
-  uint8_t timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
-  if (m_GameLobbyOwnerTimeoutMode.has_value()) {
-    if (m_GameLobbyOwnerTimeoutMode.value() == "never") {
-      timeoutMode = LOBBY_OWNER_TIMEOUT_NEVER;
-    } else if (m_GameLobbyOwnerTimeoutMode.value() == "absent") {
-      timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
-    } else if (m_GameLobbyOwnerTimeoutMode.value() == "strict") {
-      timeoutMode = LOBBY_OWNER_TIMEOUT_STRICT;
-    } else {
-      timeoutMode = LOBBY_OWNER_TIMEOUT_ABSENT;
-    }
-  }
-  return timeoutMode;
-}
-
-uint8_t CCLI::GetGameLoadingTimeoutMode() const
-{
-  uint8_t timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
-  if (m_GameLoadingTimeoutMode.has_value()) {
-    if (m_GameLoadingTimeoutMode.value() == "never") {
-      timeoutMode = GAME_LOADING_TIMEOUT_NEVER;
-    } else if (m_GameLoadingTimeoutMode.value() == "strict") {
-      timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
-    } else {
-      timeoutMode = GAME_LOADING_TIMEOUT_STRICT;
-    }
-  }
-  return timeoutMode;
-}
-
-uint8_t CCLI::GetGamePlayingTimeoutMode() const
-{
-  uint8_t timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
-  if (m_GamePlayingTimeoutMode.has_value()) {
-    if (m_GamePlayingTimeoutMode.value() == "never") {
-      timeoutMode = GAME_PLAYING_TIMEOUT_NEVER;
-    } else if (m_GamePlayingTimeoutMode.value() == "dry") {
-      timeoutMode = GAME_PLAYING_TIMEOUT_DRY;
-    } else if (m_GamePlayingTimeoutMode.value() == "strict") {
-      timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
-    } else {
-      timeoutMode = GAME_PLAYING_TIMEOUT_STRICT;
-    }
-  }
-  return timeoutMode;
-}
-
-uint8_t CCLI::GetGameReconnectionMode() const
-{
-  uint8_t reconnectionMode = RECONNECT_DISABLED;
-  if (m_GameReconnectionMode.has_value()) {
-    if (m_GameReconnectionMode.value() == "disabled") {
-      reconnectionMode = RECONNECT_DISABLED;
-    } else if (m_GameReconnectionMode.value() == "basic") {
-      reconnectionMode = RECONNECT_ENABLED_GPROXY_BASIC;
-    } else if (m_GameReconnectionMode.value() == "extended") {
-      reconnectionMode = RECONNECT_ENABLED_GPROXY_EXTENDED | RECONNECT_ENABLED_GPROXY_BASIC;
-    } else {
-      reconnectionMode = RECONNECT_DISABLED;
-    }
-  }
-  return reconnectionMode;
-}
-
-uint8_t CCLI::GetGameDisplayType() const
-{
-  uint8_t displayMode = GAME_DISPLAY_PUBLIC;
-  if (m_GameDisplayMode.has_value()) {
-    if (m_GameDisplayMode.value() == "public") {
-      displayMode = GAME_DISPLAY_PUBLIC;
-    } else if (m_GameDisplayMode.value() == "private") {
-      displayMode = GAME_DISPLAY_PRIVATE;
-    } else {
-      displayMode = GAME_DISPLAY_NONE;
-    }
-  }
-  return displayMode;
-}
-
-uint8_t CCLI::GetGameIPFloodHandler() const
-{
-  uint8_t floodHandler = ON_IPFLOOD_NONE;
-  if (m_GameIPFloodHandler.has_value()) {
-    if (m_GameIPFloodHandler.value() == "none") {
-      floodHandler = ON_IPFLOOD_NONE;
-    } else if (m_GameIPFloodHandler.value() == "notify") {
-      floodHandler = ON_IPFLOOD_NOTIFY;
-    } else if (m_GameIPFloodHandler.value() == "deny") {
-      floodHandler = ON_IPFLOOD_DENY;
-    }
-  }
-  return floodHandler;
-}
-
-uint8_t CCLI::GetGameLeaverHandler() const
-{
-  uint8_t leaverHandler = ON_PLAYER_LEAVE_NONE;
-  if (m_GameLeaverHandler.has_value()) {
-    if (m_GameLeaverHandler.value() == "none") {
-      leaverHandler = ON_PLAYER_LEAVE_NONE;
-    } else if (m_GameLeaverHandler.value() == "native") {
-      leaverHandler = ON_PLAYER_LEAVE_NATIVE;
-    } else if (m_GameLeaverHandler.value() == "share") {
-      leaverHandler = ON_PLAYER_LEAVE_SHARE_UNITS;
-    }
-  }
-  return leaverHandler;
-}
-
-uint8_t CCLI::GetGameShareUnitsHandler() const
-{
-  uint8_t shareUnitsHandler = ON_SHARE_UNITS_NATIVE;
-  if (m_GameShareUnitsHandler.has_value()) {
-    if (m_GameShareUnitsHandler.value() == "native") {
-      shareUnitsHandler = ON_SHARE_UNITS_NATIVE;
-    } else if (m_GameShareUnitsHandler.value() == "kick") {
-      shareUnitsHandler = ON_SHARE_UNITS_KICK;
-    } else if (m_GameShareUnitsHandler.value() == "restrict") {
-      shareUnitsHandler = ON_SHARE_UNITS_RESTRICT;
-    }
-  }
-  return shareUnitsHandler;
-}
-
-uint8_t CCLI::GetGameUnsafeNameHandler() const
-{
-  uint8_t nameHandler = ON_UNSAFE_NAME_NONE;
-  if (m_GameUnsafeNameHandler.has_value()) {
-    if (m_GameUnsafeNameHandler.value() == "none") {
-      nameHandler = ON_UNSAFE_NAME_NONE;
-    } else if (m_GameUnsafeNameHandler.value() == "censor") {
-      nameHandler = ON_UNSAFE_NAME_CENSOR_MAY_DESYNC;
-    } else if (m_GameUnsafeNameHandler.value() == "deny") {
-      nameHandler = ON_UNSAFE_NAME_DENY;
-    }
-  }
-  return nameHandler;
-}
-
-uint8_t CCLI::GetGameBroadcastErrorHandler() const
-{
-  uint8_t errorHandler = ON_ADV_ERROR_IGNORE_ERRORS;
-  if (m_GameBroadcastErrorHandler.has_value()) {
-    if (m_GameBroadcastErrorHandler.value() == "ignore") {
-      errorHandler = ON_ADV_ERROR_IGNORE_ERRORS;
-    } else if (m_GameBroadcastErrorHandler.value() == "exit-main-error") {
-      errorHandler = ON_ADV_ERROR_EXIT_ON_MAIN_ERROR;
-    } else if (m_GameBroadcastErrorHandler.value() == "exit-empty-main-error") {
-      errorHandler = ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY;
-    } else if (m_GameBroadcastErrorHandler.value() == "exit-any-error") {
-      errorHandler = ON_ADV_ERROR_EXIT_ON_ANY_ERROR;
-    } else if (m_GameBroadcastErrorHandler.value() == "exit-empty-any-error") {
-      errorHandler = ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY;
-    } else if (m_GameBroadcastErrorHandler.value() == "exit-max-errors") {
-      errorHandler = ON_ADV_ERROR_EXIT_ON_MAX_ERRORS;
-    }
-  }
-  return errorHandler;
-}
-
-uint8_t CCLI::GetGameCrossPlayMode() const
-{
-  uint8_t mode = CROSSPLAY_MODE_NONE;
-  if (m_GameCrossPlayMode.has_value()) {
-    if (m_GameCrossPlayMode.value() == "none") {
-      mode = CROSSPLAY_MODE_NONE;
-    } else if (m_GameCrossPlayMode.value() == "conservative") {
-      mode = CROSSPLAY_MODE_CONSERVATIVE;
-    } else if (m_GameCrossPlayMode.value() == "optimistic") {
-      mode = CROSSPLAY_MODE_OPTIMISTIC;
-    } else if (m_GameCrossPlayMode.value() == "force") {
-      mode = CROSSPLAY_MODE_FORCE;
-    }
-  }
-  return mode;
-}
-
-uint8_t CCLI::GetGameHideLoadedNames() const
-{
-  uint8_t hideNamesMode = HIDE_IGN_AUTO;
-  if (m_GameHideLoadedNames.has_value()) {
-    if (m_GameHideLoadedNames.value() == "never") {
-      hideNamesMode = HIDE_IGN_NEVER;
-    } else if (m_GameHideLoadedNames.value() == "host") {
-      hideNamesMode = HIDE_IGN_HOST;
-    } else if (m_GameHideLoadedNames.value() == "always") {
-      hideNamesMode = HIDE_IGN_ALWAYS;
-    } else if (m_GameHideLoadedNames.value() == "auto") {
-      hideNamesMode = HIDE_IGN_AUTO;
-    }
-  }
-  return hideNamesMode;
-}
-
-uint8_t CCLI::GetGameResultSource() const
-{
-  uint8_t gameResultSource = GAME_RESULT_SOURCE_NONE;
-  if (m_GameResultSource.has_value()) {
-    if (m_GameResultSource.value() == "none") {
-      gameResultSource = GAME_RESULT_SOURCE_NONE;
-    } else if (m_GameResultSource.value() == "exit") {
-      gameResultSource = GAME_RESULT_SOURCE_LEAVECODE;
-    } else if (m_GameResultSource.value() == "mmd") {
-      gameResultSource = GAME_RESULT_SOURCE_MMD;
-    }
-  }
-  return gameResultSource;
-}
-
-uint8_t CCLI::GetGameFakeUsersShareUnitsMode() const
-{
-  uint8_t fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_NEVER;
-  if (m_GameFakeUsersShareUnitsMode.has_value()) {
-    if (m_GameFakeUsersShareUnitsMode.value() == "never") {
-      fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_NEVER;
-    } else if (m_GameFakeUsersShareUnitsMode.value() == "auto") {
-      fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_AUTO;
-    } else if (m_GameFakeUsersShareUnitsMode.value() == "team") {
-      fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_TEAM;
-    } else if (m_GameFakeUsersShareUnitsMode.value() == "all") {
-      fakeUsersShareUnitsMode = FAKE_USERS_SHARE_UNITS_MODE_ALL;
-    }
-  }
-  return fakeUsersShareUnitsMode;
-}
-
-optional<Version> CCLI::GetGameVersion() const
-{
-  return ParseGameVersion(m_GameVersion.value());
 }
 
 bool CCLI::CheckGameParameters() const

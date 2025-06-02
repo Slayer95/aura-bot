@@ -1466,7 +1466,7 @@ void CNet::ReportHealthCheck()
   if (publicIPv4 != nullptr && hasDirectAttempts) {
     string portForwardInstructions;
     if (m_HealthCheckVerbose && m_HealthCheckContext->GetSourceGame() != nullptr && m_HealthCheckContext->GetSourceGame()->GetIsLobbyStrict()) {
-      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinSet(failedPorts, false) + "} to internal port(s) {" + JoinVector(GetPotentialGamePorts(), false) + "}";
+      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinStrings(failedPorts, false) + "} to internal port(s) {" + JoinStrings(GetPotentialGamePorts(), false) + "}";
     }
     if (anyDirectSuccess) {
       Print("[NET] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4));
@@ -1519,7 +1519,7 @@ void CNet::ReportHealthCheck()
       }
     }
   }
-  m_HealthCheckContext->SendAll(JoinVector(ChatReport, " | ", false));
+  m_HealthCheckContext->SendAll(JoinStrings(ChatReport, " | ", false));
   ResetHealthCheck();
 }
 

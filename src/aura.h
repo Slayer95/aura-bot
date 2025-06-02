@@ -68,8 +68,8 @@
 #include <windows.h>
 #endif
 
-#define AURA_VERSION "7.0.0.dev"
-#define AURA_APP_NAME "Aura 7.0.0.dev"
+#define AURA_VERSION "8.0.0.dev"
+#define AURA_APP_NAME "Aura 8.0.0.dev"
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
@@ -252,9 +252,9 @@ public:
   void ClearStaleContexts();
   void ClearStaleFileChunks();
   
-  inline bool MatchLogLevel(const LogLevel logLevel) const { return (const uint8_t)logLevel <= (const uint8_t)m_LogLevel; } // 0: emergency ... 8: trace ... 10 trace3
-  inline bool MatchLogLevel(const LogLevelExtra logLevel) const { return (const uint8_t)logLevel <= (const uint8_t)m_LogLevel; } // 0: emergency ... 8: trace ... 10 trace 3 ... 11 extra
-  inline bool GetIsLoggingTrace() const { return (const uint8_t)LogLevelExtra::kTrace <= (const uint8_t)m_LogLevel; }
+  inline bool MatchLogLevel(const LogLevel logLevel) const { return ((const uint8_t)logLevel) <= ((const uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace3
+  inline bool MatchLogLevel(const LogLevelExtra logLevel) const { return ((const uint8_t)logLevel) <= ((const uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace 3 ... 11 extra
+  inline bool GetIsLoggingTrace() const { return MatchLogLevel(LogLevelExtra::kTrace); }
   void LogPersistent(const std::string& logText);
   void LogRemoteFile(const std::string& logText);
   void LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t adjustedInterval);

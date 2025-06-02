@@ -83,7 +83,7 @@ GameResultConstraints::GameResultConstraints()
     m_UndecidedUserHandler(GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF),
     m_UndecidedComputerHandler(GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO),
     m_ConflictHandler(GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_VOID),
-    m_SourceOfTruth(GAME_RESULT_SOURCE_NONE),
+    m_SourceOfTruth(GameResultSourceSelect::kNone),
 
     m_MinPlayers(2),
     m_MaxPlayers(MAX_SLOTS_MODERN),
@@ -117,7 +117,7 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
     m_UndecidedUserHandler(GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF),
     m_UndecidedComputerHandler(GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO),
     m_ConflictHandler(GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_VOID),
-    m_SourceOfTruth(map->GetMMDEnabled() ? GAME_RESULT_SOURCE_SELECT_PREFER_MMD : GAME_RESULT_SOURCE_SELECT_ONLY_LEAVECODE),
+    m_SourceOfTruth(map->GetMMDEnabled() ? GameResultSourceSelect::kPreferMMD : GameResultSourceSelect::kOnlyLeaveCode),
 
     m_MinPlayers(2),
     m_MaxPlayers(map->GetMapNumControllers()),
@@ -134,12 +134,13 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
     m_MinTeamsWithNoWinners(0),
     m_MaxTeamsWithNoWinners(map->GetMapNumTeams())
 {
-  const vector<string> truthSourceOptions = {"none", "only-exit", "only-mmd", "prefer-exit", "prefer-mmd"};
+  const array<string, 5> truthSourceOptions = {"none", "only-exit", "only-mmd", "prefer-exit", "prefer-mmd"};
+  assert(GameResultSourceSelect::LAST == truthSourceOptions.size());
   if (CFG.Exists("map.game_result.source")) {
-    m_SourceOfTruth = CFG.GetStringIndex("map.game_result.source", truthSourceOptions, m_SourceOfTruth);
+    m_SourceOfTruth = CFG.GetEnum<GameResultSourceSelect>("map.game_result.source", truthSourceOptions, m_SourceOfTruth);
     CFG.FailIfErrorLast();
   } else {
-    CFG.SetString("map.game_result.source", truthSourceOptions[m_SourceOfTruth]);
+    CFG.SetString("map.game_result.source", truthSourceOptions[(uint8_t)m_SourceOfTruth]);
   }
 
   // Generic

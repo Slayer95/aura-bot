@@ -66,6 +66,15 @@
     } while(0);
 
 
+#define CONFIG_ERROR_ALLOWED_VALUES(K, T, U) \
+    do { \
+        m_ErrorLast = true; \
+        if (m_StrictMode) m_CriticalError = true; \
+        Print(std::string("[CONFIG] Error - Invalid value provided for <") + K + std::string(">. Allowed values: ") + JoinStrings(U, false) + "."); \
+        return T; \
+    } while(0);
+
+
 #define END(T) \
     do { \
         if (errored) Print(std::string("[CONFIG] Error - Invalid value provided for <") + key + std::string(">.")); \
@@ -160,7 +169,7 @@ public:
       }
     }
 
-    CONFIG_ERROR(key, x)
+    CONFIG_ERROR_ALLOWED_VALUES(key, x, fromList)
   }
 
   [[nodiscard]] std::vector<std::string> GetList(const std::string& key, char separator, bool allowEmptyElements, const std::vector<std::string> x);
@@ -223,6 +232,7 @@ public:
 
 #undef SUCCESS
 #undef CONFIG_ERROR
+#undef CONFIG_ERROR_ALLOWED_VALUES
 #undef END
 
 #endif // AURA_CONFIG_H_

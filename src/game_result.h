@@ -83,7 +83,7 @@ struct GameResultConstraints
   uint8_t m_UndecidedUserHandler; // Note: We ignore "leaver" flag and just treat them as undecided
   uint8_t m_UndecidedComputerHandler;
   uint8_t m_ConflictHandler;
-  uint8_t m_SourceOfTruth;
+  GameResultSourceSelect m_SourceOfTruth;
 
   uint8_t m_MinPlayers;
   uint8_t m_MaxPlayers;
@@ -118,7 +118,7 @@ struct GameResultConstraints
   [[nodiscard]] inline uint8_t GetUndecidedUserHandler() const { return m_UndecidedUserHandler; }
   [[nodiscard]] inline uint8_t GetUndecidedComputerHandler() const { return m_UndecidedComputerHandler; }
   [[nodiscard]] inline uint8_t GetConflictHandler() const { return m_ConflictHandler; }
-  [[nodiscard]] inline uint8_t GetSourceOfTruth() const { return m_SourceOfTruth; }
+  [[nodiscard]] inline GameResultSourceSelect GetSourceOfTruth() const { return m_SourceOfTruth; }
 };
 
 #endif // AURA_GAME_RESULTS_H

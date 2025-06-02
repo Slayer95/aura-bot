@@ -78,10 +78,9 @@ using namespace std;
     do { \
         m_ErrorLast = true; \
         if (m_StrictMode) m_CriticalError = true; \
-        Print(string("[CONFIG] Error - Invalid value provided for <") + K + string(">. Allowed values: ") + JoinVector(U, false) + "."); \
+        Print(string("[CONFIG] Error - Invalid value provided for <") + K + string(">. Allowed values: ") + JoinStrings(U, false) + "."); \
         return T; \
     } while(0);
-
 
 
 #define END(K, T) \

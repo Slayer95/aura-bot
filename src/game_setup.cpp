@@ -48,30 +48,16 @@ CGameExtraOptions::CGameExtraOptions()
 {
 }
 
-CGameExtraOptions::CGameExtraOptions(const optional<bool>& nRandomRaces, const optional<bool>& nRandomHeroes, const optional<uint8_t>& nVisibility, const optional<uint8_t>& nSpeed, const optional<uint8_t>& nObservers)
-  : m_TeamsLocked(false),
-    m_TeamsTogether(false),
-    m_RandomRaces(nRandomRaces),
-    m_RandomHeroes(nRandomHeroes),
-    m_Visibility(nVisibility),
-    m_Speed(nSpeed),
-    m_Observers(nObservers)
-{
-}
-
 bool CGameExtraOptions::ParseMapObservers(const string& s) {
-  std::string lower = s;
-  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
+  string lower = ToLowerCase(s);
   if (lower == "no" || lower == "none" || lower == "no observers" || lower == "no obs" || lower == "sin obs" || lower == "sin observador" || lower == "sin observadores") {
-    m_Observers = MAPOBS_NONE;
+    m_Observers = GameObserversMode::kNone;
   } else if (lower == "referee" || lower == "referees" || lower == "arbiter" || lower == "arbitro" || lower == "arbitros" || lower == "árbitros") {
-    m_Observers = MAPOBS_REFEREES;
+    m_Observers = GameObserversMode::kReferees;
   } else if (lower == "observadores derrotados" || lower == "derrotados" || lower == "obs derrotados" || lower == "obs on defeat" || lower == "observers on defeat" || lower == "on defeat" || lower == "defeat" || lower == "ondefeat") {
-    m_Observers = MAPOBS_ONDEFEAT;
+    m_Observers = GameObserversMode::kOnDefeat;
   } else if (lower == "full observers" || lower == "solo observadores" || lower == "full") {
-    m_Observers = MAPOBS_ALLOWED;
+    m_Observers = GameObserversMode::kStartOrOnDefeat;
   } else {
     return false;
   }
@@ -79,18 +65,15 @@ bool CGameExtraOptions::ParseMapObservers(const string& s) {
 }
 
 bool CGameExtraOptions::ParseMapVisibility(const string& s) {
-  std::string lower = s;
-  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
+  string lower = ToLowerCase(s);
   if (lower == "no" || lower == "default" || lower == "predeterminado" || lower == "fog" || lower == "fog of war" || lower == "niebla" || lower == "niebla de guerra" || lower == "fow") {
-    m_Visibility = MAPVIS_DEFAULT;
+    m_Visibility = GameVisibilityMode::kDefault;
   } else if (lower == "hide terrain" || lower == "hide" || lower == "ocultar terreno" || lower == "ocultar" || lower == "hidden") {
-    m_Visibility = MAPVIS_HIDETERRAIN;
+    m_Visibility = GameVisibilityMode::kHideTerrain;
   } else if (lower == "explored map" || lower == "map explored" || lower == "explored" || lower == "mapa explorado" || lower == "explorado") {
-    m_Visibility = MAPVIS_EXPLORED;
+    m_Visibility = GameVisibilityMode::kExplored;
   } else if (lower == "always visible" || lower == "always" || lower == "visible" || lower == "todo visible" || lower == "todo" || lower == "revelar" || lower == "todo revelado") {
-    m_Visibility = MAPVIS_ALWAYSVISIBLE;
+    m_Visibility = GameVisibilityMode::kAlwaysVisible;
   } else {
     return false;
   }
@@ -98,16 +81,13 @@ bool CGameExtraOptions::ParseMapVisibility(const string& s) {
 }
 
 bool CGameExtraOptions::ParseMapSpeed(const string& s) {
-  std::string lower = s;
-  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
+  string lower = ToLowerCase(s);
   if (lower == "slow") {
-    m_Speed = MAPSPEED_SLOW;
+    m_Speed = GameSpeed::kSlow;
   } else if (lower == "normal") {
-    m_Speed = MAPSPEED_NORMAL;
+    m_Speed = GameSpeed::kNormal;
   } else if (lower == "fast") {
-    m_Speed = MAPSPEED_FAST;
+    m_Speed = GameSpeed::kFast;
   } else {
     return false;
   }
@@ -115,10 +95,7 @@ bool CGameExtraOptions::ParseMapSpeed(const string& s) {
 }
 
 bool CGameExtraOptions::ParseMapRandomRaces(const string& s) {
-  std::string lower = s;
-  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
+  string lower = ToLowerCase(s);
   if (lower == "random race" || lower == "rr" || lower == "yes" || lower == "random" || lower == "random races") {
     m_RandomRaces = true;
   } else if (lower == "default" || lower == "no" || lower == "predeterminado") {
@@ -130,10 +107,7 @@ bool CGameExtraOptions::ParseMapRandomRaces(const string& s) {
 }
 
 bool CGameExtraOptions::ParseMapRandomHeroes(const string& s) {
-  std::string lower = s;
-  std::transform(std::begin(lower), std::end(lower), std::begin(lower), [](unsigned char c) {
-    return static_cast<char>(std::tolower(c));
-  });
+  string lower = ToLowerCase(s);
   if (lower == "random hero" || lower == "rh" || lower == "yes" || lower == "random" || lower == "random heroes") {
     m_RandomHeroes = true;
   } else if (lower == "default" || lower == "no" || lower == "predeterminado") {
@@ -145,9 +119,9 @@ bool CGameExtraOptions::ParseMapRandomHeroes(const string& s) {
 }
 
 void CGameExtraOptions::AcquireCLI(const CCLI* nCLI) {
-  if (nCLI->m_GameObservers.has_value()) ParseMapObservers(nCLI->m_GameObservers.value());
-  if (nCLI->m_GameVisibility.has_value()) ParseMapVisibility(nCLI->m_GameVisibility.value());
-  if (nCLI->m_GameSpeed.has_value()) ParseMapSpeed(nCLI->m_GameSpeed.value());
+  if (nCLI->m_GameObservers.has_value()) m_Observers = nCLI->m_GameObservers.value();
+  if (nCLI->m_GameVisibility.has_value()) m_Visibility = nCLI->m_GameVisibility.value();
+  if (nCLI->m_GameSpeed.has_value()) m_Speed = nCLI->m_GameSpeed.value();
   if (nCLI->m_GameTeamsLocked.has_value()) m_TeamsLocked = nCLI->m_GameTeamsLocked.value();
   if (nCLI->m_GameTeamsTogether.has_value()) m_TeamsTogether = nCLI->m_GameTeamsTogether.value();
   if (nCLI->m_GameAdvancedSharedUnitControl.has_value()) m_AdvancedSharedUnitControl = nCLI->m_GameAdvancedSharedUnitControl.value();
@@ -574,7 +548,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInput()
 #endif
       }
       if (!fuzzyMatches.empty()) {
-        m_Ctx->ErrorReply("Suggestions: " + JoinVector(fuzzyMatches, false), CHAT_SEND_SOURCE_ALL);
+        m_Ctx->ErrorReply("Suggestions: " + JoinStrings(fuzzyMatches, false), CHAT_SEND_SOURCE_ALL);
       }
     }
 
@@ -744,35 +718,35 @@ bool CGameSetup::ApplyMapModifiers(CGameExtraOptions* extraOptions)
 {
   bool failed = false;
   if (extraOptions->m_TeamsLocked.has_value()) {
-    if (!m_Map->SetTeamsLocked(extraOptions->m_TeamsLocked.value()))
+    if (!m_Map->SetGameTeamsLocked(extraOptions->m_TeamsLocked.value()))
       failed = true;
   }
   if (extraOptions->m_TeamsTogether.has_value()) {
-    if (!m_Map->SetTeamsTogether(extraOptions->m_TeamsTogether.value()))
+    if (!m_Map->SetGameTeamsTogether(extraOptions->m_TeamsTogether.value()))
       failed = true;
   }
   if (extraOptions->m_AdvancedSharedUnitControl.has_value()) {
-    if (!m_Map->SetAdvancedSharedUnitControl(extraOptions->m_AdvancedSharedUnitControl.value()))
+    if (!m_Map->SetGameAdvancedSharedUnitControl(extraOptions->m_AdvancedSharedUnitControl.value()))
       failed = true;
   }
   if (extraOptions->m_RandomRaces.has_value()) {
-    if (!m_Map->SetRandomRaces(extraOptions->m_RandomRaces.value()))
+    if (!m_Map->SetGameRandomRaces(extraOptions->m_RandomRaces.value()))
       failed = true;
   }
   if (extraOptions->m_RandomHeroes.has_value()) {
-    if (!m_Map->SetRandomHeroes(extraOptions->m_RandomHeroes.value()))
+    if (!m_Map->SetGameRandomHeroes(extraOptions->m_RandomHeroes.value()))
       failed = true;
   }
   if (extraOptions->m_Visibility.has_value()) {
-    if (!m_Map->SetMapVisibility(extraOptions->m_Visibility.value()))
+    if (!m_Map->SetGameVisibility(extraOptions->m_Visibility.value()))
       failed = true;
   }
   if (extraOptions->m_Speed.has_value()) {
-    if (!m_Map->SetMapSpeed(extraOptions->m_Speed.value()))
+    if (!m_Map->SetGameSpeed(extraOptions->m_Speed.value()))
       failed = true;
   }
   if (extraOptions->m_Observers.has_value()) {
-    if (!m_Map->SetMapObservers(extraOptions->m_Observers.value())) {
+    if (!m_Map->SetGameObservers(extraOptions->m_Observers.value())) {
       failed = true;
     }
   }
@@ -1621,14 +1595,8 @@ void CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
 {
   if (nCLI->m_GameSavedPath.has_value()) SetGameSavedFile(nCLI->m_GameSavedPath.value());
   if (nCLI->m_GameMapDownloadTimeout.has_value()) SetDownloadTimeout(nCLI->m_GameMapDownloadTimeout.value());
-
-  if (nCLI->m_GameIsExpansion.has_value()) {
-    SetGameIsExpansion(nCLI->m_GameIsExpansion.value());
-  }
-  if (nCLI->m_GameVersion.has_value()) {
-    optional<Version> maybeVersion = nCLI->GetGameVersion();
-    if (maybeVersion.has_value()) SetGameVersion(maybeVersion.value());
-  }
+  if (nCLI->m_GameIsExpansion.has_value()) SetGameIsExpansion(nCLI->m_GameIsExpansion.value());
+  if (nCLI->m_GameVersion.has_value()) SetGameVersion(nCLI->m_GameVersion.value());
 }
 
 void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
@@ -1655,10 +1623,10 @@ void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
 
 void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 {
-  if (nCLI->m_GameLobbyTimeoutMode.has_value()) SetLobbyTimeoutMode(nCLI->GetGameLobbyTimeoutMode());
-  if (nCLI->m_GameLobbyOwnerTimeoutMode.has_value()) SetLobbyOwnerTimeoutMode(nCLI->GetGameLobbyOwnerTimeoutMode());
-  if (nCLI->m_GameLoadingTimeoutMode.has_value()) SetLoadingTimeoutMode(nCLI->GetGameLoadingTimeoutMode());
-  if (nCLI->m_GamePlayingTimeoutMode.has_value()) SetPlayingTimeoutMode(nCLI->GetGamePlayingTimeoutMode());
+  if (nCLI->m_GameLobbyTimeoutMode.has_value()) SetLobbyTimeoutMode(nCLI->m_GameLobbyTimeoutMode.value());
+  if (nCLI->m_GameLobbyOwnerTimeoutMode.has_value()) SetLobbyOwnerTimeoutMode(nCLI->m_GameLobbyOwnerTimeoutMode.value());
+  if (nCLI->m_GameLoadingTimeoutMode.has_value()) SetLoadingTimeoutMode(nCLI->m_GameLoadingTimeoutMode.value());
+  if (nCLI->m_GamePlayingTimeoutMode.has_value()) SetPlayingTimeoutMode(nCLI->m_GamePlayingTimeoutMode.value());
 
   if (nCLI->m_GameLobbyTimeout.has_value()) SetLobbyTimeout(nCLI->m_GameLobbyTimeout.value());
   if (nCLI->m_GameLobbyOwnerTimeout.has_value()) SetLobbyOwnerTimeout(nCLI->m_GameLobbyOwnerTimeout.value());
@@ -1710,10 +1678,10 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   if (nCLI->m_GameMaxBurstAPM.has_value()) SetMaxBurstAPM(nCLI->m_GameMaxBurstAPM.value());
 
   if (nCLI->m_GameHideLobbyNames.has_value()) SetHideLobbyNames(nCLI->m_GameHideLobbyNames.value());
-  if (nCLI->m_GameHideLoadedNames.has_value()) SetHideInGameNames(nCLI->GetGameHideLoadedNames());
-  if (nCLI->m_GameResultSource.has_value()) SetResultSource(nCLI->GetGameResultSource());
+  if (nCLI->m_GameHideLoadedNames.has_value()) SetHideInGameNames(nCLI->m_GameHideLoadedNames.value());
+  if (nCLI->m_GameResultSource.has_value()) SetResultSource(nCLI->m_GameResultSource.value());
   if (nCLI->m_GameLoadInGame.has_value()) SetLoadInGame(nCLI->m_GameLoadInGame.value());
-  if (nCLI->m_GameFakeUsersShareUnitsMode.has_value()) SetFakeUsersShareUnitsMode(nCLI->GetGameFakeUsersShareUnitsMode());
+  if (nCLI->m_GameFakeUsersShareUnitsMode.has_value()) SetFakeUsersShareUnitsMode(nCLI->m_GameFakeUsersShareUnitsMode.value());
   if (nCLI->m_GameEnableJoinObserversInProgress.has_value()) SetEnableJoinObserversInProgress(nCLI->m_GameEnableJoinObserversInProgress.value());
   if (nCLI->m_GameEnableJoinPlayersInProgress.has_value()) SetEnableJoinPlayersInProgress(nCLI->m_GameEnableJoinPlayersInProgress.value());
 
@@ -1721,16 +1689,16 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 
   SetReservations(nCLI->m_GameReservations);
   SetVerbose(nCLI->m_Verbose);
-  SetDisplayMode(nCLI->GetGameDisplayType());
-  if (nCLI->m_GameReconnectionMode.has_value()) SetReconnectionMode(nCLI->GetGameReconnectionMode());
+  SetDisplayMode(nCLI->m_GameDisplayMode.value_or(GAME_DISPLAY_PUBLIC));
+  if (nCLI->m_GameReconnectionMode.has_value()) SetReconnectionMode(nCLI->m_GameReconnectionMode.value());
   if (nCLI->m_GameEnableLobbyChat.has_value()) SetEnableLobbyChat(nCLI->m_GameEnableLobbyChat.value());
   if (nCLI->m_GameEnableInGameChat.has_value()) SetEnableInGameChat(nCLI->m_GameEnableInGameChat.value());
-  if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->GetGameIPFloodHandler());
-  if (nCLI->m_GameLeaverHandler.has_value()) SetLeaverHandler(nCLI->GetGameLeaverHandler());
-  if (nCLI->m_GameShareUnitsHandler.has_value()) SetShareUnitsHandler(nCLI->GetGameShareUnitsHandler());
-  if (nCLI->m_GameUnsafeNameHandler.has_value()) SetUnsafeNameHandler(nCLI->GetGameUnsafeNameHandler());
-  if (nCLI->m_GameBroadcastErrorHandler.has_value()) SetBroadcastErrorHandler(nCLI->GetGameBroadcastErrorHandler());
-  if (nCLI->m_GameCrossPlayMode.has_value()) SetCrossPlayMode(nCLI->GetGameCrossPlayMode());
+  if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->m_GameIPFloodHandler.value());
+  if (nCLI->m_GameLeaverHandler.has_value()) SetLeaverHandler(nCLI->m_GameLeaverHandler.value());
+  if (nCLI->m_GameShareUnitsHandler.has_value()) SetShareUnitsHandler(nCLI->m_GameShareUnitsHandler.value());
+  if (nCLI->m_GameUnsafeNameHandler.has_value()) SetUnsafeNameHandler(nCLI->m_GameUnsafeNameHandler.value());
+  if (nCLI->m_GameBroadcastErrorHandler.has_value()) SetBroadcastErrorHandler(nCLI->m_GameBroadcastErrorHandler.value());
+  if (nCLI->m_GameCrossPlayMode.has_value()) SetCrossPlayMode(nCLI->m_GameCrossPlayMode.value());
 }
 
 CGameSetup::~CGameSetup()

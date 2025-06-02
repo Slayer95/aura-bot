@@ -209,7 +209,7 @@ protected:
   bool                                                   m_Remaking;
   bool                                                   m_Remade;
   uint8_t                                                m_SaveOnLeave;
-  uint8_t                                                m_GameResultSourceOfTruth;
+  GameResultSourceSelect                                 m_GameResultSourceOfTruth;
   bool                                                   m_IsSinglePlayer;
   bool                                                   m_Rated;
   std::string                                            m_UnratedReason;
@@ -223,7 +223,7 @@ protected:
   SharedByteArray                                        m_LoadedMapChunk;
   std::shared_ptr<GameHistory>                           m_GameHistory;
   std::optional<GameResults>                             m_GameResults;
-  uint8_t                                                m_GameResultsSource;
+  GameResultSource                                       m_GameResultsSource;
 
   std::bitset<128>                                       m_SupportedGameVersions;
   Version                                                m_SupportedGameVersionsMin;
@@ -419,7 +419,7 @@ public:
   std::string                                            GetActiveReconnectProtocolsDetails() const;
   bool                                                   CalcAnyUsingGProxy() const;
   bool                                                   CalcAnyUsingGProxyLegacy() const;
-  uint8_t                                                GetPlayersReadyMode() const;
+  PlayersReadyMode                                       GetPlayersReadyMode() const;
 
   inline void                                            SetExiting(bool nExiting) { m_Exiting = nExiting; }
   inline void                                            SetMapSiteURL(const std::string& nMapSiteURL) { m_MapSiteURL = nMapSiteURL; }
@@ -427,7 +427,7 @@ public:
   void                                                   SetUDPEnabled(bool nEnabled);
   bool                                                   GetHasDesyncHandler() const;
   bool                                                   GetAllowsDesync() const;
-  uint8_t                                                GetIPFloodHandler() const;
+  OnIPFloodHandler                                       GetIPFloodHandler() const;
   bool                                                   GetAllowsIPFlood() const;
   void                                                   UpdateReadyCounters();
   bool                                                   GetCanDropOwnerMissing() const;
@@ -800,7 +800,7 @@ public:
   inline bool GetRemaking() const { return m_Remaking; }
   inline bool GetRemade() const { return m_Remade; }
   inline uint8_t GetSaveOnLeave() const { return m_SaveOnLeave; }
-  inline uint8_t GetGameResultSourceOfTruth() const { return m_GameResultSourceOfTruth; }
+  inline GameResultSourceSelect GetGameResultSourceOfTruth() const { return m_GameResultSourceOfTruth; }
   bool GetHasReferees() const;
   inline bool GetUsesCustomReferees() const { return m_UsesCustomReferees; }
   bool GetIsSupportedGameVersion(const Version& nVersion) const;
@@ -858,8 +858,8 @@ public:
   [[nodiscard]] GameResultTeamAnalysis GetGameResultTeamAnalysis() const;
   [[nodiscard]] std::optional<GameResults> GetGameResultsMMD();
   [[nodiscard]] std::optional<GameResults> GetGameResultsLeaveCode();
-  [[nodiscard]] uint8_t TryConfirmResults(std::optional<GameResults>, uint8_t resultsSource);
-  uint8_t RunGameResults();
+  [[nodiscard]] GameResultSource TryConfirmResults(std::optional<GameResults>, GameResultSource resultsSource);
+  GameResultSource RunGameResults();
   [[nodiscard]] bool GetIsAPrioriCompatibleWithGameResultsConstraints(std::string& reason) const;
   [[nodiscard]] bool CheckGameResults(const GameResults& gameResults) const;
 

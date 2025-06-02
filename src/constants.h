@@ -206,48 +206,48 @@ constexpr uint32_t MAX_MAP_SIZE_1_26 = 0x800000;
 constexpr uint32_t MAX_MAP_SIZE_1_28 = 0x8000000;
 constexpr uint32_t MAX_MAP_SIZE_RF = 0x20000000;
 
-constexpr uint8_t MAPSPEED_SLOW = 1u;
-constexpr uint8_t MAPSPEED_NORMAL = 2u;
-constexpr uint8_t MAPSPEED_FAST = 3u;
+constexpr uint8_t MAPSPEED_SLOW = 0u;
+constexpr uint8_t MAPSPEED_NORMAL = 1u;
+constexpr uint8_t MAPSPEED_FAST = 2u;
 
-enum class MapSpeed : uint8_t {
-  kSlow = 1,
-  kNormal = 2,
-  kFast = 3,
+enum class GameSpeed : uint8_t {
+  kSlow = 0,
+  kNormal = 1,
+  kFast = 2,
+  LAST = 3,
+};
+
+constexpr uint8_t MAPVIS_HIDETERRAIN = 0u;
+constexpr uint8_t MAPVIS_EXPLORED = 1u;
+constexpr uint8_t MAPVIS_ALWAYSVISIBLE = 2u;
+constexpr uint8_t MAPVIS_DEFAULT = 3u;
+
+enum class GameVisibilityMode : uint8_t {
+  kHideTerrain = 0,
+  kExplored = 1,
+  kAlwaysVisible = 2,
+  kDefault = 3,
   LAST = 4,
 };
 
-constexpr uint8_t MAPVIS_HIDETERRAIN = 1u;
-constexpr uint8_t MAPVIS_EXPLORED = 2u;
-constexpr uint8_t MAPVIS_ALWAYSVISIBLE = 3u;
-constexpr uint8_t MAPVIS_DEFAULT = 4u;
+constexpr uint8_t MAPOBS_NONE = 0u;
+constexpr uint8_t MAPOBS_ONDEFEAT = 1u;
+constexpr uint8_t MAPOBS_ALLOWED = 2u;
+constexpr uint8_t MAPOBS_REFEREES = 3u;
 
-enum class MapVisibility : uint8_t {
-  kHideterrain = 1,
-  kExplored = 2,
-  kAlwaysvisible = 3,
-  kDefault = 4,
-  LAST = 5,
+enum class GameObserversMode : uint8_t {
+  kNone = 0,
+  kOnDefeat = 1,
+  kStartOrOnDefeat = 2,
+  kReferees = 3,
+  LAST = 4,
 };
 
-constexpr uint8_t MAPOBS_NONE = 1u;
-constexpr uint8_t MAPOBS_ONDEFEAT = 2u;
-constexpr uint8_t MAPOBS_ALLOWED = 3u;
-constexpr uint8_t MAPOBS_REFEREES = 4u;
-
-enum class MapObservers : uint8_t {
-  kNone = 1,
-  kOndefeat = 2,
-  kAllowed = 3,
-  kReferees = 4,
-  LAST = 5,
-};
-
-constexpr uint8_t MAPFLAG_TEAMSTOGETHER = 1u;
-constexpr uint8_t MAPFLAG_FIXEDTEAMS = 2u;
-constexpr uint8_t MAPFLAG_UNITSHARE = 4u;
-constexpr uint8_t MAPFLAG_RANDOMHERO = 8u;
-constexpr uint8_t MAPFLAG_RANDOMRACES = 16u;
+constexpr uint8_t GAMEFLAG_TEAMSTOGETHER = 1u;
+constexpr uint8_t GAMEFLAG_FIXEDTEAMS = 2u;
+constexpr uint8_t GAMEFLAG_UNITSHARE = 4u;
+constexpr uint8_t GAMEFLAG_RANDOMHERO = 8u;
+constexpr uint8_t GAMEFLAG_RANDOMRACES = 16u;
 
 constexpr uint32_t MAPOPT_HIDEMINIMAP = (1 << 0);
 constexpr uint32_t MAPOPT_MODIFYALLYPRIORITIES = (1 << 1);
@@ -350,7 +350,7 @@ constexpr uint32_t MAP_FILE_MAX_CHUNK_SIZE = 0x800000;
 // May also choose a chunk size different from the max cache chunk size.
 constexpr uint32_t MAP_FILE_PROCESSING_CHUNK_SIZE = 0x800000;
 
-constexpr uint8_t MAP_CONFIG_SCHEMA_NUMBER = 4;
+constexpr uint8_t MAP_CONFIG_SCHEMA_NUMBER = 5;
 
 constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_NONE = 0u;
 constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_MPQ = 1u;
@@ -1261,7 +1261,7 @@ constexpr uint8_t ON_UNSAFE_NAME_DENY = 2u;
 
 enum class OnUnsafeNameHandler : uint8_t {
   kNone = 0,
-  kCensormaydesync = 1,
+  kCensorMayDesync = 1,
   kDeny = 2,
   LAST = 3,
 };
@@ -1273,7 +1273,7 @@ constexpr uint8_t ON_PLAYER_LEAVE_SHARE_UNITS = 2u;
 enum class OnPlayerLeaveHandler : uint8_t {
   kNone = 0,
   kNative = 1,
-  kShareunits = 2,
+  kShareUnits = 2,
   LAST = 3,
 };
 
@@ -1283,8 +1283,8 @@ constexpr uint8_t ON_SHARE_UNITS_RESTRICT = 2u;
 
 enum class OnShareUnitsHandler : uint8_t {
   kNative = 0,
-  kKick = 1,
-  kRestrict = 2,
+  kKickSharer = 1,
+  kRestrictSharee = 2,
   LAST = 3,
 };
 
@@ -1302,7 +1302,7 @@ constexpr uint8_t CROSSPLAY_MODE_CONSERVATIVE = 1u;
 constexpr uint8_t CROSSPLAY_MODE_OPTIMISTIC = 2u;
 constexpr uint8_t CROSSPLAY_MODE_FORCE = 3u;
 
-enum class CrossplayMode : uint8_t {
+enum class CrossPlayMode : uint8_t {
   kNone = 0,
   kConservative = 1,
   kOptimistic = 2,
@@ -1314,9 +1314,9 @@ constexpr uint8_t READY_MODE_FAST = 0u;
 constexpr uint8_t READY_MODE_EXPECT_RACE = 1u;
 constexpr uint8_t READY_MODE_EXPLICIT = 2u;
 
-enum class ReadyMode : uint8_t {
+enum class PlayersReadyMode : uint8_t {
   kFast = 0,
-  kExpectrace = 1,
+  kExpectRace = 1,
   kExplicit = 2,
   LAST = 3,
 };
@@ -1326,7 +1326,7 @@ constexpr uint8_t HIDE_IGN_HOST = 1u;
 constexpr uint8_t HIDE_IGN_ALWAYS = 2u;
 constexpr uint8_t HIDE_IGN_AUTO = 3u;
 
-enum class HideIgn : uint8_t {
+enum class HideIGNMode : uint8_t {
   kNever = 0,
   kHost = 1,
   kAlways = 2,
@@ -1354,13 +1354,13 @@ constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR = 3u;
 constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY = 4u;
 constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAX_ERRORS = 5u;
 
-enum class OnAdvError : uint8_t {
+enum class OnRealmBroadcastErrorHandler : uint8_t {
   kIgnoreErrors = 0,
-  kExitOnMainerror = 1,
-  kExitOnMainerrorifempty = 2,
-  kExitOnAnyerror = 3,
-  kExitOnAnyerrorifempty = 4,
-  kExitOnMaxerrors = 5,
+  kExitOnMainError = 1,
+  kExitOnMainErrorIfEmpty = 2,
+  kExitOnAnyError = 3,
+  kExitOnAnyErrorIfEmpty = 4,
+  kExitOnMaxErrors = 5,
   LAST = 6,
 };
 
@@ -1369,10 +1369,10 @@ constexpr uint8_t LOBBY_TIMEOUT_EMPTY = 1u;
 constexpr uint8_t LOBBY_TIMEOUT_OWNERLESS = 2u;
 constexpr uint8_t LOBBY_TIMEOUT_STRICT = 3u;
 
-enum class LobbyTimeout : uint8_t {
+enum class LobbyTimeoutMode : uint8_t {
   kNever = 0,
   kEmpty = 1,
-  kOwnerless = 2,
+  kOwnerMissing = 2,
   kStrict = 3,
   LAST = 4,
 };
@@ -1381,7 +1381,7 @@ constexpr uint8_t LOBBY_OWNER_TIMEOUT_NEVER = 0u;
 constexpr uint8_t LOBBY_OWNER_TIMEOUT_ABSENT = 1u;
 constexpr uint8_t LOBBY_OWNER_TIMEOUT_STRICT = 2u;
 
-enum class LobbyOwnerTimeout : uint8_t {
+enum class LobbyOwnerTimeoutMode : uint8_t {
   kNever = 0,
   kAbsent = 1,
   kStrict = 2,
@@ -1391,7 +1391,7 @@ enum class LobbyOwnerTimeout : uint8_t {
 constexpr uint8_t GAME_LOADING_TIMEOUT_NEVER = 0u;
 constexpr uint8_t GAME_LOADING_TIMEOUT_STRICT = 1u;
 
-enum class GameLoadingTimeout : uint8_t {
+enum class GameLoadingTimeoutMode : uint8_t {
   kNever = 0,
   kStrict = 1,
   LAST = 2,
@@ -1401,7 +1401,7 @@ constexpr uint8_t GAME_PLAYING_TIMEOUT_NEVER = 0u;
 constexpr uint8_t GAME_PLAYING_TIMEOUT_DRY = 1u;
 constexpr uint8_t GAME_PLAYING_TIMEOUT_STRICT = 2u;
 
-enum class GamePlayingTimeout : uint8_t {
+enum class GamePlayingTimeoutMode : uint8_t {
   kNever = 0,
   kDry = 1,
   kStrict = 2,
@@ -1485,10 +1485,10 @@ constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL = 1;
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_API = 2;
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID = 3;
 
-enum class NetPublicIpAddressAlgorithm : uint8_t {
+enum class NetPublicIPAddressAlgorithm : uint8_t {
   kNone = 0,
   kManual = 1,
-  kApi = 2,
+  kAPI = 2,
   kInvalid = 3,
   LAST = 4,
 };
@@ -1511,6 +1511,7 @@ constexpr int64_t IP_ADDRESS_API_TIMEOUT = 3000;
 constexpr uint8_t RECONNECT_DISABLED = 0;
 constexpr uint8_t RECONNECT_ENABLED_GPROXY_BASIC = 1;
 constexpr uint8_t RECONNECT_ENABLED_GPROXY_EXTENDED = 2;
+constexpr uint8_t RECONNECT_ENABLED_GPROXY_ALL = RECONNECT_ENABLED_GPROXY_BASIC | RECONNECT_ENABLED_GPROXY_EXTENDED;
 
 constexpr size_t MAX_INCOMING_CONNECTIONS = 255;
 constexpr float GAME_USER_CONNECTION_MAX_TIMEOUT = 5000.;

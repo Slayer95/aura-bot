@@ -1380,52 +1380,30 @@ template <typename T>
   return IsBase10NaturalOrZero(s) ? s : std::string();
 }
 
-[[nodiscard]] inline std::string JoinVector(const std::vector<std::string>& list, const std::string connector, const bool trailingConnector) {
-  std::string Results;
-  for (const auto& element : list)
-    Results += element + connector;
-  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
-  return Results;
+template<typename Container>
+[[nodiscard]] inline std::string JoinStrings(const Container& list, const std::string connector, const bool trailingConnector) {
+  using T = typename Container::value_type;
+  static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, uint16_t> || std::is_same_v<T, uint32_t>, "Container must contain std::string or uint16_t or uint32_t");
+
+  std::string results;
+  for (const auto& element : list) {
+    if constexpr (std::is_same_v<T, std::string>) {
+      results += element + connector;
+    } else {
+      results += std::to_string(element) + connector;
+    }
+  }
+
+  if (!trailingConnector && !list.empty()) {
+    results.erase(results.length() - connector.length());
+  }
+
+  return results;
 }
 
-[[nodiscard]] inline std::string JoinVector(const std::vector<uint16_t>& list, const std::string connector, const bool trailingConnector) {
-  std::string Results;
-  for (const auto& element : list)
-    Results += std::to_string(element) + connector;
-  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
-  return Results;
-}
-
-[[nodiscard]] inline std::string JoinVector(const std::vector<std::string>& list, const bool trailingComma) {
-  return JoinVector(list, ", ", trailingComma);
-}
-
-[[nodiscard]] inline std::string JoinVector(const std::vector<uint16_t>& list, const bool trailingComma) {
-  return JoinVector(list, ", ", trailingComma);
-}
-
-[[nodiscard]] inline std::string JoinSet(const std::set<std::string>& list, const std::string connector, const bool trailingConnector) {
-  std::string Results;
-  for (const auto& element : list)
-    Results += element + connector;
-  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
-  return Results;
-}
-
-[[nodiscard]] inline std::string JoinSet(const std::set<uint16_t>& list, const std::string connector, const bool trailingConnector) {
-  std::string Results;
-  for (const auto& element : list)
-    Results += std::to_string(element) + connector;
-  if (!trailingConnector) Results = Results.substr(0, Results.length() - 2);
-  return Results;
-}
-
-[[nodiscard]] inline std::string JoinSet(const std::set<std::string>& list, const bool trailingComma) {
-  return JoinSet(list, ", ", trailingComma);
-}
-
-[[nodiscard]] inline std::string JoinSet(const std::set<uint16_t>& list, const bool trailingComma) {
-  return JoinSet(list, ", ", trailingComma);
+template<typename Container>
+[[nodiscard]] inline std::string JoinStrings(const Container& list, const bool trailingComma) {
+  return JoinStrings(list, ", ", trailingComma);
 }
 
 [[nodiscard]] inline std::string IPv4ToString(const std::array<uint8_t, 4> ip) {
