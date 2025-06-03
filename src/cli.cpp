@@ -507,7 +507,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   );
   app.add_option("--playing-timeout-warning-short-ticks", m_GamePlayingTimeoutWarningShortCountDown,
     "Sets the amount of ticks for the latest and most often game timeout warnings to be displayed."
- );
+  );
   app.add_option("--playing-timeout-warning-large-interval", m_GamePlayingTimeoutWarningLargeInterval,
     "Sets the interval for the earliest and rarest game timeout warnings to be displayed."
   );
@@ -516,15 +516,19 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   );
 
   app.add_flag(  "--fast-expire-lan-owner,--no-fast-expire-lan-owner{false}", m_GameLobbyOwnerReleaseLANLeaver,
-    "Allows to unsafely turn off the feature that removes game owners as soon as they leave a game lobby they joined from LAN.");
+    "Allows to unsafely turn off the feature that removes game owners as soon as they leave a game lobby they joined from LAN."
+  );
 
   app.add_option("--start-countdown-interval", m_GameLobbyCountDownInterval,
-    "Sets the interval for the game start countdown to tick down.");
+    "Sets the interval for the game start countdown to tick down."
+  );
   app.add_option("--start-countdown-ticks", m_GameLobbyCountDownStartValue,
-    "Sets the amount of ticks for the game start countdown.");
+    "Sets the amount of ticks for the game start countdown."
+  );
 
   app.add_option("--download-timeout", m_GameMapDownloadTimeout,
-    "Sets the time limit for the map download (seconds.)");
+    "Sets the time limit for the map download (seconds.)"
+  );
 
   app.add_option("--players-ready", m_GamePlayersReadyMode,
     "Customizes when Aura will consider a player to be ready to start the game. "
@@ -628,7 +632,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   );
 
   app.add_option("--winners-source", m_GameResultSource,
-    "Customizes how Aura will determine the winner(s) of the hosted lobby. Values: none, only-leave-code, only-mmd, prefer-leave-code, prefer-mmd"
+    "Customizes how Aura will determine the winner(s) of the hosted lobby. "
+    "Values: none, only-leave-code, only-mmd, prefer-leave-code, prefer-mmd"
   )->transform(
     CLI::CheckedTransformer(map<string, GameResultSourceSelect>{
       {"none", GameResultSourceSelect::kNone},
@@ -640,7 +645,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   );
 
   app.add_option("--hide-ign-started", m_GameHideLoadedNames,
-    "Whether to hide player names in various outputs (e.g. commands) after the game starts. Values: never, host, always, auto"
+    "Whether to hide player names in various outputs (e.g. commands) after the game starts. "
+    "Values: never, host, always, auto"
   )->transform(
     CLI::CheckedTransformer(map<string, HideIGNMode>{
       {"never", HideIGNMode::kNever},
@@ -658,7 +664,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   );
 
   app.add_option("--fake-users-shared-control", m_GameFakeUsersShareUnitsMode,
-    "Whether to automatically let fake users share unit control with players. Values: never, auto, team, all"
+    "Whether to automatically let fake users share unit control with players. "
+    "Values: never, auto, team, all"
   )->transform(
     CLI::CheckedTransformer(map<string, FakeUsersShareUnitsMode>{
       {"never", FakeUsersShareUnitsMode::kNever},
