@@ -78,6 +78,12 @@ class CW3MMD;
 template <typename K, typename V>
 class FlatMap;
 
+template<typename T>
+class OptReader;
+
+template<typename T>
+class OptWriter;
+
 namespace GameUser
 {
   class CGameUser;

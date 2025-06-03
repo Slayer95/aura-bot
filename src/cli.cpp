@@ -34,6 +34,7 @@
 #include "protocol/game_protocol.h"
 #include "game_setup.h"
 #include "realm.h"
+#include "optional.h"
 #include "util.h"
 
 #include "aura.h"
@@ -81,6 +82,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
 
   bool examples = false;
   bool about = false;
+  optional<string> rawGameVersion;
+  optional<string> rawWar3DataVersion;
 
   app.option_defaults()->ignore_case();
 
@@ -188,7 +191,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--savedir", m_GameSavePath, 
     "Customizes the game save directory."
   );
-  app.add_option("--data-version", m_War3DataVersion, 
+  app.add_option("--data-version", rawWar3DataVersion, 
     "Customizes the game version to be used when reading the game install directory."
   );
 
@@ -385,7 +388,6 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     })
   );
 
-  optional<string> rawGameVersion;
   app.add_option("--game-version", rawGameVersion,
     "Customizes the main version for the hosted lobby."
   );
@@ -750,6 +752,15 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     m_GameVersion.swap(gameVersion);
   }
 
+  if (rawWar3DataVersion.has_value()) {
+    optional<Version> war3DataVersion = ParseGameVersion(rawWar3DataVersion.value());
+    if (!war3DataVersion.has_value()) {
+      Print("[AURA] Invalid value for --game-version");
+      return CLIResult::kError;
+    }
+    m_War3DataVersion.swap(war3DataVersion);
+  }
+
   if (!m_ExecCommands.empty() && !m_ExecAs.has_value()) {
     Print("[AURA] Option --exec-as is required");
     return CLIResult::kError;
@@ -838,51 +849,22 @@ void CCLI::RunInfoActions() const
 
 void CCLI::OverrideConfig(CAura* nAura) const
 {
-  if (m_War3DataVersion.has_value())
-    nAura->m_Config.m_Warcraft3DataVersion = ParseGameVersion(m_War3DataVersion.value());
-  if (m_War3Path.has_value())
-    nAura->m_Config.m_Warcraft3Path = m_War3Path.value();
-  if (m_MapPath.has_value())
-    nAura->m_Config.m_MapPath = m_MapPath.value();
-  if (m_MapCFGPath.has_value())
-    nAura->m_Config.m_MapCFGPath = m_MapCFGPath.value();
-  if (m_MapCachePath.has_value())
-    nAura->m_Config.m_MapCachePath = m_MapCachePath.value();
-  if (m_JASSPath.has_value())
-    nAura->m_Config.m_JASSPath = m_JASSPath.value();
-  if (m_GameSavePath.has_value())
-    nAura->m_Config.m_GameSavePath = m_GameSavePath.value();
+  ReadOpt(m_War3DataVersion) >> nAura->m_Config.m_Warcraft3DataVersion;
+  ReadOpt(m_War3Path) >> nAura->m_Config.m_Warcraft3Path;
+  ReadOpt(m_MapPath) >> nAura->m_Config.m_MapPath;
+  ReadOpt(m_MapCFGPath) >> nAura->m_Config.m_MapCFGPath;
+  ReadOpt(m_MapCachePath) >> nAura->m_Config.m_MapCachePath;
+  ReadOpt(m_JASSPath) >> nAura->m_Config.m_JASSPath;
+  ReadOpt(m_GameSavePath) >> nAura->m_Config.m_GameSavePath;
 
-  if (m_CheckJASS.has_value())
-    nAura->m_Config.m_ValidateJASS = m_CheckJASS.value();
-
-  if (m_ExtractJASS.has_value())
-    nAura->m_Config.m_ExtractJASS = m_ExtractJASS.value();
-
-  if (m_ExitOnStandby.has_value()) {
-    nAura->m_Config.m_ExitOnStandby = m_ExitOnStandby.value();
-  }
-  if (m_BNET.has_value()) {
-    nAura->m_Config.m_EnableBNET = m_BNET.value();
-  }
-  if (m_IRC.has_value()) {
-    nAura->m_IRC.m_Config.m_Enabled = m_IRC.value();
-  }
-  if (m_Discord.has_value()) {
-    nAura->m_Discord.m_Config.m_Enabled = m_Discord.value();
-  }
-  if (m_LAN.has_value()) {
-    nAura->m_GameDefaultConfig->m_UDPEnabled = m_LAN.value();
-  }
-  if (m_UseMapCFGCache.has_value()) {
-    nAura->m_Config.m_EnableCFGCache = m_UseMapCFGCache.value();
-  }
-  if (m_MapCFGCacheRevalidation.has_value()) {
-    nAura->m_Config.m_CFGCacheRevalidateAlgorithm = m_MapCFGCacheRevalidation.value();
-  }
-  if (m_LogLevel.has_value()) {
-    nAura->m_Config.m_LogLevel = m_LogLevel.value();
-  }
+  ReadOpt(m_CheckJASS) >> nAura->m_Config.m_ValidateJASS;
+  ReadOpt(m_ExtractJASS) >> nAura->m_Config.m_ExtractJASS;
+  ReadOpt(m_ExitOnStandby) >> nAura->m_Config.m_ExitOnStandby;
+  ReadOpt(m_Discord) >> nAura->m_Discord.m_Config.m_Enabled;
+  ReadOpt(m_LAN) >> nAura->m_GameDefaultConfig->m_UDPEnabled;
+  ReadOpt(m_UseMapCFGCache) >> nAura->m_Config.m_EnableCFGCache;
+  ReadOpt(m_MapCFGCacheRevalidation) >> nAura->m_Config.m_CFGCacheRevalidateAlgorithm;
+  ReadOpt(m_LogLevel) >> nAura->m_Config.m_LogLevel;
 
   if (m_UDPDiscoveryMode.has_value()) {
     const bool isMainServerEnabled = m_UDPDiscoveryMode.value() != UDPDiscoveryMode::kFree;
@@ -898,15 +880,13 @@ void CCLI::OverrideConfig(CAura* nAura) const
       nAura->m_Net.m_Config.m_BindAddress4 = address.value();
     }
   }
-  if (m_HostPort.has_value()) {
-    nAura->m_Net.m_Config.m_MinHostPort = m_HostPort.value();
-    nAura->m_Net.m_Config.m_MaxHostPort = m_HostPort.value();
-  }
+
+  auto hostPortReader = ReadOpt(m_HostPort);
+  hostPortReader >> nAura->m_Net.m_Config.m_MinHostPort;
+  hostPortReader >> nAura->m_Net.m_Config.m_MaxHostPort;
 
 #ifndef DISABLE_MINIUPNP
-  if (m_EnableUPnP.has_value()) {
-    nAura->m_Net.m_Config.m_EnableUPnP = m_EnableUPnP.value();
-  }
+  ReadOpt(m_EnableUPnP) >> nAura->m_Net.m_Config.m_EnableUPnP;
 #endif
 }
 

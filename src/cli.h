@@ -78,7 +78,7 @@ public:
   std::optional<LogLevel>                     m_LogLevel;
   std::optional<bool>                         m_InitSystem;
 
-  std::optional<std::string>                  m_War3DataVersion;
+  std::optional<Version>                      m_War3DataVersion;
   std::optional<std::filesystem::path>        m_War3Path;
   std::optional<std::filesystem::path>        m_MapPath;
   std::optional<std::filesystem::path>        m_MapCFGPath;

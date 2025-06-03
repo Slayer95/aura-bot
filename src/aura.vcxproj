@@ -646,6 +646,7 @@
     <ClInclude Include="config\config_net.h" />
     <ClInclude Include="proxy\tcp_proxy.h" />
     <ClInclude Include="ms_stdint.h" />
+    <ClInclude Include="optional.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="flat_map.h" />
