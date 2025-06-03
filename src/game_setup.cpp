@@ -33,6 +33,7 @@
 #include "hash.h"
 #include "integration/irc.h"
 #include "map.h"
+#include "optional.h"
 #include "realm.h"
 #include "save_game.h"
 
@@ -119,14 +120,14 @@ bool CGameExtraOptions::ParseMapRandomHeroes(const string& s) {
 }
 
 void CGameExtraOptions::AcquireCLI(const CCLI* nCLI) {
-  if (nCLI->m_GameObservers.has_value()) m_Observers = nCLI->m_GameObservers.value();
-  if (nCLI->m_GameVisibility.has_value()) m_Visibility = nCLI->m_GameVisibility.value();
-  if (nCLI->m_GameSpeed.has_value()) m_Speed = nCLI->m_GameSpeed.value();
-  if (nCLI->m_GameTeamsLocked.has_value()) m_TeamsLocked = nCLI->m_GameTeamsLocked.value();
-  if (nCLI->m_GameTeamsTogether.has_value()) m_TeamsTogether = nCLI->m_GameTeamsTogether.value();
-  if (nCLI->m_GameAdvancedSharedUnitControl.has_value()) m_AdvancedSharedUnitControl = nCLI->m_GameAdvancedSharedUnitControl.value();
-  if (nCLI->m_GameRandomRaces.has_value()) m_RandomRaces = nCLI->m_GameRandomRaces.value();
-  if (nCLI->m_GameRandomHeroes.has_value()) m_RandomHeroes = nCLI->m_GameRandomHeroes.value();
+  ReadOpt(nCLI->m_GameObservers) >> m_Observers;
+  ReadOpt(nCLI->m_GameVisibility) >> m_Visibility;
+  ReadOpt(nCLI->m_GameSpeed) >> m_Speed;
+  ReadOpt(nCLI->m_GameTeamsLocked) >> m_TeamsLocked;
+  ReadOpt(nCLI->m_GameTeamsTogether) >> m_TeamsTogether;
+  ReadOpt(nCLI->m_GameAdvancedSharedUnitControl) >> m_AdvancedSharedUnitControl;
+  ReadOpt(nCLI->m_GameRandomRaces) >> m_RandomRaces;
+  ReadOpt(nCLI->m_GameRandomHeroes) >> m_RandomHeroes;
 }
 
 CGameExtraOptions::~CGameExtraOptions() = default;
@@ -235,7 +236,7 @@ std::string CGameSetup::GetInspectName() const
 bool CGameSetup::GetIsStale() const
 {
   if (m_ActiveTicks.has_value()) return false;
-  return m_ActiveTicks.value() + GAMESETUP_STALE_TICKS < GetTicks();
+  return m_Aura->GetTicksIsAfterDelay(*m_ActiveTicks, GAMESETUP_STALE_TICKS);
 }
 
 void CGameSetup::ParseInputLocal()
@@ -1319,7 +1320,7 @@ void CGameSetup::SetActive()
     }
   }
   m_Aura->m_GameSetup = shared_from_this();
-  m_ActiveTicks = GetTicks();
+  m_ActiveTicks = m_Aura->GetLoopTicks();
 }
 
 bool CGameSetup::RestoreFromSaveFile()
@@ -1410,11 +1411,6 @@ void CGameSetup::RemoveIgnoredRealm(shared_ptr<const CRealm> nRealm)
   m_RealmsExcluded.erase(nRealm->GetServer());
 }
 
-void CGameSetup::SetDisplayMode(const uint8_t nDisplayMode)
-{
-  m_RealmsDisplayMode = nDisplayMode;
-}
-
 void CGameSetup::SetOwner(const string& nOwner, shared_ptr<const CRealm> nRealm)
 {
   if (nRealm == nullptr) {
@@ -1433,33 +1429,6 @@ void CGameSetup::SetCreator(const ServiceType serviceType, const string& creator
 {
   m_Creator = ServiceUser(serviceType, creatorName);
 }
-
-/*
-void CGameSetup::SetCreator(const ServiceType serviceType, const string& creatorName, weak_ptr<void> servicePtr)
-{
-  m_Creator = ServiceUser(serviceType, creatorName, servicePtr.lock());
-}
-
-void CGameSetup::SetCreatorGameUser(const string& creatorName, shared_ptr<CGame> nGame)
-{
-  SetCreator(ServiceType::kGame, creatorName, static_pointer_cast<void>(nGame));
-}
-
-void CGameSetup::SetCreatorRealmUser(const string& creatorName, shared_ptr<CRealm> nRealm)
-{
-  SetCreator(ServiceType::kRealm, creatorName, static_pointer_cast<void>(nRealm));
-}
-
-void CGameSetup::SetCreatorIRCUser(const string& creatorName)
-{
-  SetCreator(ServiceType::kIRC, creatorName);
-}
-
-void CGameSetup::SetCreatorDiscordUser(const string& creatorName)
-{
-  SetCreator(ServiceType::kDiscord, creatorName);
-}
-*/
 
 void CGameSetup::AcquireCreator()
 {
@@ -1614,11 +1583,12 @@ string CGameSetup::NormalizeGameName(const string& baseGameName)
 void CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
 {
   if (nCLI->m_GameSavedPath.has_value()) SetGameSavedFile(nCLI->m_GameSavedPath.value());
+  // CPR timeouts are int32_t - signed!
   if (nCLI->m_GameMapDownloadTimeout.has_value()) SetDownloadTimeout(nCLI->m_GameMapDownloadTimeout.value());
-  if (nCLI->m_GameIsExpansion.has_value()) SetGameIsExpansion(nCLI->m_GameIsExpansion.value());
-  if (nCLI->m_GameVersion.has_value()) SetGameVersion(nCLI->m_GameVersion.value());
-  if (nCLI->m_GameLocaleMod.has_value()) SetGameLocaleMod(nCLI->m_GameLocaleMod.value());
-  if (nCLI->m_GameLocaleLangID.has_value()) SetGameLocaleLangID(nCLI->m_GameLocaleLangID.value());
+  WriteOpt(m_GameIsExpansion) << nCLI->m_GameIsExpansion;
+  WriteOpt(m_GameVersion) << nCLI->m_GameVersion;
+  WriteOpt(m_GameLocaleMod) << nCLI->m_GameLocaleMod;
+  WriteOpt(m_GameLocaleLangID) << nCLI->m_GameLocaleLangID;
 }
 
 void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
@@ -1645,82 +1615,85 @@ void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
 
 void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 {
-  if (nCLI->m_GameLobbyTimeoutMode.has_value()) SetLobbyTimeoutMode(nCLI->m_GameLobbyTimeoutMode.value());
-  if (nCLI->m_GameLobbyOwnerTimeoutMode.has_value()) SetLobbyOwnerTimeoutMode(nCLI->m_GameLobbyOwnerTimeoutMode.value());
-  if (nCLI->m_GameLoadingTimeoutMode.has_value()) SetLoadingTimeoutMode(nCLI->m_GameLoadingTimeoutMode.value());
-  if (nCLI->m_GamePlayingTimeoutMode.has_value()) SetPlayingTimeoutMode(nCLI->m_GamePlayingTimeoutMode.value());
+  WriteOpt(m_LobbyTimeoutMode) << nCLI->m_GameLobbyTimeoutMode;
+  WriteOpt(m_LobbyOwnerTimeoutMode) << nCLI->m_GameLobbyOwnerTimeoutMode;
+  WriteOpt(m_LoadingTimeoutMode) << nCLI->m_GameLoadingTimeoutMode;
+  WriteOpt(m_PlayingTimeoutMode) << nCLI->m_GamePlayingTimeoutMode;
 
-  if (nCLI->m_GameLobbyTimeout.has_value()) SetLobbyTimeout(nCLI->m_GameLobbyTimeout.value());
-  if (nCLI->m_GameLobbyOwnerTimeout.has_value()) SetLobbyOwnerTimeout(nCLI->m_GameLobbyOwnerTimeout.value());
-  if (nCLI->m_GameLoadingTimeout.has_value()) SetLoadingTimeout(nCLI->m_GameLoadingTimeout.value());
-  if (nCLI->m_GamePlayingTimeout.has_value()) SetPlayingTimeout(nCLI->m_GamePlayingTimeout.value());
+  WriteOpt(m_LobbyTimeout) << nCLI->m_GameLobbyTimeout;
+  WriteOpt(m_LobbyOwnerTimeout) << nCLI->m_GameLobbyOwnerTimeout;
+  WriteOpt(m_LoadingTimeout) << nCLI->m_GameLoadingTimeout;
+  WriteOpt(m_PlayingTimeout) << nCLI->m_GamePlayingTimeout;
 
-  if (nCLI->m_GamePlayingTimeoutWarningShortCountDown.has_value()) SetPlayingTimeoutWarningShortCountDown(nCLI->m_GamePlayingTimeoutWarningShortCountDown.value());
-  if (nCLI->m_GamePlayingTimeoutWarningShortInterval.has_value()) SetPlayingTimeoutWarningShortInterval(nCLI->m_GamePlayingTimeoutWarningShortInterval.value());
-  if (nCLI->m_GamePlayingTimeoutWarningLargeCountDown.has_value()) SetPlayingTimeoutWarningLargeCountDown(nCLI->m_GamePlayingTimeoutWarningLargeCountDown.value());
-  if (nCLI->m_GamePlayingTimeoutWarningLargeInterval.has_value()) SetPlayingTimeoutWarningLargeInterval(nCLI->m_GamePlayingTimeoutWarningLargeInterval.value());
+  WriteOpt(m_PlayingTimeoutWarningShortCountDown) << nCLI->m_GamePlayingTimeoutWarningShortCountDown;
+  WriteOpt(m_PlayingTimeoutWarningShortInterval) << nCLI->m_GamePlayingTimeoutWarningShortInterval;
+  WriteOpt(m_PlayingTimeoutWarningLargeCountDown) << nCLI->m_GamePlayingTimeoutWarningLargeCountDown;
+  WriteOpt(m_PlayingTimeoutWarningLargeInterval) << nCLI->m_GamePlayingTimeoutWarningLargeInterval;
 
-  if (nCLI->m_GameLobbyOwnerReleaseLANLeaver.has_value()) SetLobbyOwnerReleaseLANLeaver(nCLI->m_GameLobbyOwnerReleaseLANLeaver.value());
+  WriteOpt(m_LobbyOwnerReleaseLANLeaver) << nCLI->m_GameLobbyOwnerReleaseLANLeaver;
 
-  if (nCLI->m_GameLobbyCountDownInterval.has_value()) SetLobbyCountDownInterval(nCLI->m_GameLobbyCountDownInterval.value());
-  if (nCLI->m_GameLobbyCountDownStartValue.has_value()) SetLobbyCountDownStartValue(nCLI->m_GameLobbyCountDownStartValue.value());
+  WriteOpt(m_LobbyCountDownInterval) << nCLI->m_GameLobbyCountDownInterval;
+  WriteOpt(m_LobbyCountDownStartValue) << nCLI->m_GameLobbyCountDownStartValue;
 
-  if (nCLI->m_GameCheckJoinable.has_value()) SetIsCheckJoinable(nCLI->m_GameCheckJoinable.value());
-  if (nCLI->m_GameNotifyJoins.has_value()) SetNotifyJoins(nCLI->m_GameNotifyJoins.value());
-  if (nCLI->m_GameLobbyReplaceable.has_value()) SetLobbyReplaceable(nCLI->m_GameLobbyReplaceable.value());
-  if (nCLI->m_GameLobbyAutoRehosted.has_value()) SetLobbyAutoRehosted(nCLI->m_GameLobbyAutoRehosted.value());
+  WriteOpt(m_CheckJoinable) << nCLI->m_GameCheckJoinable;
+  WriteOpt(m_NotifyJoins) << nCLI->m_GameNotifyJoins;
+  WriteOpt(m_SaveGameAllowed) << nCLI->m_GameSaveAllowed;
+  WriteOpt(m_ChecksReservation) << nCLI->m_GameCheckReservation;
 
-  if (nCLI->m_GameSaveAllowed.has_value()) SetSaveGameAllowed(nCLI->m_GameSaveAllowed.value());
+  WriteOpt(m_AutoStartPlayers) << nCLI->m_GameAutoStartPlayers;
+  WriteOpt(m_AutoStartSeconds) << nCLI->m_GameAutoStartSeconds;
+  WriteOpt(m_AutoStartRequiresBalance) << nCLI->m_GameAutoStartRequiresBalance;
 
-  if (nCLI->m_GameCheckReservation.has_value()) SetCheckReservation(nCLI->m_GameCheckReservation.value());
+  WriteOpt(m_EnableLagScreen) << nCLI->m_GameEnableLagScreen;
+  WriteOpt(m_LatencyAverage) << nCLI->m_GameLatencyAverage;
+  WriteOpt(m_LatencyMaxFrames) << nCLI->m_GameLatencyMaxFrames;
+  WriteOpt(m_LatencySafeFrames) << nCLI->m_GameLatencySafeFrames;
+  WriteOpt(m_LatencyEqualizerEnabled) << nCLI->m_GameLatencyEqualizerEnabled;
+  WriteOpt(m_LatencyEqualizerFrames) << nCLI->m_GameLatencyEqualizerFrames;
 
-  if (nCLI->m_GameAutoStartPlayers.has_value()) SetAutoStartPlayers(nCLI->m_GameAutoStartPlayers.value());
-  if (nCLI->m_GameAutoStartSeconds.has_value()) SetAutoStartSeconds(nCLI->m_GameAutoStartSeconds.value());
-  if (nCLI->m_GameAutoStartRequiresBalance.has_value()) SetAutoStartRequiresBalance(nCLI->m_GameAutoStartRequiresBalance.value());
+  WriteOpt(m_HCL) << nCLI->m_GameHCL;
 
-  if (nCLI->m_GameEnableLagScreen.has_value()) SetEnableLagScreen(nCLI->m_GameEnableLagScreen.value());
-  if (nCLI->m_GameLatencyAverage.has_value()) SetLatencyAverage(nCLI->m_GameLatencyAverage.value());
-  if (nCLI->m_GameLatencyMaxFrames.has_value()) SetLatencyMaxFrames(nCLI->m_GameLatencyMaxFrames.value());
-  if (nCLI->m_GameLatencySafeFrames.has_value()) SetLatencySafeFrames(nCLI->m_GameLatencySafeFrames.value());
-  if (nCLI->m_GameLatencyEqualizerEnabled.has_value()) SetLatencyEqualizerEnabled(nCLI->m_GameLatencyEqualizerEnabled.value());
-  if (nCLI->m_GameLatencyEqualizerFrames.has_value()) SetLatencyEqualizerFrames(nCLI->m_GameLatencyEqualizerFrames.value());
+  WriteOpt(m_NumPlayersToStartGameOver) << nCLI->m_GameNumPlayersToStartGameOver;
 
-  if (nCLI->m_GameHCL.has_value()) SetHCL(nCLI->m_GameHCL.value());
-  if (nCLI->m_GameFreeForAll.value_or(false)) SetCustomLayout(CUSTOM_LAYOUT_FFA);
+  WriteOpt(m_AutoKickPing) << nCLI->m_GameAutoKickPing;
+  WriteOpt(m_WarnHighPing) << nCLI->m_GameWarnHighPing;
+  WriteOpt(m_SafeHighPing) << nCLI->m_GameSafeHighPing;
 
-  if (nCLI->m_GameNumPlayersToStartGameOver.has_value()) SetNumPlayersToStartGameOver(nCLI->m_GameNumPlayersToStartGameOver.value());
+  WriteOpt(m_SyncNormalize) << nCLI->m_GameSyncNormalize;
 
-  if (nCLI->m_GameAutoKickPing.has_value()) SetAutoKickPing(nCLI->m_GameAutoKickPing.value());
-  if (nCLI->m_GameWarnHighPing.has_value()) SetWarnKickPing(nCLI->m_GameWarnHighPing.value());
-  if (nCLI->m_GameSafeHighPing.has_value()) SetSafeKickPing(nCLI->m_GameSafeHighPing.value());
+  WriteOpt(m_MaxAPM) << nCLI->m_GameMaxAPM;
+  WriteOpt(m_MaxBurstAPM) << nCLI->m_GameMaxBurstAPM;
 
-  if (nCLI->m_GameSyncNormalize.has_value()) SetSyncNormalize(nCLI->m_GameSyncNormalize.value());
+  WriteOpt(m_HideLobbyNames) << nCLI->m_GameHideLobbyNames;
+  WriteOpt(m_HideInGameNames) << nCLI->m_GameHideLoadedNames;
+  WriteOpt(m_ResultSource) << nCLI->m_GameResultSource;
+  WriteOpt(m_LoadInGame) << nCLI->m_GameLoadInGame;
+  WriteOpt(m_FakeUsersShareUnitsMode) << nCLI->m_GameFakeUsersShareUnitsMode;
+  WriteOpt(m_EnableJoinObserversInProgress) << nCLI->m_GameEnableJoinObserversInProgress;
+  WriteOpt(m_EnableJoinPlayersInProgress) << nCLI->m_GameEnableJoinPlayersInProgress;
 
-  if (nCLI->m_GameMaxAPM.has_value()) SetMaxAPM(nCLI->m_GameMaxAPM.value());
-  if (nCLI->m_GameMaxBurstAPM.has_value()) SetMaxBurstAPM(nCLI->m_GameMaxBurstAPM.value());
+  WriteOpt(m_LogCommands) << nCLI->m_GameLogCommands;
 
-  if (nCLI->m_GameHideLobbyNames.has_value()) SetHideLobbyNames(nCLI->m_GameHideLobbyNames.value());
-  if (nCLI->m_GameHideLoadedNames.has_value()) SetHideInGameNames(nCLI->m_GameHideLoadedNames.value());
-  if (nCLI->m_GameResultSource.has_value()) SetResultSource(nCLI->m_GameResultSource.value());
-  if (nCLI->m_GameLoadInGame.has_value()) SetLoadInGame(nCLI->m_GameLoadInGame.value());
-  if (nCLI->m_GameFakeUsersShareUnitsMode.has_value()) SetFakeUsersShareUnitsMode(nCLI->m_GameFakeUsersShareUnitsMode.value());
-  if (nCLI->m_GameEnableJoinObserversInProgress.has_value()) SetEnableJoinObserversInProgress(nCLI->m_GameEnableJoinObserversInProgress.value());
-  if (nCLI->m_GameEnableJoinPlayersInProgress.has_value()) SetEnableJoinPlayersInProgress(nCLI->m_GameEnableJoinPlayersInProgress.value());
+  WriteOpt(m_ReconnectionMode) << nCLI->m_GameReconnectionMode;
+  WriteOpt(m_EnableLobbyChat) << nCLI->m_GameEnableLobbyChat;
+  WriteOpt(m_EnableInGameChat) << nCLI->m_GameEnableInGameChat;
+  WriteOpt(m_IPFloodHandler) << nCLI->m_GameIPFloodHandler;
+  WriteOpt(m_LeaverHandler) << nCLI->m_GameLeaverHandler;
+  WriteOpt(m_ShareUnitsHandler) << nCLI->m_GameShareUnitsHandler;
+  WriteOpt(m_UnsafeNameHandler) << nCLI->m_GameUnsafeNameHandler;
+  WriteOpt(m_BroadcastErrorHandler) << nCLI->m_GameBroadcastErrorHandler;
+  WriteOpt(m_CrossPlayMode) << nCLI->m_GameCrossPlayMode;
 
-  if (nCLI->m_GameLogCommands.has_value()) SetLogCommands(nCLI->m_GameLogCommands.value());
+  if (nCLI->m_GameFreeForAll.value_or(false)) {
+    m_CustomLayout = CUSTOM_LAYOUT_FFA; // optional
+  }
 
-  SetReservations(nCLI->m_GameReservations);
-  SetVerbose(nCLI->m_Verbose);
-  SetDisplayMode(nCLI->m_GameDisplayMode.value_or(GAME_DISPLAY_PUBLIC));
-  if (nCLI->m_GameReconnectionMode.has_value()) SetReconnectionMode(nCLI->m_GameReconnectionMode.value());
-  if (nCLI->m_GameEnableLobbyChat.has_value()) SetEnableLobbyChat(nCLI->m_GameEnableLobbyChat.value());
-  if (nCLI->m_GameEnableInGameChat.has_value()) SetEnableInGameChat(nCLI->m_GameEnableInGameChat.value());
-  if (nCLI->m_GameIPFloodHandler.has_value()) SetIPFloodHandler(nCLI->m_GameIPFloodHandler.value());
-  if (nCLI->m_GameLeaverHandler.has_value()) SetLeaverHandler(nCLI->m_GameLeaverHandler.value());
-  if (nCLI->m_GameShareUnitsHandler.has_value()) SetShareUnitsHandler(nCLI->m_GameShareUnitsHandler.value());
-  if (nCLI->m_GameUnsafeNameHandler.has_value()) SetUnsafeNameHandler(nCLI->m_GameUnsafeNameHandler.value());
-  if (nCLI->m_GameBroadcastErrorHandler.has_value()) SetBroadcastErrorHandler(nCLI->m_GameBroadcastErrorHandler.value());
-  if (nCLI->m_GameCrossPlayMode.has_value()) SetCrossPlayMode(nCLI->m_GameCrossPlayMode.value());
+  // Write to mandatory members of CGameSetup
+  m_Reservations = nCLI->m_GameReservations;
+  m_Verbose = nCLI->m_Verbose;
+  m_LobbyReplaceable = nCLI->m_GameLobbyReplaceable.value_or(false);
+  m_LobbyAutoRehosted = nCLI->m_GameLobbyAutoRehosted.value_or(false);
+  m_RealmsDisplayMode = nCLI->m_GameDisplayMode.value_or(GAME_DISPLAY_PUBLIC);
 }
 
 CGameSetup::~CGameSetup()

@@ -61,7 +61,7 @@ public:
     target = source;
   }
 
-  void operator<<(std::optional<T>& source)
+  void operator<<(const std::optional<T>& source)
   {
     target = *source;
   }
@@ -80,7 +80,7 @@ OptReader<T> ReadOpt(const std::optional<T>& opt) {
 }
 
 template<typename T>
-OptWriter<T> WriteOpt(const T& value) {
+OptWriter<T> WriteOpt(std::optional<T>& value) {
   return {value};
 }
 

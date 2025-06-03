@@ -283,7 +283,7 @@ public:
   inline void SetMirrorProxy(const bool nMirrorProxy) { m_IsMirrorProxy = nMirrorProxy; }
   void AddIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   void RemoveIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
-  void SetDisplayMode(const uint8_t nDisplayMode);
+  inline void SetDisplayMode(const uint8_t nDisplayMode) { m_RealmsDisplayMode = nDisplayMode; };
   void SetOwner(const std::string& nOwner, std::shared_ptr<const CRealm> nRealm);
   void SetOwnerLess(const bool nValue) { m_OwnerLess = nValue; }
 
@@ -291,14 +291,6 @@ public:
   void RemoveCreator();
 
   void SetCreator(const ServiceType serviceType, const std::string& nCreator);
-  /*
-  void SetCreator(const ServiceType serviceType, const std::string& nCreator, std::weak_ptr<void> servicePtr);
-  void SetCreatorGameUser(const std::string& nCreator, std::shared_ptr<CGame> nGame);
-  void SetCreatorRealmUser(const std::string& nCreator, std::shared_ptr<CRealm> nRealm);
-  void SetCreatorIRCUser(const std::string& nCreator);
-  void SetCreatorDiscordUser(const std::string& nCreator);
-  */
-
   void AcquireCreator();
 
   inline ServiceType GetCreatedFromType() const { return m_Creator.GetServiceType(); }
@@ -387,8 +379,8 @@ public:
 
   inline void SetNumPlayersToStartGameOver(const uint8_t nNumPlayersToStartGameOver) { m_NumPlayersToStartGameOver = nNumPlayersToStartGameOver; }
   inline void SetAutoKickPing(const uint32_t nAutoKickPing) { m_AutoKickPing = nAutoKickPing; }
-  inline void SetWarnKickPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
-  inline void SetSafeKickPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
+  inline void SetWarnHighPing(const uint32_t nWarnHighPing) { m_WarnHighPing = nWarnHighPing; }
+  inline void SetSafeHighPing(const uint32_t nSafeHighPing) { m_SafeHighPing = nSafeHighPing; }
   inline void SetSyncNormalize(const bool nSyncNormalize) { m_SyncNormalize = nSyncNormalize; }
   inline void SetMaxAPM(const uint16_t nMaxAPM) { m_MaxAPM = nMaxAPM; }
   inline void SetMaxBurstAPM(const uint16_t nMaxBurstAPM) { m_MaxBurstAPM = nMaxBurstAPM; }
