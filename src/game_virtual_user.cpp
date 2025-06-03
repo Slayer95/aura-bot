@@ -126,13 +126,11 @@ bool CGameVirtualUser::GetCanShare(const uint8_t SID) const
     case FakeUsersShareUnitsMode::kTeam: {
       return slot->GetTeam() == gameController->GetTeam();
     }
-    case FakeUsersShareUnitsMode::kAll: {
+    case FakeUsersShareUnitsMode::kAll:
+    default: { // LAST
       return true;
     }
-    default:
-      return false;
   }
-  return true;
 }
 
 bool CGameVirtualUser::GetCanTrade(const uint8_t /*SID*/) const
