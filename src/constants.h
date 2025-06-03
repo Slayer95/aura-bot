@@ -206,6 +206,22 @@ constexpr uint32_t MAX_MAP_SIZE_1_26 = 0x800000;
 constexpr uint32_t MAX_MAP_SIZE_1_28 = 0x8000000;
 constexpr uint32_t MAX_MAP_SIZE_RF = 0x20000000;
 
+enum class W3ModLocale : uint8_t {
+  kENUS = 0,
+  kDEDE = 1,
+  kESES = 2,
+  kESMX = 3,
+  kFRFR = 4,
+  kITIT = 5,
+  kKOKR = 6,
+  kPLPL = 7,
+  kPTBR = 8,
+  kRURU = 9,
+  kZHCN = 10,
+  kZHTW = 11,
+  LAST = 12,
+};
+
 constexpr uint8_t MAPSPEED_SLOW = 0u;
 constexpr uint8_t MAPSPEED_NORMAL = 1u;
 constexpr uint8_t MAPSPEED_FAST = 2u;
@@ -269,7 +285,7 @@ constexpr uint32_t MAPOPT_ABILITYSKINS = (1 << 17);
 constexpr uint8_t MAPFILTER_MAKER_USER = 1;
 constexpr uint8_t MAPFILTER_MAKER_BLIZZARD = 2;
 
-enum class MapfilterMaker : uint8_t {
+enum class MapFilterMaker : uint8_t {
   kUser = 1,
   kBlizzard = 2,
   LAST = 3,
@@ -327,7 +343,7 @@ constexpr uint8_t CACHE_REVALIDATION_NEVER = 0;
 constexpr uint8_t CACHE_REVALIDATION_ALWAYS = 1u;
 constexpr uint8_t CACHE_REVALIDATION_MODIFIED = 2u;
 
-enum class CacheRevalidation : uint8_t {
+enum class CacheRevalidationMethod : uint8_t {
   kNever = 0,
   kAlways = 1,
   kModified = 2,
@@ -1178,19 +1194,6 @@ enum class RealmObserverDisplay : uint8_t {
   LAST = 3,
 };
 
-constexpr uint8_t PVPGN_LOCALE_EN_US = 0u;
-constexpr uint8_t PVPGN_LOCALE_CS_CZ = 1u;
-constexpr uint8_t PVPGN_LOCALE_DE_DE = 2u;
-constexpr uint8_t PVPGN_LOCALE_ES_ES = 3u;
-constexpr uint8_t PVPGN_LOCALE_FR_FR = 4u;
-constexpr uint8_t PVPGN_LOCALE_IT_IT = 5u;
-constexpr uint8_t PVPGN_LOCALE_JA_JA = 6u;
-constexpr uint8_t PVPGN_LOCALE_KO_KR = 7u;
-constexpr uint8_t PVPGN_LOCALE_PL_PL = 8u;
-constexpr uint8_t PVPGN_LOCALE_RU_RU = 9u;
-constexpr uint8_t PVPGN_LOCALE_ZH_CN = 10u;
-constexpr uint8_t PVPGN_LOCALE_ZH_TW = 11u;
-
 enum class PvPGNLocale : uint8_t {
   kENUS = 0,
   kCSCZ = 1,
@@ -1202,7 +1205,7 @@ enum class PvPGNLocale : uint8_t {
   kKOKR = 7,
   kPLPL = 8,
   kRURU = 9,
-  kZHZN = 10,
+  kZHCN = 10,
   kZHTW = 11,
   LAST = 12,
 };

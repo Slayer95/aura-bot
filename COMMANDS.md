@@ -102,8 +102,6 @@ Commands
 ## \`disablepub\`
 - Syntax: disablepub \<REALM\>
 
-## \`disconnect\`
-
 ## \`discord\`
 
 ## \`dl\`
@@ -203,6 +201,9 @@ Commands
 - Syntax: kick \<PLAYERNAME\>
 
 ## \`key\`
+
+## \`kickme\`
+- Aliases: disconnect, dc
 
 ## \`lanversion\`
 - Syntax: lanversion \<PLAYERNAME\>, \<VERSION\>
@@ -347,7 +348,7 @@ Commands
 - Syntax: roll \<FACES\>
 
 ## \`s\`
-- Aliases: start, vs, go, g
+- Aliases: star, start, vs, go, g
 
 ## \`save\`
 - Aliases: autosave
@@ -405,6 +406,8 @@ Commands
 - Aliases: vsai
 - Syntax: terminator \<ON|OFF\>
 - Syntax: terminator \<NUMBER\>
+
+## \`testdc\`
 
 ## \`timehandicap\`
 - Aliases: th

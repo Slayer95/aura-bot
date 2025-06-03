@@ -345,7 +345,9 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputStandard()
     if (!targetPath.is_absolute()) {
       try {
         Print("[CLI] (File resolved to: " + PathToString(filesystem::absolute(targetPath)) + ")");
-      } catch (...) {}
+      } catch (const exception& e) {
+        Print("[CLI] (File absolute path cannot be resolved: " + string(e.what()));
+      }
     }
     return SEARCH_RESULT(MATCH_TYPE_NONE, targetPath);
   }
@@ -575,7 +577,8 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromConfig(CConfig* mapCFG, const bool si
   shared_ptr<CMap> map = nullptr;
   try {
     map = make_shared<CMap>(m_Aura, mapCFG);
-  } catch (...) {
+  } catch (const exception& e) {
+    Print("[MAP] Failed to load map : " + string(e.what()));
     return map;
   }
   /*
@@ -628,6 +631,17 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
   MapCFG.SetUint8("map.cfg.schema_number", MAP_CONFIG_SCHEMA_NUMBER);
   ExportTemporaryToMap(&MapCFG);
   if (m_StandardPaths) MapCFG.SetBool("map.standard_path", true);
+
+  {
+    W3ModLocale gameLocaleMod = m_GameLocaleMod.value_or(m_Aura->m_Config.m_GameLocaleModDefault);
+    array<string, 12> localeStrings = {"enUS", "deDE", "esES", "esMX", "frFR", "itIT", "koKR", "plPL", "ptBR", "ruRU", "zhCN", "zhTW"};
+    assert((uint8_t)W3ModLocale::LAST == localeStrings.size());
+    MapCFG.SetString("map.locale.mod", localeStrings[(uint8_t)gameLocaleMod]);
+  }
+  {
+    uint16_t gameLocaleLangID = m_GameLocaleLangID.value_or(m_Aura->m_Config.m_GameLocaleLangID);
+    MapCFG.SetUint16("map.locale.lang_id", gameLocaleLangID);
+  }
   MapCFG.Set("map.path", R"(Maps\Download\)" + baseFileName);
   string localPath = isInMapsFolder && !m_StandardPaths ? fileName : PathToString(filePath);
   MapCFG.Set("map.local_path", localPath);
@@ -641,8 +655,9 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFile(const filesystem::path& fileP
   shared_ptr<CMap> baseMap = nullptr;
   try {
     baseMap = make_shared<CMap>(m_Aura, &MapCFG);
-  } catch (...) {
+  } catch (const exception& e) {
     if (!silent) m_Ctx->ErrorReply("Failed to load map.", CHAT_SEND_SOURCE_ALL);
+    Print("[MAP] Failed to load map : " + string(e.what()));
     vector<uint8_t> bytes = MapCFG.Export();
     m_Aura->LogPersistent("[MAP] Failed to load [" + PathToString(filePath) + "] - config was:");
     m_Aura->LogPersistent(string(begin(bytes), end(bytes)));
@@ -695,7 +710,12 @@ shared_ptr<CMap> CGameSetup::GetBaseMapFromMapFileOrCache(const filesystem::path
           FileNameEquals(PathToString(cachedResult->GetServerPath()), PathToString(fileName))
         )
       ) {
-        cacheSuccess = true;
+        if (
+          (!m_GameLocaleLangID.has_value() || cachedResult->GetGameLocaleLangID() == m_GameLocaleLangID.value()) &&
+          (!m_GameLocaleMod.has_value() || cachedResult->GetGameLocaleMod() == m_GameLocaleMod.value())
+        ) {
+          cacheSuccess = true;
+        }
       }
       if (cacheSuccess) {
         if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
@@ -1597,6 +1617,8 @@ void CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
   if (nCLI->m_GameMapDownloadTimeout.has_value()) SetDownloadTimeout(nCLI->m_GameMapDownloadTimeout.value());
   if (nCLI->m_GameIsExpansion.has_value()) SetGameIsExpansion(nCLI->m_GameIsExpansion.value());
   if (nCLI->m_GameVersion.has_value()) SetGameVersion(nCLI->m_GameVersion.value());
+  if (nCLI->m_GameLocaleMod.has_value()) SetGameLocaleMod(nCLI->m_GameLocaleMod.value());
+  if (nCLI->m_GameLocaleLangID.has_value()) SetGameLocaleLangID(nCLI->m_GameLocaleLangID.value());
 }
 
 void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)

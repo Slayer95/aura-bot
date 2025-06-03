@@ -345,7 +345,7 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
   [[nodiscard]] std::optional<CConfig> RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
 
-  [[nodiscard]] std::optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const std::string& message, const uint8_t realmLocale);
+  [[nodiscard]] std::optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const std::string& message, const PvPGNLocale realmLocale);
 
   // send functions
 

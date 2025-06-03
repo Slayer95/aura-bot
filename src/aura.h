@@ -252,9 +252,13 @@ public:
   void ClearStaleContexts();
   void ClearStaleFileChunks();
   
-  inline bool MatchLogLevel(const LogLevel logLevel) const { return ((const uint8_t)logLevel) <= ((const uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace3
-  inline bool MatchLogLevel(const LogLevelExtra logLevel) const { return ((const uint8_t)logLevel) <= ((const uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace 3 ... 11 extra
-  inline bool GetIsLoggingTrace() const { return MatchLogLevel(LogLevelExtra::kTrace); }
+  inline bool MatchLogLevel(LogLevel logLevel) const { return ((uint8_t)logLevel) <= ((uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace3
+  inline bool MatchLogLevel(LogLevelExtra logLevel) const { return ((uint8_t)logLevel) <= ((uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace 3 ... 11 extra
+#ifdef DEBUG
+  inline bool GetIsLoggingTrace() const { return MatchLogLevel(LogLevel::kTrace); }
+#else
+  inline bool GetIsLoggingTrace() const { return false; }
+#endif
   void LogPersistent(const std::string& logText);
   void LogRemoteFile(const std::string& logText);
   void LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t adjustedInterval);

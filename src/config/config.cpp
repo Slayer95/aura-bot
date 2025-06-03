@@ -281,6 +281,11 @@ string CConfig::GetString(const string& key, const uint32_t minLength, const uin
   SUCCESS(value)
 }
 
+string CConfig::GetKeyValue(const string& key)
+{
+  return "<" + key + " = " + GetString(key) + ">";
+}
+
 string CConfig::GetGameCounterTemplate(const string& key, const string& defaultValue)
 {
   GET_KEY(key, value, defaultValue)

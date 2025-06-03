@@ -16,8 +16,9 @@ const FILE_LIST = [
   'src/config/config_realm.cpp',
   'src/config/config_commands.cpp',
 ];
-const configMaybeKeyRegexp = /CFG\.(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
-const configKeyRegexp = /CFG\.(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
+const configMaybeKeyRegexp = /CFG(?:\.|\-\>)(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
+const configKeyRegexp = /CFG(?:\.|\-\>)(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
+const configEnumRegexp = /CFG(?:\.|\-\>)(GetEnum\<[a-zA-Z0-9]+\>)\("([^"]+)\", (?:[a-zA-Z0-9_]+|TO_ARRAY\([^\)]+\)), ([^\)]+)\)/;
 
 const ReloadModes = {NONE: 0, INSTANT: 1, NEXT: 2};
 
@@ -118,6 +119,14 @@ async function main() {
         } else if (fileName == 'src/config/config_game.cpp') {
           optionsMeta.get(lastConfigName).reload = ReloadModes.NEXT;
         }
+        continue;
+      }
+      let enumMatch = configEnumRegexp.exec(trimmed);
+      if (enumMatch) {
+        const [, fnName, keyName, restArgs] = enumMatch;
+        lastConfigName = keyName;
+        configOptions.push({keyName, fnName, restArgs});
+        if (!optionsMeta.has(lastConfigName)) optionsMeta.set(lastConfigName, {});
         continue;
       }
       if (trimmed.endsWith(`CFG.FailIfErrorLast();`)) {

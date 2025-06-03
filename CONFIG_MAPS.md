@@ -39,6 +39,11 @@ Map
 - Default value: Empty
 - Error handling: Use default value
 
+## \`map.auto_commands.init\`
+- Type: list
+- Default value: 
+- Error handling: Use default value
+
 ## \`map.auto_start.players\`
 - Type: uint8
 - Default value: 2
@@ -244,7 +249,7 @@ Map
 - Error handling: Use default value
 
 ## \`map.game_result.source\`
-- Type: enum
+- Type: enum\<gameresultsourceselect\>
 - Default value: Empty
 - Error handling: Abort operation
 
@@ -308,8 +313,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.loading.mode\`
-- Type: enum
-- Default value: GAME_LOADING_TIMEOUT_STRICT
+- Type: enum\<gameloadingtimeoutmode\>
+- Default value: GameLoadingTimeoutMode::kStrict
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.loading.timeout\`
@@ -318,8 +323,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.lobby.mode\`
-- Type: enum
-- Default value: LOBBY_TIMEOUT_OWNERLESS
+- Type: enum\<lobbytimeoutmode\>
+- Default value: LobbyTimeoutMode::kOwnerMissing
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.lobby.timeout\`
@@ -333,8 +338,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.owner.mode\`
-- Type: enum
-- Default value: LOBBY_OWNER_TIMEOUT_ABSENT
+- Type: enum\<lobbyownertimeoutmode\>
+- Default value: LobbyOwnerTimeoutMode::kAbsent
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.owner.timeout\`
@@ -343,8 +348,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.playing.mode\`
-- Type: enum
-- Default value: GAME_PLAYING_TIMEOUT_STRICT
+- Type: enum\<gameplayingtimeoutmode\>
+- Default value: GamePlayingTimeoutMode::kStrict
 - Error handling: Use default value
 
 ## \`map.hosting.expiry.playing.timeout\`
@@ -372,24 +377,29 @@ Map
 - Default value: 10
 - Error handling: Use default value
 
+## \`map.hosting.fake_users.share_units.mode\`
+- Type: enum\<fakeusersshareunitsmode\>
+- Default value: FakeUsersShareUnitsMode::kAuto
+- Error handling: Use default value
+
 ## \`map.hosting.game_over.player_count\`
 - Type: uint8
 - Default value: 1
 - Error handling: Use default value
 
 ## \`map.hosting.game_protocol.leaver_handler\`
-- Type: enum
-- Default value: ON_PLAYER_LEAVE_NATIVE
+- Type: enum\<onplayerleavehandler\>
+- Default value: OnPlayerLeaveHandler::kNative
 - Error handling: Use default value
 
 ## \`map.hosting.game_protocol.share_handler\`
-- Type: enum
-- Default value: ON_SHARE_UNITS_NATIVE
+- Type: enum\<onshareunitshandler\>
+- Default value: OnShareUnitsHandler::kNative
 - Error handling: Use default value
 
 ## \`map.hosting.game_ready.mode\`
-- Type: enum
-- Default value: READY_MODE_EXPECT_RACE
+- Type: enum\<playersreadymode\>
+- Default value: PlayersReadyMode::kExpectRace
 - Error handling: Use default value
 
 ## \`map.hosting.game_start.count_down_interval\`
@@ -427,8 +437,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.hosting.ip_filter.flood_handler\`
-- Type: enum
-- Default value: ON_IPFLOOD_DENY
+- Type: enum\<onipfloodhandler\>
+- Default value: OnIPFloodHandler::kDeny
 - Error handling: Use default value
 
 ## \`map.hosting.join_in_progress.observers\`
@@ -472,13 +482,13 @@ Map
 - Error handling: Use default value
 
 ## \`map.hosting.name_filter.unsafe_handler\`
-- Type: enum
-- Default value: ON_UNSAFE_NAME_DENY
+- Type: enum\<onunsafenamehandler\>
+- Default value: OnUnsafeNameHandler::kDeny
 - Error handling: Use default value
 
 ## \`map.hosting.nicknames.hide_in_game\`
-- Type: enum
-- Default value: HIDE_IGN_AUTO
+- Type: enum\<hideignmode\>
+- Default value: HideIGNMode::kAuto
 - Error handling: Use default value
 
 ## \`map.hosting.nicknames.hide_lobby\`
@@ -487,8 +497,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.hosting.realm_broadcast.error_handler\`
-- Type: enum
-- Default value: ON_ADV_ERROR_EXIT_ON_MAX_ERRORS
+- Type: enum\<onrealmbroadcasterrorhandler\>
+- Default value: OnRealmBroadcastErrorHandler::kExitOnMaxErrors
 - Error handling: Use default value
 
 ## \`map.hosting.save_game.allowed\`
@@ -520,14 +530,14 @@ Map
 - Default value: Empty
 - Error handling: Use default value
 
-## \`map.locale\`
-- Type: uint32
-- Default value: 0
+## \`map.locale.lang_id\`
+- Type: uint16
+- Default value: deductedLangId.value_or(m_GameLocaleLangID
 - Error handling: Use default value
 
 ## \`map.lua\`
 - Type: bool
-- Default value: Empty
+- Default value: false
 - Error handling: Use default value
 
 ## \`map.melee\`
@@ -576,9 +586,9 @@ Map
 - Error handling: Use default value
 
 ## \`map.observers\`
-- Type: uint8
+- Type: enum\<gameobserversmode\>
 - Default value: Empty
-- Error handling: Abort operation
+- Error handling: Use default value
 
 ## \`map.options\`
 - Type: uint32
@@ -630,8 +640,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.speed\`
-- Type: uint8
-- Default value: MAPSPEED_FAST
+- Type: enum\<gamespeed\>
+- Default value: GameSpeed::kFast
 - Error handling: Use default value
 
 ## \`map.standard_path\`
@@ -645,8 +655,8 @@ Map
 - Error handling: Use default value
 
 ## \`map.visibility\`
-- Type: uint8
-- Default value: MAPVIS_DEFAULT
+- Type: enum\<gamevisibilitymode\>
+- Default value: GameVisibilityMode::kDefault
 - Error handling: Use default value
 
 ## \`map.w3hmc.file_name\`

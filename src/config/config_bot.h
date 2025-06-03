@@ -59,6 +59,8 @@ struct CBotConfig
   std::vector<std::string>                m_Greeting;                    // read from m_GreetingPath
 
   std::vector<Version>                    m_SupportedGameVersions;       // all game versions the bot will support either through LAN or bnet
+  W3ModLocale                             m_GameLocaleModDefault;
+  uint16_t                                m_GameLocaleLangID;
 
   uint8_t                                 m_LogRemoteMode;
   uint8_t                                 m_LogGameChat;
@@ -78,7 +80,7 @@ struct CBotConfig
   bool                                    m_StrictSearch;                // accept only exact paths (no fuzzy searches) for maps, etc.
   bool                                    m_MapSearchShowSuggestions;
   bool                                    m_EnableCFGCache;              // save read map CFGs to disk
-  uint8_t                                 m_CFGCacheRevalidateAlgorithm; // always, never, modified
+  CacheRevalidationMethod                 m_CFGCacheRevalidateAlgorithm; // always, never, modified
 
   CCommandConfig*                         m_LANCommandCFG;
   std::string                             m_LANReHostCounterTemplate;    // string in the form PREFIX {COUNT} SUFFIX

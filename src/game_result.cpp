@@ -135,7 +135,7 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
     m_MaxTeamsWithNoWinners(map->GetMapNumTeams())
 {
   const array<string, 5> truthSourceOptions = {"none", "only-exit", "only-mmd", "prefer-exit", "prefer-mmd"};
-  assert(GameResultSourceSelect::LAST == truthSourceOptions.size());
+  assert((uint8_t)GameResultSourceSelect::LAST == truthSourceOptions.size());
   if (CFG.Exists("map.game_result.source")) {
     m_SourceOfTruth = CFG.GetEnum<GameResultSourceSelect>("map.game_result.source", truthSourceOptions, m_SourceOfTruth);
     CFG.FailIfErrorLast();

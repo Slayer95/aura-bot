@@ -12,6 +12,7 @@ const FILE_LIST = [
 ];
 const configMaybeKeyRegexp = /CFG(?:\.|\-\>)(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
 const configKeyRegexp = /CFG(?:\.|\-\>)(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
+const configEnumRegexp = /CFG(?:\.|\-\>)(GetEnum\<[a-zA-Z0-9]+\>)\("([^"]+)\", (?:[a-zA-Z0-9_]+|TO_ARRAY\([^\)]+\)), ([^\)]+)\)/;
 
 function getKeyType(keyName) {
   let subName = '';
@@ -29,6 +30,7 @@ function getKeyType(keyName) {
 }
 
 function getDefaultValue(rest, keyName) {
+  console.log({rest, keyName});
   if (keyName === `net.host_port.min`) return `<net.host_port.only>`;
   if (keyName === `net.host_port.max`) return `<net.host_port.min>`;
   if (rest.endsWith('}') && rest.includes('{')) {
@@ -91,6 +93,15 @@ async function main() {
       let keyMatch = configKeyRegexp.exec(trimmed);
       if (keyMatch) {
         const [, fnName, keyName, restArgs] = keyMatch;
+        lastConfigName = keyName;
+        configOptions.push({keyName, fnName, restArgs});
+        if (!optionsMeta.has(lastConfigName)) optionsMeta.set(lastConfigName, {});
+        if (isStrictMode) optionsMeta.get(lastConfigName).failIfError = true;
+        continue;
+      }
+      let enumMatch = configEnumRegexp.exec(trimmed);
+      if (enumMatch) {
+        const [, fnName, keyName, restArgs] = enumMatch;
         lastConfigName = keyName;
         configOptions.push({keyName, fnName, restArgs});
         if (!optionsMeta.has(lastConfigName)) optionsMeta.set(lastConfigName, {});

@@ -75,6 +75,9 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   m_TargetCommunity              = CFG.GetBool("hosting.game_versions.community", false);
 
+  m_GameLocaleModDefault         = CFG.GetEnumSensitive<W3ModLocale>("hosting.game_locale.mod.default", TO_ARRAY("enUS", "deDE", "esES", "esMX", "frFR", "itIT", "koKR", "plPL", "ptBR", "ruRU", "zhCN", "zhTW"), W3ModLocale::kENUS);
+  m_GameLocaleLangID             = CFG.GetUint16("hosting.game_locale.lang_id.default", 0);
+
   m_AllowJASS                    = CFG.GetBool("maps.jass.enabled", true);
   m_AllowLua                     = CFG.GetStringIndex("maps.lua.enabled", {"never", "always", "auto"}, MAP_ALLOW_LUA_AUTO);
 
@@ -136,7 +139,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
   m_StrictSearch                 = CFG.GetBool("bot.load_maps.strict_search", false);
   m_MapSearchShowSuggestions     = CFG.GetBool("bot.load_maps.show_suggestions", true);
   m_EnableCFGCache               = CFG.GetBool("bot.load_maps.cache.enabled", true);
-  m_CFGCacheRevalidateAlgorithm  = CFG.GetStringIndex("bot.load_maps.cache.revalidation.algorithm", {"never", "always", "modified"}, CACHE_REVALIDATION_MODIFIED);
+  m_CFGCacheRevalidateAlgorithm  = CFG.GetEnum<CacheRevalidationMethod>("bot.load_maps.cache.revalidation.algorithm", TO_ARRAY("never", "always", "modified"), CacheRevalidationMethod::kModified);
   m_LANReHostCounterTemplate     = CFG.GetGameNameTemplate("lan_realm.rehost.name_template", "-{COUNT}");
   m_LANLobbyNameTemplate         = CFG.GetGameNameTemplate("lan_realm.lobby.name_template", "{NAME}{COUNTER}");
   m_LANWatchableNameTemplate     = CFG.GetGameNameTemplate("lan_realm.watchable.name_template", "{NAME}{COUNTER}");

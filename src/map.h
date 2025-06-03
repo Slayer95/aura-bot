@@ -106,7 +106,6 @@ struct MapEssentials
   Version minSuggestedGameVersion;
   bool isExpansion;
   bool isLua;
-  bool foundLua;
   uint32_t editorVersion;
   uint32_t options;
   uint32_t previewImgSize;
@@ -131,7 +130,6 @@ struct MapEssentials
      minSuggestedGameVersion(GAMEVER(1u, 0u)),
      isExpansion(false),
      isLua(false),
-     foundLua(false),
      editorVersion(0),
      options(0),
      previewImgSize(0)/*,
@@ -372,7 +370,8 @@ private:
   SharedByteArray                 m_MapFileContents;       // the map data itself, for sending the map to players
   bool                            m_MapFileIsValid;
   bool                            m_MapLoaderIsPartial;
-  uint32_t                        m_MapLocale;
+  std::optional<W3ModLocale>      m_GameLocaleMod;
+  uint16_t                        m_GameLocaleLangID;
   uint32_t                        m_MapOptions;
   uint32_t                        m_MapEditorVersion;
   uint8_t                         m_MapDataSet;
@@ -450,7 +449,8 @@ public:
   [[nodiscard]] inline Version                    GetMapTargetGameVersion() const { return m_MapTargetGameVersion.value(); }
   [[nodiscard]] inline bool                       GetMapHasTargetGameIsExpansion() const { return m_MapTargetGameIsExpansion.has_value(); }
   [[nodiscard]] inline bool                       GetMapTargetGameIsExpansion() const { return m_MapTargetGameIsExpansion.value(); }
-  [[nodiscard]] inline uint32_t                   GetMapLocale() const { return m_MapLocale; }
+  [[nodiscard]] inline std::optional<W3ModLocale> GetGameLocaleMod() const { return m_GameLocaleMod; }
+  [[nodiscard]] inline uint16_t                   GetGameLocaleLangID() const { return m_GameLocaleLangID; }
   [[nodiscard]] inline uint32_t                   GetMapOptions() const { return m_MapOptions; }
   [[nodiscard]] inline uint8_t                    GetMapDataSet() const { return m_MapDataSet; }
   [[nodiscard]] inline bool                       GetMapRequiresExpansion() const { return m_MapRequiresExpansion; }
@@ -523,6 +523,8 @@ public:
 
   void                                            OnLoadMPQSubFile(std::optional<MapEssentials>& mapEssentials, std::map<Version, MapCrypto>& cryptos, const std::vector<Version>& supportedVersionHeads, const std::string& fileContents, const bool isMapScript);
 
+  void                                            ReadFileFromArchiveExact(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
+  void                                            ReadFileFromArchiveExact(std::string& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::vector<uint8_t>& container, const std::string& fileSubPath) const;
   void                                            ReadFileFromArchive(std::string& container, const std::string& fileSubPath) const;
   std::optional<uint32_t>                         GetFileSizeFromArchive(const std::string& fileSubPath) const;
@@ -607,6 +609,8 @@ public:
     return result;
   }
 
+  [[nodiscard]] static uint16_t GetLocaleInt(const W3ModLocale locale);
+  [[nodiscard]] static std::string GetLocalizedInMPQPath(const W3ModLocale locale, const std::string& baseName);
   [[nodiscard]] static std::string SanitizeTrigStr(const std::string& input);
   [[nodiscard]] static std::optional<std::string> GetTrigStr(const std::string& fileContents, const uint32_t targetNum);
   [[nodiscard]] static std::map<uint32_t, std::string> GetTrigStrMulti(const std::string& fileContents, const std::set<uint32_t> captureTargets);

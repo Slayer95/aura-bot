@@ -329,6 +329,18 @@ case Aura cannot figure out the version used by a game client.
 
 This option is equivalent to ``<game.install_version>`` in `config.ini`
 
+## \`--cache-revalidate \<METHOD\>\`
+
+Specifies the method used to revalidate the cached map configurations.
+
+**Options:**
+
+- never: Never try to validate the cached configurations against the maps they are based on.
+- always: Always validate the cached configurations against the maps they are based on.
+- modified: Only validate the cached configurations against the maps they are based on if modifications are detected in the map.
+
+This option is equivalent to ``<bot.load_maps.cache.revalidation.algorithm>`` in `config.ini`
+
 ## \`--bind-address \<IPv4>\`
 
 If specified, Aura's game server will only allow connections from the provided IPv4 address.
@@ -1231,6 +1243,33 @@ Specifies the main version targetted by a game lobby.
 This option is equivalent to ``<hosting.game_versions.main>`` in `config.ini`
 
 This option is equivalent to ``<map.hosting.game_versions.main>`` in map configuration
+
+## \`--game-locale-mod \<LOCALE\>\`
+
+Specifies the locale targetted by a game lobby. This option uses the _Locales feature introduced in game version v1.30.
+
+This option is equivalent to ``<map.locale.mod>`` in map configuration
+
+**Options:**
+- enUS
+- deDE
+- esES
+- esMX
+- frFR
+- itIT
+- koKR
+- plPL
+- ptBR
+- ruRU
+- zhCN
+- zhTW
+
+## \`--game-locale-lang-id \<LOCALE\>\`
+
+Specifies the locale targetted by a game lobby. This option uses the legacy MPQ-based localization feature.
+Locale must be specified as a Windows LANGID. 
+
+This option is equivalent to ``<map.locale.lang_id>`` in map configuration
 
 ## \`--crossplay \<MODE\>\`
 

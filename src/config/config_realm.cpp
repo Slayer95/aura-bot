@@ -47,7 +47,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_Enabled(true),
     m_Valid(true),
     m_LocaleShort({83, 69, 115, 101}), // esES, reversed
-    m_Locale(PVPGN_LOCALE_ES_ES),
+    m_Locale(PvPGNLocale::kESES),
     m_AutoRegister(false),
     m_UserNameCaseSensitive(false),
     m_PassWordCaseSensitive(false),
@@ -85,8 +85,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     }
   }
 
-  vector<string> shortLocales = {"enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"};
-  m_Locale = CFG.GetStringIndexSensitive(m_CFGKeyPrefix + "locale_short", shortLocales, PVPGN_LOCALE_ES_ES);
+  m_Locale = CFG.GetEnumSensitive<PvPGNLocale>(m_CFGKeyPrefix + "locale_short", TO_ARRAY("enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"), PvPGNLocale::kESES);
 
   if (m_Win32Locale == "system") {
     m_Win32LocaleID = 10250;
@@ -364,8 +363,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     }
   }
 
-  vector<string> shortLocales = {"enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"};
-  m_Locale = CFG.GetStringIndexSensitive(m_CFGKeyPrefix + "locale_short", shortLocales, m_Locale);
+  m_Locale = CFG.GetEnumSensitive<PvPGNLocale>(m_CFGKeyPrefix + "locale_short", TO_ARRAY("enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"), m_Locale);
 
   if (m_Win32Locale == "system") {
     m_Win32LocaleID = 10250;
@@ -534,13 +532,13 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   if (m_WhisperErrorReply.empty()) {
     switch (m_Locale) {
-      case PVPGN_LOCALE_DE_DE:
+      case PvPGNLocale::kDEDE:
         m_WhisperErrorReply = "Dieser Nutzer ist nicht eingeloggt.";
         break;
-      case PVPGN_LOCALE_ES_ES:
+      case PvPGNLocale::kESES:
         m_WhisperErrorReply = "Ese usuario no está conectado.";
         break;
-      case PVPGN_LOCALE_EN_US:
+      case PvPGNLocale::kENUS:
       default:
         m_WhisperErrorReply = "That user is not logged on.";
         break;

@@ -71,6 +71,7 @@ public:
   std::optional<bool>                         m_Discord;
   std::optional<bool>                         m_ExitOnStandby;
   std::optional<bool>                         m_UseMapCFGCache;
+  std::optional<CacheRevalidationMethod>      m_MapCFGCacheRevalidation;
   std::optional<std::string>                  m_BindAddress;
   std::optional<uint16_t>                     m_HostPort;
   std::optional<UDPDiscoveryMode>             m_UDPDiscoveryMode;
@@ -91,8 +92,10 @@ public:
   std::optional<std::string>                  m_SearchTarget;
   std::optional<uint8_t>                      m_SearchType;
   std::optional<std::string>                  m_GameName;
-  std::optional<Version>                      m_GameVersion;
   std::optional<bool>                         m_GameIsExpansion;
+  std::optional<Version>                      m_GameVersion;
+  std::optional<W3ModLocale>                  m_GameLocaleMod;
+  std::optional<uint16_t>                     m_GameLocaleLangID;
   std::optional<bool>                         m_GameTeamsLocked;
   std::optional<bool>                         m_GameTeamsTogether;
   std::optional<bool>                         m_GameAdvancedSharedUnitControl;

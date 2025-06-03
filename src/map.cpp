@@ -74,12 +74,12 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapServerPath(CFG->GetPath("map.local_path", filesystem::path())),
     m_MapFileIsValid(false),
     m_MapLoaderIsPartial(CFG->GetBool("map.cfg.partial", false)), // from CGameSetup or !cachemaps
-    m_MapLocale(CFG->GetUint32("map.locale", 0)),
+    m_GameLocaleLangID(0),
     m_MapOptions(0),
     m_MapEditorVersion(0),
     m_MapDataSet(MAP_DATASET_DEFAULT),
     m_MapRequiresExpansion(false),
-    m_MapIsLua(false),
+    m_MapIsLua(CFG->GetBool("map.lua", false)),
     m_MapIsMelee(false),
     m_MapMinGameVersion(GAMEVER(1u, 0u)),
     m_MapMinSuggestedGameVersion(GAMEVER(1u, 0u)),
@@ -105,6 +105,26 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
   m_MapCRC32.fill(0);
   m_MapSHA1.fill(0);
   m_MapContentMismatch.fill(0);
+
+  m_CFGName = PathToString(CFG->GetFile().filename());
+
+  AcquireGameIsExpansion(CFG);
+  AcquireGameVersion(CFG);
+
+  optional<uint16_t> deductedLangId;
+  if (CFG->Exists("map.locale.mod")) {
+    if (m_MapTargetGameVersion.has_value() && m_MapTargetGameVersion.value() >= GAMEVER(1u, 30u)) {
+      m_GameLocaleMod = CFG->GetEnumSensitive<W3ModLocale>("map.locale.mod", TO_ARRAY("enUS", "deDE", "esES", "esMX", "frFR", "itIT", "koKR", "plPL", "ptBR", "ruRU", "zhCN", "zhTW"), W3ModLocale::kENUS);
+      deductedLangId = CMap::GetLocaleInt(m_GameLocaleMod.value());
+    } else {
+      PRINT_IF(LogLevel::kDebug, "[MAP] " + CFG->GetKeyValue("map.locale.mod") + " not supported - game version >= v1.30 is required");
+    }
+  }
+
+  m_GameLocaleLangID = CFG->GetUint16("map.locale.lang_id", deductedLangId.value_or(m_GameLocaleLangID));
+  if (m_GameLocaleLangID != 0 && deductedLangId.has_value() && m_GameLocaleLangID != deductedLangId.value()) {
+    PRINT_IF(LogLevel::kWarning, "[MAP] warning - " + CFG->GetKeyValue("map.locale.lang_id") + " does not match " + CFG->GetKeyValue("map.locale.mod")); 
+  }
 
   Load(CFG);
 }
@@ -355,7 +375,7 @@ SharedByteArray CMap::GetMapPreviewContents()
       }
       SharedByteArray fileContentsPtr = make_shared<vector<uint8_t>>();
       fileContentsPtr->reserve(GetMapPreviewImageSize());
-      ReadFileFromArchive(*(fileContentsPtr.get()), GetMapPreviewImagePath());
+      ReadFileFromArchiveExact(*(fileContentsPtr.get()), GetMapPreviewImagePath());
       if (isTempMPQ) {
         SFileCloseArchive(m_MapMPQ);
         m_MapMPQ = nullptr;
@@ -672,8 +692,8 @@ void CMap::OnLoadMPQSubFile(optional<MapEssentials>& /*mapEssentials*/, map<Vers
   } else {
     // Load common.j, blizzard.j as soon as we load war3map.j
     string mapCommonJ, mapBlizzardJ;
-    ReadFileFromArchive(mapCommonJ, R"(Scripts\common.j)");
-    ReadFileFromArchive(mapBlizzardJ, R"(Scripts\blizzard.j)");
+    ReadFileFromArchiveExact(mapCommonJ, R"(Scripts\common.j)");
+    ReadFileFromArchiveExact(mapBlizzardJ, R"(Scripts\blizzard.j)");
 
     for (const auto& version: supportedVersionHeads) {
       string baseCommonJ, baseBlizzardJ;
@@ -713,22 +733,48 @@ void CMap::OnLoadMPQSubFile(optional<MapEssentials>& /*mapEssentials*/, map<Vers
   }
 }
 
-void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSubPath) const
+void CMap::ReadFileFromArchiveExact(vector<uint8_t>& container, const string& fileSubPath) const
 {
   const char* path = fileSubPath.c_str();
-  ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
+  ReadMPQFile(m_MapMPQ, path, container, m_GameLocaleLangID);
+}
+
+void CMap::ReadFileFromArchiveExact(string& container, const string& fileSubPath) const
+{
+  const char* path = fileSubPath.c_str();
+  ReadMPQFile(m_MapMPQ, path, container, m_GameLocaleLangID);
+}
+
+void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSubPath) const
+{
+  if (m_GameLocaleMod.has_value()) {
+    string localizedPath = CMap::GetLocalizedInMPQPath(m_GameLocaleMod.value(), fileSubPath);
+    ReadFileFromArchiveExact(container, localizedPath);
+    if (!container.empty()) {
+      PRINT_IF(LogLevel::kInfo, "[MAP] found [" + localizedPath + "]")
+      return;
+    }
+  }
+  ReadFileFromArchiveExact(container, fileSubPath);
 }
 
 void CMap::ReadFileFromArchive(string& container, const string& fileSubPath) const
 {
-  const char* path = fileSubPath.c_str();
-  ReadMPQFile(m_MapMPQ, path, container, m_MapLocale);
+  if (m_GameLocaleMod.has_value()) {
+    string localizedPath = CMap::GetLocalizedInMPQPath(m_GameLocaleMod.value(), fileSubPath);
+    ReadFileFromArchiveExact(container, localizedPath);
+    if (!container.empty()) {
+      PRINT_IF(LogLevel::kInfo, "[MAP] found [" + localizedPath + "]")
+      return;
+    }
+  }
+  ReadFileFromArchiveExact(container, fileSubPath);
 }
 
 optional<uint32_t> CMap::GetFileSizeFromArchive(const std::string& fileSubPath) const
 {
   const char* path = fileSubPath.c_str();
-  return GetMPQFileSize(m_MapMPQ, path, m_MapLocale);
+  return GetMPQFileSize(m_MapMPQ, path, m_GameLocaleLangID);
 }
 
 void CMap::ReplaceTriggerStrings(string& container, vector<string*>& maybeWTSRefs) const
@@ -752,6 +798,7 @@ void CMap::ReplaceTriggerStrings(string& container, vector<string*>& maybeWTSRef
     return;
   }
 
+  // loads localized strings if they exist
   ReadFileFromArchive(container, "war3map.wts");
   if (container.empty()) {
     return;
@@ -785,68 +832,6 @@ optional<MapEssentials> CMap::ParseMPQ()
   }
 
   string fileContents;
-  {
-    bool foundScript = false;
-    vector<string> fileList;
-    fileList.emplace_back("war3map.j");
-    fileList.emplace_back(R"(scripts\war3map.j)");
-    fileList.emplace_back("war3map.lua");
-    fileList.emplace_back(R"(scripts\war3map.lua)");
-    fileList.emplace_back("war3map.w3e");
-    fileList.emplace_back("war3map.wpm");
-    fileList.emplace_back("war3map.doo");
-    fileList.emplace_back("war3map.w3u");
-    fileList.emplace_back("war3map.w3b");
-    fileList.emplace_back("war3map.w3d");
-    fileList.emplace_back("war3map.w3a");
-    fileList.emplace_back("war3map.w3q");
-
-    for (const auto& fileName : fileList) {
-      const bool isMapScript = GetMPQPathIsMapScript(fileName);
-      if (isMapScript) {
-        // only one map script file is used if there are more than one
-        // JASS is preferred over Lua; root is preferred over Scripts folder
-        if (foundScript) continue;
-      } else if (!foundScript) {
-        m_Valid = false;
-        m_ErrorMessage = "war3map.j or war3map.lua not found in MPQ archive";
-        break;
-      }
-      ReadFileFromArchive(fileContents, fileName);
-      if (fileContents.empty()) continue;
-      if (isMapScript) {
-        foundScript = true;
-        mapEssentials->foundLua = fileName.substr(fileName.size() - 4) == ".lua";
-      }
-      OnLoadMPQSubFile(mapEssentials, cryptos, supportedVersionHeads, fileContents, isMapScript);
-    }
-
-    for (const auto& version : supportedVersionHeads) {
-      auto mapCryptoProcessor = cryptos.find(version);
-      //mapEssentials->fragmentHashes.emplace(version, MapFragmentHashes());
-      mapEssentials->fragmentHashes[version];
-      // make sure to instantiate MapFragmentHashes anyway, so that mapEssentials is in a valid state
-      // (note: contents are wrapped in std::optional)
-      if (mapCryptoProcessor->second.errored) {
-        PRINT_IF(LogLevel::kWarning, "[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">")
-        continue;
-      }
-      auto mapCryptoResults = mapEssentials->fragmentHashes.find(version);
-      EnsureFixedByteArray(mapCryptoResults->second.blizz, mapCryptoProcessor->second.blizz, false);
-      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.blizz.value()) + ">")
-
-      mapCryptoProcessor->second.sha1.Final();
-      mapCryptoResults->second.sha1.emplace();
-      mapCryptoResults->second.sha1->fill(0);
-      mapCryptoProcessor->second.sha1.GetHash(mapCryptoResults->second.sha1->data());
-      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.sha1.value()) + ">")
-    }
-
-    if (!m_JASSValid && m_ErrorMessage.empty()) {
-      m_Valid = false;
-      m_ErrorMessage = "map script is not valid JASS - " + m_JASSErrorMessage;
-    }
-  }
 
   // try to calculate <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>, <map.filter_type>
 
@@ -942,16 +927,6 @@ optional<MapEssentials> CMap::ParseMPQ()
         mapEssentials->editorVersion = RawEditorVersion;
         mapEssentials->isExpansion = FileFormat >= 25;
         mapEssentials->isLua = RawScriptingLanguage > 0;
-
-        if (mapEssentials->isLua != mapEssentials->foundLua && m_ErrorMessage.empty()) {
-          m_Valid = false;
-          if (mapEssentials->isLua) {
-            m_ErrorMessage = "map is declared as Lua, but war3map.j was found";
-          } else {
-            m_ErrorMessage = "map is declared as JASS, but war3map.lua was found";
-          }
-        }
-
         mapEssentials->name = RawMapName;
         mapEssentials->author = RawMapAuthor;
         mapEssentials->desc = RawMapDescription;
@@ -1105,6 +1080,9 @@ optional<MapEssentials> CMap::ParseMPQ()
         mapEssentials->minCompatibleGameVersion = GAMEVER(1u, 7u);
       }
 
+      // Lua flag from w3i wins over CFG
+      m_MapIsLua = mapEssentials->isLua;
+
       vector<string*> maybeTriggerStrings;
       maybeTriggerStrings.push_back(&mapEssentials->name);
       maybeTriggerStrings.push_back(&mapEssentials->author);
@@ -1113,13 +1091,13 @@ optional<MapEssentials> CMap::ParseMPQ()
 
       /*
       if (!mapEssentials->prologueImgPath.empty()) {
-        ReadFileFromArchive(fileContents, mapEssentials->prologueImgPath);
+        ReadFileFromArchiveExact(fileContents, mapEssentials->prologueImgPath);
         if (!fileContents.empty()) {
           mapEssentials->prologueImgSize = fileContents.size();
         }
       }
       if (!mapEssentials->loadingImgPath.empty()) {
-        ReadFileFromArchive(fileContents, mapEssentials->loadingImgPath);
+        ReadFileFromArchiveExact(fileContents, mapEssentials->loadingImgPath);
         if (!fileContents.empty()) {
           mapEssentials->loadingImgSize = fileContents.size();
         }
@@ -1133,6 +1111,95 @@ optional<MapEssentials> CMap::ParseMPQ()
     }
   } else { // end m_MapLoaderIsPartial
     DPRINT_IF(LogLevel::kTrace, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
+  }
+
+  if (m_MapIsLua) {
+    switch (m_Aura->m_Config.m_AllowLua) {
+      case MAP_ALLOW_LUA_NEVER: {
+        m_Valid = false;
+        m_ErrorMessage = "map script uses Lua, which is not allowed";
+        break;
+      }
+      case MAP_ALLOW_LUA_AUTO: {
+        Version minVersion = m_Aura->m_Config.m_TargetCommunity ? GAMEVER(1u, 29u) : GAMEVER(1u, 31u);
+        if (m_MapTargetGameVersion.has_value() && m_MapTargetGameVersion.value() < minVersion) {
+          m_Valid = false;
+          m_ErrorMessage = "map script uses Lua, which is not allowed";
+          break;
+        }
+      }
+    }
+  } else if (!m_Aura->m_Config.m_AllowJASS) {
+    m_Valid = false;
+    m_ErrorMessage = "only Lua maps are allowed";
+  }
+
+  {
+    bool foundScript = false;
+    vector<string> fileList;
+    if (m_MapIsLua) {
+      fileList.emplace_back("war3map.lua");
+      fileList.emplace_back(R"(scripts\war3map.lua)");
+    } else {
+      fileList.emplace_back("war3map.j");
+      fileList.emplace_back(R"(scripts\war3map.j)");
+    }
+    fileList.emplace_back("war3map.w3e");
+    fileList.emplace_back("war3map.wpm");
+    fileList.emplace_back("war3map.doo");
+    fileList.emplace_back("war3map.w3u");
+    fileList.emplace_back("war3map.w3b");
+    fileList.emplace_back("war3map.w3d");
+    fileList.emplace_back("war3map.w3a");
+    fileList.emplace_back("war3map.w3q");
+
+    for (const auto& fileName : fileList) {
+      const bool isMapScript = GetMPQPathIsMapScript(fileName);
+      if (isMapScript) {
+        // only one map script file is used if there are more than one
+        // JASS is preferred over Lua; root is preferred over Scripts folder
+        if (foundScript) continue;
+      } else if (!foundScript) {
+        m_Valid = false;
+        m_ErrorMessage = "war3map.j or war3map.lua not found in MPQ archive";
+        break;
+      }
+
+      ReadFileFromArchive(fileContents, fileName);
+      if (fileContents.empty()) {
+        continue;
+      }
+      if (isMapScript) {
+        foundScript = true;
+      }
+      OnLoadMPQSubFile(mapEssentials, cryptos, supportedVersionHeads, fileContents, isMapScript);
+    }
+
+    for (const auto& version : supportedVersionHeads) {
+      auto mapCryptoProcessor = cryptos.find(version);
+      //mapEssentials->fragmentHashes.emplace(version, MapFragmentHashes());
+      mapEssentials->fragmentHashes[version];
+      // make sure to instantiate MapFragmentHashes anyway, so that mapEssentials is in a valid state
+      // (note: contents are wrapped in std::optional)
+      if (mapCryptoProcessor->second.errored) {
+        PRINT_IF(LogLevel::kWarning, "[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">")
+        continue;
+      }
+      auto mapCryptoResults = mapEssentials->fragmentHashes.find(version);
+      EnsureFixedByteArray(mapCryptoResults->second.blizz, mapCryptoProcessor->second.blizz, false);
+      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.blizz.value()) + ">")
+
+      mapCryptoProcessor->second.sha1.Final();
+      mapCryptoResults->second.sha1.emplace();
+      mapCryptoResults->second.sha1->fill(0);
+      mapCryptoProcessor->second.sha1.GetHash(mapCryptoResults->second.sha1->data());
+      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.sha1.value()) + ">")
+    }
+
+    if (!m_JASSValid && m_ErrorMessage.empty()) {
+      m_Valid = false;
+      m_ErrorMessage = "map script is not valid JASS - " + m_JASSErrorMessage;
+    }
   }
 
   fileContents.clear();
@@ -1178,7 +1245,6 @@ optional<MapEssentials> CMap::ParseMPQ()
 void CMap::Load(CConfig* CFG)
 {
   m_Valid   = true;
-  m_CFGName = PathToString(CFG->GetFile().filename());
   bool isLatestSchema = CFG->GetUint8("map.cfg.schema_number", 0) == MAP_CONFIG_SCHEMA_NUMBER;
   bool ignoreMPQ = !HasServerPath();
   optional<uint32_t> mapFileSize;
@@ -1200,7 +1266,7 @@ void CMap::Load(CConfig* CFG)
   if (!ignoreMPQ) {
     ignoreMPQ = (
       (!m_MapLoaderIsPartial && isLatestSchema) &&
-      m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_NEVER
+      m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CacheRevalidationMethod::kNever
     );
   }
 
@@ -1214,7 +1280,7 @@ void CMap::Load(CConfig* CFG)
       fileModifiedTime = GetMaybeModifiedTime(resolvedFilePath);
       ignoreMPQ = (
         (!m_MapLoaderIsPartial && isLatestSchema) && (
-          m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CACHE_REVALIDATION_MODIFIED && (
+          m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CacheRevalidationMethod::kModified && (
             !fileModifiedTime.has_value() || (
               cachedModifiedTime.has_value() && fileModifiedTime.has_value() &&
               fileModifiedTime.value() <= cachedModifiedTime.value()
@@ -1242,9 +1308,6 @@ void CMap::Load(CConfig* CFG)
   if (mapFileSHA1.has_value()) {
     sha1 = mapFileSHA1.value();
   }
-
-  AcquireGameIsExpansion(CFG);
-  AcquireGameVersion(CFG);
 
   optional<MapEssentials> mapEssentials;
   if (!ignoreMPQ) {
@@ -1285,7 +1348,8 @@ void CMap::Load(CConfig* CFG)
     m_MapMinGameVersion = mapEssentials->minCompatibleGameVersion;
     m_MapMinSuggestedGameVersion = mapEssentials->minSuggestedGameVersion;
     m_MapRequiresExpansion = mapEssentials->isExpansion;
-    m_MapIsLua = mapEssentials->isLua;
+    //already loaded - this is a critical definition
+    //m_MapIsLua = mapEssentials->isLua;
     m_MapEditorVersion = mapEssentials->editorVersion;
     m_MapOptions = mapEssentials->options;
 
@@ -1503,11 +1567,8 @@ void CMap::Load(CConfig* CFG)
     CFG->SetBool("map.expansion", m_MapRequiresExpansion);
   }
 
-  if (CFG->Exists("map.lua")) {
-    m_MapIsLua = CFG->GetBool("map.lua", m_MapIsLua);
-  } else {
-    CFG->SetBool("map.lua", m_MapIsLua);
-  }
+  // Update Lua flag from war3map.w3i if we read it
+  CFG->SetBool("map.lua", m_MapIsLua);
 
   if (CFG->Exists("map.editor_version")) {
     m_MapEditorVersion = CFG->GetUint32("map.editor_version", m_MapEditorVersion);
@@ -1977,30 +2038,6 @@ string CMap::CheckProblems()
     m_Valid = false;
     m_ErrorMessage = "hosting in v" + ToVersionString(m_MapTargetGameVersion.value()) + " is not supported";
     return m_ErrorMessage;
-  }
-
-  if (!m_MapIsLua && !m_Aura->m_Config.m_AllowJASS) {
-    m_Valid = false;
-    m_ErrorMessage = "only Lua maps are allowed";
-    return m_ErrorMessage;
-  }
-
-  if (m_MapIsLua) {
-    switch (m_Aura->m_Config.m_AllowLua) {
-      case MAP_ALLOW_LUA_NEVER: {
-        m_Valid = false;
-        m_ErrorMessage = "map script uses Lua, which is not allowed";
-        return m_ErrorMessage;
-      }
-      case MAP_ALLOW_LUA_AUTO: {
-        Version minVersion = m_Aura->m_Config.m_TargetCommunity ? GAMEVER(1u, 29u) : GAMEVER(1u, 31u);
-        if (m_MapTargetGameVersion.has_value() && m_MapTargetGameVersion.value() < minVersion) {
-          m_Valid = false;
-          m_ErrorMessage = "map script uses Lua, which is not allowed";
-          return m_ErrorMessage;
-        }
-      }
-    }
   }
 
   if (m_ClientMapPath.find('/') != string::npos)
@@ -2520,6 +2557,96 @@ uint8_t CMap::GetLobbyRace(const CGameSlot* slot) const
   if (isRandomRace) return SLOTRACE_RANDOM;
   // Note: If the slot was never selectable, it isn't promoted to selectable.
   return slot->GetRaceSelectable();
+}
+
+uint16_t CMap::GetLocaleInt(const W3ModLocale locale)
+{
+  // https://www.hiveworkshop.com/threads/multilanguage-map-prototype-translation-tutorial.339671/
+  // https://learn.microsoft.com/en-us/windows/win32/intl/language-identifiers
+  // Lower 8 bits are primary language
+  // Upper 8 bits are secondary language
+  switch (locale) {
+    case W3ModLocale::kENUS:
+      return 1033; // English: 0x0409
+    /*
+    case W3ModLocale::kCSCZ
+      return 1029; // Czech (classic-only): 0x0405
+    */
+    case W3ModLocale::kDEDE:
+      return 1031; // German: 0x0407
+    case W3ModLocale::kESES:
+      return 1034; // Spanish (Spain): 0x040a
+    case W3ModLocale::kESMX:
+      return 2058; // Spanish (Mexico): 0x080a
+    case W3ModLocale::kFRFR:
+      return 1036; // French: 0x040c
+    case W3ModLocale::kITIT:
+      return 1040; // Italian: 0x0410
+    /*
+    case W3ModLocale:: kJAJA:
+      return 1041; // Japanese (classic-only): 0x0411
+    */
+    case W3ModLocale::kKOKR:
+      return 1042; // Korean: 0x0412
+    case W3ModLocale::kPLPL:
+      return 1045; // Polish: 0x0415
+    case W3ModLocale::kRURU:
+      return 1049; // Russian: 0x0419
+    /*
+    case W3ModLocale::kTHTH:
+      return 1054; // Thai (classic-only): 0x041e
+    */
+    case W3ModLocale::kZHCN:
+      return 2052; // Simplified Chinese: 0x0804
+    case W3ModLocale::kZHTW:
+    default: // ::LAST
+      return 1028; // Traditional Chinese: 0x0404
+  }
+}
+
+string CMap::GetLocalizedInMPQPath(const W3ModLocale locale, const string& baseName)
+{
+  string localizedPath;
+  localizedPath.reserve(20 + baseName.size());
+  localizedPath.append(R"(_Locales\)");
+  switch (locale) {
+    case W3ModLocale:: kENUS:
+      localizedPath.append("enUS");
+      break;
+    case W3ModLocale:: kDEDE:
+      localizedPath.append("deDE");
+      break;
+    case W3ModLocale:: kESES:
+      localizedPath.append("esES");
+      break;
+    case W3ModLocale:: kESMX:
+      localizedPath.append("esMX");
+      break;
+    case W3ModLocale:: kFRFR:
+      localizedPath.append("frFR");
+      break;
+    case W3ModLocale:: kITIT:
+      localizedPath.append("itIT");
+      break;
+    case W3ModLocale:: kKOKR:
+      localizedPath.append("koKR");
+      break;
+    case W3ModLocale:: kPLPL:
+      localizedPath.append("plPL");
+      break;
+    case W3ModLocale:: kRURU:
+      localizedPath.append("ruRU");
+      break;
+    case W3ModLocale:: kZHCN:
+      localizedPath.append("zhCN");
+      break;
+    case W3ModLocale:: kZHTW:
+      localizedPath.append("zhTW");
+      break;
+  }
+  localizedPath.append(R"(.w3mod\)");
+  localizedPath.append(baseName);
+  return localizedPath;
 }
 
 string CMap::SanitizeTrigStr(const string& input)

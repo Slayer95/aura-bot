@@ -128,6 +128,7 @@ public:
   [[nodiscard]] std::string GetString(const std::string& key);
   [[nodiscard]] std::string GetString(const std::string& key, const std::string& x);
   [[nodiscard]] std::string GetString(const std::string& key, const uint32_t minLength, const uint32_t maxLength, const std::string& x);
+  [[nodiscard]] std::string GetKeyValue(const std::string& key);
   [[nodiscard]] std::string GetGameNameTemplate(const std::string& key, const std::string& x);
   [[nodiscard]] std::string GetGameCounterTemplate(const std::string& key, const std::string& x);
 
@@ -150,6 +151,30 @@ public:
 
   template <typename EnumType, size_t N>
   [[nodiscard]] EnumType GetEnum(const std::string& key, const std::array<std::string, N>& fromList, EnumType x)
+  {
+    static_assert(std::is_enum<EnumType>::value, "EnumType must be an enum type");
+
+    constexpr uint8_t enumCount = static_cast<uint8_t>(EnumType::LAST);
+    static_assert(enumCount == static_cast<uint8_t>(N), "fromList size must match the number of enum values");
+
+    m_ValidKeys.insert(key);
+
+    auto it = m_CFG.find(key);
+    if (it == m_CFG.end()) {
+      SUCCESS(x)
+    }
+
+    for (uint8_t i = 0; i < N; ++i) {
+      if (ToLowerCase(it->second) == fromList[i]) {
+        SUCCESS(static_cast<EnumType>(i))
+      }
+    }
+
+    CONFIG_ERROR_ALLOWED_VALUES(key, x, fromList)
+  }
+
+  template <typename EnumType, size_t N>
+  [[nodiscard]] EnumType GetEnumSensitive(const std::string& key, const std::array<std::string, N>& fromList, EnumType x)
   {
     static_assert(std::is_enum<EnumType>::value, "EnumType must be an enum type");
 

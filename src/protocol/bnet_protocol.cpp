@@ -546,7 +546,7 @@ namespace BNETProtocol
     return gameConfig;
   }
 
-  optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const string& message, const uint8_t realmLocale)
+  optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const string& message, const PvPGNLocale realmLocale)
   {
     optional<BNETProtocol::WhoisInfo> result;
     const string::size_type spIndex = message.find(' ');
@@ -555,7 +555,7 @@ namespace BNETProtocol
       return result;
     }
     switch (realmLocale) {
-      case PVPGN_LOCALE_EN_US: {
+      case PvPGNLocale::kENUS: {
         constexpr static string::size_type SIZE_CLIENT_WC3 = GetStringLength(BNETProtocol::WhoisTexts::enUS::CLIENT_WC3);
         constexpr static string::size_type SIZE_CLIENT_TFT = GetStringLength(BNETProtocol::WhoisTexts::enUS::CLIENT_TFT);
         constexpr static string::size_type SIZE_LOCATION_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::enUS::LOCATION_PREFIX);
@@ -677,7 +677,7 @@ namespace BNETProtocol
         }
         break;
       }
-      case PVPGN_LOCALE_ES_ES: {
+      case PvPGNLocale::kESES: {
         constexpr static string::size_type SIZE_CLIENT_WC3 = GetStringLength(BNETProtocol::WhoisTexts::esES::CLIENT_WC3);
         constexpr static string::size_type SIZE_CLIENT_TFT = GetStringLength(BNETProtocol::WhoisTexts::esES::CLIENT_TFT);
         constexpr static string::size_type SIZE_LOCATION_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::esES::LOCATION_PREFIX);
@@ -799,7 +799,7 @@ namespace BNETProtocol
         }
         break;
       }
-      case PVPGN_LOCALE_DE_DE: {
+      case PvPGNLocale::kDEDE: {
         constexpr static string::size_type SIZE_CLIENT_WC3 = GetStringLength(BNETProtocol::WhoisTexts::deDE::CLIENT_WC3);
         constexpr static string::size_type SIZE_CLIENT_TFT = GetStringLength(BNETProtocol::WhoisTexts::deDE::CLIENT_TFT);
         constexpr static string::size_type SIZE_LOCATION_PREFIX = GetStringLength(BNETProtocol::WhoisTexts::deDE::LOCATION_PREFIX);

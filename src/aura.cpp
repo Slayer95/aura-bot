@@ -2249,7 +2249,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     gameSetup->m_Ctx->ErrorReply("The currently loaded game setup is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
-  if (!gameSetup->m_Map || !gameSetup->m_Map->GetValid()) {
+  if (!gameSetup->m_Map->GetValid()) {
     gameSetup->m_Ctx->ErrorReply("The currently loaded map config file is invalid", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }

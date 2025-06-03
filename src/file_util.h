@@ -230,13 +230,13 @@ bool FileDelete(const std::filesystem::path& file);
 
 [[nodiscard]] bool OpenMPQArchive(void** MPQ, const std::filesystem::path& filePath);
 void CloseMPQArchive(void* MPQ);
-std::optional<uint32_t> GetMPQFileSize(void* MPQ, const char* packedFileName, const uint32_t locale);
+std::optional<uint32_t> GetMPQFileSize(void* MPQ, const char* packedFileName, const uint16_t locale);
 
 template <typename Container>
-bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, const uint32_t locale)
+bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, const uint16_t locale)
 {
   container.clear();
-  SFileSetLocale(locale);
+  SFileSetLocale((uint32_t)locale);
 
   void* subFile = nullptr;
   if (SFileOpenFileEx(MPQ, packedFileName, 0, &subFile)) {
@@ -279,6 +279,6 @@ bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, co
   return true;
 }
 
-bool ExtractMPQFile(void* MPQ, const char* packedFileName, const std::filesystem::path& outPath, const uint32_t locale = 0);
+bool ExtractMPQFile(void* MPQ, const char* packedFileName, const std::filesystem::path& outPath, const uint16_t locale = 0);
 
 #endif // AURA_FILEUTIL_H_

@@ -1581,11 +1581,11 @@ constexpr std::array<std::string, N> StringArray(const char* const (&strings)[N]
   result.fill(0x30);
 
   for (size_t j = 0; j < 4; j++) {
-    unsigned char c;
+    uint8_t c;
     if (reverse) {
-      c = num >> (24 - j * 8);
+      c = static_cast<uint8_t>(num >> (24 - j * 8));
     } else {
-      c = num >> (j * 8);
+      c = static_cast<uint8_t>(num >> (j * 8));
     }
     std::string fragment = ToHexString(c);
     if (c > 0xF) {

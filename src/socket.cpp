@@ -194,6 +194,8 @@ void CSocket::SetFD(fd_set* fd, fd_set* send_fd, int* nfds)
 #ifndef _WIN32
   if (m_Socket > *nfds)
     *nfds = m_Socket;
+#else
+  UNREFERENCED_PARAMETER(nfds);
 #endif
 }
 

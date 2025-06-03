@@ -198,6 +198,8 @@ public:
 
   std::optional<bool>                             m_GameIsExpansion;
   std::optional<Version>                          m_GameVersion;
+  std::optional<W3ModLocale>                      m_GameLocaleMod;
+  std::optional<uint16_t>                         m_GameLocaleLangID;
   std::optional<bool>                             m_LoadInGame;
   std::optional<FakeUsersShareUnitsMode>          m_FakeUsersShareUnitsMode;
   std::optional<bool>                             m_EnableJoinObserversInProgress;
@@ -394,6 +396,8 @@ public:
   inline void SetHideInGameNames(const HideIGNMode nHideInGameNames) { m_HideInGameNames = nHideInGameNames; }
   inline void SetGameIsExpansion(const bool nGameIsExpansion) { m_GameIsExpansion = nGameIsExpansion; }
   inline void SetGameVersion(const Version& nGameVersion) { m_GameVersion = nGameVersion; }
+  inline void SetGameLocaleMod(const W3ModLocale nGameLocaleMod) { m_GameLocaleMod = nGameLocaleMod; }
+  inline void SetGameLocaleLangID(const uint16_t nGameLocaleLangID) { m_GameLocaleLangID = nGameLocaleLangID; }
   inline void SetLoadInGame(const bool nGameLoadInGame) { m_LoadInGame = nGameLoadInGame; }
   inline void SetFakeUsersShareUnitsMode(const FakeUsersShareUnitsMode nShareUnitsMode) { m_FakeUsersShareUnitsMode = nShareUnitsMode; }
   inline void SetEnableJoinObserversInProgress(const bool nGameEnableJoinObserversInProgress) { m_EnableJoinObserversInProgress = nGameEnableJoinObserversInProgress; }

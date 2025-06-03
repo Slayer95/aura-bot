@@ -4677,6 +4677,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           targetGame->SendGameDiscoveryRefresh();
           if (!m_Aura->m_Net.m_UDPMainServerEnabled)
             targetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
+          targetGame->SetGameDiscoveryActive(true);
         }
         if (targetGame->GetUDPEnabled()) {
           SendReply("This lobby will now be displayed in the Local Area Network game list");
@@ -4767,6 +4768,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       targetGame->SetUDPEnabled(true);
       targetGame->SendGameDiscoveryInfo();
+      targetGame->SetGameDiscoveryActive(true);
       SendReply("Sent game info to peers.");
       break;
     }

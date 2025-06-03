@@ -31,8 +31,8 @@ Config
 - Error handling: Use default value
 
 ## \`bot.load_maps.cache.revalidation.algorithm\`
-- Type: enum
-- Default value: CACHE_REVALIDATION_MODIFIED
+- Type: enum\<cacherevalidationmethod\>
+- Default value: CacheRevalidationMethod::kModified
 - Error handling: Use default value
 
 ## \`bot.load_maps.show_suggestions\`
@@ -46,13 +46,13 @@ Config
 - Error handling: Use default value
 
 ## \`bot.log_level\`
-- Type: enum
-- Default value: LOG_LEVEL_INFO - 1
+- Type: enum\<loglevel\>
+- Default value: LogLevel::kInfo
 - Error handling: Use default value
 
 ## \`bot.log_level\`
-- Type: enum
-- Default value: LOG_LEVEL_INFO - 1
+- Type: enum\<loglevel\>
+- Default value: LogLevel::kInfo
 - Error handling: Use default value
 
 ## \`bot.log_path\`
@@ -94,9 +94,19 @@ Config
 - Default value: true
 - Error handling: Use default value
 
+## \`db.journal_mode\`
+- Type: enum\<journalmode\>
+- Default value: JournalMode::DEL
+- Error handling: Use default value
+
 ## \`db.storage_file\`
 - Type: path
 - Default value: Aura home directory
+- Error handling: Use default value
+
+## \`db.synchronous\`
+- Type: enum\<synchronousmode\>
+- Default value: SynchronousMode::FULL
 - Error handling: Use default value
 
 ## \`db.wal_autocheckpoint\`
@@ -600,19 +610,9 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.locale_short\`
-- Type: stringindexsensitive
-- Default value: PVPGN_LOCALE_ES_ES
-- Error handling: Use default value
-
-## \`global_realm.locale_short\`
 - Type: string
 - Constraints: Min length: 4. Max length: 4.
 - Default value: esES
-- Error handling: Use default value
-
-## \`global_realm.locale_short\`
-- Type: stringindexsensitive
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.login.hash_type\`
@@ -884,8 +884,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.desync.handler\`
-- Type: enum
-- Default value: ON_DESYNC_NOTIFY
+- Type: enum\<ondesynchandler\>
+- Default value: OnDesyncHandler::kNotify
 - Error handling: Use default value
 
 ## \`hosting.early_end.enabled\`
@@ -899,8 +899,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.expiry.loading.mode\`
-- Type: enum
-- Default value: GAME_LOADING_TIMEOUT_STRICT
+- Type: enum\<gameloadingtimeoutmode\>
+- Default value: GameLoadingTimeoutMode::kStrict
 - Error handling: Use default value
 
 ## \`hosting.expiry.loading.timeout\`
@@ -909,8 +909,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.expiry.lobby.mode\`
-- Type: enum
-- Default value: LOBBY_TIMEOUT_OWNERLESS
+- Type: enum\<lobbytimeoutmode\>
+- Default value: LobbyTimeoutMode::kOwnerMissing
 - Error handling: Use default value
 
 ## \`hosting.expiry.lobby.timeout\`
@@ -924,8 +924,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.expiry.owner.mode\`
-- Type: enum
-- Default value: LOBBY_OWNER_TIMEOUT_ABSENT
+- Type: enum\<lobbyownertimeoutmode\>
+- Default value: LobbyOwnerTimeoutMode::kAbsent
 - Error handling: Use default value
 
 ## \`hosting.expiry.owner.timeout\`
@@ -934,8 +934,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.expiry.playing.mode\`
-- Type: enum
-- Default value: GAME_PLAYING_TIMEOUT_STRICT
+- Type: enum\<gameplayingtimeoutmode\>
+- Default value: GamePlayingTimeoutMode::kStrict
 - Error handling: Use default value
 
 ## \`hosting.expiry.playing.timeout\`
@@ -963,6 +963,16 @@ Config
 - Default value: 10
 - Error handling: Use default value
 
+## \`hosting.fake_users.share_units.mode\`
+- Type: enum\<fakeusersshareunitsmode\>
+- Default value: FakeUsersShareUnitsMode::kAuto
+- Error handling: Use default value
+
+## \`hosting.game_locale.lang_id.default\`
+- Type: uint16
+- Default value: 0
+- Error handling: Use default value
+
 ## \`hosting.game_over.player_count\`
 - Type: uint8
 - Default value: 1
@@ -974,18 +984,18 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.game_protocol.leaver_handler\`
-- Type: enum
-- Default value: ON_PLAYER_LEAVE_NATIVE
+- Type: enum\<onplayerleavehandler\>
+- Default value: OnPlayerLeaveHandler::kNative
 - Error handling: Use default value
 
 ## \`hosting.game_protocol.share_handler\`
-- Type: enum
-- Default value: ON_SHARE_UNITS_NATIVE
+- Type: enum\<onshareunitshandler\>
+- Default value: OnShareUnitsHandler::kNative
 - Error handling: Use default value
 
 ## \`hosting.game_ready.mode\`
-- Type: enum
-- Default value: READY_MODE_EXPECT_RACE
+- Type: enum\<playersreadymode\>
+- Default value: PlayersReadyMode::kExpectRace
 - Error handling: Use default value
 
 ## \`hosting.game_start.count_down_interval\`
@@ -1004,8 +1014,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.game_versions.crossplay.mode\`
-- Type: enum
-- Default value: CROSSPLAY_MODE_CONSERVATIVE
+- Type: enum\<crossplaymode\>
+- Default value: CrossPlayMode::kConservative
 - Error handling: Use default value
 
 ## \`hosting.game_versions.expansion.default\`
@@ -1074,8 +1084,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.ip_filter.flood_handler\`
-- Type: enum
-- Default value: ON_IPFLOOD_DENY
+- Type: enum\<onipfloodhandler\>
+- Default value: OnIPFloodHandler::kDeny
 - Error handling: Use default value
 
 ## \`hosting.ip_filter.max_loopback\`
@@ -1219,8 +1229,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.name_filter.unsafe_handler\`
-- Type: enum
-- Default value: ON_UNSAFE_NAME_DENY
+- Type: enum\<onunsafenamehandler\>
+- Default value: OnUnsafeNameHandler::kDeny
 - Error handling: Use default value
 
 ## \`hosting.namepace.first_game_id\`
@@ -1229,8 +1239,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.nicknames.hide_in_game\`
-- Type: enum
-- Default value: HIDE_IGN_AUTO
+- Type: enum\<hideignmode\>
+- Default value: HideIGNMode::kAuto
 - Error handling: Use default value
 
 ## \`hosting.nicknames.hide_lobby\`
@@ -1239,8 +1249,8 @@ Config
 - Error handling: Use default value
 
 ## \`hosting.realm_broadcast.error_handler\`
-- Type: enum
-- Default value: ON_ADV_ERROR_EXIT_ON_MAX_ERRORS
+- Type: enum\<onrealmbroadcasterrorhandler\>
+- Default value: OnRealmBroadcastErrorHandler::kExitOnMaxErrors
 - Error handling: Use default value
 
 ## \`hosting.save_game.allowed\`
