@@ -30,48 +30,59 @@
 
 template<typename T>
 class OptReader {
-  const std::optional<T>& source;
+  std::reference_wrapper<const std::optional<T>> source;
 
 public:
   void operator>>(T& target) const
   {
-    if (source.has_value()) target = *source;
+    const std::optional<T>& optSource = source.get();
+    if (!optSource.has_value()) return;
+    target = *optSource;
   }
 
   void operator>>(std::optional<T>& target) const
   {
-    if (source.has_value()) target = *source;
+    const std::optional<T>& optSource = source.get();
+    if (!optSource.has_value()) return;
+    target = *optSource;
   }
 
   OptReader(const std::optional<T>& nSource)
-   : source(nSource)
+   : source(ref(nSource))
   {
   };
 
-  ~OptReader() = default;
+  ~OptReader()
+  {
+  };
 };
 
 template<typename T>
 class OptWriter {
-  std::optional<T>& target;
+  std::reference_wrapper<std::optional<T>> target;
 
 public:
-  void operator<<(T& source)
+  void operator<<(const T& source)
   {
-    target = source;
+    std::optional<T>& optTarget = target.get();
+    optTarget = source;
   }
 
   void operator<<(const std::optional<T>& source)
   {
-    target = *source;
+    if (!source.has_value()) return;
+    std::optional<T>& optTarget = target.get();
+    optTarget = *source;
   }
 
   OptWriter(std::optional<T>& nTarget)
-   : target(nTarget)
+   : target(ref(nTarget))
   {
   };
 
-  ~OptWriter() = default;
+  ~OptWriter()
+  {
+  };
 };
 
 template<typename T>
