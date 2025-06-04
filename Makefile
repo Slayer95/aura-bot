@@ -30,7 +30,7 @@ INSTALL_DIR = /usr
 CC ?= gcc
 CXX ?= g++
 CCFLAGS += -fno-builtin
-CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti
+CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti -MMD -MP
 DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 
@@ -109,66 +109,73 @@ CXXFLAGS += $(OFLAGS)
 LDFLAGS = $(LDFLAGS_SYS) $(LDFLAGS_PATHS)
 LDLIBS = $(LDLIBS_CORE) $(LDLIBS_OPT) $(LDLIBS_SYS)
 
-OBJS = lib/base64/base64.o \
-       lib/csvparser/csvparser.o \
-       lib/crc32/crc32.o \
-       lib/sha1/sha1.o \
-       src/protocol/bnet_protocol.o \
-       src/protocol/game_protocol.o \
-       src/protocol/gps_protocol.o \
-       src/protocol/vlan_protocol.o \
-       src/config/config.o \
-       src/config/config_bot.o \
-       src/config/config_realm.o \
-       src/config/config_commands.o \
-       src/config/config_game.o \
-       src/config/config_irc.o \
-       src/config/config_discord.o \
-       src/config/config_net.o \
-       src/proxy/tcp_proxy.o \
-       src/auradb.o \
-       src/bncsutil_interface.o \
-       src/bonjour.o \
-       src/file_util.o \
-       src/json.o \
-       src/os_util.o \
-       src/pjass.o \
-       src/map.o \
-       src/packed.o \
-       src/save_game.o \
-       src/socket.o \
-       src/connection.o \
-       src/net.o \
-       src/realm.o \
-       src/realm_chat.o \
-       src/realm_games.o \
-       src/async_observer.o \
-       src/game_controller_data.o \
-       src/game_host.o \
-       src/game_interactive_host.o \
-       src/game_result.o \
-       src/game_seeker.o \
-       src/game_setup.o \
-       src/game_slot.o \
-       src/game_structs.o \
-       src/game_user.o \
-       src/game_virtual_user.o \
-       src/game.o \
-       src/aura.o \
-       src/cli.o \
-       src/command.o \
-       src/command_history.o \
-       src/locations.o \
-       src/rate_limiter.o \
-       src/integration/discord.o \
-       src/integration/irc.o \
-       src/stats/dota.o \
-       src/stats/w3mmd.o \
-       src/test/runner.o \
+BUILDDIR := build/
 
-COBJS = lib/sqlite3/sqlite3.o
+OBJDIR := $(BUILDDIR)obj/
+
+OBJS = $(OBJDIR)lib/base64/base64.o \
+       $(OBJDIR)lib/csvparser/csvparser.o \
+       $(OBJDIR)lib/crc32/crc32.o \
+       $(OBJDIR)lib/sha1/sha1.o \
+       $(OBJDIR)src/protocol/bnet_protocol.o \
+       $(OBJDIR)src/protocol/game_protocol.o \
+       $(OBJDIR)src/protocol/gps_protocol.o \
+       $(OBJDIR)src/protocol/vlan_protocol.o \
+       $(OBJDIR)src/config/config.o \
+       $(OBJDIR)src/config/config_bot.o \
+       $(OBJDIR)src/config/config_realm.o \
+       $(OBJDIR)src/config/config_commands.o \
+       $(OBJDIR)src/config/config_game.o \
+       $(OBJDIR)src/config/config_irc.o \
+       $(OBJDIR)src/config/config_discord.o \
+       $(OBJDIR)src/config/config_net.o \
+       $(OBJDIR)src/proxy/tcp_proxy.o \
+       $(OBJDIR)src/auradb.o \
+       $(OBJDIR)src/bncsutil_interface.o \
+       $(OBJDIR)src/bonjour.o \
+       $(OBJDIR)src/file_util.o \
+       $(OBJDIR)src/json.o \
+       $(OBJDIR)src/os_util.o \
+       $(OBJDIR)src/pjass.o \
+       $(OBJDIR)src/map.o \
+       $(OBJDIR)src/packed.o \
+       $(OBJDIR)src/save_game.o \
+       $(OBJDIR)src/socket.o \
+       $(OBJDIR)src/connection.o \
+       $(OBJDIR)src/net.o \
+       $(OBJDIR)src/realm.o \
+       $(OBJDIR)src/realm_chat.o \
+       $(OBJDIR)src/realm_games.o \
+       $(OBJDIR)src/async_observer.o \
+       $(OBJDIR)src/game_controller_data.o \
+       $(OBJDIR)src/game_host.o \
+       $(OBJDIR)src/game_interactive_host.o \
+       $(OBJDIR)src/game_result.o \
+       $(OBJDIR)src/game_seeker.o \
+       $(OBJDIR)src/game_setup.o \
+       $(OBJDIR)src/game_slot.o \
+       $(OBJDIR)src/game_structs.o \
+       $(OBJDIR)src/game_user.o \
+       $(OBJDIR)src/game_virtual_user.o \
+       $(OBJDIR)src/game.o \
+       $(OBJDIR)src/aura.o \
+       $(OBJDIR)src/cli.o \
+       $(OBJDIR)src/command.o \
+       $(OBJDIR)src/command_history.o \
+       $(OBJDIR)src/locations.o \
+       $(OBJDIR)src/rate_limiter.o \
+       $(OBJDIR)src/integration/discord.o \
+       $(OBJDIR)src/integration/irc.o \
+       $(OBJDIR)src/stats/dota.o \
+       $(OBJDIR)src/stats/w3mmd.o \
+       $(OBJDIR)src/test/runner.o \
+
+COBJS = $(OBJDIR)lib/sqlite3/sqlite3.o
 
 PROG = aura
+
+SRC_OBJS = $(filter src/%, $(OBJS)) 
+SRC_CPP  = $(patsubst %.o, %.cpp, $(SRC_OBJS))
 
 all: $(OBJS) $(COBJS) $(PROG)
 	@echo "Used CCFLAGS: $(CPPFLAGS) $(CCFLAGS)"
@@ -189,15 +196,23 @@ install:
 	@install $(PROG) "$(DESTDIR)$(INSTALL_DIR)/bin/$(PROG)"
 	@echo "Binary $(PROG) installed to $(DESTDIR)$(INSTALL_DIR)/bin"
 
-$(OBJS): %.o: %.cpp
+$(OBJDIR): | $(BUILDDIR)
+	mkdir -p $@
+
+$(BUILDDIR):
+	mkdir -p $@
+
+$(OBJS): $(OBJDIR)%.o: %.cpp | $(OBJDIR)
 	@$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) -c $<
 	@echo "[$(CXX)] $@"
 
-$(COBJS): %.o: %.c
+$(COBJS): $(OBJDIR)%.o: %.c | $(OBJDIR)
 	@$(CC) -o $@ $(CPPFLAGS) $(CCFLAGS) -c $<
 	@echo "[$(CC)] $@"
 
 clang-tidy:
-	@for file in $(OBJS); do \
-		clang-tidy "src/$$(basename $$file .o).cpp" -fix -checks=* -header-filter=src/* -- $(CPPFLAGS) $(CXXFLAGS); \
+	@for file in $(SRC_CPP); do \
+		clang-tidy "$$file" -fix -checks=* -header-filter="src/.* src/.*/.*" -- $(CPPFLAGS) $(CXXFLAGS); \
 	done;
+
+-include $(OBJS:.o=.d) $(COBJS:.o=.d)

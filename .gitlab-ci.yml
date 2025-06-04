@@ -8,7 +8,16 @@ image: ubuntu:24.04
 # Stages
 stages:
   - build
-  - publish
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - build/
+    - obj/
+    - jass/
+    - cpr-src/build/
+    - dpp-src/build/
+    - deps/**/build/
 
 # Build
 Assemble:
@@ -72,7 +81,7 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so* dist/bin-shared
   # CPR (shared, .so)
   - git clone https://github.com/libcpr/cpr.git cpr-src
-  - cd cpr-src && mkdir build && cd build
+  - cd cpr-src && mkdir -p build && cd build
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=ON
   - cmake --build . --parallel
   - cmake --install .
@@ -81,7 +90,7 @@ Assemble:
   - cp /usr/local/lib/libcpr.so* dist/bin-shared
   # DPP (shared, .so)
   # - git clone https://github.com/brainboxdotcc/DPP.git dpp-src
-  # - cd dpp-src && mkdir build && cd build
+  # - cd dpp-src && mkdir -p build && cd build
   # - cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
   # - cmake --build . -j4
   # - make install
