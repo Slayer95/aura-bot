@@ -172,6 +172,8 @@ OBJS = $(OBJDIR)lib/base64/base64.o \
 
 COBJS = $(OBJDIR)lib/sqlite3/sqlite3.o
 
+DIRS = $(sort $(dir $(OBJS) $(COBJS)))
+
 PROG = aura
 
 SRC_OBJS = $(filter src/%, $(OBJS)) 
@@ -206,6 +208,9 @@ $(OBJS): $(OBJDIR)%.o: %.cpp | $(dir $@)
 $(COBJS): $(OBJDIR)%.o: %.c | $(dir $@)
 	@$(CC) -o $@ $(CPPFLAGS) $(CCFLAGS) -c $<
 	@echo "[$(CC)] $@"
+
+$(DIRS):
+	mkdir -p $@
 
 clang-tidy:
 	@for file in $(SRC_CPP); do \
