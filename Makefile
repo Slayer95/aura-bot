@@ -168,11 +168,13 @@ OBJS = $(OBJDIR)lib/base64/base64.o \
        $(OBJDIR)src/integration/irc.o \
        $(OBJDIR)src/stats/dota.o \
        $(OBJDIR)src/stats/w3mmd.o \
-       $(OBJDIR)src/test/runner.o \
+       $(OBJDIR)src/test/runner.o
 
 COBJS = $(OBJDIR)lib/sqlite3/sqlite3.o
 
 DIRS = $(sort $(dir $(OBJS) $(COBJS)))
+
+$(info DIRS is: $(DIRS))
 
 PROG = aura
 
