@@ -392,7 +392,7 @@ string CCommandContext::GetUserAttributionPreffix()
       auto gameSource = GetGameSource();
       switch (gameSource.GetType()) {
         case GameCommandSource::kNone:
-          return "[SYSTEM] User [" + GetSender() + "]" + userFragment + modeFragment;
+          return "[SYSTEM] " + userFragment + modeFragment;
         case GameCommandSource::kReplay:
           return "[REPLAY] " + userFragment + modeFragment;
         case GameCommandSource::kUser:
