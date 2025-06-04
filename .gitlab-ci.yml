@@ -84,6 +84,9 @@ Assemble:
   - git clone https://github.com/libcpr/cpr.git cpr-src --depth 1
   - mv cpr-src-cached/* cpr-src/ || true
   - rm -rf cpr-src-cached || true
+  - cd cpr-src
+  - cd ls
+  - cd ..
   - cd cpr-src && mkdir -p build && cd build
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=ON
   - cmake --build . --parallel
