@@ -113,6 +113,17 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #endif
 #endif
 
+#if defined(__clang__) || defined(__GNUC__)
+#define UNREACHABLE() __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define UNREACHABLE() __assume(0)
+#else
+#define UNREACHABLE() do {} while (0) // Fallback: does nothing
+#endif
+
+#define IGNORE_ENUM_LAST(EnumType) \
+    case EnumType::LAST: UNREACHABLE(); break;
+
 #define PRINT_IF(T, U) \
     static_assert(T < LogLevel::LAST, "Use DPRINT_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
