@@ -174,8 +174,6 @@ COBJS = $(OBJDIR)lib/sqlite3/sqlite3.o
 
 DIRS = $(sort $(dir $(OBJS) $(COBJS)))
 
-$(info DIRS is: $(DIRS))
-
 PROG = aura
 
 SRC_OBJS = $(filter src/%, $(OBJS)) 
@@ -201,7 +199,7 @@ install:
 	@echo "Binary $(PROG) installed to $(DESTDIR)$(INSTALL_DIR)/bin"
 
 $(dir $@):
-	mkdir -p $@
+	@mkdir -p $@
 
 $(OBJS): $(OBJDIR)%.o: %.cpp $(dir $@)
 	@$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) -c $<
