@@ -80,10 +80,10 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so /usr/local/lib
   - cp /usr/lib/libminiupnpc.so* dist/bin-shared
   # CPR (shared, .so)
-  - mv cpr-src/ cpr-src-cached/ || :
+  - mv cpr-src/ cpr-src-cached/ || true
   - git clone https://github.com/libcpr/cpr.git cpr-src --depth 1
-  - mv cpr-src-cached/* cpr-src/ || :
-  - rm -rf cpr-src-cached || :
+  - mv cpr-src-cached/* cpr-src/ || true
+  - rm -rf cpr-src-cached || true
   - cd cpr-src && mkdir -p build && cd build
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=ON
   - cmake --build . --parallel
@@ -93,10 +93,10 @@ Assemble:
   - cp /usr/local/lib/libcpr.so* dist/bin-shared
   # DPP (shared, .so)
   # - git clone https://github.com/brainboxdotcc/DPP.git dpp-src --depth 1
-  # - mv dpp-src/ dpp-src-cached/ || :
+  # - mv dpp-src/ dpp-src-cached/ || true
   # - git clone https://github.com/brainboxdotcc/DPP.git dpp-src --depth 1
-  # - mv dpp-src-cached/* dpp-src/ || :
-  # - rm -rf dpp-src-cached || :
+  # - mv dpp-src-cached/* dpp-src/ || true
+  # - rm -rf dpp-src-cached || true
   # - cd dpp-src && mkdir -p build && cd build
   # - cmake .. -DBUILD_SHARED_LIBS=ON -DBUILD_VOICE_SUPPORT=OFF -DDPP_BUILD_TEST=OFF
   # - cmake --build . -j4
