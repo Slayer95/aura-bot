@@ -210,9 +210,11 @@ $(OBJS): $(OBJDIR)%.o: %.cpp $(dir $@)
 $(COBJS): $(OBJDIR)%.o: %.c $(dir $@)
 	@$(CC) -o $@ $(CPPFLAGS) $(CCFLAGS) -c $<
 	@echo "[$(CC)] $@"
+  
+$(OBJS) $(COBJS): | $(DIRS)
 
 $(DIRS):
-	@mkdir -p $@
+	mkdir -p $@
 
 clang-tidy:
 	@for file in $(SRC_CPP); do \
