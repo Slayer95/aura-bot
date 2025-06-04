@@ -201,11 +201,11 @@ install:
 $(dir $@):
 	mkdir -p $@
 
-$(OBJS): $(OBJDIR)%.o: %.cpp | $(dir $@)
+$(OBJS): $(OBJDIR)%.o: %.cpp $(dir $@)
 	@$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) -c $<
 	@echo "[$(CXX)] $@"
 
-$(COBJS): $(OBJDIR)%.o: %.c | $(dir $@)
+$(COBJS): $(OBJDIR)%.o: %.c $(dir $@)
 	@$(CC) -o $@ $(CPPFLAGS) $(CCFLAGS) -c $<
 	@echo "[$(CC)] $@"
 
