@@ -64,7 +64,7 @@ connectivity with ``!checknetwork *``. See [NETWORKING.md][6] for additional inf
 
 Once you are satisfied, you may add fake players or computers (``!fp``, or ``!fill``) before starting 
 the game (it cannot start with you alone.) Games may be started with ``!start`` or a few alternative 
-commands, which you may find at [COMMANDS.md][7].
+commands (aliases), which you may find at [COMMANDS.md][7].
 
 In both CLI examples so far, we have seen how to:
 a. Host a known game from a config file at ``<bot.map_configs_path>``.
