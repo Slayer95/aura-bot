@@ -13,7 +13,6 @@ cache:
   key: "$CI_COMMIT_REF_SLUG"
   paths:
     - build/
-    - obj/
     - jass/
     - cpr-src/build/
     - dpp-src/build/
