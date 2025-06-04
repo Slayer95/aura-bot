@@ -81,6 +81,7 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so* dist/bin-shared
   # CPR (shared, .so)
   - cp -r --preserve=all cpr-src/ cpr-src-cached/ || true
+  - rm -rf cpr-src
   - git clone https://github.com/libcpr/cpr.git cpr-src --depth 1
   - cp -r --preserve=all cpr-src-cached/* cpr-src/ || true
   - rm -rf cpr-src-cached || true
@@ -94,6 +95,7 @@ Assemble:
   # DPP (shared, .so)
   # - git clone https://github.com/brainboxdotcc/DPP.git dpp-src --depth 1
   # - cp -r --preserve=all dpp-src/ dpp-src-cached/ || true
+  # - rm -rf cpr-src
   # - git clone https://github.com/brainboxdotcc/DPP.git dpp-src --depth 1
   # -- cp -r --preserve=all dpp-src-cached/* dpp-src/ || true
   # - rm -rf dpp-src-cached || true
