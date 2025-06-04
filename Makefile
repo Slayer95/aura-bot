@@ -198,9 +198,6 @@ install:
 	@install $(PROG) "$(DESTDIR)$(INSTALL_DIR)/bin/$(PROG)"
 	@echo "Binary $(PROG) installed to $(DESTDIR)$(INSTALL_DIR)/bin"
 
-$(dir $@):
-	@mkdir -p $@
-
 $(OBJS): $(OBJDIR)%.o: %.cpp $(dir $@)
 	@$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) -c $<
 	@echo "[$(CXX)] $@"
