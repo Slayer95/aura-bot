@@ -15,8 +15,7 @@ and OS X (64-bit Intel CPU) machines.
 
 ## Getting started
 
-First, get an Aura release. They are already provided for Windows 32-bit and 64-bit. 
-For Linux, or OS X, you will need to build it yourself. See [BUILDING.md][4] for instructions.
+You will need to build it yourself. See [BUILDING.md][4] for instructions.
 
 To run the executable, you will need to use a command line. In Windows, open Command Prompt 
 (type cmd into the Start menu and it should be the first result). In Mac OS X, open Terminal 
