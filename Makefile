@@ -196,17 +196,14 @@ install:
 	@install $(PROG) "$(DESTDIR)$(INSTALL_DIR)/bin/$(PROG)"
 	@echo "Binary $(PROG) installed to $(DESTDIR)$(INSTALL_DIR)/bin"
 
-$(OBJDIR): | $(BUILDDIR)
+$(dir $@):
 	mkdir -p $@
 
-$(BUILDDIR):
-	mkdir -p $@
-
-$(OBJS): $(OBJDIR)%.o: %.cpp | $(OBJDIR)
+$(OBJS): $(OBJDIR)%.o: %.cpp | $(dir $@)
 	@$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) -c $<
 	@echo "[$(CXX)] $@"
 
-$(COBJS): $(OBJDIR)%.o: %.c | $(OBJDIR)
+$(COBJS): $(OBJDIR)%.o: %.c | $(dir $@)
 	@$(CC) -o $@ $(CPPFLAGS) $(CCFLAGS) -c $<
 	@echo "[$(CC)] $@"
 
