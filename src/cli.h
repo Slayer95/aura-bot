@@ -28,6 +28,7 @@
 
 #include "includes.h"
 #include "action.h"
+#include "socket.h"
 
 #include <filesystem>
 #include <CLI11/CLI11.hpp>
@@ -63,6 +64,7 @@ public:
   bool                                        m_UseStandardPaths;
 
   CLIAction                                   m_InfoAction;
+  CLIResult                                   m_ParseResult;
 
   bool                                        m_Verbose;
   std::optional<bool>                         m_LAN;
@@ -72,7 +74,7 @@ public:
   std::optional<bool>                         m_ExitOnStandby;
   std::optional<bool>                         m_UseMapCFGCache;
   std::optional<CacheRevalidationMethod>      m_MapCFGCacheRevalidation;
-  std::optional<std::string>                  m_BindAddress;
+  std::optional<sockaddr_storage>             m_BindAddress;
   std::optional<uint16_t>                     m_HostPort;
   std::optional<UDPDiscoveryMode>             m_UDPDiscoveryMode;
   std::optional<LogLevel>                     m_LogLevel;
@@ -107,14 +109,27 @@ public:
   std::optional<std::string>                  m_GameOwner;
   std::optional<bool>                         m_GameOwnerLess;
   std::vector<std::string>                    m_ExcludedRealms;
+
+  std::optional<bool>                         m_GameMirror;
   std::optional<std::string>                  m_GameMirrorSource;
+  std::optional<MirrorSourceType>             m_GameMirrorSourceType;
+  std::optional<std::string>                  m_GameMirrorSourceService;
+
+  std::optional<bool>                         m_GameMirrorWatchLobby;
+  std::optional<std::string>                  m_GameMirrorWatchLobbyUser;
+  std::optional<uint8_t>                      m_GameMirrorWatchLobbyTeam;
+  std::optional<uint32_t>                     m_GameMirrorWatchLobbyTeamRetryInterval;
+  std::optional<uint32_t>                     m_GameMirrorWatchLobbyTeamMaxTries;
+
   std::optional<bool>                         m_GameMirrorProxy;
 
+  std::optional<MirrorTimeoutMode>            m_GameMirrorTimeoutMode;
   std::optional<LobbyTimeoutMode>             m_GameLobbyTimeoutMode;
   std::optional<LobbyOwnerTimeoutMode>        m_GameLobbyOwnerTimeoutMode;
   std::optional<GameLoadingTimeoutMode>       m_GameLoadingTimeoutMode;
   std::optional<GamePlayingTimeoutMode>       m_GamePlayingTimeoutMode;
 
+  std::optional<uint32_t>                     m_GameMirrorTimeout;
   std::optional<uint32_t>                     m_GameLobbyTimeout;
   std::optional<uint32_t>                     m_GameLobbyOwnerTimeout;
   std::optional<uint32_t>                     m_GameLoadingTimeout;
@@ -202,7 +217,91 @@ public:
   // Parsing stuff
   //CLI::Validator GetIsFullyQualifiedUserValidator();
   CLIResult Parse(const int argc, char** argv);
-  [[nodiscard]] bool CheckGameParameters() const;
+
+  void ConditionalRequireError(const std::string& gateName, const std::string& subName, bool isConverse = false)
+  {
+    if (isConverse) {
+      Print("[AURA] " + subName + " cannot be provided unless " + gateName + " is also provided.");
+    } else {
+      Print("[AURA] " + gateName + " requires " + subName + " to also be provided.");
+    }
+    m_ParseResult = CLIResult::kError;
+  }
+
+  void ConditionalRequireOppositeError(const std::string& gateName, const std::string& subName, bool isConverse = false)
+  {
+    if (isConverse) {
+      Print("[AURA] " + subName + " cannot be provided if " + gateName + " is also provided.");
+    } else {
+      Print("[AURA] " + gateName + " requires " + subName + " to NOT be provided.");
+    }
+    m_ParseResult = CLIResult::kError;
+  }
+
+  template<typename T, typename U>
+  void ConditionalRequire(const std::string& gateName, const std::optional<T>& gate, const std::string& subName, const std::optional<U>& sub, bool isBiDi = false)
+  {
+    // Flags and options are treated separately.
+    // For completeness, all CLI options are wrapped in std::optional.
+    // However, in practice, empty std::optional<bool> 
+    // are treated as false by the conditional requirements checker.
+    //
+    // This behavior is tailored to --mirror and related options that can
+    // only be configured from the CLI. This excludes e.g. --mirror-timeout.
+    bool gateTestResult, subTestResult;
+    if constexpr (std::is_same_v<T, bool>) {
+      gateTestResult = gate.value_or(false);
+    } else {
+      gateTestResult = gate.has_value();
+    }
+    if constexpr (std::is_same_v<U, bool>) {
+      subTestResult = sub.value_or(false);
+    } else {
+      subTestResult = sub.has_value();
+    }
+    if (gateTestResult) {
+      if (!subTestResult) {
+        ConditionalRequireError(gateName, subName, false);
+      }
+    } else if (isBiDi && subTestResult) {
+      ConditionalRequireError(gateName, subName, true);
+    }
+  }
+
+  template<typename T, typename U>
+  void ConditionalRequireOpposite(const std::string& gateName, const std::optional<T>& gate, const std::string& subName, const std::optional<U>& sub, bool isBiDi = false)
+  {
+    bool gateTestResult, subTestResult;
+    if constexpr (std::is_same_v<T, bool>) {
+      gateTestResult = gate.value_or(false);
+    } else {
+      gateTestResult = gate.has_value();
+    }
+    if constexpr (std::is_same_v<U, bool>) {
+      subTestResult = sub.value_or(false);
+    } else {
+      subTestResult = sub.has_value();
+    }
+    if (gateTestResult) {
+      if (subTestResult) {
+        ConditionalRequireOppositeError(gateName, subName, false);
+      }
+    } else if (isBiDi && !subTestResult) {
+      ConditionalRequireOppositeError(gateName, subName, true);
+    }
+  }
+
+  template<typename T, typename U, typename F>
+  void MapOpt(const std::string& optName, const std::optional<T>& operand, F&& mapFn, std::optional<U>& result)
+  {
+    if (!operand.has_value()) return;
+    result = std::move(mapFn(*operand));
+    if (!result.has_value()) {
+      Print("[AURA] <" + optName + "> - invalid CLI usage - please see CLI.md");
+      m_ParseResult = CLIResult::kError;
+    }
+  }
+
   [[nodiscard]] bool RunGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;
 
   void RunInfoActions() const;

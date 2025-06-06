@@ -183,7 +183,7 @@ public:
   void                                          FlushOutgoingThrottles();
 
 #ifndef DISABLE_MINIUPNP
-  uint8_t RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const LogLevel logLevel, bool ignoreCache = false);
+  uint8_t RequestUPnP(const NetProtocol protocolCode, const uint16_t externalPort, const uint16_t internalPort, const LogLevel logLevel, bool ignoreCache = false);
 #endif
   bool QueryHealthCheck(std::shared_ptr<CCommandContext> ctx, const uint8_t checkMode, std::shared_ptr<CRealm> realm, std::shared_ptr<const CGame> game);
   void ResetHealthCheck();

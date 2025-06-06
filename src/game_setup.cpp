@@ -163,8 +163,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_IsMapDownloaded(false),
 
     m_OwnerLess(false),
-    m_IsMirror(false),
-    m_IsMirrorProxy(false),
     m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
@@ -178,7 +176,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_ExitingSoon(false),
     m_DeleteMe(false)
 {
-  memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
   m_Map = GetBaseMapFromConfig(nMapCFG, false);
 }
 
@@ -209,8 +206,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_IsMapDownloaded(false),
 
     m_OwnerLess(false),
-    m_IsMirror(false),
-    m_IsMirrorProxy(false),
     m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
@@ -225,7 +220,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_DeleteMe(false)
     
 {
-  memset(&m_RealmsAddress, 0, sizeof(m_RealmsAddress));
 }
 
 std::string CGameSetup::GetInspectName() const
@@ -1345,16 +1339,40 @@ bool CGameSetup::RunHost()
   return m_Aura->CreateGame(shared_from_this());
 }
 
-bool CGameSetup::SetMirrorSource(const sockaddr_storage& sourceAddress, const uint32_t gameIdentifier, const uint32_t entryKey)
+uint32_t CGameSetup::GetGameIdentifier()
 {
-  m_IsMirror = true;
-  m_Identifier = gameIdentifier;
-  m_EntryKey = entryKey;
-  memcpy(&m_RealmsAddress, &sourceAddress, sizeof(sockaddr_storage));
+  if (m_Mirror.GetIsEnabled()) {
+    return m_Mirror.GetIdentifier();
+  }
+  return m_Aura->NextHostCounter();
+}
+
+uint32_t CGameSetup::GetEntryKey()
+{
+  if (m_Mirror.GetIsEnabled()) {
+    return m_Mirror.GetEntryKey();
+  }
+  return GetRandomUInt32();
+}
+
+const sockaddr_storage* CGameSetup::GetGameAddress()
+{
+  if (m_Mirror.GetIsEnabled()) {
+    return &(m_Mirror.GetAddress());
+  }
+  return nullptr;
+}
+
+bool CGameSetup::SetRawMirrorSource(const sockaddr_storage& sourceAddress, const uint32_t gameIdentifier, const uint32_t entryKey)
+{
+  m_Mirror.Enable();
+  m_Mirror.SetIdentifier(gameIdentifier);
+  m_Mirror.SetEntryKey(entryKey);
+  m_Mirror.SetAddress(sourceAddress);
   return true;
 }
 
-bool CGameSetup::SetMirrorSource(const string& nInput)
+bool CGameSetup::SetRawMirrorSource(const string& nInput)
 {
   string::size_type portStart = nInput.find(':', 0);
   if (portStart == string::npos) return false;
@@ -1398,7 +1416,18 @@ bool CGameSetup::SetMirrorSource(const string& nInput)
   }
 
   SetAddressPort(&(maybeAddress.value()), *maybeGamePort);
-  return SetMirrorSource(*maybeAddress, *maybeId, entryKey);
+  return SetRawMirrorSource(*maybeAddress, *maybeId, entryKey);
+}
+
+bool CGameSetup::SetRegistryMirrorSource(const string& gameName, const string& registryName)
+{
+  m_Mirror.Enable();
+  /*
+  m_Mirror.SetIdentifier(gameIdentifier);
+  m_Mirror.SetEntryKey(entryKey);
+  m_Mirror.SetAddress(sourceAddress);
+  */
+  return false;
 }
 
 void CGameSetup::AddIgnoredRealm(shared_ptr<const CRealm> nRealm)
@@ -1694,6 +1723,32 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   m_LobbyReplaceable = nCLI->m_GameLobbyReplaceable.value_or(false);
   m_LobbyAutoRehosted = nCLI->m_GameLobbyAutoRehosted.value_or(false);
   m_RealmsDisplayMode = nCLI->m_GameDisplayMode.value_or(GAME_DISPLAY_PUBLIC);
+}
+
+bool CGameSetup::AcquireCLIMirror(const CCLI* nCLI)
+{
+  if (!nCLI->m_GameMirrorSource.has_value()) {
+    return false;
+  }
+  switch (nCLI->m_GameMirrorSourceType.value()) {
+    case MirrorSourceType::kRaw:
+      if (!SetRawMirrorSource(*(nCLI->m_GameMirrorSource))) {
+        return false;
+      }
+      break;
+    case MirrorSourceType::kRegistry:
+      if (!nCLI->m_GameMirrorSourceService.has_value()) {
+        return false;
+      }
+      if (!SetRegistryMirrorSource(*(nCLI->m_GameMirrorSource), *(nCLI->m_GameMirrorSourceService))) {
+        return false;
+      }
+      break;
+    IGNORE_ENUM_LAST(MirrorSourceType)
+  }
+
+  ReadOpt(nCLI->m_GameMirrorProxy) >> m_Mirror.m_EnableProxy;
+  return true;
 }
 
 CGameSetup::~CGameSetup()

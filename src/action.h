@@ -40,13 +40,13 @@ enum class CommandAuth : uint8_t
 
 struct AppAction
 {
-  uint8_t type;
-  uint8_t mode;
+  AppActionType type;
+  AppActionMode mode;
   uint32_t value_1;
   uint32_t value_2;
   int64_t queuedTicks;
 
-  AppAction(uint8_t nType, uint8_t nMode = 0, uint32_t nValue1 = 0, uint32_t nValue2 = 0)
+  AppAction(AppActionType nType, AppActionMode nMode = AppActionMode::kNone, uint32_t nValue1 = 0, uint32_t nValue2 = 0)
    : type(nType),
      mode(nMode),
      value_1(nValue1),

@@ -332,7 +332,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_BroadcastErrorHandler, m_BroadcastErrorHandler, m_BroadcastErrorHandler)
   INHERIT_MAP(m_PipeConsideredHarmful, m_PipeConsideredHarmful)
 
-  if (nGameSetup->GetIsMirror() && !nGameSetup->GetIsMirrorProxy()) {
+  if (nGameSetup->GetIsMirror() && !nGameSetup->GetMirror().GetIsProxyEnabled()) {
     m_UDPEnabled = false;
   } else {
     INHERIT(m_UDPEnabled)

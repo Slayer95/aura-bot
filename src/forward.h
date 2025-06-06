@@ -126,6 +126,7 @@ struct GameDiscoveryInterface;
 struct GameHistory;
 struct GameHost;
 struct GameInteraction;
+struct GameMirrorSetup;
 struct GameSearchMatch;
 struct GameSearchQuery;
 struct GameSource;

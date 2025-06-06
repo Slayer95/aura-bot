@@ -39,8 +39,8 @@
 #include "map.h"
 #include "net.h"
 #include "realm_chat.h"
+#include "util.h"
 
-#include <random>
 #include <tuple>
 #include <future>
 
@@ -4093,7 +4093,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       uint16_t intPort = static_cast<uint16_t>(Args[1]);
 
       SendReply("Trying to forward external port " + to_string(extPort) + " to internal port " + to_string(intPort) + "...");
-      uint8_t result = m_Aura->m_Net.RequestUPnP(NET_PROTOCOL_TCP, extPort, intPort, LogLevel::kInfo, true);
+      uint8_t result = m_Aura->m_Net.RequestUPnP(NetProtocol::kTCP, extPort, intPort, LogLevel::kInfo, true);
       if (result == 0) {
         ErrorReply("Universal Plug and Play is not supported by the host router.");
       } else if (0 != (result & 1)) {
@@ -7979,7 +7979,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       string gameName = Args[5];
       SetAddressPort(&(maybeAddress.value()), gamePort);
       m_Aura->m_GameSetup->SetContext(shared_from_this());
-      if (!m_Aura->m_GameSetup->SetMirrorSource(maybeAddress.value(), gameHostCounter)) {
+      if (!m_Aura->m_GameSetup->SetRawMirrorSource(maybeAddress.value(), gameHostCounter)) {
         ErrorReply("Cannot mirror game at the provided address.");
         break;
       }
@@ -8266,7 +8266,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 }
 
 
-uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& lazyCtx)
+AppActionStatus CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& lazyCtx)
 {
   string cmdToken;
   shared_ptr<CGame> targetGame = nullptr;
@@ -8275,21 +8275,21 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
 
   if (lazyCtx.identityLoc.empty()) {
     Print("[AURA] --exec service empty.");
-    return APP_ACTION_ERROR;
+    return AppActionStatus::kError;
   }
 
   void* servicePtr = nullptr;
   ServiceType serviceType = nAura->FindServiceFromHostName(lazyCtx.identityLoc, servicePtr);
   if (serviceType == ServiceType::kNone) {
     Print("[AURA] --exec parsed user at service invalid.");
-    return APP_ACTION_ERROR;
+    return AppActionStatus::kError;
   }
 
   switch (serviceType) {
     case ServiceType::kGame:
     case ServiceType::kDiscord:
       Print("[AURA] --exec-as: @service not supported [" + lazyCtx.identityLoc + "]");
-      return APP_ACTION_ERROR;
+      return AppActionStatus::kError;
     case ServiceType::kCLI:
       try {
         if (targetGame) {
@@ -8306,9 +8306,9 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       break;
     case ServiceType::kIRC:
       if (lazyCtx.online) {
-        if (!nAura->m_IRC.GetIsEnabled()) return APP_ACTION_ERROR;
-        if (nAura->m_IRC.m_Config.m_Channels.empty()) return APP_ACTION_ERROR;
-        if (!nAura->m_IRC.GetIsLoggedIn()) return APP_ACTION_WAIT;
+        if (!nAura->m_IRC.GetIsEnabled()) return AppActionStatus::kError;
+        if (nAura->m_IRC.m_Config.m_Channels.empty()) return AppActionStatus::kError;
+        if (!nAura->m_IRC.GetIsLoggedIn()) return AppActionStatus::kWait;
       }
 
       try {
@@ -8333,7 +8333,7 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
     case ServiceType::kRealm:
       CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
       if (lazyCtx.online && !sourceRealm->GetLoggedIn()) {
-        return APP_ACTION_WAIT;
+        return AppActionStatus::kWait;
       }
 
       commandCFG = sourceRealm->GetCommandConfig();
@@ -8355,7 +8355,7 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
   }
 
   if (!ctx) {
-    return APP_ACTION_ERROR;
+    return AppActionStatus::kError;
   }
 
   switch (lazyCtx.auth) {
@@ -8378,7 +8378,7 @@ uint8_t CCommandContext::TryDeferred(CAura* nAura, const LazyCommandContext& laz
       break;
   }
   ctx->Run(cmdToken, lazyCtx.command, lazyCtx.target);
-  return APP_ACTION_DONE;
+  return AppActionStatus::kDone;
 }
 
 CCommandContext::~CCommandContext()

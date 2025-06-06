@@ -1016,9 +1016,14 @@ bool CRealm::GetUnverifiedAutoKickedFromLobby() const
   return m_Config.m_UnverifiedAutoKickedFromLobby;
 }
 
-uint8_t CRealm::GetWatchableGamesDisplayMode() const
+RealmBroadcastDisplayPriority CRealm::GetLobbyDisplayPriority() const
 {
-  return m_Config.m_WatchableDisplayMode;
+  return m_Config.m_LobbyDisplayPriority;
+}
+
+RealmBroadcastDisplayPriority CRealm::GetWatchableGamesDisplayPriority() const
+{
+  return m_Config.m_WatchableDisplayPriority;
 }
 
 CCommandConfig* CRealm::GetCommandConfig() const
@@ -1055,8 +1060,8 @@ void CRealm::TrySendGetGamesList()
 
 void CRealm::SendNetworkConfig()
 {
-  shared_ptr<CGame> lobbyPendingForBroadcast = m_Aura->GetMostRecentLobby();
-  if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetIsMirror() && !m_Config.m_IsMirror) {
+  shared_ptr<CGame> lobbyPendingForBroadcast = GetGameBroadcastPending();
+  if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetPublicHostOverride()) {
     PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "mirroring public game host " + IPv4ToString(lobbyPendingForBroadcast->GetPublicHostAddress()) + ":" + to_string(lobbyPendingForBroadcast->GetPublicHostPort()))
     SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(lobbyPendingForBroadcast->GetPublicHostAddress(), lobbyPendingForBroadcast->GetPublicHostPort()));
     m_LastGamePort = lobbyPendingForBroadcast->GetPublicHostPort();
@@ -1387,8 +1392,8 @@ bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
     return false;
   }
   if (game->GetIsMirror() && GetIsMirror()) {
-  // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
-  // Do not display external games in those realms.
+    // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
+    // Do not display external games in those realms.
     return false;
   }
   if (m_GameVersion >= GAMEVER(1u, 0u)) {
@@ -1402,8 +1407,19 @@ bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
   if (game->GetIsRealmExcluded(GetServer())) {
     return false;
   }
-  if (game->GetCanJoinInProgress() && GetWatchableGamesDisplayMode() != REALM_OBSERVER_DISPLAY_ALWAYS) {
+
+  RealmBroadcastDisplayPriority targetPriority = game->GetCanJoinInProgress() ? GetWatchableGamesDisplayPriority() : GetLobbyDisplayPriority();
+  if (targetPriority == RealmBroadcastDisplayPriority::kNone) {
     return false;
+  }
+  if (targetPriority == RealmBroadcastDisplayPriority::kLow) {
+    auto currentGame = GetGameBroadcast();
+    if (currentGame) {
+      RealmBroadcastDisplayPriority activePriority = currentGame->GetCanJoinInProgress() ? GetWatchableGamesDisplayPriority() : GetLobbyDisplayPriority();
+      if (activePriority > targetPriority) {
+        return false;
+      }
+    }
   }
   return true;
 }

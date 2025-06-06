@@ -173,7 +173,7 @@ public:
   void SetPartiallyDestroyed() { m_PartiallyDestroyed = true; }
   bool GetPartiallyDestroyed() const { return m_PartiallyDestroyed; }
 
-  [[nodiscard]] static uint8_t TryDeferred(CAura* nAura, const LazyCommandContext& lazyCtx);
+  [[nodiscard]] static AppActionStatus TryDeferred(CAura* nAura, const LazyCommandContext& lazyCtx);
   
   ~CCommandContext();
 };

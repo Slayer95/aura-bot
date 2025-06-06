@@ -343,11 +343,14 @@ This option is equivalent to ``<bot.load_maps.cache.revalidation.algorithm>`` in
 
 ## \`--bind-address \<IPv4>\`
 
-If specified, Aura's game server will only allow connections from the provided IPv4 address.
-Note that \`0.0.0.0\` is a special value that will allow connections from every IPv4 address.
+If specified, Aura's game server will bind to the provided IPv4 address. This means that only computers 
+running in the associated network will be able to connect to the games.
 
 The most interesting value is \`127.0.0.1\`, which will only allow connections from your 
 [loopback interface][4] (i.e. connections only from the local machine where the server is running.)
+
+\`0.0.0.0\` is a special value that will allow connections from every IPv4 address. Other values may be 
+used according to your network configuration.
 
 This option is equivalent to ``<net.bind_address>`` in `config.ini`
 

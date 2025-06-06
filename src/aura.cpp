@@ -1034,64 +1034,73 @@ vector<shared_ptr<CGame>> CAura::GetJoinableGames() const
   return joinables;
 }
 
-uint8_t CAura::HandleAction(const AppAction& action)
+AppActionStatus CAura::HandleAction(const AppAction& action)
 {
   switch (action.type) {
 #ifndef DISABLE_MINIUPNP
-    case APP_ACTION_TYPE_UPNP: {
+    case AppActionType::kUPnP: {
       uint16_t externalPort = static_cast<uint16_t>(action.value_1);
       uint16_t internalPort = static_cast<uint16_t>(action.value_2);
-      if (action.type == APP_ACTION_MODE_TCP) {
-        m_Net.RequestUPnP(NET_PROTOCOL_TCP, externalPort, internalPort, LogLevel::kDebug);
-      } else if (action.type == APP_ACTION_MODE_UDP) {
-        m_Net.RequestUPnP(NET_PROTOCOL_UDP, externalPort, internalPort, LogLevel::kDebug);
+      switch (action.mode) {
+        case AppActionMode::kTCP:
+          m_Net.RequestUPnP(NetProtocol::kTCP, externalPort, internalPort, LogLevel::kDebug);
+          break;
+        case AppActionMode::kUDP:
+          m_Net.RequestUPnP(NetProtocol::kUDP, externalPort, internalPort, LogLevel::kDebug);
+          break;
+        case AppActionMode::kNone:
+          UNREACHABLE();
+          break;
       }
-      return APP_ACTION_DONE;
+      return AppActionStatus::kDone;
     }
 #endif
-    case APP_ACTION_TYPE_HOST: {
+    case AppActionType::kHost: {
       bool success = m_GameSetup->RunHost();
       if (!success) {
         // Delete all other pending actions
-        return APP_ACTION_ERROR;
+        return AppActionStatus::kError;
       }
       if (MergePendingLobbies()) {
         m_MetaDataNeedsUpdate = true;
       }
-      return APP_ACTION_DONE;
+      return AppActionStatus::kDone;
     }
+    case AppActionType::kCommand:
+      UNREACHABLE();
+      break;
   }
 
-  return APP_ACTION_ERROR;
+  return AppActionStatus::kError;
 }
 
-uint8_t CAura::HandleDeferredCommandContext(const LazyCommandContext& lazyCtx)
+AppActionStatus CAura::HandleDeferredCommandContext(const LazyCommandContext& lazyCtx)
 {
   return CCommandContext::TryDeferred(this, lazyCtx);
 }
 
-uint8_t CAura::HandleGenericAction(const GenericAppAction& genAction)
+AppActionStatus CAura::HandleGenericAction(const GenericAppAction& genAction)
 {
   switch (genAction.index()) {
     case 0: { // AppAction
       const AppAction& action = std::get<AppAction>(genAction);
-      uint8_t result = HandleAction(action);
-      if (result == APP_ACTION_WAIT && action.queuedTicks + 20000 < m_LoopTicks) {
-        result = APP_ACTION_TIMEOUT;
+      AppActionStatus result = HandleAction(action);
+      if (result == AppActionStatus::kWait && action.queuedTicks + 20000 < m_LoopTicks) {
+        result = AppActionStatus::kTimeOut;
       }
       return result;
     }
     case 1: { // LazyCommandContext
       const LazyCommandContext& lazyCtx = std::get<LazyCommandContext>(genAction);
-      uint8_t result = HandleDeferredCommandContext(lazyCtx);
-      if (result == APP_ACTION_WAIT && lazyCtx.queuedTicks + 20000 < m_LoopTicks) {
-        result = APP_ACTION_TIMEOUT;
+      AppActionStatus result = HandleDeferredCommandContext(lazyCtx);
+      if (result == AppActionStatus::kWait && lazyCtx.queuedTicks + 20000 < m_LoopTicks) {
+        result = AppActionStatus::kTimeOut;
       }
       return result;
     }
   }
 
-  return APP_ACTION_ERROR;
+  return AppActionStatus::kError;
 }
 
 int64_t CAura::GetSelectBlockTime() const
@@ -1129,14 +1138,14 @@ bool CAura::Update()
       m_PendingActions.pop();
       continue;
     }
-    uint8_t actionResult = HandleGenericAction(m_PendingActions.front());
-    if (actionResult == APP_ACTION_WAIT) {
+    AppActionStatus actionResult = HandleGenericAction(m_PendingActions.front());
+    if (actionResult == AppActionStatus::kWait) {
       break;
     }
-    if (actionResult == APP_ACTION_ERROR) {
+    if (actionResult == AppActionStatus::kError) {
       Print("[AURA] Queued action errored. Pending actions aborted.");
       skipActions = true;
-    } else if (actionResult == APP_ACTION_TIMEOUT) {
+    } else if (actionResult == AppActionStatus::kTimeOut) {
       Print("[AURA] Queued action timed out. Pending actions aborted.");
       skipActions = true;
     }
@@ -1153,7 +1162,7 @@ bool CAura::Update()
       (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
     ) {
       m_AutoRehostGameSetup->SetActive();
-      AppAction rehostAction = AppAction(APP_ACTION_TYPE_HOST);
+      AppAction rehostAction = AppAction(AppActionType::kHost);
       m_PendingActions.push(rehostAction);
     }
   }
@@ -2060,7 +2069,7 @@ void CAura::LogRemoteFile(const string& logText)
   writeStream.close();
 }
 
-void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t newInterval)
+void CAura::LogPerformanceWarning(const TaskType taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t newInterval)
 {
   // something is going terribly wrong - Aura is probably starved of resources
   // print a message because even though this will take more resources it should provide some information to the administrator for future reference
@@ -2074,7 +2083,7 @@ void CAura::LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, c
   }
 
   string prefix;
-  if (taskType == TASK_TYPE_GAME_FRAME) {
+  if (taskType == TaskType::kGameFrame) {
     prefix = static_cast<const CGame*>(taskPtr)->GetLogPrefix();
   }
   char buffer[256];
@@ -2308,7 +2317,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 #ifndef DISABLE_MINIUPNP
   if (m_Net.m_Config.m_EnableUPnP && createdLobby->GetIsLobbyStrict() && m_StartedGames.empty()) {
     // FIXME? This is a long synchronous network call.
-    m_Net.RequestUPnP(NET_PROTOCOL_TCP, createdLobby->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4), createdLobby->GetHostPort(), LogLevel::kInfo);
+    m_Net.RequestUPnP(NetProtocol::kTCP, createdLobby->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4), createdLobby->GetHostPort(), LogLevel::kInfo);
   }
 #endif
 

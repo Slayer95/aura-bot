@@ -203,7 +203,8 @@ public:
   bool                 GetHasEnhancedAntiSpoof() const;
   bool                 GetUnverifiedCannotStartGame() const;
   bool                 GetUnverifiedAutoKickedFromLobby() const;
-  uint8_t              GetWatchableGamesDisplayMode() const;                 
+  RealmBroadcastDisplayPriority GetLobbyDisplayPriority() const;
+  RealmBroadcastDisplayPriority GetWatchableGamesDisplayPriority() const;
   CCommandConfig*      GetCommandConfig() const;
 
   // processing functions

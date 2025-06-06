@@ -56,6 +56,7 @@
 #include "game_setup.h"
 #include "locations.h"
 #include "net.h"
+#include "util.h"
 #include "integration/irc.h"
 #include "integration/discord.h"
 
@@ -190,9 +191,9 @@ public:
 
   // processing functions
 
-  [[nodiscard]] uint8_t HandleAction(const AppAction& action);
-  [[nodiscard]] uint8_t HandleDeferredCommandContext(const LazyCommandContext& lazyCtx);
-  [[nodiscard]] uint8_t HandleGenericAction(const GenericAppAction& genAction);
+  [[nodiscard]] AppActionStatus HandleAction(const AppAction& action);
+  [[nodiscard]] AppActionStatus HandleDeferredCommandContext(const LazyCommandContext& lazyCtx);
+  [[nodiscard]] AppActionStatus HandleGenericAction(const GenericAppAction& genAction);
   [[nodiscard]] int64_t GetSelectBlockTime() const;
   bool Update();
   void AwaitSettled();
@@ -252,8 +253,8 @@ public:
   void ClearStaleContexts();
   void ClearStaleFileChunks();
   
-  inline bool MatchLogLevel(LogLevel logLevel) const { return ((uint8_t)logLevel) <= ((uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace3
-  inline bool MatchLogLevel(LogLevelExtra logLevel) const { return ((uint8_t)logLevel) <= ((uint8_t)m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace 3 ... 11 extra
+  inline bool MatchLogLevel(LogLevel logLevel) const { return logLevel <= m_LogLevel; } // 0: emergency ... 8: trace ... 10 trace3
+  inline bool MatchLogLevel(LogLevelExtra logLevel) const { return (uint8_t)logLevel <= (uint8_t)(m_LogLevel); } // 0: emergency ... 8: trace ... 10 trace 3 ... 11 extra
 #ifdef DEBUG
   inline bool GetIsLoggingTrace() const { return MatchLogLevel(LogLevel::kTrace); }
 #else
@@ -261,7 +262,7 @@ public:
 #endif
   void LogPersistent(const std::string& logText);
   void LogRemoteFile(const std::string& logText);
-  void LogPerformanceWarning(const uint8_t taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t adjustedInterval);
+  void LogPerformanceWarning(const TaskType taskType, const void* taskPtr, const int64_t frameDrift, const int64_t oldInterval, const int64_t adjustedInterval);
   void GracefulExit();
   bool CheckDependencies();
   bool CheckGracefulExit();

@@ -52,6 +52,7 @@
 #include "parser.h"
 
 #include <fstream>
+#include <random>
 #include <regex>
 #include <filesystem>
 #include <functional>
@@ -1975,5 +1976,13 @@ inline bool ReplaceText(std::string& input, const std::string& fragment, const s
   return y;
 }
 */
+
+[[nodiscard]] inline uint32_t GetRandomUInt32()
+{
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<uint32_t> dis;
+  return dis(gen);
+}
 
 #endif // AURA_UTIL_H_

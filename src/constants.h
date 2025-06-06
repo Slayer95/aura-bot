@@ -27,6 +27,10 @@
 #define AURA_CONSTANTS_H_
 
 #include <string>
+#include <type_traits>
+
+template<typename T>
+struct is_comparable_enum : std::false_type {};
 
 // includes.h
 
@@ -61,6 +65,8 @@ enum class LogLevel : uint8_t {
 #endif
 };
 
+template<> struct is_comparable_enum<LogLevel> : std::true_type {};
+
 enum class LogLevelExtra : uint8_t {
   kEmergency = LOG_LEVEL_EMERGENCY,
   kAlert = LOG_LEVEL_ALERT,
@@ -75,6 +81,8 @@ enum class LogLevelExtra : uint8_t {
   kTrace3 = LOG_LEVEL_TRACE3,
   kExtra = LOG_LEVEL_TRACE3 + 1,
 };
+
+template<> struct is_comparable_enum<LogLevelExtra> : std::true_type {};
 
 constexpr uint8_t ANTI_SPOOF_NONE = 0;
 constexpr uint8_t ANTI_SPOOF_BASIC = 1;
@@ -107,26 +115,22 @@ enum class AppActionStatus : uint8_t {
   kDone = 0,
   kError = 1,
   kWait = 2,
-  kTimeout = 3,
-  LAST = 4,
+  kTimeOut = 3,
+  //LAST = 4,
 };
-
-constexpr uint8_t APP_ACTION_TYPE_UPNP = 0u;
-constexpr uint8_t APP_ACTION_TYPE_HOST = 1u;
 
 enum class AppActionType : uint8_t {
   kUPnP = 0,
   kHost = 1,
-  LAST = 2,
+  kCommand = 2,
+  //LAST = 3,
 };
 
-constexpr uint8_t APP_ACTION_MODE_TCP = 0u;
-constexpr uint8_t APP_ACTION_MODE_UDP = 1u;
-
 enum class AppActionMode : uint8_t {
-  kTCP = 0,
-  kUDP = 1,
-  LAST = 2,
+  kNone = 0,
+  kTCP = 1,
+  kUDP = 2,
+  //LAST = 3,
 };
 
 enum class OptionalDependencyMode : uint8_t
@@ -135,7 +139,7 @@ enum class OptionalDependencyMode : uint8_t
   kNotUseful = 1u,
   kOptEnhancement = 2u,
   kRequired = 3u,
-  LAST = 4,
+  //LAST = 4,
 };
 
 enum class ServiceType : uint8_t
@@ -157,13 +161,6 @@ enum class GameCommandSource : uint8_t
   kReplay = 3u,
   LAST = 4,
 };
-
-constexpr uint8_t TASK_TYPE_GAME_FRAME = 0;
-constexpr uint8_t TASK_TYPE_CHECK_JOINABLE = 1;
-constexpr uint8_t TASK_TYPE_MAP_DOWNLOAD = 2;
-constexpr uint8_t TASK_TYPE_HMC_HTTP = 3;
-constexpr uint8_t TASK_TYPE_DB_READ = 4;
-constexpr uint8_t TASK_TYPE_DB_WRITE = 5;
 
 enum class TaskType : uint8_t {
   kGameFrame = 0,
@@ -222,10 +219,6 @@ enum class W3ModLocale : uint8_t {
   LAST = 12,
 };
 
-constexpr uint8_t MAPSPEED_SLOW = 0u;
-constexpr uint8_t MAPSPEED_NORMAL = 1u;
-constexpr uint8_t MAPSPEED_FAST = 2u;
-
 enum class GameSpeed : uint8_t {
   kSlow = 0,
   kNormal = 1,
@@ -233,10 +226,7 @@ enum class GameSpeed : uint8_t {
   LAST = 3,
 };
 
-constexpr uint8_t MAPVIS_HIDETERRAIN = 0u;
-constexpr uint8_t MAPVIS_EXPLORED = 1u;
-constexpr uint8_t MAPVIS_ALWAYSVISIBLE = 2u;
-constexpr uint8_t MAPVIS_DEFAULT = 3u;
+template<> struct is_comparable_enum<GameSpeed> : std::true_type {};
 
 enum class GameVisibilityMode : uint8_t {
   kHideTerrain = 0,
@@ -245,11 +235,6 @@ enum class GameVisibilityMode : uint8_t {
   kDefault = 3,
   LAST = 4,
 };
-
-constexpr uint8_t MAPOBS_NONE = 0u;
-constexpr uint8_t MAPOBS_ONDEFEAT = 1u;
-constexpr uint8_t MAPOBS_ALLOWED = 2u;
-constexpr uint8_t MAPOBS_REFEREES = 3u;
 
 enum class GameObserversMode : uint8_t {
   kNone = 0,
@@ -374,8 +359,8 @@ constexpr uint8_t MAP_FILE_SOURCE_CATEGORY_FS = 2u;
 
 enum class MapFileSourceCategory : uint8_t {
   kNone = 0,
-  kMpq = 1,
-  kFs = 2,
+  kMPQ = 1,
+  kFS = 2,
   LAST = 3,
 };
 
@@ -1183,16 +1168,14 @@ enum class RealmAuth : uint8_t {
   LAST = 2,
 };
 
-constexpr uint8_t REALM_OBSERVER_DISPLAY_NONE = 0u;
-constexpr uint8_t REALM_OBSERVER_DISPLAY_LOW_PRIORITY = 1u;
-constexpr uint8_t REALM_OBSERVER_DISPLAY_ALWAYS = 2u;
-
-enum class RealmObserverDisplay : uint8_t {
+enum class RealmBroadcastDisplayPriority : uint8_t {
   kNone = 0,
-  kLowPriority = 1,
-  kAlways = 2,
+  kLow = 1,
+  kHigh = 2,
   LAST = 3,
 };
+
+template<> struct is_comparable_enum<RealmBroadcastDisplayPriority> : std::true_type {};
 
 enum class PvPGNLocale : uint8_t {
   kENUS = 0,
@@ -1300,11 +1283,6 @@ enum class GameExpansionCode : uint8_t {
   LAST = 2,
 };
 
-constexpr uint8_t CROSSPLAY_MODE_NONE = 0u;
-constexpr uint8_t CROSSPLAY_MODE_CONSERVATIVE = 1u;
-constexpr uint8_t CROSSPLAY_MODE_OPTIMISTIC = 2u;
-constexpr uint8_t CROSSPLAY_MODE_FORCE = 3u;
-
 enum class CrossPlayMode : uint8_t {
   kNone = 0,
   kConservative = 1,
@@ -1313,21 +1291,12 @@ enum class CrossPlayMode : uint8_t {
   LAST = 4,
 };
 
-constexpr uint8_t READY_MODE_FAST = 0u;
-constexpr uint8_t READY_MODE_EXPECT_RACE = 1u;
-constexpr uint8_t READY_MODE_EXPLICIT = 2u;
-
 enum class PlayersReadyMode : uint8_t {
   kFast = 0,
   kExpectRace = 1,
   kExplicit = 2,
   LAST = 3,
 };
-
-constexpr uint8_t HIDE_IGN_NEVER = 0u;
-constexpr uint8_t HIDE_IGN_HOST = 1u;
-constexpr uint8_t HIDE_IGN_ALWAYS = 2u;
-constexpr uint8_t HIDE_IGN_AUTO = 3u;
 
 enum class HideIGNMode : uint8_t {
   kNever = 0,
@@ -1337,11 +1306,6 @@ enum class HideIGNMode : uint8_t {
   LAST = 4,
 };
 
-constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_NEVER = 0u;
-constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_AUTO = 1u;
-constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_TEAM = 2u;
-constexpr uint8_t FAKE_USERS_SHARE_UNITS_MODE_ALL = 3u;
-
 enum class FakeUsersShareUnitsMode : uint8_t {
   kNever = 0,
   kAuto = 1,
@@ -1349,13 +1313,6 @@ enum class FakeUsersShareUnitsMode : uint8_t {
   kAll = 3,
   LAST = 4,
 };
-
-constexpr uint8_t ON_ADV_ERROR_IGNORE_ERRORS = 0u;
-constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAIN_ERROR = 1u;
-constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAIN_ERROR_IF_EMPTY = 2u;
-constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR = 3u;
-constexpr uint8_t ON_ADV_ERROR_EXIT_ON_ANY_ERROR_IF_EMPTY = 4u;
-constexpr uint8_t ON_ADV_ERROR_EXIT_ON_MAX_ERRORS = 5u;
 
 enum class OnRealmBroadcastErrorHandler : uint8_t {
   kIgnoreErrors = 0,
@@ -1367,10 +1324,11 @@ enum class OnRealmBroadcastErrorHandler : uint8_t {
   LAST = 6,
 };
 
-constexpr uint8_t LOBBY_TIMEOUT_NEVER = 0u;
-constexpr uint8_t LOBBY_TIMEOUT_EMPTY = 1u;
-constexpr uint8_t LOBBY_TIMEOUT_OWNERLESS = 2u;
-constexpr uint8_t LOBBY_TIMEOUT_STRICT = 3u;
+enum class MirrorSourceType : uint8_t {
+  kRaw = 0,
+  kRegistry = 1,
+  LAST = 2,
+};
 
 enum class LobbyTimeoutMode : uint8_t {
   kNever = 0,
@@ -1380,9 +1338,13 @@ enum class LobbyTimeoutMode : uint8_t {
   LAST = 4,
 };
 
-constexpr uint8_t LOBBY_OWNER_TIMEOUT_NEVER = 0u;
-constexpr uint8_t LOBBY_OWNER_TIMEOUT_ABSENT = 1u;
-constexpr uint8_t LOBBY_OWNER_TIMEOUT_STRICT = 2u;
+enum class MirrorTimeoutMode : uint8_t {
+  kNever = 0,
+  kStarted = 1,
+  kUnwatched = 2,
+  kStrict = 3,
+  LAST = 4,
+};
 
 enum class LobbyOwnerTimeoutMode : uint8_t {
   kNever = 0,
@@ -1391,18 +1353,11 @@ enum class LobbyOwnerTimeoutMode : uint8_t {
   LAST = 3,
 };
 
-constexpr uint8_t GAME_LOADING_TIMEOUT_NEVER = 0u;
-constexpr uint8_t GAME_LOADING_TIMEOUT_STRICT = 1u;
-
 enum class GameLoadingTimeoutMode : uint8_t {
   kNever = 0,
   kStrict = 1,
   LAST = 2,
 };
-
-constexpr uint8_t GAME_PLAYING_TIMEOUT_NEVER = 0u;
-constexpr uint8_t GAME_PLAYING_TIMEOUT_DRY = 1u;
-constexpr uint8_t GAME_PLAYING_TIMEOUT_STRICT = 2u;
 
 enum class GamePlayingTimeoutMode : uint8_t {
   kNever = 0,
@@ -1524,9 +1479,6 @@ constexpr int64_t GAME_USER_TIMEOUT_RECONNECTABLE = 20000;
 
 constexpr uint16_t GAME_DEFAULT_UDP_PORT = 6112u;
 constexpr uint8_t UDP_DISCOVERY_MAX_EXTRA_ADDRESSES = 30u;
-
-constexpr uint8_t NET_PROTOCOL_TCP = 0u;
-constexpr uint8_t NET_PROTOCOL_UDP = 1u;
 
 enum class NetProtocol : uint8_t {
   kTCP = 0,
@@ -1714,5 +1666,33 @@ constexpr int64_t MMD_PROCESSING_STREAM_DEF_DELAY = 60000;
 constexpr int64_t MMD_PROCESSING_STREAM_ACTION_DELAY = 180000;
 
 constexpr uint32_t MMD_MAX_ARITY = 64u;
+
+template<typename T>
+constexpr auto operator<(T lhs, T rhs)
+  -> std::enable_if_t<is_comparable_enum<T>::value, bool>
+{
+  return static_cast<std::underlying_type_t<T>>(lhs) < static_cast<std::underlying_type_t<T>>(rhs);
+}
+
+template<typename T>
+constexpr auto operator<=(T lhs, T rhs)
+  -> std::enable_if_t<is_comparable_enum<T>::value, bool>
+{
+  return !(rhs < lhs);
+}
+
+template<typename T>
+constexpr auto operator>(T lhs, T rhs)
+  -> std::enable_if_t<is_comparable_enum<T>::value, bool>
+{
+  return rhs < lhs;
+}
+
+template<typename T>
+constexpr auto operator>=(T lhs, T rhs)
+  -> std::enable_if_t<is_comparable_enum<T>::value, bool>
+{
+  return !(lhs < rhs);
+}
 
 #endif // AURA_CONSTANTS_H_

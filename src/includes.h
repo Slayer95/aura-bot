@@ -121,8 +121,10 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #define UNREACHABLE() do {} while (0) // Fallback: does nothing
 #endif
 
-#define IGNORE_ENUM_LAST(EnumType) \
-    case EnumType::LAST: UNREACHABLE(); break;
+#define IGNORE_CASE(T) \
+    case T: UNREACHABLE(); break;
+
+#define IGNORE_ENUM_LAST(EnumType) IGNORE_CASE(EnumType::LAST)
 
 #define PRINT_IF(T, U) \
     static_assert(T < LogLevel::LAST, "Use DPRINT_IF for tracing log levels");\

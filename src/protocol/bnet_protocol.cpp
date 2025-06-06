@@ -530,9 +530,9 @@ namespace BNETProtocol
     //
     // Meanwhile, this should be enough as a PoC.
     if (maxSlots > mapNumPlayers) {
-      gameConfig->SetUint8("map.observers", MAPOBS_REFEREES);
+      gameConfig->SetString("map.observers", "referees");
     } else {
-      gameConfig->SetUint8("map.observers", MAPOBS_NONE);
+      gameConfig->SetString("map.observers", "none");
     }
 
     // In a PVPGN server, stored at t_game.mapsize_x

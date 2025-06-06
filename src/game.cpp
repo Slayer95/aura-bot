@@ -166,8 +166,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameOver(GAME_ONGOING),
     m_LastLagScreenResetTime(0),
     m_RandomSeed(0),
-    m_HostCounter(nGameSetup->m_Identifier.has_value() ? nGameSetup->m_Identifier.value() : nAura->NextHostCounter()),
-    m_EntryKey(nGameSetup->m_EntryKey.value_or(0)),
+    m_HostCounter(nGameSetup->GetGameIdentifier()),
+    m_EntryKey(nGameSetup->GetEntryKey()),
     m_SyncCounter(0),
     m_SyncCounterChecked(0),
     m_MaxPingEqualizerDelayFrames(0),
@@ -178,7 +178,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_ControllersReadyCount(0),
     m_ControllersNotReadyCount(0),
     m_ControllersWithMap(0),
-    m_CustomLayout(nGameSetup->m_CustomLayout.has_value() ? nGameSetup->m_CustomLayout.value() : MAPLAYOUT_ANY),
+    m_CustomLayout(nGameSetup->m_CustomLayout.value_or(MAPLAYOUT_ANY)),
     m_CustomLayoutData(make_pair(nGameSetup->m_Map->GetVersionMaxSlots(), nGameSetup->m_Map->GetVersionMaxSlots())),
     m_HostPort(0),
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
@@ -198,7 +198,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_MuteAll(false),
     m_ChatEnabled(false),
     m_IsMirror(nGameSetup->GetIsMirror()),
-    m_IsMirrorProxy(nGameSetup->GetIsMirrorProxy()),
+    m_IsMirrorProxy(false),
     m_CountDownStarted(false),
     m_CountDownFast(false),
     m_CountDownUserInitiated(false),
@@ -210,7 +210,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_IsDraftMode(false),
     m_IsHiddenPlayerNames(false),
     m_HadLeaver(false),
-    m_CheckReservation(nGameSetup->m_ChecksReservation.has_value() ? nGameSetup->m_ChecksReservation.value() : nGameSetup->m_RestoredGame != nullptr),
+    m_CheckReservation(nGameSetup->m_ChecksReservation.value_or(nGameSetup->m_RestoredGame != nullptr)),
     m_UsesCustomReferees(false),
     m_SentPriorityWhois(false),
     m_Remaking(false),
@@ -275,7 +275,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       AddToReserved(userName);
     }
 
-    InitPRNG();
+    m_RandomSeed = GetRandomUInt32();
 
     // wait time of 1 minute  = 0 empty actions required
     // wait time of 2 minutes = 1 empty action required...
@@ -304,8 +304,9 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     }
   } else {
     SetIsCheckJoinable(false);
-    m_PublicHostAddress = AddressToIPv4Array(&(nGameSetup->m_RealmsAddress));
-    m_PublicHostPort = GetAddressPort(&(nGameSetup->m_RealmsAddress));
+    m_PublicHostAddress = AddressToIPv4Array(nGameSetup->GetGameAddress());
+    m_PublicHostPort = GetAddressPort(nGameSetup->GetGameAddress());
+    m_IsMirrorProxy = nGameSetup->GetMirror().GetIsProxyEnabled();
 
     if (m_IsMirrorProxy && !InitNet()) {
       m_Exiting = true;
@@ -336,15 +337,6 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       }
     }
   }
-}
-
-void CGame::InitPRNG()
-{
-  random_device rd;
-  mt19937 gen(rd());
-  uniform_int_distribution<uint32_t> dis;
-  m_RandomSeed = dis(gen);
-  m_EntryKey = dis(gen);
 }
 
 void CGame::InitSlots()
@@ -1958,7 +1950,7 @@ void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t max
   const int64_t Ticks = GetTicks();
   if (m_LastActionSentTicks != 0) {
     if (actionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
-      m_Aura->LogPerformanceWarning(TASK_TYPE_GAME_FRAME, this, actionLateBy, oldLatency, newLatency);
+      m_Aura->LogPerformanceWarning(TaskType::kGameFrame, this, actionLateBy, oldLatency, newLatency);
     }
     m_LastActionLateBy = actionLateBy;
   }
@@ -7279,8 +7271,9 @@ void CGame::Remake()
 
   NextCreationCounter();
   m_HostCounter = m_Aura->NextHostCounter();
+  m_RandomSeed = GetRandomUInt32();
+  m_EntryKey = GetRandomUInt32();
   m_ChatEnabled = m_Config.m_EnableLobbyChat;
-  InitPRNG();
   InitSlots();
 
   m_KickVotePlayer.clear();

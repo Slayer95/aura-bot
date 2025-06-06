@@ -460,7 +460,7 @@ bool CNet::Init()
     }
 #ifndef DISABLE_MINIUPNP
     if (m_Config.m_EnableUPnP) {
-      RequestUPnP(NET_PROTOCOL_UDP, 6112, 6112, LogLevel::kDebug);
+      RequestUPnP(NetProtocol::kUDP, 6112, 6112, LogLevel::kDebug);
     }
 #endif
   }
@@ -1189,7 +1189,7 @@ sockaddr_storage* CNet::GetPublicIPv6()
 }
 
 #ifndef DISABLE_MINIUPNP
-uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPort, const uint16_t internalPort, const LogLevel logLevel, bool ignoreCache)
+uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externalPort, const uint16_t internalPort, const LogLevel logLevel, bool ignoreCache)
 {
   struct UPNPDev* devlist = nullptr;
   struct UPNPDev* device;
@@ -1199,24 +1199,28 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
   char wanaddr[64] = "unset";
 
   string protocol;
-  if (protocolCode == NET_PROTOCOL_TCP) {
-    protocol = "TCP";
-    if (!ignoreCache) {
-      auto cacheEntry = m_UPnPTCPCache.find(make_pair(externalPort, internalPort));
-      if (cacheEntry != m_UPnPTCPCache.end() && GetTime() < cacheEntry->second.first + 10800) {
-        return cacheEntry->second.second;
+  switch (protocolCode) {
+    case NetProtocol::kTCP: {
+      protocol = "TCP";
+      if (!ignoreCache) {
+        auto cacheEntry = m_UPnPTCPCache.find(make_pair(externalPort, internalPort));
+        if (cacheEntry != m_UPnPTCPCache.end() && GetTime() < cacheEntry->second.first + 10800) {
+          return cacheEntry->second.second;
+        }
       }
+      break;
     }
-  } else if (protocolCode == NET_PROTOCOL_UDP) {
-    protocol = "UDP";
-    if (!ignoreCache) {
-      auto cacheEntry = m_UPnPUDPCache.find(make_pair(externalPort, internalPort));
-      if (cacheEntry != m_UPnPUDPCache.end() && GetTime() < cacheEntry->second.first+ 10800) {
-        return cacheEntry->second.second;
+    case NetProtocol::kUDP: {
+      protocol = "UDP";
+      if (!ignoreCache) {
+        auto cacheEntry = m_UPnPUDPCache.find(make_pair(externalPort, internalPort));
+        if (cacheEntry != m_UPnPUDPCache.end() && GetTime() < cacheEntry->second.first+ 10800) {
+          return cacheEntry->second.second;
+        }
       }
+      break;
     }
-  } else {
-    return 0;
+    IGNORE_ENUM_LAST(NetProtocol)
   }
 
   PRINT_IF(LogLevel::kNotice, "[NET] Requesting UPnP port-mapping (" + protocol + ") " + to_string(externalPort) + " -> " + to_string(internalPort))
@@ -1298,10 +1302,16 @@ uint8_t CNet::RequestUPnP(const uint8_t protocolCode, const uint16_t externalPor
     }
   }
 
-  if (protocolCode == NET_PROTOCOL_TCP) {
-    m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
-  } else if (protocolCode == NET_PROTOCOL_UDP) {
-    m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
+  switch (protocolCode) {
+    case NetProtocol::kTCP: {
+      m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
+      break;
+    }
+    case NetProtocol::kUDP: {
+      m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
+      break;
+    }
+    IGNORE_ENUM_LAST(NetProtocol)
   }
 
   return success;

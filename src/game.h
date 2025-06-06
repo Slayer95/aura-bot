@@ -663,7 +663,6 @@ public:
   void                                EventObserverMapSize(CAsyncObserver* connection, const CIncomingMapFileSize& mapSize);
 
   // Initialization
-  void                                InitPRNG();
   void                                InitSlots();
   bool                                InitNet();
   void                                InitBonjour(GameDiscoveryInterface& interface);

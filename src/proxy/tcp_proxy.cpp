@@ -137,7 +137,7 @@ TCPProxyStatus CTCPProxy::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     // falls through
   } else if (!m_OutgoingSocket->GetConnected() && !m_OutgoingSocket->HasError()) {
     auto game = m_Game.lock();
-    if (!game) return TCPProxyStatus::kDestroy;
+    if (!game || !game->GetPublicHostOverride()) return TCPProxyStatus::kDestroy;
     sockaddr_storage outgoingAddress = IPv4ArrayToAddress(game->GetPublicHostAddress());
     SetAddressPort(&outgoingAddress, game->GetPublicHostPort());
     m_OutgoingSocket->Connect(nullopt, outgoingAddress);

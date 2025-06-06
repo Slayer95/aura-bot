@@ -56,7 +56,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_Admins({}),
     m_MaxGameNameFixedCharsSize(0),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
-    m_WatchableDisplayMode(REALM_OBSERVER_DISPLAY_NONE),
+    m_LobbyDisplayPriority(RealmBroadcastDisplayPriority::kNone),
+    m_WatchableDisplayPriority(RealmBroadcastDisplayPriority::kNone),
     m_FloodImmune(false),
 
     m_QueryGameLists(false)
@@ -174,7 +175,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_WatchableNameTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.watchable.name_template", "{NAME}{COUNTER}");
 
   m_MaxUploadSize          = CFG.GetUint32(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
-  m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
+  m_LobbyDisplayPriority       = CFG.GetEnum<RealmBroadcastDisplayPriority>(m_CFGKeyPrefix + "game_list.lobby.display.priority", TO_ARRAY("none", "low", "high"), m_LobbyDisplayPriority);
+  m_WatchableDisplayPriority   = CFG.GetEnum<RealmBroadcastDisplayPriority>(m_CFGKeyPrefix + "game_list.watchable.display.priority", TO_ARRAY("none", "low", "high"), m_WatchableDisplayPriority);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", true);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5) - 1;
@@ -303,7 +305,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_LobbyNameTemplate(nRootConfig->m_LobbyNameTemplate),
     m_WatchableNameTemplate(nRootConfig->m_WatchableNameTemplate),
     m_MaxUploadSize(nRootConfig->m_MaxUploadSize),
-    m_WatchableDisplayMode(nRootConfig->m_WatchableDisplayMode),
+    m_LobbyDisplayPriority(nRootConfig->m_LobbyDisplayPriority),
+    m_WatchableDisplayPriority(nRootConfig->m_WatchableDisplayPriority),
 
     m_ConsoleLogChat(nRootConfig->m_ConsoleLogChat),
     m_FloodQuotaLines(nRootConfig->m_FloodQuotaLines),
@@ -480,8 +483,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
 
   m_ReHostCounterTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.rehost.name_template", m_ReHostCounterTemplate);
-  m_LobbyNameTemplate      = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.lobby.name_template", m_LobbyNameTemplate);
-  m_WatchableNameTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.watchable.name_template", m_WatchableNameTemplate);
+
+  m_LobbyDisplayPriority       = CFG.GetEnum<RealmBroadcastDisplayPriority>(m_CFGKeyPrefix + "game_list.lobby.display.priority", TO_ARRAY("none", "low", "high"), m_LobbyDisplayPriority);
+  m_WatchableDisplayPriority   = CFG.GetEnum<RealmBroadcastDisplayPriority>(m_CFGKeyPrefix + "game_list.watchable.display.priority", TO_ARRAY("none", "low", "high"), m_WatchableDisplayPriority);
 
   m_MaxGameNameFixedCharsSize = CountTemplateFixedChars(m_ReHostCounterTemplate).value_or(MAX_GAME_NAME_SIZE) + max(
     CountTemplateFixedChars(m_LobbyNameTemplate).value_or(MAX_GAME_NAME_SIZE),
@@ -493,7 +497,6 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
 
   m_MaxUploadSize          = CFG.GetUint32(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
-  m_WatchableDisplayMode   = CFG.GetStringIndex(m_CFGKeyPrefix + "watchable_games.display_mode", {"none", "deprioritize", "always"}, m_WatchableDisplayMode);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", m_ConsoleLogChat);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", m_FloodQuotaLines + 1) - 1;

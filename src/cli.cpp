@@ -48,6 +48,7 @@ using namespace std;
 CCLI::CCLI()
  : m_UseStandardPaths(false),
    m_InfoAction(CLIAction::kNone),
+   m_ParseResult(CLIResult::kOk),
    m_Verbose(false),
    m_ExecAuth(CommandAuth::kAuto),
    m_ExecBroadcast(false),
@@ -84,6 +85,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   bool about = false;
   optional<string> rawGameVersion;
   optional<string> rawWar3DataVersion;
+  optional<string> rawBindAddress;
 
   app.option_defaults()->ignore_case();
 
@@ -207,8 +209,9 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     })
   );
 
-  app.add_option("--bind-address", m_BindAddress,
-    "Restricts connections to the game server, only allowing the input IPv4 address."
+  app.add_option("--bind-address", rawBindAddress,
+    "Bind address used by any created TCP servers, as well as by the UDP listen/broadcast services."
+    "This option can be used to restricts connections to the game server, only allowing certain IPv4 address."
   )->check(CLI::ValidIPV4);
   app.add_option("--host-port", m_HostPort,
     "Customizes the game server to only listen in the specified port."
@@ -432,22 +435,78 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     })
   );
 
-  app.add_option("--alias", m_GameMapAlias, 
+  app.add_option("--map-alias", m_GameMapAlias,
     "Registers an alias for the map used when hosting from the CLI."
   );
-  app.add_option("--mirror", m_GameMirrorSource, 
-    "Mirrors a game, listing it in the connected realms. Syntax: IP:PORT#ID."
-  );
-  app.add_option("--exclude", m_ExcludedRealms, 
+
+  app.add_option("--broadcast-exclude", m_ExcludedRealms,
     "Hides the game in the listed realm(s). Repeatable."
   );
-  app.add_flag(  "--proxy", m_GameMirrorProxy, 
+
+  app.add_flag(  "--mirror,--no-mirror{false}", m_GameMirror,
+    "Mirrors a game, listing it in the connected realms."
+    "The mirrored game must be specified with --mirror-source, --mirror-source-type, and --mirror-source-registry"
+  );
+
+  app.add_option("--mirror-source", m_GameMirrorSource,
+    "Mirrors a game, listing it in the connected realms. "
+    "When --mirror-source-type=raw, the syntax expected is: IP:PORT#ID or IP:PORT#ID:KEY. "
+    "When --mirror-source-type=registry, it expects the game name. "
+  );
+
+  app.add_option("--mirror-source-type", m_GameMirrorSourceType,
+    "Customizes how Aura will find the game to be mirrored. "
+    "Values: raw, registry"
+  )->transform(
+    CLI::CheckedTransformer(map<string, MirrorSourceType>{
+      {"raw", MirrorSourceType::kRaw},
+      {"registry", MirrorSourceType::kRegistry}
+    })
+  );
+
+  app.add_option("--mirror-source-registry", m_GameMirrorSourceService,
+    "Provides an identifier of the game registry to be used when --mirror-source-type=registry"
+  );
+  app.add_flag(  "--mirror-watch-lobby,--no-mirror-watch-lobby{false}", m_GameMirrorWatchLobby,
+    "Lets Aura join the mirrored lobby to ensure it's still joinable."
+  );
+  app.add_option("--mirror-watch-lobby-user", m_GameMirrorWatchLobbyUser,
+    "Customizes the game used by Aura when watching a mirrored game lobby."
+  );
+  app.add_option("--mirror-watch-lobby-team", m_GameMirrorWatchLobbyTeam,
+    "Customizes the team joined by Aura when watching a mirrored game lobby."
+    //"Only after this team is successfully joined will Aura acknowledge that the map is available."
+  );
+  app.add_option("--mirror-watch-lobby-team-retry-interval", m_GameMirrorWatchLobbyTeamRetryInterval,
+    "Customizes how long between each Aura attempt to join the required team of a watched mirrored lobby."
+  );
+  app.add_option("--mirror-watch-lobby-team-max-tries", m_GameMirrorWatchLobbyTeamMaxTries,
+    "Customizes how many times will Aura attempt join the required team of a watched mirrored lobby. "
+    "Set to 0 for unlimited tries."
+  );
+
+  app.add_option("--mirror-timeout", m_GameMirrorTimeout,
+    "Sets the time limit for a mirrored lobby with --mirror-timeout-mode=unwatched or --mirror-timeout-mode=strict."
+  );
+  app.add_option("--mirror-timeout-mode", m_GameMirrorTimeoutMode,
+    "Customizes under which circumstances should a mirrored game lobby timeout. "
+    "Values: never, started, unwatched, strict."
+  )->transform(
+    CLI::CheckedTransformer(map<string, MirrorTimeoutMode>{
+      {"never", MirrorTimeoutMode::kNever},
+      {"started", MirrorTimeoutMode::kStarted},
+      {"unwatched", MirrorTimeoutMode::kUnwatched},
+      {"strict", MirrorTimeoutMode::kStrict}
+    })
+  );
+
+  app.add_flag(  "--mirror-proxy,--no-mirror-proxy{false}", m_GameMirrorProxy,
     "Proxies LAN connections towards the mirrored game."
   );
 
   app.add_option("--lobby-timeout-mode", m_GameLobbyTimeoutMode, 
     "Customizes under which circumstances should a game lobby timeout. "
-    "Values: never, empty, ownerless, strict"
+    "Values: never, empty, no-owner, strict"
   )->transform(
     CLI::CheckedTransformer(map<string, LobbyTimeoutMode>{
       {"never", LobbyTimeoutMode::kNever},
@@ -750,29 +809,6 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     return CLIResult::kError;
   }
 
-  if (rawGameVersion.has_value()) {
-    optional<Version> gameVersion = ParseGameVersion(rawGameVersion.value());
-    if (!gameVersion.has_value()) {
-      Print("[AURA] Invalid value for --game-version");
-      return CLIResult::kError;
-    }
-    m_GameVersion.swap(gameVersion);
-  }
-
-  if (rawWar3DataVersion.has_value()) {
-    optional<Version> war3DataVersion = ParseGameVersion(rawWar3DataVersion.value());
-    if (!war3DataVersion.has_value()) {
-      Print("[AURA] Invalid value for --game-version");
-      return CLIResult::kError;
-    }
-    m_War3DataVersion.swap(war3DataVersion);
-  }
-
-  if (!m_ExecCommands.empty() && !m_ExecAs.has_value()) {
-    Print("[AURA] Option --exec-as is required");
-    return CLIResult::kError;
-  }
-
   if (about || examples || m_RunTests) {
     if (about) {
       m_InfoAction = CLIAction::kAbout;
@@ -803,31 +839,55 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     return CLIResult::kConfigAndQuit;
   }
 
-  return CLIResult::kOk;
-}
+  MapOpt("--game-version", rawGameVersion, &ParseGameVersion, m_GameVersion);
+  MapOpt("--data-version", rawWar3DataVersion, &ParseGameVersion, m_War3DataVersion);
+  MapOpt("--bind-address", rawBindAddress, [](const string& input) {
+    return CNet::ParseAddress(input, ACCEPT_IPV4);
+  }, m_BindAddress);
 
-bool CCLI::CheckGameParameters() const
-{
+  if (m_ExecCommands.empty() == m_ExecAs.has_value()) {
+    ConditionalRequireError("--exec", "--exec-as", m_ExecCommands.empty());
+  }
+
+  // Hosted games
+
   if (m_GameOwnerLess.value_or(false) && m_GameOwner.has_value()) {
     Print("[AURA] Conflicting --owner and --no-owner flags.");
-    return false;
+    m_ParseResult = CLIResult::kError;
   }
-  return true;
+
+  // Loaded games
+  ConditionalRequire("--load", m_GameSavedPath, "--check-reservation", m_GameCheckReservation, false);
+
+  // Do not allow automatically rehosting loads of the same savefile,
+  // Because that would mean keeping the CSaveGame around.
+  // Also, what's this? The Battle for Wesnoth?
+  ConditionalRequireOpposite("--load", m_GameSavedPath, "--auto-rehost", m_GameLobbyAutoRehosted, false);
+
+  // Mirror games
+
+  ConditionalRequire("--mirror", m_GameMirror, "--mirror-source", m_GameMirrorSource, true);
+  ConditionalRequire("--mirror", m_GameMirror, "--mirror-source-type", m_GameMirrorSourceType, true);
+
+  if ((m_GameMirrorSourceType.value_or(MirrorSourceType::kRaw) == MirrorSourceType::kRegistry) != m_GameMirrorSourceService.has_value()) {
+    ConditionalRequireError("--mirror-source-type=registry", "--mirror-source-registry", m_GameMirrorSourceService.has_value());
+  }
+
+  ConditionalRequire("--mirror-watch-lobby", m_GameMirrorWatchLobbyUser, "--mirror", m_GameMirror, false);
+  ConditionalRequire("--mirror-watch-lobby-user", m_GameMirrorWatchLobbyUser, "--mirror-watch-lobby", m_GameMirrorWatchLobby, false);
+  ConditionalRequire("--mirror-watch-lobby-team", m_GameMirrorWatchLobbyTeam, "--mirror-watch-lobby", m_GameMirrorWatchLobby, false);
+  ConditionalRequire("--mirror-watch-lobby-team-retry-interval", m_GameMirrorWatchLobbyTeamRetryInterval, "--mirror-watch-lobby-team", m_GameMirrorWatchLobbyTeam, false);
+  ConditionalRequire("--mirror-watch-lobby-team-max-tries", m_GameMirrorWatchLobbyTeamMaxTries, "--mirror-watch-lobby-team", m_GameMirrorWatchLobbyTeam, false);
+
+  ConditionalRequire("--mirror-proxy", m_GameMirrorProxy, "--mirror", m_GameMirror, false);
+
+  return m_ParseResult;
 }
 
 bool CCLI::RunGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
 {
   if (!gameSetup->RestoreFromSaveFile()) {
     Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
-    return false;
-  } else if (m_GameCheckReservation.has_value() && !m_GameCheckReservation.value()) {
-    Print("[AURA] Resuming a loaded game must always check reservations.");
-    return false;
-  } else if (m_GameLobbyAutoRehosted.value_or(false)) {
-    // Do not allow automatically rehosting loads of the same savefile,
-    // Because that would mean keeping the CSaveGame around.
-    // Also, what's this? The Battle for Wesnoth?
-    Print("[AURA] A loaded game cannot be auto rehosted.");
     return false;
   }
   return true;
@@ -882,10 +942,7 @@ void CCLI::OverrideConfig(CAura* nAura) const
   }
 
   if (m_BindAddress.has_value()) {
-    optional<sockaddr_storage> address = CNet::ParseAddress(m_BindAddress.value(), ACCEPT_IPV4);
-    if (address.has_value()) {
-      nAura->m_Net.m_Config.m_BindAddress4 = address.value();
-    }
+    nAura->m_Net.m_Config.m_BindAddress4 = *m_BindAddress;
   }
 
   auto hostPortReader = ReadOpt(m_HostPort);
@@ -900,21 +957,18 @@ void CCLI::OverrideConfig(CAura* nAura) const
 bool CCLI::QueueActions(CAura* nAura) const
 {
   for (const auto& port : m_PortForwardTCP) {
-    AppAction upnpAction = AppAction(APP_ACTION_TYPE_UPNP, APP_ACTION_MODE_TCP, port, port);
+    AppAction upnpAction = AppAction(AppActionType::kUPnP, AppActionMode::kTCP, port, port);
     nAura->m_PendingActions.push(upnpAction);
   }
 
   for (const auto& port : m_PortForwardUDP) {
-    AppAction upnpAction = AppAction(APP_ACTION_TYPE_UPNP, APP_ACTION_MODE_UDP, port, port);
+    AppAction upnpAction = AppAction(AppActionType::kUPnP, AppActionMode::kUDP, port, port);
     nAura->m_PendingActions.push(upnpAction);
   }
 
   if (m_SearchTarget.has_value()) {
     CGameExtraOptions options;
     options.AcquireCLI(this);
-    if (!CheckGameParameters()) {
-      return false;
-    }
 
     const uint8_t searchType = m_SearchType.value_or(m_UseStandardPaths ? SEARCH_TYPE_ONLY_FILE : SEARCH_TYPE_ANY);
 
@@ -970,19 +1024,20 @@ bool CCLI::QueueActions(CAura* nAura) const
         Print("Failed to add alias.");
       }
     }
-    if (m_GameMirrorSource.has_value()) {
-      if (!gameSetup->SetMirrorSource(m_GameMirrorSource.value())) {
+
+    const bool isMirror = m_GameMirror.value_or(false);
+    if (isMirror && !gameSetup->AcquireCLIMirror(this)) {
+      if (m_GameMirrorSourceType == MirrorSourceType::kRaw) {
         Print("[AURA] Invalid mirror source [" + m_GameMirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
-        return false;
+      } else {
+        Print("[AURA] Invalid mirror source [" + m_GameMirrorSource.value() + "]. Ensure it's a valid PvPGN realm or other registry.");
       }
-      if (m_GameMirrorProxy.has_value()) {
-        gameSetup->SetMirrorProxy(m_GameMirrorProxy.value());
-      }
+      return false;
     }
     gameSetup->AcquireHost(this, userName);
     gameSetup->AcquireCLISimple(this);
     gameSetup->SetActive();
-    AppAction hostAction = AppAction(APP_ACTION_TYPE_HOST, 0);
+    AppAction hostAction = AppAction(AppActionType::kHost, AppActionMode::kNone);
     nAura->m_PendingActions.push(hostAction);
   }
 

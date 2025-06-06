@@ -129,7 +129,9 @@ struct CRealmConfig
   std::string m_WatchableNameTemplate;           // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended
   size_t m_MaxGameNameFixedCharsSize;
   uint32_t m_MaxUploadSize;                      // in KB
-  uint8_t m_WatchableDisplayMode;                // none, deprioritize, always
+
+  RealmBroadcastDisplayPriority m_LobbyDisplayPriority;        // none, low, high
+  RealmBroadcastDisplayPriority m_WatchableDisplayPriority;       // none, low, high
 
   bool m_ConsoleLogChat;                         // whether we should print public chat messages
   uint8_t m_FloodQuotaLines;                     // - PvPGN: corresponds to bnetd.conf: quota_lines (default 5)
