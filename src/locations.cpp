@@ -167,6 +167,7 @@ void GameSource::Expire()
     case GameCommandSource::kReplay:
     case GameCommandSource::kNone:
       break;
+    IGNORE_ENUM_LAST(GameCommandSource)
   }
 }
 

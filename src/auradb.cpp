@@ -268,6 +268,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
       case JournalMode::INVALID:
         // do nothing
         break;
+      IGNORE_ENUM_LAST(JournalMode)
     }
 
     switch (m_Synchronous) {
@@ -286,6 +287,7 @@ CAuraDB::CAuraDB(CConfig& CFG)
       case SynchronousMode::INVALID:
         // do nothing
         break;
+      IGNORE_ENUM_LAST(SynchronousMode)
     }
 
     PreCompileStatements();

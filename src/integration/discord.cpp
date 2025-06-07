@@ -366,16 +366,21 @@ bool CDiscord::GetIsConnected() const
   return false;
 }
 
+#ifdef DISABLE_DPP
+bool CDiscord::MatchHostName(const string& /*hostName*/) const
+{
+  return false;
+}
+#else
 bool CDiscord::MatchHostName(const string& hostName) const
 {
-#ifndef DISABLE_DPP
   if (hostName == m_Config.m_HostName) return true;
   if (hostName == "users." + m_Config.m_HostName) {
     return true;
   }
-#endif
   return false;
 }
+#endif
 
 bool CDiscord::CheckLibraries()
 {

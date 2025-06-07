@@ -242,12 +242,18 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     Version headVersion = GetScriptsVersionRangeHead(GetVersion());
     for (const auto& version : m_Aura->m_Config.m_SupportedGameVersions) {
       switch (m_Config.m_CrossPlayMode) {
+        case CrossPlayMode::kNone:
+          UNREACHABLE()
+          break;
         case CrossPlayMode::kConservative:
         case CrossPlayMode::kOptimistic:
           if (GetScriptsVersionRangeHead(version) != headVersion) {
             continue;
           }
           break;
+        case CrossPlayMode::kForce:
+          break;
+        IGNORE_ENUM_LAST(CrossPlayMode)
       }
       if (!m_Map->GetMapIsGameVersionSupported(version)) {
         // map is too recent,
@@ -1901,23 +1907,25 @@ void CGame::CheckLobbyTimeouts()
           ReleaseOwner();
         }
         break;
+      IGNORE_ENUM_LAST(LobbyOwnerTimeoutMode)
     }
   }
 
   if (!m_Aura->m_Net.m_HealthCheckInProgress && (!m_IsMirror || m_Config.m_LobbyTimeoutMode == LobbyTimeoutMode::kStrict)) {
     bool timedOut = false;
     switch (m_Config.m_LobbyTimeoutMode) {
-    case LobbyTimeoutMode::kNever:
-      break;
-    case LobbyTimeoutMode::kEmpty:
-      timedOut = m_LastUserSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
-      break;
-    case LobbyTimeoutMode::kOwnerMissing:
-      timedOut = m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
-      break;
-    case LobbyTimeoutMode::kStrict:
-      timedOut = m_CreationTime + (static_cast<int64_t>(m_Config.m_LobbyTimeout) / 1000) < GetTime();
-      break;
+      case LobbyTimeoutMode::kNever:
+        break;
+      case LobbyTimeoutMode::kEmpty:
+        timedOut = m_LastUserSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
+        break;
+      case LobbyTimeoutMode::kOwnerMissing:
+        timedOut = m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
+        break;
+      case LobbyTimeoutMode::kStrict:
+        timedOut = m_CreationTime + (static_cast<int64_t>(m_Config.m_LobbyTimeout) / 1000) < GetTime();
+        break;
+      IGNORE_ENUM_LAST(LobbyTimeoutMode)
     }
     if (timedOut) {
       Log("is over (lobby time limit hit)");
@@ -4998,6 +5006,8 @@ void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) cons
       }
       break;
     }
+
+    IGNORE_ENUM_LAST(OnPlayerLeaveHandler)
   }
 
   user->SetLeftMessageSent(true);
@@ -6540,6 +6550,13 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
           SendChat(user, "Type " + GetCmdToken() + "ready for the match to automatically start.");
           break;
         }
+        case PlayersReadyMode::kFast: {
+          // This is an "always-ready" mode. Even !afk cannot be used.
+          // GameUser::CGameUser::UpdateReady() takes care of updating user readiness as soon as they are map-ready.
+          UNREACHABLE()
+          break;
+        }
+        IGNORE_ENUM_LAST(PlayersReadyMode)
       }
       user->SetReadyReminded();
     }
@@ -10756,6 +10773,7 @@ uint8_t CGame::ResolveUndecidedController(CGameController* controllerData, const
       }
       break;
     }
+    IGNORE_ENUM_LAST(GameControllerType)
   }
 
   LOG_APP_IF(LogLevel::kDebug, "ResolveUndecidedController unhandled path");
@@ -10796,6 +10814,7 @@ GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
           case GameControllerType::kComputer:
             targetBitSet = &analysis.undecidedComputerTeams;
             break;
+          IGNORE_ENUM_LAST(GameControllerType)
         }
       }
     }
@@ -10944,7 +10963,7 @@ bool CGame::GetIsAPrioriCompatibleWithGameResultsConstraints(string& reason) con
   return true;
 }
 
-bool CGame::CheckGameResults(const GameResults& gameResults) const
+bool CGame::CheckGameResults(const GameResults& /*gameResults*/) const
 {
   // TODO: CheckGameResults contraints (m_Map.m_GameResults)
   //bool canDraw;

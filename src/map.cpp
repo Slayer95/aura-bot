@@ -2590,6 +2590,8 @@ uint16_t CMap::GetLocaleInt(const W3ModLocale locale)
       return 1042; // Korean: 0x0412
     case W3ModLocale::kPLPL:
       return 1045; // Polish: 0x0415
+    case W3ModLocale::kPTBR:
+      return 1046; // Portuguese (Brasil): 0x0416
     case W3ModLocale::kRURU:
       return 1049; // Russian: 0x0419
     /*
@@ -2599,8 +2601,8 @@ uint16_t CMap::GetLocaleInt(const W3ModLocale locale)
     case W3ModLocale::kZHCN:
       return 2052; // Simplified Chinese: 0x0804
     case W3ModLocale::kZHTW:
-    default: // ::LAST
       return 1028; // Traditional Chinese: 0x0404
+    IGNORE_ENUM_LAST(W3ModLocale)
   }
 }
 
@@ -2634,6 +2636,9 @@ string CMap::GetLocalizedInMPQPath(const W3ModLocale locale, const string& baseN
     case W3ModLocale:: kPLPL:
       localizedPath.append("plPL");
       break;
+    case W3ModLocale:: kPTBR:
+      localizedPath.append("ptBR");
+      break;
     case W3ModLocale:: kRURU:
       localizedPath.append("ruRU");
       break;
@@ -2643,6 +2648,7 @@ string CMap::GetLocalizedInMPQPath(const W3ModLocale locale, const string& baseN
     case W3ModLocale:: kZHTW:
       localizedPath.append("zhTW");
       break;
+    IGNORE_ENUM_LAST(W3ModLocale)
   }
   localizedPath.append(R"(.w3mod\)");
   localizedPath.append(baseName);

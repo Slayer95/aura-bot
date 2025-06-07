@@ -921,6 +921,12 @@ namespace BNETProtocol
         }
         break;
       }
+
+      IGNORE_ENUM_LAST(PvPGNLocale)
+
+      default:
+        // FIXME: default case suppresses warnings for unhandled cases in BNETProtocol::PARSE_WHOIS_INFO
+        break;
     }
 
     return result;

@@ -194,11 +194,17 @@ PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment()
   return PLATFORM_STRING_TYPE();
 }
 
+#ifdef _WIN32
 void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath)
+#else
+void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& /*nUserPath*/)
+#endif
 {
 #ifdef _WIN32
   SetUserRegistryKey(L"Environment", L"PATH", nUserPath.c_str());
 #else
+  // FIXME?: SetPersistentUserPathEnvironment() Linux case?
+  // Maybe just rely on Makefile?
 #endif
 }
 
