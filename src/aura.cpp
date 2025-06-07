@@ -830,17 +830,24 @@ CAura::~CAura()
     m_GameSetup->m_ExitingSoon = true;
   }
 
-  for (auto& realm : m_Realms) {
-    EventRealmDeleted(realm);
-    realm.reset();
-  }
-
-  for (auto& game : GetAllGames()) {
-    EventGameDeleted(game);
-    game.reset();
+  while (!m_Realms.empty()) {
+    EventRealmDeleted(m_Realms.back());
+    m_Realms.erase(m_Realms.end() - 1);
   }
 
   m_JoinInProgressGames.clear();
+
+#define CLEAR_GAMES(vec)\
+  while (!vec.empty()) {\
+    EventGameDeleted(vec.back());\
+    vec.erase(vec.end() - 1);\
+  }
+
+  CLEAR_GAMES(m_StartedGames)
+  CLEAR_GAMES(m_Lobbies)
+  CLEAR_GAMES(m_LobbiesPending)
+
+#undef CLEAR_GAMES
 
   delete m_DB;
 }
@@ -2297,20 +2304,22 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   }
 
   shared_ptr<CGame> createdLobby = make_shared<CGame>(this, gameSetup);
-  m_LobbiesPending.push_back(createdLobby);
+
   m_LastGameHostedTicks = m_LoopTicks;
   if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;
     m_LastGameAutoHostedTicks = m_LastGameHostedTicks;
     m_AutoReHosted = true;
   }
-  gameSetup->OnGameCreate();
 
   if (createdLobby->GetExiting()) {
     createdLobby.reset();
     gameSetup->m_Ctx->ErrorReply("Cannot assign a TCP/IP port to game [" + gameSetup->m_Name + "].", CHAT_SEND_SOURCE_ALL | CHAT_LOG_INCIDENT);
     return false;
   }
+
+  m_LobbiesPending.push_back(createdLobby);
+  gameSetup->OnGameCreate();
 
   UpdateMetaData();
 

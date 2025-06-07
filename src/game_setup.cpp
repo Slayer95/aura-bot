@@ -158,7 +158,7 @@ bool GameMirrorSetup::SetRegistrySource(const StringPair& registry)
 {
   Enable();
   m_Source = registry;
-  return false;
+  return true;
 }
 
 bool GameMirrorSetup::SetRegistrySource(const string& gameName, const string& registryName)
@@ -182,7 +182,6 @@ optional<GameHost> GameMirrorSetup::GetRawSource() const
 
 CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* nMapCFG)
   : m_Aura(nAura),
-    m_RestoredGame(nullptr),
     //m_Map(nullptr),
     m_Ctx(nCtx),
 
@@ -225,7 +224,6 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
 
 CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const string nSearchRawTarget, const uint8_t nSearchType, const bool nAllowPaths, const bool nUseStandardPaths, const bool nUseLuckyMode)
   : m_Aura(nAura),
-    m_RestoredGame(nullptr),
     //m_Map(nullptr),
     m_Ctx(nCtx),
 
@@ -1363,7 +1361,7 @@ void CGameSetup::SetActive()
 
 bool CGameSetup::RestoreFromSaveFile()
 {
-  m_RestoredGame = new CSaveGame(m_Aura, m_SaveFile);
+  m_RestoredGame = make_shared<CSaveGame>(m_Aura, m_SaveFile);
   if (!m_RestoredGame->Load()) return false;
   bool success = m_RestoredGame->Parse();
   m_RestoredGame->Unload();
@@ -1485,8 +1483,7 @@ bool CGameSetup::MatchesCreatedFromDiscord() const
 
 void CGameSetup::OnGameCreate()
 {
-  // Transferred to CGame. Do not deallocate.
-  m_RestoredGame = nullptr;
+  m_RestoredGame.reset();
   if (m_LobbyAutoRehosted) {
     m_CreationCounter = (m_CreationCounter + 1) % 36;
     if (m_CreationCounter == 0) ++m_CreationCounter;
@@ -1721,6 +1718,11 @@ bool CGameSetup::AcquireCLIMirror(const CCLI* nCLI)
     }
     case MirrorSourceType::kRegistry: {
       const StringPair& registrySource = get<StringPair>(nCLI->m_GameMirrorSource);
+      void* servicePtr = nullptr;
+      ServiceType serviceType = m_Aura->FindServiceFromHostName(registrySource.second, servicePtr);
+      if (serviceType != ServiceType::kRealm) {
+        return false;
+      }
       if (!mirror.SetRegistrySource(registrySource)) {
         return false;
       }
@@ -1739,8 +1741,7 @@ CGameSetup::~CGameSetup()
 
   m_Ctx.reset();
 
-  delete m_RestoredGame;
-  m_RestoredGame = nullptr;
+  m_RestoredGame.reset();
 
   m_Creator.Reset();
   m_Aura = nullptr;

@@ -94,7 +94,7 @@ protected:
   CW3MMD*                                                m_CustomStats;
   Dota::CDotaStats*                                      m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
   CGameInteractiveHost*                                  m_GameInteractiveHost;
-  CSaveGame*                                             m_RestoredGame;
+  std::shared_ptr<CSaveGame>                             m_RestoredGame;
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
   std::vector<CGameController*>                          m_GameControllers;               // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players

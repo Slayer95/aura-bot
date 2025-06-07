@@ -303,12 +303,14 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       }
     }
   } else {
-    SetIsCheckJoinable(false);
-    m_PublicHostAddress = AddressToIPv4Array(nGameSetup->GetGameAddress());
-    m_PublicHostPort = GetAddressPort(nGameSetup->GetGameAddress());
-    m_IsMirrorProxy = nGameSetup->GetMirror().GetIsProxyEnabled();
-
-    if (m_IsMirrorProxy && !InitNet()) {
+    const sockaddr_storage* address = nGameSetup->GetGameAddress();
+    if (address) {
+      SetIsCheckJoinable(false);
+      m_PublicHostAddress = AddressToIPv4Array(address);
+      m_PublicHostPort = GetAddressPort(address);
+      m_IsMirrorProxy = nGameSetup->GetMirror().GetIsProxyEnabled();
+    }
+    if (!address || (m_IsMirrorProxy && !InitNet())) {
       m_Exiting = true;
     }
   }

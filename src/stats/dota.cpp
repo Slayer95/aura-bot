@@ -6494,7 +6494,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         optional<uint8_t> siegeColor = EnsureActorColor(cacheValue);
         vector<uint8_t> shrineId = SplitNumeral(eventStringData);
         if (siegeColor.has_value() && shrineId.size() == 2) {
-          GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
+          //GameUser::CGameUser* siegeUser = GetUserFromColor(*siegeColor);
 
           bool isFriendlyFire = (shrineId[0] == 0) == GetIsSentinelColor(*siegeColor);
           string action = "destroyed";
@@ -6606,12 +6606,14 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
       case HashCode("XGPM"): {
         optional<uint8_t> heroColor = ParseHeroColor(eventStringData);
         if (heroColor.has_value()) {
+          /*
           uint32_t xgData = cacheValue;
           uint32_t netWorth = xgData & 0xFFFF; // 16 bits
           xgData >>= 16;
           uint32_t xp = xgData; // 16 bits
-          //string playerName = GetUserNameFromColor(*heroColor);
-          //LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] " + to_string(netWorth) + " gold earned, " + to_string(xp) + " XP");
+          string playerName = GetUserNameFromColor(*heroColor);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] " + to_string(netWorth) + " gold earned, " + to_string(xp) + " XP");
+          */
         }
         break;
       }
@@ -6870,8 +6872,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
           Print(GetLogPrefix() + "got event [" + key + "], but game mode is not -so");
           break;
         }
-        GameUser::CGameUser* fromPlayer = m_Game.get().GetUserFromColor(*fromColor);
-        GameUser::CGameUser* toPlayer = m_Game.get().GetUserFromColor(*toColor);
+        //GameUser::CGameUser* fromPlayer = m_Game.get().GetUserFromColor(*fromColor);
+        //GameUser::CGameUser* toPlayer = m_Game.get().GetUserFromColor(*toColor);
         CDBDotAPlayer* fromData = m_Players[*fromColor];
         CDBDotAPlayer* toData = m_Players[*toColor];
         string fromHeroName = GetHeroName(FourCC(fromData->GetHero()));

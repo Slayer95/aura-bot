@@ -120,7 +120,7 @@ class CGameSetup : public std::enable_shared_from_this<CGameSetup>
 {
 public:
   CAura*                                          m_Aura;
-  CSaveGame*                                      m_RestoredGame;
+  std::shared_ptr<CSaveGame>                      m_RestoredGame;
   std::shared_ptr<CMap>                           m_Map;
   std::shared_ptr<CCommandContext>                m_Ctx;
 

@@ -879,7 +879,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
       case MirrorSourceType::kRegistry: {
         string gameName = rawMirrorSource.value();
         if (gameName.size() > MAX_GAME_NAME_SIZE) {
-          Print("[AURA] <--mirror-source> - invalid CLI usage - please see CLI.md");
+          Print("[CLI] --mirror-source: expected syntax: [IP]:PORT#ID or [IP]:PORT#ID:KEY");
           m_ParseResult = CLIResult::kError;
           return m_ParseResult;
         }
@@ -889,7 +889,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
       case MirrorSourceType::kRaw: {
         optional<GameHost> maybeGameHost = GameHost::Parse(rawMirrorSource.value());
         if (!maybeGameHost.has_value()) {
-          Print("[AURA] <--mirror-source> - invalid CLI usage - please see CLI.md");
+          Print("[CLI] --mirror-source: expected a valid game name");
           m_ParseResult = CLIResult::kError;
           return m_ParseResult;
         }
