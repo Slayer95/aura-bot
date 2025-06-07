@@ -8203,6 +8203,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     }
 
     case HashCode("ff"): {
+      PRINT_IF(LogLevel::kDebug, "ff command used")
       // 2x 4x 6x 8x 16x 32x 64x
       auto gameSource = GetGameSource();
       if (!gameSource.GetIsSpectator()) {

@@ -551,8 +551,10 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
   const bool isLobbyChat = incomingChatMessage.GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
   if (isLobbyChat == m_StartedLoading) {
     // Racing condition
+    PRINT_IF(LogLevel::kDebug, "EventChat ignored (bad message type for game state)")
     return;
   }
+  PRINT_IF(LogLevel::kDebug, "EventChat received")
 
   bool shouldRelay = !isLobbyChat && false; // relay the chat message to other users
 
