@@ -2604,6 +2604,7 @@ uint16_t CMap::GetLocaleInt(const W3ModLocale locale)
       return 1028; // Traditional Chinese: 0x0404
     IGNORE_ENUM_LAST(W3ModLocale)
   }
+  return 1033;
 }
 
 string CMap::GetLocalizedInMPQPath(const W3ModLocale locale, const string& baseName)

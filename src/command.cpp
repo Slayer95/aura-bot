@@ -8287,10 +8287,11 @@ AppActionStatus CCommandContext::TryDeferred(CAura* nAura, const LazyCommandCont
 
   switch (serviceType) {
     case ServiceType::kGame:
-    case ServiceType::kDiscord:
+    case ServiceType::kDiscord: {
       Print("[AURA] --exec-as: @service not supported [" + lazyCtx.identityLoc + "]");
       return AppActionStatus::kError;
-    case ServiceType::kCLI:
+    }
+    case ServiceType::kCLI: {
       try {
         if (targetGame) {
           ctx = make_shared<CCommandContext>(
@@ -8304,7 +8305,8 @@ AppActionStatus CCommandContext::TryDeferred(CAura* nAura, const LazyCommandCont
       } catch (...) {
       }
       break;
-    case ServiceType::kIRC:
+    }
+    case ServiceType::kIRC: {
       if (lazyCtx.online) {
         if (!nAura->m_IRC.GetIsEnabled()) return AppActionStatus::kError;
         if (nAura->m_IRC.m_Config.m_Channels.empty()) return AppActionStatus::kError;
@@ -8330,7 +8332,8 @@ AppActionStatus CCommandContext::TryDeferred(CAura* nAura, const LazyCommandCont
       } catch (...) {
       }
       break;
-    case ServiceType::kRealm:
+    }
+    case ServiceType::kRealm: {
       CRealm* sourceRealm = reinterpret_cast<CRealm*>(servicePtr);
       if (lazyCtx.online && !sourceRealm->GetLoggedIn()) {
         return AppActionStatus::kWait;
@@ -8352,8 +8355,11 @@ AppActionStatus CCommandContext::TryDeferred(CAura* nAura, const LazyCommandCont
       } catch (...) {
       }
       break;
+    }
     case ServiceType::kLAN:
+    case ServiceType::kNone:
       UNREACHABLE();
+      break;
   }
 
   if (!ctx) {
