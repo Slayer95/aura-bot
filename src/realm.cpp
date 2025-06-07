@@ -155,7 +155,7 @@ void CRealm::EventConnectionTimeOut()
   m_WaitingToConnect     = true;
 }
 
-void CRealm::EventConnected(fd_set* fd, fd_set* send_fd)
+void CRealm::EventConnected(fd_set* /*fd*/, fd_set* send_fd)
 {
   // the connection attempt completed
   m_Aura->m_Net.OnThrottledConnectionSuccess(NetworkHost(m_Config.m_HostName, m_Config.m_ServerPort));
