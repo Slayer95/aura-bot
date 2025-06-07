@@ -1062,7 +1062,7 @@ AppActionStatus CAura::HandleAction(const AppAction& action)
       return AppActionStatus::kDone;
     }
 #endif
-    case AppActionType::kHost: {
+    case AppActionType::kHostActive: {
       bool success = m_GameSetup->RunHost();
       if (!success) {
         // Delete all other pending actions
@@ -1169,7 +1169,7 @@ bool CAura::Update()
       (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
     ) {
       m_AutoRehostGameSetup->SetActive();
-      AppAction rehostAction = AppAction(AppActionType::kHost);
+      AppAction rehostAction = AppAction(AppActionType::kHostActive);
       m_PendingActions.push(rehostAction);
     }
   }

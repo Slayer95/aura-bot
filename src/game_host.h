@@ -111,6 +111,7 @@ struct NetworkGameInfo
   [[nodiscard]] std::string GetIPString() const;
   [[nodiscard]] inline const sockaddr_storage& GetAddress() const { return m_Host.m_Address; };
   [[nodiscard]] inline uint32_t GetIdentifier() const { return m_Host.m_Identifier; };
+  [[nodiscard]] inline uint32_t GetEntryKey() const { return m_Host.m_EntryKey; };
   [[nodiscard]] inline uint32_t GetGameFlags() const { return m_Info.m_GameFlags; };
   [[nodiscard]] inline std::string_view GetGameName() const { return m_GameName; };
   [[nodiscard]] inline std::string_view GetHostName() const { return m_HostName; };

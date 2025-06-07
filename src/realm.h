@@ -76,11 +76,12 @@ private:
   std::string                      m_GameBroadcastName;
   bool                             m_GameBroadcastWantsRename;
 
-  bool                             m_GameIsExpansion;
-  Version                          m_GameVersion;
-  Version                          m_AuthGameVersion;
-  uint16_t                         m_LastGamePort;              // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
-  uint32_t                         m_LastGameHostCounter;       // game host counter for the game that is being broadcasted
+  bool                                    m_GameIsExpansion;
+  Version                                 m_GameVersion;
+  Version                                 m_AuthGameVersion;
+  std::optional<std::array<uint8_t, 4>>   m_PublicHostAddress;
+  uint16_t                                m_LastGamePort;              // game port that PvPGN server recognizes and tells clients to connect to when trying to join our games
+  uint32_t                                m_LastGameHostCounter;       // game host counter for the game that is being broadcasted
 
   uint32_t                         m_InternalServerID;          // internal server ID, maps 1:1 to CRealmConfig::m_InputID
   uint8_t                          m_ServerIndex;               // one-based
@@ -128,7 +129,7 @@ private:
   std::queue<CQueuedChatMessage*>             m_ChatSentWhispers;
   std::vector<std::pair<int64_t, uint8_t>>    m_ChatQuotaInUse;
 
-  GameSearchQuery*                            m_GameSearchQuery;
+  std::shared_ptr<GameSearchQuery>            m_GameSearchQuery;
 
   friend class CCommandContext;
 
@@ -291,6 +292,8 @@ public:
   void ReloadConfig(CRealmConfig* CFG);
 
   inline void SetHostCounter(const uint8_t nHostCounter) { m_PublicServerID = nHostCounter; }
+
+  void QuerySearch(const std::string& gameName, std::shared_ptr<CGameSetup> gameSetup);
 
   private:
 };

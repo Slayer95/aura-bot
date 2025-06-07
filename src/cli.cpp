@@ -1065,8 +1065,10 @@ bool CCLI::QueueActions(CAura* nAura) const
     gameSetup->AcquireHost(this, userName);
     gameSetup->AcquireCLISimple(this);
     gameSetup->SetActive();
-    AppAction hostAction = AppAction(AppActionType::kHost, AppActionMode::kNone);
-    nAura->m_PendingActions.push(hostAction);
+    if (!isMirror || m_GameMirrorSourceType == MirrorSourceType::kRaw) {
+      AppAction hostAction = AppAction(AppActionType::kHostActive, AppActionMode::kNone);
+      nAura->m_PendingActions.push(hostAction);
+    }
   }
 
   for (const auto& execEntry : m_ExecCommands) {

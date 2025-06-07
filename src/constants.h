@@ -106,11 +106,6 @@ constexpr unsigned char ProductID_TFT[4] = {80, 88, 51, 87};
 
 // aura.h
 
-constexpr uint8_t APP_ACTION_DONE = 0u;
-constexpr uint8_t APP_ACTION_ERROR = 1u;
-constexpr uint8_t APP_ACTION_WAIT = 2u;
-constexpr uint8_t APP_ACTION_TIMEOUT = 3u;
-
 enum class AppActionStatus : uint8_t {
   kDone = 0,
   kError = 1,
@@ -121,7 +116,7 @@ enum class AppActionStatus : uint8_t {
 
 enum class AppActionType : uint8_t {
   kUPnP = 0,
-  kHost = 1,
+  kHostActive = 1,
   kCommand = 2,
   //LAST = 3,
 };
@@ -1546,6 +1541,14 @@ constexpr uint8_t CHAT_VALIDATOR_LOBBY_JOINABLE = 1;
 enum class QueuedChatMessageValidator : uint8_t {
   kNone = 0,
   kLobbyJoinable = 1,
+  LAST = 2,
+};
+
+// realm_games.h
+
+enum class GameSearchQueryCallback : uint8_t {
+  kNone = 0,
+  kHostActive = 1,
   LAST = 2,
 };
 

@@ -30,17 +30,19 @@
 
 struct GameSearchQuery
 {
-  Version                                             m_GameVersion;
   std::shared_ptr<CMap>                               m_Map;
   std::string                                         m_GameName;
   std::string                                         m_HostName;
+  GameSearchQueryCallback                             m_CallbackType;
+  std::weak_ptr<CGameSetup>                           m_CallbackTarget;
 
   GameSearchQuery();
-  GameSearchQuery(const Version& gameVersion, const std::string& gameName, const std::string& hostName, std::shared_ptr<CMap> map);
+  GameSearchQuery(const std::string& gameName, const std::string& hostName, std::shared_ptr<CMap> map);
   ~GameSearchQuery();
 
-  [[nodiscard]] bool GetIsMatch(const NetworkGameInfo& networkGameInfo) const;
+  [[nodiscard]] bool GetIsMatch(const Version& gameVersion, const NetworkGameInfo& networkGameInfo) const;
   [[nodiscard]] bool EventMatch(const NetworkGameInfo& networkGameInfo);
+  void SetCallback(const GameSearchQueryCallback callbackType, std::shared_ptr<CGameSetup> callbackTarget);
 };
 
 #endif // AURA_REALM_GAMES_H_

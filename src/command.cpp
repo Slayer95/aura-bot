@@ -8213,7 +8213,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       CAsyncObserver* spectator = gameSource.GetSpectator();
       int64_t frameRate = spectator->GetFrameRate();
       if (frameRate >= 64) {
-        spectator->SendChat("Playback rate is limited to 64x");
+        spectator->SendChat("Playback rate is limited to 64x (NOTE: your computer may not be able to keep up with this speed.)");
       } else {
         switch (frameRate) {
           // Smooth out acceleration around 8x, since

@@ -229,12 +229,21 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             }
 
             if (m_GameSearchQuery) {
+              bool keepSearching = true;
               for (const auto& gameInfo : thirdPartyHostedGames) {
-                if (m_GameSearchQuery->GetIsMatch(gameInfo)) {
-                  if (!m_GameSearchQuery->EventMatch(gameInfo)) {
+                if (m_GameSearchQuery->GetIsMatch(GetGameVersion(), gameInfo)) {
+                  PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "[" + gameInfo.GetMapClientFileName() + "] matching search query found: " + gameInfo.GetHostDetails())
+                  keepSearching = m_GameSearchQuery->EventMatch(gameInfo);
+                  if (!keepSearching) {
                     break;
                   }
+                } else {
+                  PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "[" + gameInfo.GetMapClientFileName() + "] NOT matching search query: " + gameInfo.GetHostDetails())
                 }
+              }
+              if (!keepSearching)  {
+                PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "game search stopped")
+                m_GameSearchQuery.reset();
               }
             }
 
@@ -1061,19 +1070,26 @@ void CRealm::TrySendGetGamesList()
 void CRealm::SendNetworkConfig()
 {
   shared_ptr<CGame> lobbyPendingForBroadcast = GetGameBroadcastPending();
+  if (lobbyPendingForBroadcast) {
+    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "lobby [" + lobbyPendingForBroadcast->GetGameName() + "] is pending broadcast @SendNetworkConfig")
+  } else {
+    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "no lobby was pending @SendNetworkConfig")
+  }
   if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetPublicHostOverride()) {
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "mirroring public game host " + IPv4ToString(lobbyPendingForBroadcast->GetPublicHostAddress()) + ":" + to_string(lobbyPendingForBroadcast->GetPublicHostPort()))
-    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(lobbyPendingForBroadcast->GetPublicHostAddress(), lobbyPendingForBroadcast->GetPublicHostPort()));
+    m_PublicHostAddress = lobbyPendingForBroadcast->GetPublicHostAddress();
+    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "mirroring public game host " + IPv4ToString(*m_PublicHostAddress) + ":" + to_string(lobbyPendingForBroadcast->GetPublicHostPort()))
+    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(*m_PublicHostAddress, lobbyPendingForBroadcast->GetPublicHostPort()));
     m_LastGamePort = lobbyPendingForBroadcast->GetPublicHostPort();
   } else if (m_Config.m_EnableCustomAddress) {
+    m_PublicHostAddress = AddressToIPv4Array(&(m_Config.m_PublicHostAddress));
     uint16_t port = 6112;
     if (m_Config.m_EnableCustomPort) {
       port = m_Config.m_PublicHostPort;
     } else if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetIsLobbyStrict()) {
       port = lobbyPendingForBroadcast->GetHostPort();
     }
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "using public game host " + IPv4ToString(AddressToIPv4Array(&(m_Config.m_PublicHostAddress))) + ":" + to_string(port))
-    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(AddressToIPv4Array(&(m_Config.m_PublicHostAddress)), port));
+    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "using public game host " + IPv4ToString(*m_PublicHostAddress) + ":" + to_string(port))
+    SendAuth(BNETProtocol::SEND_SID_PUBLICHOST(*m_PublicHostAddress, port));
     m_LastGamePort = port;
   } else if (m_Config.m_EnableCustomPort) {
     PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "using public game port " + to_string(m_Config.m_PublicHostPort))
@@ -1389,33 +1405,33 @@ void CRealm::ResetGameBroadcastData()
 bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
 {
   if (game->GetDisplayMode() == GAME_DISPLAY_NONE) {
-    DPRINT_IF(LogLevel::kTrace2, "Not setting pending because display mode is none")
+    DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending because display mode is none")
     return false;
   }
   if (game->GetIsMirror() && GetIsMirror()) {
     // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
     // Do not display external games in those realms.
-    DPRINT_IF(LogLevel::kTrace2, "Not setting pending mirror game because realm is mirror")
+    DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending mirror game because realm is mirror")
     return false;
   }
   if (m_GameVersion >= GAMEVER(1u, 0u)) {
     if (!game->GetIsSupportedGameVersion(GetGameVersion())) {
-      DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because version is unsupported")
+      DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending game because version is unsupported")
       return false;
     }
     if (game->GetIsExpansion() != GetGameIsExpansion()) {
-      DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because expansion does not match")
+      DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending game because expansion does not match")
       return false;
     }
   }
   if (game->GetIsRealmExcluded(GetServer())) {
-    DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because realm is excluded")
+    DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending game because realm is excluded")
     return false;
   }
 
   RealmBroadcastDisplayPriority targetPriority = game->GetCanJoinInProgress() ? GetWatchableGamesDisplayPriority() : GetLobbyDisplayPriority();
   if (targetPriority == RealmBroadcastDisplayPriority::kNone) {
-    DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because priority is none")
+    DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending game because priority is none")
     return false;
   }
   if (targetPriority == RealmBroadcastDisplayPriority::kLow) {
@@ -1423,7 +1439,7 @@ bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
     if (currentGame) {
       RealmBroadcastDisplayPriority activePriority = currentGame->GetCanJoinInProgress() ? GetWatchableGamesDisplayPriority() : GetLobbyDisplayPriority();
       if (activePriority > targetPriority) {
-        DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because priority is too low")
+        DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending game because priority is too low")
         return false;
       }
     }
@@ -1437,6 +1453,7 @@ bool CRealm::TrySetGameBroadcastPending(shared_ptr<CGame> game)
     return false;
   }
   SetGameBroadcastPending(game);
+  DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Game [" + game->GetGameName() + "] is now pending broadcast");
   return true;
 }
 
@@ -1447,6 +1464,15 @@ void CRealm::CheckPendingGameBroadcast()
   }
 
   shared_ptr<CGame> pendingGame = GetGameBroadcastPending();
+
+  if (pendingGame->GetPublicHostOverride() &&
+    !(m_PublicHostAddress.has_value() && pendingGame->GetPublicHostAddress() == m_PublicHostAddress.value())
+  ) {
+    PRINT_IF(LogLevel::kInfo, GetLogPrefix() + "resetting session to setup mirroring to " + IPv4ToString(pendingGame->GetPublicHostAddress()) + "...")
+    ResetConnection(false);
+    return;
+  }
+
   optional<bool> pendingChat = m_GameBroadcastPendingChat;
   ResetGameBroadcastPending(); // early reset to unlock CRealm::SendGameRefresh
   ResetGameBroadcastPendingChat();
@@ -1637,7 +1663,12 @@ void CRealm::StopConnection(bool hadError)
   m_CurrentChannel.clear();
   m_AnchorChannel.clear();
   m_WaitingToConnect = true;
-  SetGameBroadcastPending(GetGameBroadcast());
+  m_PublicHostAddress.reset();
+
+  auto gameBroadcast = GetGameBroadcast();
+  if (gameBroadcast) {
+    SetGameBroadcastPending(gameBroadcast);
+  }
   ResetGameBroadcastInFlight();
   ResetGameBroadcastStatus();
 
@@ -1771,4 +1802,11 @@ const string& CRealm::GetLobbyNameTemplate() const
 const string& CRealm::GetWatchableNameTemplate() const
 {
   return m_Config.m_WatchableNameTemplate;
+}
+
+void CRealm::QuerySearch(const string& gameName, shared_ptr<CGameSetup> gameSetup)
+{
+  m_GameSearchQuery = make_shared<GameSearchQuery>(gameName, string(), gameSetup->GetMap());
+  m_GameSearchQuery->SetCallback(GameSearchQueryCallback::kHostActive, gameSetup);
+  PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "searching game [" + gameName + "]...")
 }

@@ -28,8 +28,11 @@
 
 #include "protocol/bnet_protocol.h"
 #include "includes.h"
+#include "aura.h"
+#include "action.h"
 #include "map.h"
 #include "game_host.h"
+#include "game_setup.h"
 
 using namespace std;
 
@@ -38,14 +41,15 @@ using namespace std;
 //
 
 GameSearchQuery::GameSearchQuery()
+ : m_CallbackType(GameSearchQueryCallback::kNone)
 {
 }
 
-GameSearchQuery::GameSearchQuery(const Version& gameVersion, const string& gameName, const string& hostName, shared_ptr<CMap> map)
- : m_GameVersion(gameVersion),
-   m_Map(map),
+GameSearchQuery::GameSearchQuery(const string& gameName, const string& hostName, shared_ptr<CMap> map)
+ : m_Map(map),
    m_GameName(gameName),
-   m_HostName(hostName)
+   m_HostName(hostName),
+   m_CallbackType(GameSearchQueryCallback::kNone)
 {
 }
 
@@ -53,19 +57,56 @@ GameSearchQuery::~GameSearchQuery()
 {
 }
 
-bool GameSearchQuery::GetIsMatch(const NetworkGameInfo& gameInfo) const
+bool GameSearchQuery::GetIsMatch(const Version& gameVersion, const NetworkGameInfo& gameInfo) const
 {
-  if (!m_GameName.empty() && gameInfo.GetGameName() != m_GameName) return false;
-  if (!m_HostName.empty() && gameInfo.GetHostName() != m_HostName) return false;
+  if (!m_GameName.empty() && gameInfo.GetGameName() != m_GameName) {
+    return false;
+  }
+  if (!m_HostName.empty() && gameInfo.GetHostName() != m_HostName) {
+    return false;
+  }
   if (m_Map) {
-    if (m_Map->GetMapScriptsBlizz(m_GameVersion) != gameInfo.GetMapScriptsBlizz()) return false;
-    if (m_Map->GetClientFileName() != gameInfo.GetMapClientFileName()) return false;
+    if (!m_Map->MatchMapScriptsBlizz(gameVersion, gameInfo.GetMapScriptsBlizz()).value_or(true)) {
+      Print(
+        "[SEARCH] Found game [" + string(gameInfo.GetGameName()) + "] by [" + string(gameInfo.GetHostName()) + "], "
+        "but maps are different."
+      );
+      return false;
+    }
+    if (!CaseInsensitiveEquals(m_Map->GetClientFileName(), gameInfo.GetMapClientFileName())) {
+      Print(
+        "[SEARCH] Found game [" + string(gameInfo.GetGameName()) + "] by [" + string(gameInfo.GetHostName()) + "], "
+        "but filenames are different (registry: [" + gameInfo.GetMapClientFileName() + "] vs local: [" + m_Map->GetClientFileName() + "])."
+      );
+      return false;
+    }
   }
   return true;
 }
 
 bool GameSearchQuery::EventMatch(const NetworkGameInfo& gameInfo)
 {
-  if (m_Map) m_Map->SetGameConvertedFlags(gameInfo.GetGameFlags());
-  return false; // stop searching
+  switch (m_CallbackType) {
+    case GameSearchQueryCallback::kHostActive: {
+      auto gameSetup = m_CallbackTarget.lock();
+      if (!gameSetup || !gameSetup->GetIsActive()) return false;
+      if (m_Map) m_Map->SetGameConvertedFlags(gameInfo.GetGameFlags());
+      gameSetup->GetMirror().SetRawSource(gameInfo.m_Host);
+      AppAction hostAction = AppAction(AppActionType::kHostActive, AppActionMode::kNone);
+      gameSetup->m_Aura->m_PendingActions.push(hostAction);
+      return false; // stop searching
+    }
+    case GameSearchQueryCallback::kNone: {
+      return true;
+    }
+    IGNORE_ENUM_LAST(GameSearchQueryCallback)
+    default:
+      return false;
+  }
+}
+
+void GameSearchQuery::SetCallback(const GameSearchQueryCallback callbackType, shared_ptr<CGameSetup> callbackTarget)
+{
+  m_CallbackType = callbackType;
+  m_CallbackTarget = callbackTarget;
 }

@@ -678,6 +678,7 @@ GameResultTeamAnalysis CW3MMD::GetGameResultTeamAnalysis() const
         case GameControllerType::kComputer:
           targetBitSet = &analysis.undecidedComputerTeams;
           break;
+        IGNORE_ENUM_LAST(GameControllerType)
       }
     } else {
       uint8_t result = match->second;

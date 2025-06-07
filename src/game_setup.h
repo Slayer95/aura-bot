@@ -29,6 +29,7 @@
 #include "includes.h"
 #include "game_host.h"
 #include "locations.h"
+#include "realm.h"
 #include "socket.h"
 
 #include <atomic>
@@ -89,6 +90,7 @@ struct GameMirrorSetup
 {
   bool                                                      m_IsMirror;
   std::variant<std::monostate, StringPair, GameHost>        m_Source;
+  std::weak_ptr<CRealm>                                     m_SourceRealm;
   bool                                                      m_EnableProxy;
 
   GameMirrorSetup()
@@ -106,10 +108,12 @@ struct GameMirrorSetup
   bool SetRawSource(const std::string& nInput);
   bool SetRegistrySource(const std::string& gameName, const std::string& registryName);
   bool SetRegistrySource(const StringPair& registry);
-  std::optional<GameHost> GetRawSource() const;
+  void SetSourceRealm(std::shared_ptr<CRealm> sourceRealm) { m_SourceRealm = sourceRealm; }
+  [[nodiscard]] std::optional<GameHost> GetRawSource() const;
 
-  inline bool GetIsEnabled() const { return m_IsMirror; }
-  inline bool GetIsProxyEnabled() const { return m_EnableProxy; }
+  [[nodiscard]] inline bool GetIsEnabled() const { return m_IsMirror; }
+  [[nodiscard]] inline bool GetIsProxyEnabled() const { return m_EnableProxy; }
+  [[nodiscard]] inline std::shared_ptr<CRealm> GetSourceRealm() const { return m_SourceRealm.lock(); }
 };
 
 //
@@ -293,6 +297,7 @@ public:
   [[nodiscard]] bool LoadMapSync();
   void OnLoadMapSuccess();
   void OnLoadMapError();
+  [[nodiscard]] bool GetIsActive();
   void SetActive();
   [[nodiscard]] bool RestoreFromSaveFile();
   bool RunHost();

@@ -1346,6 +1346,11 @@ bool CGameSetup::LoadMapSync()
   return m_Map != nullptr;
 }
 
+bool CGameSetup::GetIsActive()
+{
+  return m_Aura->m_GameSetup == shared_from_this();
+}
+
 void CGameSetup::SetActive()
 {
   if (m_Aura->m_GameSetup) {
@@ -1726,6 +1731,9 @@ bool CGameSetup::AcquireCLIMirror(const CCLI* nCLI)
       if (!mirror.SetRegistrySource(registrySource)) {
         return false;
       }
+      shared_ptr<CRealm> sourceRealm =  static_cast<CRealm*>(servicePtr)->shared_from_this();
+      mirror.SetSourceRealm(sourceRealm);
+      sourceRealm->QuerySearch(registrySource.first, shared_from_this());
       break;
     }
     IGNORE_ENUM_LAST(MirrorSourceType)

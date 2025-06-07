@@ -209,7 +209,13 @@ string NetworkGameInfo::GetIPString() const
 
 string NetworkGameInfo::GetHostDetails() const
 {
-  return "[" + GetIPString() + "]:" + to_string(GetAddressPort(&(GetAddress()))) + "#" + ToHexString(GetIdentifier()) + ":0"/* + ToHexString(GetEntryKey())*/;
+  const string gameLocation = "[" + GetIPString() + "]:" + to_string(GetAddressPort(&(GetAddress()))) + "#" + ToHexString(GetIdentifier());
+  const uint32_t entryKey = GetEntryKey();
+  if (entryKey == 0) {
+    return gameLocation;
+  } else {
+    return gameLocation + ":" + ToHexString(entryKey);
+  }
 }
 
 string NetworkGameInfo::GetMapClientFileName() const
