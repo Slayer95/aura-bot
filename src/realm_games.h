@@ -39,8 +39,8 @@ struct GameSearchQuery
   GameSearchQuery(const Version& gameVersion, const std::string& gameName, const std::string& hostName, std::shared_ptr<CMap> map);
   ~GameSearchQuery();
 
-  [[nodiscard]] bool GetIsMatch(const GameHost& gameHost) const;
-  [[nodiscard]] bool EventMatch(const GameHost& gameHost);
+  [[nodiscard]] bool GetIsMatch(const NetworkGameInfo& networkGameInfo) const;
+  [[nodiscard]] bool EventMatch(const NetworkGameInfo& networkGameInfo);
 };
 
 #endif // AURA_REALM_GAMES_H_

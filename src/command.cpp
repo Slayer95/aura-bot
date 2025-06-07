@@ -7979,7 +7979,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       string gameName = Args[5];
       SetAddressPort(&(maybeAddress.value()), gamePort);
       m_Aura->m_GameSetup->SetContext(shared_from_this());
-      if (!m_Aura->m_GameSetup->SetRawMirrorSource(maybeAddress.value(), gameHostCounter)) {
+      if (!m_Aura->m_GameSetup->GetMirror().SetRawSource(maybeAddress.value(), gameHostCounter, 0)) {
         ErrorReply("Cannot mirror game at the provided address.");
         break;
       }

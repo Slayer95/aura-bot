@@ -192,16 +192,16 @@ uint32_t CMap::GetGameConvertedFlags() const
 
   switch (m_GameVisibility) {
     case GameVisibilityMode::kHideTerrain:
-      gameFlags = 0x00000100;
+      gameFlags |= 0x00000100;
       break;
     case GameVisibilityMode::kExplored:
-      gameFlags = 0x00000200;
+      gameFlags |= 0x00000200;
       break;
     case GameVisibilityMode::kAlwaysVisible:
-      gameFlags = 0x00000400;
+      gameFlags |= 0x00000400;
       break;
     default:
-      gameFlags = 0x00000800;
+      gameFlags |= 0x00000800;
   }
 
   switch (m_GameObservers) {

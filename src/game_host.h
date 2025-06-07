@@ -31,45 +31,93 @@
 #include "list.h"
 #include "protocol/game_protocol.h"
 
-//
-// GameHost
-//
 
 struct GameHost
 {
+  sockaddr_storage          m_Address;
+  uint32_t                  m_Identifier;
+  uint32_t                  m_EntryKey;
+
+  GameHost();
+  GameHost(const sockaddr_storage& address, uint32_t identifier);
+  GameHost(const sockaddr_storage& address, uint32_t identifier, uint32_t entryKey);
+  GameHost(const std::string& hexInput);
+  ~GameHost();
+
+  inline void SetAddress(const sockaddr_storage& address) { memcpy(&m_Address, &address, sizeof(sockaddr_storage)); }
+  inline void SetIdentifier(uint32_t identifier) { m_Identifier = identifier; }
+  inline void SetEntryKey(uint32_t entryKey) { m_EntryKey = entryKey; }
+
+  [[nodiscard]] inline const sockaddr_storage&           GetAddress() const { return m_Address; }
+  [[nodiscard]] inline uint32_t                          GetIdentifier() const { return m_Identifier; }
+  [[nodiscard]] inline uint32_t                          GetEntryKey() const { return m_EntryKey; }
+
+  static std::optional<GameHost> Parse(const std::string& hexInput);
+};
+
+struct GameInfo
+{
   uint16_t                  m_GameType;
   uint32_t                  m_GameStatus;
-  uint32_t                  m_HostCounter;
-  uint32_t                  m_MapFlags;
+  uint32_t                  m_GameFlags;
   uint16_t                  m_MapWidth;
   uint16_t                  m_MapHeight;
   std::array<uint8_t, 4>    m_MapScriptsBlizz;
-  sockaddr_storage          m_HostAddress;
-  std::string               m_GameName;
-  std::string               m_GamePassWord;
-  std::string               m_GameInfo; // WIP
+
   std::string               m_MapPath;
-  std::string               m_HostName;
 
-  GameHost();
-  ~GameHost();
+  GameInfo()
+   : m_GameType(0),
+     m_GameStatus(0),
+     m_GameFlags(0),
+     m_MapWidth(0),
+     m_MapHeight(0)
+  {
+    m_MapScriptsBlizz.fill(0);
+  }
 
-  void SetGameType(uint16_t gameType);
+  ~GameInfo()
+  {
+  }
+};
+
+//
+// NetworkGameInfo
+//
+
+struct NetworkGameInfo
+{
+  GameHost                m_Host;
+  GameInfo                m_Info;
+  std::string             m_GameName;
+  std::string             m_GamePassWord;
+  std::string             m_HostName;
+
+  NetworkGameInfo()
+  {
+  }
+
+  ~NetworkGameInfo()
+  {
+  }
+
   void SetAddress(const sockaddr_storage& address);
+  void SetGameType(uint16_t gameType);
   void SetStatus(uint32_t status);
   void SetGameName(std::string_view gameName);
   void SetPassword(std::string_view passWord);
   bool SetBNETGameInfo(const std::string& gameInfo);
 
   [[nodiscard]] std::string GetIPString() const;
-  [[nodiscard]] inline uint32_t GetHostCounter() const { return m_HostCounter; };
-  [[nodiscard]] inline uint32_t GetMapFlags() const { return m_MapFlags; };
+  [[nodiscard]] inline const sockaddr_storage& GetAddress() const { return m_Host.m_Address; };
+  [[nodiscard]] inline uint32_t GetIdentifier() const { return m_Host.m_Identifier; };
+  [[nodiscard]] inline uint32_t GetGameFlags() const { return m_Info.m_GameFlags; };
   [[nodiscard]] inline std::string_view GetGameName() const { return m_GameName; };
   [[nodiscard]] inline std::string_view GetHostName() const { return m_HostName; };
   [[nodiscard]] std::string GetHostDetails() const;
-  [[nodiscard]] inline bool GetIsGProxy() const { return m_MapWidth == m_MapHeight && m_MapHeight == 1984; }
-  [[nodiscard]] inline const std::array<uint8_t, 4>& GetMapScriptsBlizz() const { return m_MapScriptsBlizz; }
-  [[nodiscard]] inline std::string_view GetMapClientPath() const { return m_MapPath; };
+  [[nodiscard]] inline bool GetIsGProxy() const { return m_Info.m_MapWidth == m_Info.m_MapHeight && m_Info.m_MapHeight == 1984; }
+  [[nodiscard]] inline const std::array<uint8_t, 4>& GetMapScriptsBlizz() const { return m_Info.m_MapScriptsBlizz; }
+  [[nodiscard]] inline std::string_view GetMapClientPath() const { return m_Info.m_MapPath; };
   [[nodiscard]] std::string GetMapClientFileName() const;
 };
 

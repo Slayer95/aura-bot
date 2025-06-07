@@ -86,6 +86,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   optional<string> rawGameVersion;
   optional<string> rawWar3DataVersion;
   optional<string> rawBindAddress;
+  optional<string> rawMirrorSource;
+  optional<string> rawMirrorSourceService;
 
   app.option_defaults()->ignore_case();
 
@@ -448,7 +450,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     "The mirrored game must be specified with --mirror-source, --mirror-source-type, and --mirror-source-registry"
   );
 
-  app.add_option("--mirror-source", m_GameMirrorSource,
+  app.add_option("--mirror-source", rawMirrorSource,
     "Mirrors a game, listing it in the connected realms. "
     "When --mirror-source-type=raw, the syntax expected is: IP:PORT#ID or IP:PORT#ID:KEY. "
     "When --mirror-source-type=registry, it expects the game name. "
@@ -464,7 +466,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     })
   );
 
-  app.add_option("--mirror-source-registry", m_GameMirrorSourceService,
+  app.add_option("--mirror-source-registry", rawMirrorSourceService,
     "Provides an identifier of the game registry to be used when --mirror-source-type=registry"
   );
   app.add_flag(  "--mirror-watch-lobby,--no-mirror-watch-lobby{false}", m_GameMirrorWatchLobby,
@@ -866,11 +868,36 @@ CLIResult CCLI::Parse(const int argc, char** argv)
 
   // Mirror games
 
-  ConditionalRequire("--mirror", m_GameMirror, "--mirror-source", m_GameMirrorSource, true);
+  ConditionalRequire("--mirror", m_GameMirror, "--mirror-source", rawMirrorSource, true);
   ConditionalRequire("--mirror", m_GameMirror, "--mirror-source-type", m_GameMirrorSourceType, true);
 
-  if ((m_GameMirrorSourceType.value_or(MirrorSourceType::kRaw) == MirrorSourceType::kRegistry) != m_GameMirrorSourceService.has_value()) {
-    ConditionalRequireError("--mirror-source-type=registry", "--mirror-source-registry", m_GameMirrorSourceService.has_value());
+  if (m_GameMirrorSourceType.has_value() && m_ParseResult == CLIResult::kOk) {
+    if ((*m_GameMirrorSourceType == MirrorSourceType::kRegistry) != rawMirrorSourceService.has_value()) {
+      ConditionalRequireError("--mirror-source-type=registry", "--mirror-source-registry", rawMirrorSourceService.has_value());
+    }
+    switch (*m_GameMirrorSourceType) {
+      case MirrorSourceType::kRegistry: {
+        string gameName = rawMirrorSource.value();
+        if (gameName.size() > MAX_GAME_NAME_SIZE) {
+          Print("[AURA] <--mirror-source> - invalid CLI usage - please see CLI.md");
+          m_ParseResult = CLIResult::kError;
+          return m_ParseResult;
+        }
+        m_GameMirrorSource = StringPair(gameName, rawMirrorSourceService.value());
+        break;
+      }
+      case MirrorSourceType::kRaw: {
+        optional<GameHost> maybeGameHost = GameHost::Parse(rawMirrorSource.value());
+        if (!maybeGameHost.has_value()) {
+          Print("[AURA] <--mirror-source> - invalid CLI usage - please see CLI.md");
+          m_ParseResult = CLIResult::kError;
+          return m_ParseResult;
+        }
+        m_GameMirrorSource = *maybeGameHost;
+        break;
+      }
+      IGNORE_ENUM_LAST(MirrorSourceType)
+    }
   }
 
   ConditionalRequire("--mirror-watch-lobby", m_GameMirrorWatchLobbyUser, "--mirror", m_GameMirror, false);
@@ -1027,10 +1054,11 @@ bool CCLI::QueueActions(CAura* nAura) const
 
     const bool isMirror = m_GameMirror.value_or(false);
     if (isMirror && !gameSetup->AcquireCLIMirror(this)) {
-      if (m_GameMirrorSourceType == MirrorSourceType::kRaw) {
-        Print("[AURA] Invalid mirror source [" + m_GameMirrorSource.value() + "]. Ensure it has the form IP:PORT#ID");
+      if (m_GameMirrorSourceType == MirrorSourceType::kRegistry) {
+        const StringPair& mirrorSource = get<StringPair>(m_GameMirrorSource);
+        Print("[AURA] Invalid mirror source [" + mirrorSource.second + "]. Ensure it's a valid PvPGN realm or other registry.");
       } else {
-        Print("[AURA] Invalid mirror source [" + m_GameMirrorSource.value() + "]. Ensure it's a valid PvPGN realm or other registry.");
+        Print("[AURA] Failed to acquire CLI mirror");
       }
       return false;
     }

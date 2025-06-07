@@ -56,7 +56,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_Admins({}),
     m_MaxGameNameFixedCharsSize(0),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
-    m_LobbyDisplayPriority(RealmBroadcastDisplayPriority::kNone),
+    m_LobbyDisplayPriority(RealmBroadcastDisplayPriority::kHigh),
     m_WatchableDisplayPriority(RealmBroadcastDisplayPriority::kNone),
     m_FloodImmune(false),
 
@@ -483,6 +483,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
 
   m_ReHostCounterTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.rehost.name_template", m_ReHostCounterTemplate);
+  m_LobbyNameTemplate      = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.lobby.name_template", m_LobbyNameTemplate);
+  m_WatchableNameTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.watchable.name_template", m_WatchableNameTemplate);
 
   m_LobbyDisplayPriority       = CFG.GetEnum<RealmBroadcastDisplayPriority>(m_CFGKeyPrefix + "game_list.lobby.display.priority", TO_ARRAY("none", "low", "high"), m_LobbyDisplayPriority);
   m_WatchableDisplayPriority   = CFG.GetEnum<RealmBroadcastDisplayPriority>(m_CFGKeyPrefix + "game_list.watchable.display.priority", TO_ARRAY("none", "low", "high"), m_WatchableDisplayPriority);

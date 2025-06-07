@@ -330,7 +330,7 @@ namespace BNETProtocol
   // receive functions
 
   [[nodiscard]] bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
-  [[nodiscard]] std::vector<GameHost> RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
+  [[nodiscard]] std::vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
   [[nodiscard]] BNETProtocol::IncomingChatResult RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
   [[nodiscard]] bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);

@@ -1,5 +1,6 @@
 /*
 
+
   Copyright [2024-2025] [Leonardo Julca]
 
   Permission is hereby granted, free of charge, to any person obtaining
@@ -52,19 +53,19 @@ GameSearchQuery::~GameSearchQuery()
 {
 }
 
-bool GameSearchQuery::GetIsMatch(const GameHost& gameHost) const
+bool GameSearchQuery::GetIsMatch(const NetworkGameInfo& gameInfo) const
 {
-  if (!m_GameName.empty() && gameHost.GetGameName() != m_GameName) return false;
-  if (!m_HostName.empty() && gameHost.GetHostName() != m_HostName) return false;
+  if (!m_GameName.empty() && gameInfo.GetGameName() != m_GameName) return false;
+  if (!m_HostName.empty() && gameInfo.GetHostName() != m_HostName) return false;
   if (m_Map) {
-    if (m_Map->GetMapScriptsBlizz(m_GameVersion) != gameHost.GetMapScriptsBlizz()) return false;
-    if (m_Map->GetClientFileName() != gameHost.GetMapClientFileName()) return false;
+    if (m_Map->GetMapScriptsBlizz(m_GameVersion) != gameInfo.GetMapScriptsBlizz()) return false;
+    if (m_Map->GetClientFileName() != gameInfo.GetMapClientFileName()) return false;
   }
   return true;
 }
 
-bool GameSearchQuery::EventMatch(const GameHost& gameHost)
+bool GameSearchQuery::EventMatch(const NetworkGameInfo& gameInfo)
 {
-  if (m_Map) m_Map->SetGameConvertedFlags(gameHost.GetMapFlags());
+  if (m_Map) m_Map->SetGameConvertedFlags(gameInfo.GetGameFlags());
   return false; // stop searching
 }

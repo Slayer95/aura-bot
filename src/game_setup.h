@@ -27,6 +27,7 @@
 #define AURA_GAMESETUP_H_
 
 #include "includes.h"
+#include "game_host.h"
 #include "locations.h"
 #include "socket.h"
 
@@ -86,33 +87,28 @@ public:
 
 struct GameMirrorSetup
 {
-  bool                                            m_IsMirror;
-  std::optional<uint32_t>                         m_Identifier;
-  std::optional<uint32_t>                         m_EntryKey;
-  sockaddr_storage                                m_Address;
-
-  bool                                            m_EnableProxy;
+  bool                                                      m_IsMirror;
+  std::variant<std::monostate, StringPair, GameHost>        m_Source;
+  bool                                                      m_EnableProxy;
 
   GameMirrorSetup()
    : m_IsMirror(false),
      m_EnableProxy(false) 
   {
-     memset(&m_Address, 0, sizeof(sockaddr_storage));
   }
 
   ~GameMirrorSetup() {
   }
 
   inline void Enable() { m_IsMirror = true; }
-  inline void SetIdentifier(uint32_t nIdentifier) { m_Identifier = nIdentifier; }
-  inline void SetEntryKey(uint32_t nEntryKey) { m_EntryKey = nEntryKey; }
-  inline void SetAddress(const sockaddr_storage& nAddress) { memcpy(&m_Address, &nAddress, sizeof(sockaddr_storage)); }
+  bool SetRawSource(const GameHost& gameHost);
+  bool SetRawSource(const sockaddr_storage& sourceAddress, const uint32_t gameIdentifier, const uint32_t entryKey);
+  bool SetRawSource(const std::string& nInput);
+  bool SetRegistrySource(const std::string& gameName, const std::string& registryName);
+  bool SetRegistrySource(const StringPair& registry);
+  std::optional<GameHost> GetRawSource() const;
 
   inline bool GetIsEnabled() const { return m_IsMirror; }
-  inline uint32_t GetIdentifier() const { return m_Identifier.value_or(0); }
-  inline uint32_t GetEntryKey() const { return m_EntryKey.value_or(0); }
-  inline const sockaddr_storage& GetAddress() const { return m_Address; }
-
   inline bool GetIsProxyEnabled() const { return m_EnableProxy; }
 };
 
@@ -301,18 +297,16 @@ public:
   [[nodiscard]] bool RestoreFromSaveFile();
   bool RunHost();
 
-  [[nodiscard]] uint32_t GetGameIdentifier();
-  [[nodiscard]] uint32_t GetEntryKey();
-  [[nodiscard]] const sockaddr_storage* GetGameAddress();
+  [[nodiscard]] uint32_t GetGameIdentifier() const;
+  [[nodiscard]] uint32_t GetEntryKey() const;
+  [[nodiscard]] const sockaddr_storage* GetGameAddress() const;
 
-  [[nodiscard]] inline bool GetIsMirror() const { return GetMirror().GetIsEnabled(); }
-  [[nodiscard]] inline const GameMirrorSetup& GetMirror() const { return m_Mirror; }
+  [[nodiscard]] inline bool GetIsMirror() const { return InspectMirror().GetIsEnabled(); }
+  [[nodiscard]] inline GameMirrorSetup& GetMirror() { return m_Mirror; }
+  [[nodiscard]] inline const GameMirrorSetup& InspectMirror() const { return m_Mirror; }
   [[nodiscard]] inline bool GetIsDownloading() const { return m_IsStepDownloading; }
   [[nodiscard]] inline bool GetHasBeenHosted() const { return m_CreationCounter > 0; }
 
-  [[nodiscard]] bool SetRawMirrorSource(const sockaddr_storage& nSourceAddress, const uint32_t nGameIdentifier, const uint32_t nEntryKey = 0);
-  [[nodiscard]] bool SetRawMirrorSource(const std::string& nInput);
-  [[nodiscard]] bool SetRegistryMirrorSource(const std::string& nGameName, const std::string& nGameRegistry);
   void AddIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   void RemoveIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   inline void SetDisplayMode(const uint8_t nDisplayMode) { m_RealmsDisplayMode = nDisplayMode; };

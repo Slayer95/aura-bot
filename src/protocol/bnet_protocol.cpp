@@ -69,9 +69,9 @@ namespace BNETProtocol
     return ValidateLength(packet);
   }
 
-  vector<GameHost> RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& data)
+  vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& data)
   {
-    vector<GameHost> games;
+    vector<NetworkGameInfo> games;
     size_t byteCount = data.size();
     if (!ValidateLength(data) || byteCount < 8) {
       return games;
@@ -93,8 +93,8 @@ namespace BNETProtocol
       }
       cursor += 4;
 
-      GameHost& gameHost = games[gameIndex];
-      gameHost.SetGameType(ByteArrayToUInt16(data, false, cursor));
+      NetworkGameInfo& gameInfo = games[gameIndex];
+      gameInfo.SetGameType(ByteArrayToUInt16(data, false, cursor));
       cursor += 2;
       cursor += 4; // <0x01 0x00 0x02 0x00>
 
@@ -103,12 +103,12 @@ namespace BNETProtocol
       sockaddr_storage address = IPv4BytesToAddress(data.data() + cursor);
       cursor += 4;
       SetAddressPort(&address, port);
-      gameHost.SetAddress(address);
+      gameInfo.SetAddress(address);
 
       cursor += 4; // zeroes
       cursor += 4; // zeroes
 
-      gameHost.SetStatus(ByteArrayToUInt32(data, false, cursor));
+      gameInfo.SetStatus(ByteArrayToUInt32(data, false, cursor));
       cursor += 4;
 
       cursor += 4; // <0x2b 0x00 0x00 0x00>
@@ -116,29 +116,29 @@ namespace BNETProtocol
       cursorEnd = FindNullDelimiterOrStart(data, cursor);
       string gameName = GetStringAddressRange(data, cursor, cursorEnd);
       if (gameName.empty()) {
-        //Print("[BNETPROTO] Game name was empty #" + to_string(gameIndex + 1) + " at " + gameHost.GetHostDetails());
-        return games/*vector<GameHost>()*/;
+        //Print("[BNETPROTO] Game name was empty #" + to_string(gameIndex + 1) + " at " + gameInfo.GetHostDetails());
+        return games/*vector<NetworkGameInfo>()*/;
       }
-      //Print("[BNETPROTO] Got game #" + to_string(gameIndex + 1) + " name <" + gameName + "> at " + gameHost.GetHostDetails());
-      gameHost.SetGameName(gameName);
+      //Print("[BNETPROTO] Got game #" + to_string(gameIndex + 1) + " name <" + gameName + "> at " + gameInfo.GetHostDetails());
+      gameInfo.SetGameName(gameName);
       cursor += gameName.size() + 1;
 
       cursorEnd = FindNullDelimiterOrStart(data, cursor);
       string passWord = GetStringAddressRange(data, cursor, cursorEnd);
-      gameHost.SetPassword(passWord);
+      gameInfo.SetPassword(passWord);
       cursor += passWord.size() + 1;
 
       cursorEnd = FindNullDelimiterOrEnd(data, cursor);
-      string gameInfo = GetStringAddressRange(data, cursor, cursorEnd);
-      if (gameInfo.empty()) {
+      string gameStat = GetStringAddressRange(data, cursor, cursorEnd);
+      if (gameStat.empty()) {
         //Print("[BNETPROTO] Game info was empty");
-        return games/*vector<GameHost>()*/;
+        return games/*vector<NetworkGameInfo>()*/;
       }
-      if (!gameHost.SetBNETGameInfo(gameInfo)) {
+      if (!gameInfo.SetBNETGameInfo(gameStat)) {
         //Print("[BNETPROTO] Failed to set BNET game info <" + gameInfo + ">");
-        return games/*vector<GameHost>()*/;
+        return games/*vector<NetworkGameInfo>()*/;
       }
-      cursor += gameInfo.size() + 1;
+      cursor += gameStat.size() + 1;
 
       gameIndex++;
     }

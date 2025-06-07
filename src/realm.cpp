@@ -215,7 +215,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::GETADVLISTEX: {
-            vector<GameHost> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(Data);
+            vector<NetworkGameInfo> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(Data);
             if (!thirdPartyHostedGames.empty() && m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
@@ -229,9 +229,9 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             }
 
             if (m_GameSearchQuery) {
-              for (const auto& gameHost : thirdPartyHostedGames) {
-                if (m_GameSearchQuery->GetIsMatch(gameHost)) {
-                  if (!m_GameSearchQuery->EventMatch(gameHost)) {
+              for (const auto& gameInfo : thirdPartyHostedGames) {
+                if (m_GameSearchQuery->GetIsMatch(gameInfo)) {
+                  if (!m_GameSearchQuery->EventMatch(gameInfo)) {
                     break;
                   }
                 }
@@ -1389,27 +1389,33 @@ void CRealm::ResetGameBroadcastData()
 bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
 {
   if (game->GetDisplayMode() == GAME_DISPLAY_NONE) {
+    DPRINT_IF(LogLevel::kTrace2, "Not setting pending because display mode is none")
     return false;
   }
   if (game->GetIsMirror() && GetIsMirror()) {
     // A mirror realm is a realm whose purpose is to mirror games actually hosted by Aura.
     // Do not display external games in those realms.
+    DPRINT_IF(LogLevel::kTrace2, "Not setting pending mirror game because realm is mirror")
     return false;
   }
   if (m_GameVersion >= GAMEVER(1u, 0u)) {
     if (!game->GetIsSupportedGameVersion(GetGameVersion())) {
+      DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because version is unsupported")
       return false;
     }
     if (game->GetIsExpansion() != GetGameIsExpansion()) {
+      DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because expansion does not match")
       return false;
     }
   }
   if (game->GetIsRealmExcluded(GetServer())) {
+    DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because realm is excluded")
     return false;
   }
 
   RealmBroadcastDisplayPriority targetPriority = game->GetCanJoinInProgress() ? GetWatchableGamesDisplayPriority() : GetLobbyDisplayPriority();
   if (targetPriority == RealmBroadcastDisplayPriority::kNone) {
+    DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because priority is none")
     return false;
   }
   if (targetPriority == RealmBroadcastDisplayPriority::kLow) {
@@ -1417,6 +1423,7 @@ bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
     if (currentGame) {
       RealmBroadcastDisplayPriority activePriority = currentGame->GetCanJoinInProgress() ? GetWatchableGamesDisplayPriority() : GetLobbyDisplayPriority();
       if (activePriority > targetPriority) {
+        DPRINT_IF(LogLevel::kTrace2, "Not setting pending game because priority is too low")
         return false;
       }
     }

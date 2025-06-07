@@ -28,9 +28,11 @@
 
 #include "includes.h"
 #include "action.h"
+#include "game_host.h"
 #include "socket.h"
 
 #include <filesystem>
+#include <variant>
 #include <CLI11/CLI11.hpp>
 
 enum class CLIAction : uint8_t
@@ -110,10 +112,9 @@ public:
   std::optional<bool>                         m_GameOwnerLess;
   std::vector<std::string>                    m_ExcludedRealms;
 
-  std::optional<bool>                         m_GameMirror;
-  std::optional<std::string>                  m_GameMirrorSource;
-  std::optional<MirrorSourceType>             m_GameMirrorSourceType;
-  std::optional<std::string>                  m_GameMirrorSourceService;
+  std::optional<bool>                                       m_GameMirror;
+  std::variant<std::monostate, StringPair, GameHost>        m_GameMirrorSource;
+  std::optional<MirrorSourceType>                           m_GameMirrorSourceType;
 
   std::optional<bool>                         m_GameMirrorWatchLobby;
   std::optional<std::string>                  m_GameMirrorWatchLobbyUser;

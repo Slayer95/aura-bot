@@ -133,6 +133,50 @@ void CGameExtraOptions::AcquireCLI(const CCLI* nCLI) {
 CGameExtraOptions::~CGameExtraOptions() = default;
 
 //
+// GameMirrorSource
+//
+
+
+bool GameMirrorSetup::SetRawSource(const GameHost& gameHost)
+{
+  Enable();
+  m_Source = gameHost;
+  return true;
+}
+
+bool GameMirrorSetup::SetRawSource(const sockaddr_storage& sourceAddress, const uint32_t gameIdentifier, const uint32_t entryKey)
+{
+  return SetRawSource(GameHost(sourceAddress, gameIdentifier, entryKey));
+}
+
+bool GameMirrorSetup::SetRawSource(const string& input)
+{
+  return SetRawSource(GameHost(input));
+}
+
+bool GameMirrorSetup::SetRegistrySource(const StringPair& registry)
+{
+  Enable();
+  m_Source = registry;
+  return false;
+}
+
+bool GameMirrorSetup::SetRegistrySource(const string& gameName, const string& registryName)
+{
+  return SetRegistrySource(StringPair(gameName, registryName));
+}
+
+optional<GameHost> GameMirrorSetup::GetRawSource() const
+{
+  optional<GameHost> maybeSource;
+  if (!GetIsEnabled() || m_Source.index() != 2) {
+    return maybeSource;
+  }
+  maybeSource = get<GameHost>(m_Source);
+  return maybeSource;
+}
+
+//
 // CGameSetup
 //
 
@@ -1339,95 +1383,31 @@ bool CGameSetup::RunHost()
   return m_Aura->CreateGame(shared_from_this());
 }
 
-uint32_t CGameSetup::GetGameIdentifier()
+uint32_t CGameSetup::GetGameIdentifier() const
 {
-  if (m_Mirror.GetIsEnabled()) {
-    return m_Mirror.GetIdentifier();
+  optional<GameHost> rawSource = m_Mirror.GetRawSource();
+  if (!rawSource.has_value()) {
+    return m_Aura->NextHostCounter();
   }
-  return m_Aura->NextHostCounter();
+  return rawSource->GetIdentifier();
 }
 
-uint32_t CGameSetup::GetEntryKey()
+uint32_t CGameSetup::GetEntryKey() const
 {
-  if (m_Mirror.GetIsEnabled()) {
-    return m_Mirror.GetEntryKey();
+  optional<GameHost> rawSource = m_Mirror.GetRawSource();
+  if (!rawSource.has_value()) {
+    return GetRandomUInt32();
   }
-  return GetRandomUInt32();
+  return rawSource->GetEntryKey();
 }
 
-const sockaddr_storage* CGameSetup::GetGameAddress()
+const sockaddr_storage* CGameSetup::GetGameAddress() const
 {
-  if (m_Mirror.GetIsEnabled()) {
-    return &(m_Mirror.GetAddress());
+  optional<GameHost> rawSource = m_Mirror.GetRawSource();
+  if (!rawSource.has_value()) {
+    return nullptr;
   }
-  return nullptr;
-}
-
-bool CGameSetup::SetRawMirrorSource(const sockaddr_storage& sourceAddress, const uint32_t gameIdentifier, const uint32_t entryKey)
-{
-  m_Mirror.Enable();
-  m_Mirror.SetIdentifier(gameIdentifier);
-  m_Mirror.SetEntryKey(entryKey);
-  m_Mirror.SetAddress(sourceAddress);
-  return true;
-}
-
-bool CGameSetup::SetRawMirrorSource(const string& nInput)
-{
-  string::size_type portStart = nInput.find(':', 0);
-  if (portStart == string::npos) return false;
-  string::size_type idStart = nInput.find('#', portStart);
-  if (idStart == string::npos) return false;
-  string rawAddress = nInput.substr(0, portStart);
-  if (rawAddress.length() < 7) return false;
-  string rawPort = nInput.substr(portStart + 1, idStart - (portStart + 1));
-  if (rawPort.empty()) return false;
-  string::size_type idEnd = nInput.find(':', idStart);
-  string rawId, rawEntryKey;
-  if (idEnd == string::npos) {
-    rawId = nInput.substr(idStart + 1);
-  } else {
-    rawId = nInput.substr(idStart + 1, idEnd - (idStart + 1));
-    rawEntryKey = nInput.substr(idEnd + 1);
-  }
-  if (rawId.empty()) return false;
-  optional<sockaddr_storage> maybeAddress;
-  if (rawAddress[0] == '[' && rawAddress[rawAddress.length() - 1] == ']') {
-    maybeAddress = CNet::ParseAddress(rawAddress.substr(1, rawAddress.length() - 2), ACCEPT_IPV4);
-  } else {
-    maybeAddress = CNet::ParseAddress(rawAddress, ACCEPT_IPV4);
-  }
-  if (!maybeAddress.has_value()) return false;
-  optional<uint16_t> maybeGamePort = ParseUint16(rawPort);
-  if (!maybeGamePort.has_value()) {
-    return false;
-  }
-  uint32_t entryKey = 0;
-  optional<uint32_t> maybeId = ParseUint32Hex(rawId);
-  if (!maybeId.has_value()) {
-    return false;
-  }
-  if (!rawEntryKey.empty()) {
-    optional<uint32_t> maybeEntryKey = ParseUint32Hex(rawEntryKey);
-    if (!maybeEntryKey.has_value()) {
-      return false;
-    }
-    entryKey = maybeEntryKey.value();
-  }
-
-  SetAddressPort(&(maybeAddress.value()), *maybeGamePort);
-  return SetRawMirrorSource(*maybeAddress, *maybeId, entryKey);
-}
-
-bool CGameSetup::SetRegistryMirrorSource(const string& gameName, const string& registryName)
-{
-  m_Mirror.Enable();
-  /*
-  m_Mirror.SetIdentifier(gameIdentifier);
-  m_Mirror.SetEntryKey(entryKey);
-  m_Mirror.SetAddress(sourceAddress);
-  */
-  return false;
+  return &(rawSource->GetAddress());
 }
 
 void CGameSetup::AddIgnoredRealm(shared_ptr<const CRealm> nRealm)
@@ -1727,23 +1707,25 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 
 bool CGameSetup::AcquireCLIMirror(const CCLI* nCLI)
 {
-  if (!nCLI->m_GameMirrorSource.has_value()) {
+  if (nCLI->m_GameMirrorSource.index() == 0) {
     return false;
   }
+  GameMirrorSetup& mirror = GetMirror();
   switch (nCLI->m_GameMirrorSourceType.value()) {
-    case MirrorSourceType::kRaw:
-      if (!SetRawMirrorSource(*(nCLI->m_GameMirrorSource))) {
+    case MirrorSourceType::kRaw: {
+      const GameHost& gameHost = get<GameHost>(nCLI->m_GameMirrorSource);
+      if (!mirror.SetRawSource(gameHost)) {
         return false;
       }
       break;
-    case MirrorSourceType::kRegistry:
-      if (!nCLI->m_GameMirrorSourceService.has_value()) {
-        return false;
-      }
-      if (!SetRegistryMirrorSource(*(nCLI->m_GameMirrorSource), *(nCLI->m_GameMirrorSourceService))) {
+    }
+    case MirrorSourceType::kRegistry: {
+      const StringPair& registrySource = get<StringPair>(nCLI->m_GameMirrorSource);
+      if (!mirror.SetRegistrySource(registrySource)) {
         return false;
       }
       break;
+    }
     IGNORE_ENUM_LAST(MirrorSourceType)
   }
 
