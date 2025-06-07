@@ -243,7 +243,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     for (const auto& version : m_Aura->m_Config.m_SupportedGameVersions) {
       switch (m_Config.m_CrossPlayMode) {
         case CrossPlayMode::kNone:
-          UNREACHABLE()
+          UNREACHABLE();
           break;
         case CrossPlayMode::kConservative:
         case CrossPlayMode::kOptimistic:
@@ -6553,7 +6553,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
         case PlayersReadyMode::kFast: {
           // This is an "always-ready" mode. Even !afk cannot be used.
           // GameUser::CGameUser::UpdateReady() takes care of updating user readiness as soon as they are map-ready.
-          UNREACHABLE()
+          UNREACHABLE();
           break;
         }
         IGNORE_ENUM_LAST(PlayersReadyMode)

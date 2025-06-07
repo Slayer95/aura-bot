@@ -8353,7 +8353,7 @@ AppActionStatus CCommandContext::TryDeferred(CAura* nAura, const LazyCommandCont
       }
       break;
     case ServiceType::kLAN:
-      UNREACHABLE()
+      UNREACHABLE();
   }
 
   if (!ctx) {
