@@ -1732,6 +1732,7 @@ bool CGameSetup::AcquireCLIMirror(const CCLI* nCLI)
         return false;
       }
       shared_ptr<CRealm> sourceRealm =  static_cast<CRealm*>(servicePtr)->shared_from_this();
+      AddIgnoredRealm(sourceRealm);
       mirror.SetSourceRealm(sourceRealm);
       sourceRealm->QuerySearch(registrySource.first, shared_from_this());
       break;

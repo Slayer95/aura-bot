@@ -1070,11 +1070,6 @@ void CRealm::TrySendGetGamesList()
 void CRealm::SendNetworkConfig()
 {
   shared_ptr<CGame> lobbyPendingForBroadcast = GetGameBroadcastPending();
-  if (lobbyPendingForBroadcast) {
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "lobby [" + lobbyPendingForBroadcast->GetGameName() + "] is pending broadcast @SendNetworkConfig")
-  } else {
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "no lobby was pending @SendNetworkConfig")
-  }
   if (lobbyPendingForBroadcast && lobbyPendingForBroadcast->GetPublicHostOverride()) {
     m_PublicHostAddress = lobbyPendingForBroadcast->GetPublicHostAddress();
     PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "mirroring public game host " + IPv4ToString(*m_PublicHostAddress) + ":" + to_string(lobbyPendingForBroadcast->GetPublicHostPort()))

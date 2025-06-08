@@ -1165,7 +1165,7 @@ bool CAura::Update()
   }
 
   if (m_AutoRehostGameSetup && !m_AutoReHosted) {
-    if (!(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
+    if (!(m_GameSetup && (m_GameSetup->GetIsDownloading() || m_GameSetup->GetMirror().GetIsSearching())) &&
       (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
     ) {
       m_AutoRehostGameSetup->SetActive();
@@ -1177,7 +1177,7 @@ bool CAura::Update()
   bool isStandby = (
     m_Lobbies.empty() && m_StartedGames.empty() &&
     m_Net.GetIsStandby() &&
-    !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
+    !(m_GameSetup && (m_GameSetup->GetIsDownloading() || m_GameSetup->GetMirror().GetIsSearching())) &&
     m_PendingActions.empty() &&
     !m_AutoRehostGameSetup
   );
@@ -2185,7 +2185,7 @@ bool CAura::CheckGracefulExit()
   /* Already checked:
     (m_Lobbies.empty() && m_StartedGames.empty() &&
     !m_Net.m_HealthCheckInProgress &&
-    !(m_GameSetup && m_GameSetup->GetIsDownloading()) &&
+    !(m_GameSetup && (m_GameSetup->GetIsDownloading() || m_GameSetup->GetMirror().GetIsSearching())) &&
     m_PendingActions.empty())
   */
 

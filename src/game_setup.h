@@ -114,6 +114,7 @@ struct GameMirrorSetup
   [[nodiscard]] inline bool GetIsEnabled() const { return m_IsMirror; }
   [[nodiscard]] inline bool GetIsProxyEnabled() const { return m_EnableProxy; }
   [[nodiscard]] inline std::shared_ptr<CRealm> GetSourceRealm() const { return m_SourceRealm.lock(); }
+  [[nodiscard]] inline bool GetIsSearching() const { return m_Source.index() == 1; }
 };
 
 //
