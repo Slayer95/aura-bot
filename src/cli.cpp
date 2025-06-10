@@ -136,7 +136,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     "Caches loaded map files into the map configs folder."
   );
 
-  app.add_flag("--cache-revalidate", m_MapCFGCacheRevalidation, 
+  app.add_option("--cache-revalidate", m_MapCFGCacheRevalidation, 
     "Customizes the judgment of when to validate the cached map configs against their base maps."
   )->transform(
     CLI::CheckedTransformer(map<string, CacheRevalidationMethod>{
@@ -1066,7 +1066,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     gameSetup->AcquireCLISimple(this);
     gameSetup->SetActive();
     if (!isMirror || m_GameMirrorSourceType == MirrorSourceType::kRaw) {
-      AppAction hostAction = AppAction(AppActionType::kHostActive, AppActionMode::kNone);
+      AppAction hostAction = AppAction(AppActionType::kHostActiveMirror, AppActionMode::kNone);
       nAura->m_PendingActions.push(hostAction);
     }
   }

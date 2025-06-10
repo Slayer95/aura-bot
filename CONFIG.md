@@ -357,6 +357,16 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
+## \`global_realm.crypto_hosts\`
+- Type: set
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.crypto_hosts\`
+- Type: set
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.custom_ip_address.enabled\`
 - Type: bool
 - Default value: false
@@ -545,6 +555,16 @@ Config
 - Default value: !m_IsHostMulti
 - Error handling: Use default value
 
+## \`global_realm.game_list.lobby.display.priority\`
+- Type: enum\<realmbroadcastdisplaypriority\>
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.lobby.display.priority\`
+- Type: enum\<realmbroadcastdisplaypriority\>
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`global_realm.game_list.lobby.name_template\`
 - Type: gamenametemplate
 - Default value: {NAME}{COUNTER}
@@ -562,6 +582,16 @@ Config
 
 ## \`global_realm.game_list.rehost.name_template\`
 - Type: gamenametemplate
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.watchable.display.priority\`
+- Type: enum\<realmbroadcastdisplaypriority\>
+- Default value: Empty
+- Error handling: Use default value
+
+## \`global_realm.game_list.watchable.display.priority\`
+- Type: enum\<realmbroadcastdisplaypriority\>
 - Default value: Empty
 - Error handling: Use default value
 
@@ -817,16 +847,6 @@ Config
 
 ## \`global_realm.vpn\`
 - Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.watchable_games.display_mode\`
-- Type: enum
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.watchable_games.display_mode\`
-- Type: enum
 - Default value: Empty
 - Error handling: Use default value
 

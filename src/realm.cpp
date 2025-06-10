@@ -215,7 +215,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::GETADVLISTEX: {
-            vector<NetworkGameInfo> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(Data);
+            vector<NetworkGameInfo> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(GetGameVersion(), Data);
             if (!thirdPartyHostedGames.empty() && m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
@@ -229,6 +229,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             }
 
             if (m_GameSearchQuery) {
+              DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "game list received (" + to_string(thirdPartyHostedGames.size()) + " games) - searching for query <" + string(m_GameSearchQuery->m_GameName) + ">...")
               bool keepSearching = true;
               for (const auto& gameInfo : thirdPartyHostedGames) {
                 if (m_GameSearchQuery->GetIsMatch(GetGameVersion(), gameInfo)) {
@@ -237,8 +238,10 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
                   if (!keepSearching) {
                     break;
                   }
+                } else if (!gameInfo.GetIsValid()) {
+                  PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "received invalid game")
                 } else {
-                  PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "[" + gameInfo.GetMapClientFileName() + "] NOT matching search query: " + gameInfo.GetHostDetails())
+                  DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "[" + gameInfo.GetMapClientFileName() + "] NOT matching search query: " + gameInfo.GetHostDetails())
                 }
               }
               if (!keepSearching)  {
@@ -1609,6 +1612,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
   string hostName = m_Config.m_UserName;
   Version version = GetGameVersion();
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
+    GetGameVersion(),
     game->GetDisplayMode(),
     game->GetGameType(),
     game->GetGameFlags(),
@@ -1718,6 +1722,12 @@ bool CRealm::GetIsSudoer(string name) const
   return m_Config.m_SudoUsers.find(name) != m_Config.m_SudoUsers.end();
 }
 
+bool CRealm::GetIsCryptoHost(string name) const
+{
+  transform(begin(name), end(name), begin(name), [](char c) { return static_cast<char>(std::tolower(c)); });
+  return m_Config.m_CryptoHosts.find(name) != m_Config.m_CryptoHosts.end();
+}
+
 bool CRealm::IsBannedPlayer(string name, string hostName) const
 {
   return m_Aura->m_DB->GetIsUserBanned(name, hostName, m_Config.m_DataBaseID);
@@ -1802,6 +1812,6 @@ const string& CRealm::GetWatchableNameTemplate() const
 void CRealm::QuerySearch(const string& gameName, shared_ptr<CGameSetup> gameSetup)
 {
   m_GameSearchQuery = make_shared<GameSearchQuery>(gameName, string(), gameSetup->GetMap());
-  m_GameSearchQuery->SetCallback(GameSearchQueryCallback::kHostActive, gameSetup);
+  m_GameSearchQuery->SetCallback(GameSearchQueryCallback::kHostActiveMirror, gameSetup);
   PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "searching game [" + gameName + "]...")
 }

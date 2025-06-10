@@ -63,6 +63,7 @@ struct GameInfo
   uint16_t                  m_MapWidth;
   uint16_t                  m_MapHeight;
   std::array<uint8_t, 4>    m_MapScriptsBlizz;
+  std::optional<std::array<uint8_t, 20>> m_MapScriptsSHA1;
 
   std::string               m_MapPath;
 
@@ -79,6 +80,9 @@ struct GameInfo
   ~GameInfo()
   {
   }
+
+  [[nodiscard]] inline bool GetHasSHA1() const { return m_MapScriptsSHA1.has_value(); }
+  [[nodiscard]] inline const std::array<uint8_t, 20>& GetMapScriptsSHA1() const { return m_MapScriptsSHA1.value(); }
 };
 
 //
@@ -87,6 +91,7 @@ struct GameInfo
 
 struct NetworkGameInfo
 {
+  bool                    m_IsValid;
   GameHost                m_Host;
   GameInfo                m_Info;
   std::string             m_GameName;
@@ -94,6 +99,7 @@ struct NetworkGameInfo
   std::string             m_HostName;
 
   NetworkGameInfo()
+   : m_IsValid(true)
   {
   }
 
@@ -106,19 +112,22 @@ struct NetworkGameInfo
   void SetStatus(uint32_t status);
   void SetGameName(std::string_view gameName);
   void SetPassword(std::string_view passWord);
-  bool SetBNETGameInfo(const std::string& gameInfo);
+  bool SetBNETGameInfo(const std::string& gameInfo, const Version& war3Version);
 
+  [[nodiscard]] inline bool GetIsValid() const { return m_IsValid; }
   [[nodiscard]] std::string GetIPString() const;
-  [[nodiscard]] inline const sockaddr_storage& GetAddress() const { return m_Host.m_Address; };
-  [[nodiscard]] inline uint32_t GetIdentifier() const { return m_Host.m_Identifier; };
-  [[nodiscard]] inline uint32_t GetEntryKey() const { return m_Host.m_EntryKey; };
-  [[nodiscard]] inline uint32_t GetGameFlags() const { return m_Info.m_GameFlags; };
-  [[nodiscard]] inline std::string_view GetGameName() const { return m_GameName; };
-  [[nodiscard]] inline std::string_view GetHostName() const { return m_HostName; };
+  [[nodiscard]] inline const sockaddr_storage& GetAddress() const { return m_Host.m_Address; }
+  [[nodiscard]] inline uint32_t GetIdentifier() const { return m_Host.m_Identifier; }
+  [[nodiscard]] inline uint32_t GetEntryKey() const { return m_Host.m_EntryKey; }
+  [[nodiscard]] inline uint32_t GetGameFlags() const { return m_Info.m_GameFlags; }
+  [[nodiscard]] inline bool GetHasSHA1() const { return m_Info.GetHasSHA1(); }
+  [[nodiscard]] inline const std::array<uint8_t, 20>& GetMapScriptsSHA1() const { return m_Info.GetMapScriptsSHA1(); }
+  [[nodiscard]] inline std::string_view GetGameName() const { return m_GameName; }
+  [[nodiscard]] inline std::string_view GetHostName() const { return m_HostName; }
   [[nodiscard]] std::string GetHostDetails() const;
   [[nodiscard]] inline bool GetIsGProxy() const { return m_Info.m_MapWidth == m_Info.m_MapHeight && m_Info.m_MapHeight == 1984; }
   [[nodiscard]] inline const std::array<uint8_t, 4>& GetMapScriptsBlizz() const { return m_Info.m_MapScriptsBlizz; }
-  [[nodiscard]] inline std::string_view GetMapClientPath() const { return m_Info.m_MapPath; };
+  [[nodiscard]] inline std::string_view GetMapClientPath() const { return m_Info.m_MapPath; }
   [[nodiscard]] std::string GetMapClientFileName() const;
 };
 

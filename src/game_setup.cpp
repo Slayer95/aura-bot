@@ -1728,10 +1728,16 @@ bool CGameSetup::AcquireCLIMirror(const CCLI* nCLI)
       if (serviceType != ServiceType::kRealm) {
         return false;
       }
+      shared_ptr<CRealm> sourceRealm =  static_cast<CRealm*>(servicePtr)->shared_from_this();
+      /*
+      if (sourceRealm->GetIsCryptoHost(hostName)) {
+        Print("[GAME] Games created by host [" + hostName + "] are encrypted and cannot be mirrored.");
+        return false;
+      }
+      */
       if (!mirror.SetRegistrySource(registrySource)) {
         return false;
       }
-      shared_ptr<CRealm> sourceRealm =  static_cast<CRealm*>(servicePtr)->shared_from_this();
       AddIgnoredRealm(sourceRealm);
       mirror.SetSourceRealm(sourceRealm);
       sourceRealm->QuerySearch(registrySource.first, shared_from_this());

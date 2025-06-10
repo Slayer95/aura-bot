@@ -53,7 +53,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_PassWordCaseSensitive(false),
     m_LicenseeName("Aura"),
 
+    m_SudoUsers({}),
     m_Admins({}),
+    m_CryptoHosts({}),
     m_MaxGameNameFixedCharsSize(0),
     m_MaxUploadSize(NetConfig->m_MaxUploadSize), // The setting in AuraCFG applies to LAN always.
     m_LobbyDisplayPriority(RealmBroadcastDisplayPriority::kHigh),
@@ -169,6 +171,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", "The Void");
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, false, m_SudoUsers);
   m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
+  m_CryptoHosts            = CFG.GetSet(m_CFGKeyPrefix + "crypto_hosts", ',', true, false, m_CryptoHosts);
 
   m_ReHostCounterTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.rehost.name_template", "-{COUNT}");
   m_LobbyNameTemplate      = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.lobby.name_template", "{NAME}{COUNTER}");
@@ -301,6 +304,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_FirstChannel(nRootConfig->m_FirstChannel),
     m_SudoUsers(nRootConfig->m_SudoUsers),
     m_Admins(nRootConfig->m_Admins),
+    m_CryptoHosts(nRootConfig->m_CryptoHosts),
     m_ReHostCounterTemplate(nRootConfig->m_ReHostCounterTemplate),
     m_LobbyNameTemplate(nRootConfig->m_LobbyNameTemplate),
     m_WatchableNameTemplate(nRootConfig->m_WatchableNameTemplate),
@@ -481,6 +485,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_FirstChannel           = CFG.GetString(m_CFGKeyPrefix + "first_channel", m_FirstChannel);
   m_SudoUsers              = CFG.GetSet(m_CFGKeyPrefix + "sudo_users", ',', true, false, m_SudoUsers);
   m_Admins                 = CFG.GetSet(m_CFGKeyPrefix + "admins", ',', true, false, m_Admins);
+  m_CryptoHosts            = CFG.GetSet(m_CFGKeyPrefix + "crypto_hosts", ',', true, false, m_CryptoHosts);
 
   m_ReHostCounterTemplate  = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.rehost.name_template", m_ReHostCounterTemplate);
   m_LobbyNameTemplate      = CFG.GetGameNameTemplate(m_CFGKeyPrefix + "game_list.lobby.name_template", m_LobbyNameTemplate);

@@ -439,6 +439,7 @@ public:
   [[nodiscard]] const std::array<uint8_t, 4>&            GetMapScriptsBlizz(const Version& nVersion) const; // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
   [[nodiscard]] const std::array<uint8_t, 20>&           GetMapScriptsSHA1(const Version& nVersion) const; // <map.scripts_hash.sha1>, but also legacy <map.sha1>
   [[nodiscard]] std::optional<bool>                      MatchMapScriptsBlizz(const Version& nVersion, const std::array<uint8_t, 4>& cmpHash) const;
+  [[nodiscard]] std::optional<bool>                      MatchMapScriptsSHA1(const Version& nVersion, const std::array<uint8_t, 20>& cmpHash) const;
   [[nodiscard]] bool                                     GetMapIsGameVersionSupported(const Version& nVersion) const;
   [[nodiscard]] inline GameVisibilityMode                GetGameVisibility() const { return m_GameVisibility; }
   [[nodiscard]] inline GameSpeed                         GetGameSpeed() const { return m_GameSpeed; }

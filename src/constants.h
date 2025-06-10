@@ -116,7 +116,7 @@ enum class AppActionStatus : uint8_t {
 
 enum class AppActionType : uint8_t {
   kUPnP = 0,
-  kHostActive = 1,
+  kHostActiveMirror = 1,
   kCommand = 2,
   //LAST = 3,
 };
@@ -1548,7 +1548,7 @@ enum class QueuedChatMessageValidator : uint8_t {
 
 enum class GameSearchQueryCallback : uint8_t {
   kNone = 0,
-  kHostActive = 1,
+  kHostActiveMirror = 1,
   LAST = 2,
 };
 

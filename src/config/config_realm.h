@@ -124,6 +124,7 @@ struct CRealmConfig
   std::string m_FirstChannel;                    //
   std::set<std::string> m_SudoUsers;             //
   std::set<std::string> m_Admins;                //
+  std::set<std::string> m_CryptoHosts;
   std::string m_ReHostCounterTemplate;           // string in the form PREFIX {COUNT} SUFFIX
   std::string m_LobbyNameTemplate;               // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended
   std::string m_WatchableNameTemplate;           // string in the form PREFIX {NAME} {MODE} {COUNTER} SUFFIX - if {COUNTER} is not provided for an autorehostable game, it gets appended

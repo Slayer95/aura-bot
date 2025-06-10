@@ -69,16 +69,18 @@ namespace BNETProtocol
     return ValidateLength(packet);
   }
 
-  vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const vector<uint8_t>& data)
+  vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const Version& war3Version, const vector<uint8_t>& data)
   {
     vector<NetworkGameInfo> games;
     size_t byteCount = data.size();
     if (!ValidateLength(data) || byteCount < 8) {
+      //Print("[BNETPROTO] Got invalid game list");
       return games;
     }
 
     const uint32_t totalGames = ByteArrayToUInt32(data, false, 4);
     if (totalGames == 0 || totalGames > 100) {
+      //Print("[BNETPROTO] Got list of " + to_string(totalGames) + " games");
       return games;
     }
 
@@ -134,10 +136,7 @@ namespace BNETProtocol
         //Print("[BNETPROTO] Game info was empty");
         return games/*vector<NetworkGameInfo>()*/;
       }
-      if (!gameInfo.SetBNETGameInfo(gameStat)) {
-        //Print("[BNETPROTO] Failed to set BNET game info <" + gameInfo + ">");
-        return games/*vector<NetworkGameInfo>()*/;
-      }
+      gameInfo.SetBNETGameInfo(gameStat, war3Version);
       cursor += gameStat.size() + 1;
 
       gameIndex++;
@@ -1062,7 +1061,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+  vector<uint8_t> SEND_SID_STARTADVEX3(const Version& war3Version, uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
   {
     string HostCounterString = ToHexString(hostCounter);
 
@@ -1084,7 +1083,9 @@ namespace BNETProtocol
     AppendByteArrayString(StatString, mapPath, true);
     AppendByteArrayString(StatString, hostName, true);
     StatString.push_back(0);
-    AppendByteArrayFast(StatString, mapSHA1);
+    if (war3Version >= GAMEVER(1u, 23u)) {
+      AppendByteArrayFast(StatString, mapSHA1);
+    }
     StatString = EncodeStatString(StatString);
 
     if (!gameName.empty() && !hostName.empty() && !mapPath.empty() && HostCounterString.size() == 8)

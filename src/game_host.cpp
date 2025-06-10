@@ -153,10 +153,14 @@ void NetworkGameInfo::SetPassword(string_view passWord)
   m_GamePassWord = passWord;
 }
 
-bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat)
+bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war3Version)
 {
   size_t size = gameStat.size();
-  if (size < 10) return false;
+  if (size < 10) {
+    //Print("[BNETPROTO] Stat string is too short.");
+    m_IsValid = false;
+    return false;
+  }
   const uint8_t* infoEnd = reinterpret_cast<const uint8_t*>(gameStat.c_str()) + size;
 
   array<uint8_t, 8> hostCounterRaw;
@@ -172,6 +176,7 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat)
   
   if (statData.size() < 14) {
     //Print("[BNETPROTO] Stat string cannot be read. Encoded: <" + encStatString + ">");
+    m_IsValid = false;
     return false;
   }
 
@@ -184,6 +189,7 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat)
   size_t cursorEnd = FindNullDelimiterOrStart(statData, cursorStart);
   if (cursorEnd == cursorStart) {
     //Print("[BNETPROTO] Failed to read map path");
+    m_IsValid = false;
     return false;
   }
   m_Info.m_MapPath = string(statData.begin() + cursorStart, statData.begin() + cursorEnd);
@@ -193,12 +199,21 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat)
   cursorEnd = FindNullDelimiterOrStart(statData, cursorStart);
   if (cursorEnd == cursorStart) {
     //Print("[BNETPROTO] Failed to read host name");
+    m_IsValid = false;
     return false;
   }
   m_HostName = string(statData.begin() + cursorStart, statData.begin() + cursorEnd);
+
+  if (cursorEnd + 22 <= statData.size()) {
+    m_Info.m_MapScriptsSHA1.emplace();
+    copy_n(statData.begin() + cursorEnd + 2, 20, m_Info.m_MapScriptsSHA1->begin());
+  }
   //Print("[BNETPROTO] Host: <" + m_HostName + ">");
   //Print("[BNETPROTO] Dimensions: " + to_string(m_Info.m_MapWidth) + "x" + to_string(m_Info.m_MapHeight));
   //Print("[BNETPROTO] Blizz Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsBlizz) + ">");
+  //if (m_Info.m_MapScriptsSHA1.has_value()) {
+  //  Print("[BNETPROTO] SHA1 Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsSHA1.value()) + ">");
+  //}
   return true;
 }
 

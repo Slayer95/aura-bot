@@ -277,6 +277,7 @@ public:
   bool GetIsModerator(std::string name) const;
   bool GetIsAdmin(std::string name) const;
   bool GetIsSudoer(std::string name) const;
+  bool GetIsCryptoHost(std::string name) const;
   bool IsBannedPlayer(std::string name, std::string hostName) const;
   bool IsBannedIP(std::string ip) const;
   void HoldFriends(std::shared_ptr<CGame> game);

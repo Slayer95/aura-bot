@@ -157,6 +157,18 @@ optional<bool> CMap::MatchMapScriptsBlizz(const Version& nVersion, const array<u
   return checkResult;
 }
 
+optional<bool> CMap::MatchMapScriptsSHA1(const Version& nVersion, const array<uint8_t, 20>& cmpHash) const
+{
+  optional<bool> checkResult;
+  Version headVersion = GetScriptsVersionRangeHead(nVersion);
+  auto it = m_MapScriptsSHA1.find(headVersion);
+  if (it == m_MapScriptsSHA1.end()) {
+    return checkResult;
+  }
+  checkResult = (it->second == cmpHash);
+  return checkResult;
+}
+
 bool CMap::GetMapIsGameVersionSupported(const Version& nVersion) const
 {
   Version headVersion = GetScriptsVersionRangeHead(nVersion);

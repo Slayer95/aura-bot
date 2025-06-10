@@ -60,23 +60,28 @@ GameSearchQuery::~GameSearchQuery()
 bool GameSearchQuery::GetIsMatch(const Version& gameVersion, const NetworkGameInfo& gameInfo) const
 {
   if (!m_GameName.empty() && gameInfo.GetGameName() != m_GameName) {
+    //Print("[SEARCH] Game names do not match");
     return false;
   }
   if (!m_HostName.empty() && gameInfo.GetHostName() != m_HostName) {
+    //Print("[SEARCH] Game hosts do not match");
     return false;
   }
   if (m_Map) {
+    vector<string> mismatchReasons;
     if (!m_Map->MatchMapScriptsBlizz(gameVersion, gameInfo.GetMapScriptsBlizz()).value_or(true)) {
-      Print(
-        "[SEARCH] Found game [" + string(gameInfo.GetGameName()) + "] by [" + string(gameInfo.GetHostName()) + "], "
-        "but maps are different."
-      );
-      return false;
+      mismatchReasons.push_back("maps are different");
+    }
+    if (gameInfo.GetHasSHA1() && !m_Map->MatchMapScriptsSHA1(gameVersion, gameInfo.GetMapScriptsSHA1()).value_or(true)) {
+      mismatchReasons.push_back("maps are different (sha1)");
     }
     if (!CaseInsensitiveEquals(m_Map->GetClientFileName(), gameInfo.GetMapClientFileName())) {
+      mismatchReasons.push_back("filenames are different (registry: [" + gameInfo.GetMapClientFileName() + "] vs local: [" + m_Map->GetClientFileName() + "]");
+    }
+    if (!mismatchReasons.empty()) {
       Print(
         "[SEARCH] Found game [" + string(gameInfo.GetGameName()) + "] by [" + string(gameInfo.GetHostName()) + "], "
-        "but filenames are different (registry: [" + gameInfo.GetMapClientFileName() + "] vs local: [" + m_Map->GetClientFileName() + "])."
+        "but " + JoinStrings(mismatchReasons, false) + "."
       );
       return false;
     }
@@ -87,12 +92,19 @@ bool GameSearchQuery::GetIsMatch(const Version& gameVersion, const NetworkGameIn
 bool GameSearchQuery::EventMatch(const NetworkGameInfo& gameInfo)
 {
   switch (m_CallbackType) {
-    case GameSearchQueryCallback::kHostActive: {
+    case GameSearchQueryCallback::kHostActiveMirror: {
       auto gameSetup = m_CallbackTarget.lock();
       if (!gameSetup || !gameSetup->GetIsActive()) return false;
+      auto sourceRealm = gameSetup->GetMirror().GetSourceRealm();
+      string hostName = string(gameInfo.GetHostName());
+      if (sourceRealm && sourceRealm->GetIsCryptoHost(hostName)) {
+        Print("[SEARCH] Found game [" + string(gameInfo.GetGameName()) + "] by [" + hostName + "], but host is encrypted and it cannot be mirrored.");
+        gameSetup->m_Aura->m_GameSetup.reset();
+        return false;
+      }
       if (m_Map) m_Map->SetGameConvertedFlags(gameInfo.GetGameFlags());
       gameSetup->GetMirror().SetRawSource(gameInfo.m_Host);
-      AppAction hostAction = AppAction(AppActionType::kHostActive, AppActionMode::kNone);
+      AppAction hostAction = AppAction(AppActionType::kHostActiveMirror, AppActionMode::kNone);
       gameSetup->m_Aura->m_PendingActions.push(hostAction);
       return false; // stop searching
     }
