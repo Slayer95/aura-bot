@@ -116,7 +116,9 @@ bool CSaveGame::Parse()
 	for (uint8_t i = 0; i < m_NumSlots; i++) {
 		uint8_t SlotData[9];
 		ISS.read(reinterpret_cast<char*>(SlotData), 9);			// slot data
-		m_Slots.emplace_back(SlotData[0], SlotData[1], SlotData[2], SlotData[3], SlotData[4], SlotData[5], SlotData[6], SlotData[7], SlotData[8]);
+    // SlotData[8] seems to be always 100?
+    // 0, [0] download, [1] slot status, [2] computer, [3] team, [4] color, [5] race, [6] difficulty, [7] handicap
+		m_Slots.emplace_back(0, SlotData[0], SlotData[1], SlotData[2], SlotData[3], SlotData[4], SlotData[5], SlotData[6], SlotData[7]/*, SlotData[8]*/);
 	}
 
 	ISS.read(reinterpret_cast<char*>(&m_RandomSeed), 4);			// random seed

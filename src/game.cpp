@@ -5550,9 +5550,10 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
   uint8_t UID = 0xFF;
 
   if (m_RestoredGame) {
+    const vector<CGameSlot>& saveSlots = m_RestoredGame->GetSlots();
     uint8_t matchCounter = 0xFF;
     for (uint8_t i = 0; i < m_Slots.size(); ++i) {
-      if (!m_RestoredGame->GetSlots()[i].GetIsPlayerOrFake()) {
+      if (!saveSlots[i].GetIsPlayerOrFake()) {
         continue;
       }
       if (++matchCounter == reservedIndex) {
