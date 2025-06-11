@@ -350,11 +350,12 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
 void CGame::InitSlots()
 {
   if (m_RestoredGame) {
+    uint8_t i = 0xFF;
     m_Slots = m_RestoredGame->GetSlots();
     // reset user slots
     for (auto& slot : m_Slots) {
       if (slot.GetIsPlayerOrFake()) {
-        slot.SetUID(0);
+        slot.SetUID(++i);
         slot.SetDownloadStatus(100);
         slot.SetSlotStatus(SLOTSTATUS_OPEN);
       }
@@ -5558,7 +5559,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
       }
       if (++matchCounter == reservedIndex) {
         SID = i;
-        UID = m_RestoredGame->GetSlots()[i].GetUID();
+        UID = saveSlots[i].GetUID();
         break;
       }
     }
@@ -10492,18 +10493,17 @@ uint8_t CGame::FakeAllSlots()
   uint8_t addedCounter = 0;
   if (m_RestoredGame) {
     if (m_Reserved.empty()) return 0;
-    uint8_t reservedIndex = 0;
-    uint8_t reservedEnd = static_cast<uint8_t>(m_Reserved.size()) - static_cast<uint8_t>(!hasUsers);
+    uint8_t reservedIndex = 0xFF;
+    uint8_t reservedCount = static_cast<uint8_t>(m_Reserved.size());
     for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {
-      if (m_Slots[SID].GetIsPlayerOrFake()) {
-        if (++reservedIndex >= reservedEnd) break;
+      const CGameSlot* savedSlot = m_RestoredGame->InspectSlot(SID);
+      if (!savedSlot || !savedSlot->GetIsPlayerOrFake()) {
         continue;
       }
+      if (++reservedIndex >= reservedCount) break;
       if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
-        const CGameSlot* savedSlot = m_RestoredGame->InspectSlot(SID);
         CreateFakeUserInner(SID, savedSlot->GetUID(), m_Reserved[reservedIndex], false);
         ++addedCounter;
-        if (++reservedIndex >= reservedEnd) break;
       }
     }
   } else {
