@@ -359,7 +359,7 @@ private:
   std::array<uint8_t, 4>                       m_MapCRC32;               // config value: <map.file_hash.crc32> (4 bytes) -> this is the real full CRC
   std::array<uint8_t, 20>                      m_MapSHA1;                // config value: <map.file_hash.sha1> (20 bytes) -> this is the real full SHA1
   std::map<Version, std::array<uint8_t, 20>>   m_MapScriptsSHA1;         // config value: <map.scripts_hash.sha1> (20 bytes)
-  std::map<Version, std::array<uint8_t, 4>>    m_MapScriptsBlizz;        // config value: <map.scripts_hash.crc32> (4 bytes) -> this is not the real CRC, it's the "xoro" value
+  std::map<Version, std::array<uint8_t, 4>>    m_MapScriptsBlizzHash;        // config value: <map.scripts_hash.crc32> (4 bytes) -> this is not the real CRC, it's the "xoro" value
   std::vector<CGameSlot>                       m_Slots;
   std::vector<std::pair<std::string, std::string>> m_InitCommands;
   std::string                     m_CFGName;
@@ -436,7 +436,7 @@ public:
   [[nodiscard]] bool                                     GetMapSizeIsNativeSupported(const Version& version) const;
   [[nodiscard]] inline const std::array<uint8_t, 4>&     GetMapCRC32() const { return m_MapCRC32; } // <map.file_hash.crc32>, but also legacy <map_hash> and <map.crc32>
   [[nodiscard]] inline const std::array<uint8_t, 20>&    GetMapSHA1() const { return m_MapSHA1; } // <map.file_hash.sha1>
-  [[nodiscard]] const std::array<uint8_t, 4>&            GetMapScriptsBlizz(const Version& nVersion) const; // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
+  [[nodiscard]] const std::array<uint8_t, 4>&            GetMapScriptsBlizzHash(const Version& nVersion) const; // <map.scripts_hash.blizz>, but also legacy <map_crc>, <map.weak_hash>
   [[nodiscard]] const std::array<uint8_t, 20>&           GetMapScriptsSHA1(const Version& nVersion) const; // <map.scripts_hash.sha1>, but also legacy <map.sha1>
   [[nodiscard]] std::optional<bool>                      MatchMapScriptsBlizz(const Version& nVersion, const std::array<uint8_t, 4>& cmpHash) const;
   [[nodiscard]] std::optional<bool>                      MatchMapScriptsSHA1(const Version& nVersion, const std::array<uint8_t, 20>& cmpHash) const;

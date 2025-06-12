@@ -603,6 +603,7 @@
     <ClCompile Include="game_seeker.cpp" />
     <ClCompile Include="game_setup.cpp" />
     <ClCompile Include="game_slot.cpp" />
+    <ClCompile Include="game_stat.cpp" />
     <ClCompile Include="game_structs.cpp" />
     <ClCompile Include="game_user.cpp" />
     <ClCompile Include="game_virtual_user.cpp" />
@@ -676,6 +677,7 @@
     <ClInclude Include="game_seeker.h" />
     <ClInclude Include="game_setup.h" />
     <ClInclude Include="game_slot.h" />
+    <ClInclude Include="game_stat.h" />
     <ClInclude Include="game_structs.h" />
     <ClInclude Include="game_user.h" />
     <ClInclude Include="game_virtual_user.h" />

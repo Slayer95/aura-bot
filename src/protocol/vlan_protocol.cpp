@@ -1,6 +1,7 @@
 #include "vlan_protocol.h"
 
 #include "../util.h"
+#include "../game_stat.h"
 
 using namespace std;
 
@@ -107,26 +108,18 @@ namespace VLANProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, const Version& war3Version, uint32_t mapGameType, uint32_t mapFlags, array<uint8_t, 2> mapWidth, array<uint8_t, 2> mapHeight, string gameName, string hostName, uint32_t elapsedTime, string mapPath, array<uint8_t, 4> mapCRC, uint32_t slotsTotal, uint32_t slotsOpen, array<uint8_t, 4> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+  vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, const Version& war3Version, uint32_t mapGameType, uint32_t gameFlags, array<uint8_t, 2> mapWidth, array<uint8_t, 2> mapHeight, string gameName, string hostName, uint32_t elapsedTime, string mapPath, array<uint8_t, 4> mapBlizzHash, uint32_t slotsTotal, uint32_t slotsOpen, array<uint8_t, 4> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
     vector<uint8_t> packet;
 
-    if (gameName.empty() || hostName.empty() || mapPath.empty() || mapCRC.size() != 4) {
+    if (gameName.empty() || hostName.empty() || mapPath.empty() || mapBlizzHash.size() != 4) {
       Print("[VLAN] invalid parameters passed to SEND_VLAN_GAMEINFO");
       return packet;
     }
-    // make the stat string
 
-    vector<uint8_t> StatString;
-    AppendByteArray(StatString, mapFlags, false);
-    StatString.push_back(0);
-    AppendByteArrayFast(StatString, mapWidth);
-    AppendByteArrayFast(StatString, mapHeight);
-    AppendByteArrayFast(StatString, mapCRC);
-    AppendByteArrayString(StatString, mapPath, true);
-    AppendByteArrayString(StatString, hostName, true);
-    StatString.push_back(0);
-    StatString = EncodeStatString(StatString);
+    // make the stat string
+    GameStat gameStat(gameFlags, ByteArrayToUInt16(mapWidth, false), ByteArrayToUInt16(mapHeight, false), mapPath, hostName, mapBlizzHash, nullopt);
+    vector<uint8_t> statString = gameStat.Encode();
 
     // make the rest of the packet
 
@@ -145,7 +138,7 @@ namespace VLANProtocol
     AppendByteArray(packet, entryKey, false);             // Entry Key
     AppendByteArrayString(packet, gameName, true);                // Game Name
     packet.push_back(0);                                  // ??? (maybe game password)
-    AppendByteArrayFast(packet, StatString);              // Stat String
+    AppendByteArrayFast(packet, statString);              // Stat String
     packet.push_back(0);                                  // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
     AppendByteArray(packet, slotsTotal, false);           // Slots Total
     AppendByteArray(packet, mapGameType, false);          // Map Game Type
@@ -240,33 +233,14 @@ CIncomingVLanGameInfo::CIncomingVLanGameInfo( bool nTFT, uint32_t nVersion, uint
 
   // decode stat string
 
-  vector<uint8_t> StatString = DecodeStatString(m_StatString);
-  vector<uint8_t> MapFlags;
-  vector<uint8_t> MapWidth;
-  vector<uint8_t> MapHeight;
-  vector<uint8_t> MapCRC;
-  vector<uint8_t> MapPath;
-  vector<uint8_t> HostName;
-
-  if (StatString.size() >= 14) {
-    unsigned int i = 13;
-    MapFlags = vector<uint8_t>(StatString.begin(), StatString.begin() + 4);
-    MapWidth = vector<uint8_t>(StatString.begin() + 5, StatString.begin() + 7);
-    MapHeight = vector<uint8_t>(StatString.begin() + 7, StatString.begin() + 9);
-    MapCRC = vector<uint8_t>(StatString.begin() + 9, StatString.begin() + 13);
-    MapPath = ExtractCString(StatString, 13);
-    i += MapPath.size() + 1;
-
-    m_MapFlags = ByteArrayToUInt32(MapFlags, false);
-    m_MapWidth = ByteArrayToUInt16(MapWidth, false);
-    m_MapHeight = ByteArrayToUInt16(MapHeight, false);
-    m_MapCRC = MapCRC;
-    m_MapPath = string(MapPath.begin(), MapPath.end());
-
-    if (StatString.size() >= i + 1) {
-      HostName = ExtractCString(StatString, i);
-      m_HostName = string(HostName.begin(), HostName.end());
-    }
+  GameStat statData = GameStat::Parse(m_StatString);
+  if (statData.GetIsValid()) {
+    m_GameFlags = statData.GetGameFlags();
+    m_MapWidth = statData.GetMapWidth();
+    m_MapHeight = statData.GetMapHeight();
+    copy_n(statData.GetMapScriptsBlizzHash().begin(), 4, m_MapScriptsBlizzHash.begin());
+    m_MapPath = statData.m_MapPath;
+    m_HostName = statData.m_HostName;
   }
 }
 

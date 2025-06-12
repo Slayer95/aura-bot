@@ -131,10 +131,10 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
 
 CMap::~CMap() = default;
 
-const array<uint8_t, 4>& CMap::GetMapScriptsBlizz(const Version& nVersion) const
+const array<uint8_t, 4>& CMap::GetMapScriptsBlizzHash(const Version& nVersion) const
 {
   Version headVersion = GetScriptsVersionRangeHead(nVersion);
-  auto it = m_MapScriptsBlizz.find(headVersion);
+  auto it = m_MapScriptsBlizzHash.find(headVersion);
   return it->second;
 };
 
@@ -149,8 +149,8 @@ optional<bool> CMap::MatchMapScriptsBlizz(const Version& nVersion, const array<u
 {
   optional<bool> checkResult;
   Version headVersion = GetScriptsVersionRangeHead(nVersion);
-  auto it = m_MapScriptsBlizz.find(headVersion);
-  if (it == m_MapScriptsBlizz.end()) {
+  auto it = m_MapScriptsBlizzHash.find(headVersion);
+  if (it == m_MapScriptsBlizzHash.end()) {
     return checkResult;
   }
   checkResult = (it->second == cmpHash);
@@ -172,7 +172,7 @@ optional<bool> CMap::MatchMapScriptsSHA1(const Version& nVersion, const array<ui
 bool CMap::GetMapIsGameVersionSupported(const Version& nVersion) const
 {
   Version headVersion = GetScriptsVersionRangeHead(nVersion);
-  return m_MapMinGameVersion < nVersion && (m_MapScriptsBlizz.find(headVersion) != m_MapScriptsBlizz.end()) && (m_MapScriptsSHA1.find(headVersion) != m_MapScriptsSHA1.end());
+  return m_MapMinGameVersion < nVersion && (m_MapScriptsBlizzHash.find(headVersion) != m_MapScriptsBlizzHash.end()) && (m_MapScriptsSHA1.find(headVersion) != m_MapScriptsSHA1.end());
 };
 
 uint32_t CMap::GetMapSizeClamped(const Version& nVersion) const
@@ -1489,7 +1489,7 @@ void CMap::Load(CConfig* CFG)
     } else {
       copy_n(cfgScriptsWeakHash.begin(), 4, scriptsHashBlizz.begin());
     }
-    m_MapScriptsBlizz[version] = scriptsHashBlizz;
+    m_MapScriptsBlizzHash[version] = scriptsHashBlizz;
 
     array<uint8_t, 20> scriptsHashSHA1;
     scriptsHashSHA1.fill(0);

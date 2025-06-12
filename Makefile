@@ -154,6 +154,7 @@ OBJS = $(OBJDIR)lib/base64/base64.o \
        $(OBJDIR)src/game_seeker.o \
        $(OBJDIR)src/game_setup.o \
        $(OBJDIR)src/game_slot.o \
+       $(OBJDIR)src/game_stat.o \       
        $(OBJDIR)src/game_structs.o \
        $(OBJDIR)src/game_user.o \
        $(OBJDIR)src/game_virtual_user.o \

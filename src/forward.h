@@ -131,6 +131,7 @@ struct GameMirrorSetup;
 struct GameSearchMatch;
 struct GameSearchQuery;
 struct GameSource;
+struct GameStat;
 struct GameUserSearchResult;
 struct GameResults;
 struct GameResultTeamAnalysis;

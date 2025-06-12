@@ -361,7 +361,7 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::vector<uint8_t>& message, const std::vector<uint8_t>& user);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CHECKAD();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_STARTADVEX3(const Version& war3Version, uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, const std::array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_STARTADVEX3(const Version& war3Version, uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, const std::optional<std::array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_NOTIFYJOIN(const std::string& gameName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_PING(const std::array<uint8_t, 4>& pingValue);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);

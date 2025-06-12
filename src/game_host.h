@@ -62,7 +62,7 @@ struct GameInfo
   uint32_t                  m_GameFlags;
   uint16_t                  m_MapWidth;
   uint16_t                  m_MapHeight;
-  std::array<uint8_t, 4>    m_MapScriptsBlizz;
+  std::array<uint8_t, 4>    m_MapScriptsBlizzHash;
   std::optional<std::array<uint8_t, 20>> m_MapScriptsSHA1;
 
   std::string               m_MapPath;
@@ -74,7 +74,7 @@ struct GameInfo
      m_MapWidth(0),
      m_MapHeight(0)
   {
-    m_MapScriptsBlizz.fill(0);
+    m_MapScriptsBlizzHash.fill(0);
   }
 
   ~GameInfo()
@@ -126,7 +126,7 @@ struct NetworkGameInfo
   [[nodiscard]] inline std::string_view GetHostName() const { return m_HostName; }
   [[nodiscard]] std::string GetHostDetails() const;
   [[nodiscard]] inline bool GetIsGProxy() const { return m_Info.m_MapWidth == m_Info.m_MapHeight && m_Info.m_MapHeight == 1984; }
-  [[nodiscard]] inline const std::array<uint8_t, 4>& GetMapScriptsBlizz() const { return m_Info.m_MapScriptsBlizz; }
+  [[nodiscard]] inline const std::array<uint8_t, 4>& GetMapScriptsBlizzHash() const { return m_Info.m_MapScriptsBlizzHash; }
   [[nodiscard]] inline std::string_view GetMapClientPath() const { return m_Info.m_MapPath; }
   [[nodiscard]] std::string GetMapClientFileName() const;
 };

@@ -3216,7 +3216,7 @@ array<uint8_t, 4> CGame::GetSourceFileHashBlizz(const Version& version) const
   if (m_RestoredGame) {
     return m_RestoredGame->GetSaveHash();
   } else {
-    return m_Map->GetMapScriptsBlizz(version);
+    return m_Map->GetMapScriptsBlizzHash(version);
   }
 }
 
@@ -3334,9 +3334,9 @@ void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version) co
     DLOG_APP_IF(LogLevel::kTrace, "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedMapSize / (float)(1024. * 1024.)) + " MB")
   }
   if (version >= GAMEVER(1u, 23u)) {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version), GetMapSHA1(version)));
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizzHash(version), GetMapSHA1(version)));
   } else {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizz(version)));
+    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizzHash(version)));
   }
 }
 

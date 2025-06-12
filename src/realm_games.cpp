@@ -69,7 +69,7 @@ bool GameSearchQuery::GetIsMatch(const Version& gameVersion, const NetworkGameIn
   }
   if (m_Map) {
     vector<string> mismatchReasons;
-    if (!m_Map->MatchMapScriptsBlizz(gameVersion, gameInfo.GetMapScriptsBlizz()).value_or(true)) {
+    if (!m_Map->MatchMapScriptsBlizz(gameVersion, gameInfo.GetMapScriptsBlizzHash()).value_or(true)) {
       mismatchReasons.push_back("maps are different");
     }
     if (gameInfo.GetHasSHA1() && !m_Map->MatchMapScriptsSHA1(gameVersion, gameInfo.GetMapScriptsSHA1()).value_or(true)) {

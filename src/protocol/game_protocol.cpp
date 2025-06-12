@@ -51,6 +51,7 @@
 #include "../file_util.h"
 #include "../game_user.h"
 #include "../game_slot.h"
+#include "../game_stat.h"
 #include "../game.h"
 
 using namespace std;
@@ -719,7 +720,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t gameFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
     if (gameName.empty() || hostName.empty() || mapPath.empty()) {
       Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
@@ -730,16 +731,8 @@ namespace GameProtocol
 
     // make the stat string
 
-    std::vector<uint8_t> StatString;
-    AppendByteArray(StatString, mapFlags, false);
-    StatString.push_back(0);
-    AppendByteArrayFast(StatString, mapWidth);
-    AppendByteArrayFast(StatString, mapHeight);
-    AppendByteArrayFast(StatString, mapBlizzHash);
-    AppendByteArrayString(StatString, mapPath, true);
-    AppendByteArrayString(StatString, hostName, true);
-    StatString.push_back(0);
-    StatString = EncodeStatString(StatString);
+    GameStat gameStat(gameFlags, ByteArrayToUInt16(mapWidth, false), ByteArrayToUInt16(mapHeight, false), mapPath, hostName, mapBlizzHash, nullopt);
+    vector<uint8_t> statString = gameStat.Encode();
 
     // make the rest of the packet
 
@@ -754,7 +747,7 @@ namespace GameProtocol
     AppendByteArray(packet, entryKey, false);                // Entry Key
     AppendByteArrayString(packet, gameName, true);                   // Game Name
     packet.push_back(0);                                     // ??? (maybe game password)
-    AppendByteArrayFast(packet, StatString);                 // Stat String
+    AppendByteArrayFast(packet, statString);                 // Stat String
     packet.push_back(0);                                     // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
     AppendByteArray(packet, slotsTotal, false);              // Slots Total
     AppendByteArray(packet, mapGameType, false);             // Game Type

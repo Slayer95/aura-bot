@@ -312,6 +312,7 @@ public:
   [[nodiscard]] inline const GameMirrorSetup& InspectMirror() const { return m_Mirror; }
   [[nodiscard]] inline bool GetIsDownloading() const { return m_IsStepDownloading; }
   [[nodiscard]] inline bool GetHasBeenHosted() const { return m_CreationCounter > 0; }
+  [[nodiscard]] inline bool GetHasGameVersion() const { return m_GameVersion.has_value(); }
 
   void AddIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   void RemoveIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
@@ -432,7 +433,7 @@ public:
 
   void ClearExtraOptions();
   void ExportTemporaryToMap(CConfig* MapCFG);
-  void AcquireCLIEarly(const CCLI* nCLI);
+  bool AcquireCLIEarly(const CCLI* nCLI);
   void AcquireHost(const CCLI* nCLI, const std::optional<std::string>& mpName);
   void AcquireCLISimple(const CCLI* nCLI);
   bool AcquireCLIMirror(const CCLI* nCLI);

@@ -141,6 +141,9 @@
     <ClCompile Include="game_slot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game_stat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="game_structs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -354,6 +357,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_slot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_stat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_structs.h">

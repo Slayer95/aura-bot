@@ -26,6 +26,7 @@
 #include <filesystem>
 
 #include "game_slot.h"
+#include "game_stat.h"
 
 //
 // CSaveGame
@@ -37,32 +38,34 @@ private:
   CAura* m_Aura;
   CPacked* m_Packed;
   bool m_Valid;
-	uint8_t m_NumSlots;
+  uint8_t m_NumSlots;
   uint32_t m_RandomSeed;
-	std::string m_ClientMapPath;
-	std::string m_GameName;
-	std::string m_ClientPath;
-	std::filesystem::path m_ServerPath;
-	std::vector<CGameSlot> m_Slots;
-	std::array<uint8_t, 4> m_SaveHash;
+  std::string m_ClientMapPath;
+  std::string m_GameName;
+  std::string m_ClientPath;
+  std::filesystem::path m_ServerPath;
+  std::vector<CGameSlot> m_Slots;
+  GameStat m_GameStat;
+  std::array<uint8_t, 4> m_SaveHash;
 
 public:
-	CSaveGame(CAura* nAura, const std::filesystem::path& fromPath);
-	~CSaveGame();
+  CSaveGame(CAura* nAura, const std::filesystem::path& fromPath);
+  ~CSaveGame();
 
-	[[nodiscard]] const std::filesystem::path& GetServerPath()const { return m_ServerPath; }
-	[[nodiscard]] const std::string& GetClientPath() const { return m_ClientPath; }
+  [[nodiscard]] const std::filesystem::path& GetServerPath()const { return m_ServerPath; }
+  [[nodiscard]] const std::string& GetClientPath() const { return m_ClientPath; }
   [[nodiscard]] const std::string& GetClientMapPath() const { return m_ClientMapPath; }
-	[[nodiscard]] const std::string& GetGameName()	const { return m_GameName; }
-	[[nodiscard]] uint8_t GetNumSlots() const { return m_NumSlots; }
+  [[nodiscard]] const std::string& GetGameName()  const { return m_GameName; }
+  [[nodiscard]] uint8_t GetNumSlots() const { return m_NumSlots; }
   [[nodiscard]] uint8_t GetNumHumanSlots() const;
-	[[nodiscard]] const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
-	[[nodiscard]] uint32_t GetRandomSeed() const { return m_RandomSeed; }
-	[[nodiscard]] const std::array<uint8_t, 4>& GetSaveHash()	const { return m_SaveHash; }
+  [[nodiscard]] const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }
+  [[nodiscard]] inline const GameStat& GetGameStat() const { return m_GameStat; }
+  [[nodiscard]] uint32_t GetRandomSeed() const { return m_RandomSeed; }
+  [[nodiscard]] const std::array<uint8_t, 4>& GetSaveHash()  const { return m_SaveHash; }
   [[nodiscard]] const CGameSlot* InspectSlot(const uint8_t SID) const;
   bool Load();
   void Unload();
-	bool Parse();
+  bool Parse();
 };
 
 #endif // AURA_SAVEGAME_H

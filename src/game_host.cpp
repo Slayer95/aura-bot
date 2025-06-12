@@ -24,6 +24,7 @@
  */
 
 #include "game_host.h"
+#include "game_stat.h"
 #include "game.h"
 #include "game_user.h"
 #include "net.h"
@@ -172,45 +173,26 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   const uint8_t* encStatStringStart = reinterpret_cast<const uint8_t*>(gameStat.c_str()) + cursor;
   const uint8_t* encStatStringEnd = FindNullDelimiterOrEnd(encStatStringStart, infoEnd);
   string encStatString = GetStringAddressRange(encStatStringStart, encStatStringEnd);
-  vector<uint8_t> statData = DecodeStatString(encStatString);
-  
-  if (statData.size() < 14) {
-    //Print("[BNETPROTO] Stat string cannot be read. Encoded: <" + encStatString + ">");
+  GameStat statData = GameStat::Parse(encStatString);
+  if (!statData.GetIsValid()) {
+    //Print("[BNETPROTO] Stat string cannot be parsed. Encoded: <" + encStatString + ">");
     m_IsValid = false;
     return false;
   }
 
-  m_Info.m_GameFlags = ByteArrayToUInt32(statData, false, 0);
-  m_Info.m_MapWidth = ByteArrayToUInt16(statData, false, 5);
-  m_Info.m_MapHeight = ByteArrayToUInt16(statData, false, 7);
-  copy_n(statData.begin() + 9, 4, m_Info.m_MapScriptsBlizz.begin());
-
-  size_t cursorStart = 13;
-  size_t cursorEnd = FindNullDelimiterOrStart(statData, cursorStart);
-  if (cursorEnd == cursorStart) {
-    //Print("[BNETPROTO] Failed to read map path");
-    m_IsValid = false;
-    return false;
-  }
-  m_Info.m_MapPath = string(statData.begin() + cursorStart, statData.begin() + cursorEnd);
-  //Print("[BNETPROTO] Map path: <" + m_Info.m_MapPath + ">");
-
-  cursorStart = cursorEnd + 1;
-  cursorEnd = FindNullDelimiterOrStart(statData, cursorStart);
-  if (cursorEnd == cursorStart) {
-    //Print("[BNETPROTO] Failed to read host name");
-    m_IsValid = false;
-    return false;
-  }
-  m_HostName = string(statData.begin() + cursorStart, statData.begin() + cursorEnd);
-
-  if (cursorEnd + 22 <= statData.size()) {
+  m_Info.m_GameFlags = statData.m_GameFlags;
+  m_Info.m_MapWidth = statData.m_MapWidth;
+  m_Info.m_MapHeight = statData.m_MapHeight;
+  copy_n(statData.m_MapScriptsBlizzHash.begin() + 9, 4, m_Info.m_MapScriptsBlizzHash.begin());
+  m_Info.m_MapPath = statData.m_MapPath;
+  m_HostName = statData.m_HostName;
+  if (statData.m_MapScriptsSHA1.has_value()) {
     m_Info.m_MapScriptsSHA1.emplace();
-    copy_n(statData.begin() + cursorEnd + 2, 20, m_Info.m_MapScriptsSHA1->begin());
+    copy_n(statData.m_MapScriptsSHA1->begin(), 20, m_Info.m_MapScriptsSHA1->begin());
   }
   //Print("[BNETPROTO] Host: <" + m_HostName + ">");
   //Print("[BNETPROTO] Dimensions: " + to_string(m_Info.m_MapWidth) + "x" + to_string(m_Info.m_MapHeight));
-  //Print("[BNETPROTO] Blizz Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsBlizz) + ">");
+  //Print("[BNETPROTO] Blizz Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsBlizzHash) + ">");
   //if (m_Info.m_MapScriptsSHA1.has_value()) {
   //  Print("[BNETPROTO] SHA1 Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsSHA1.value()) + ">");
   //}

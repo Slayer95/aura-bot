@@ -789,6 +789,18 @@ inline void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, con
   b.push_back(value);
 }
 
+[[nodiscard]] inline bool IsAllZeroes(const uint8_t* start, const uint8_t* end)
+{
+  const uint8_t* needle = start;
+  while (needle < end) {
+    if (*needle != 0) {
+      return false;
+    }
+    ++needle;
+  }
+  return true;
+}
+
 [[nodiscard]] inline size_t FindNullDelimiterOrStart(const std::vector<uint8_t>& b, const size_t start)
 {
   size_t end = b.size();

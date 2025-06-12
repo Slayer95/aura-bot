@@ -7671,6 +7671,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("Unable to host game");
         break;
       }
+      if (!gameSetup->GetHasGameVersion()) {
+        ErrorReply("Unable to host game - game version missing");
+        break;
+      }
       gameSetup->SetActive();
       gameSetup->LoadMap();
       break;
@@ -7911,6 +7915,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!gameSetup) {
         delete options;
         ErrorReply("Unable to host game", CHAT_SEND_SOURCE_ALL);
+        break;
+      }
+      if (!gameSetup->GetHasGameVersion()) {
+        ErrorReply("Unable to host game - game version missing", CHAT_SEND_SOURCE_ALL);
         break;
       }
       if (isHostCommand) {

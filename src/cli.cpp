@@ -1012,7 +1012,9 @@ bool CCLI::QueueActions(CAura* nAura) const
     } catch (...) {
       return false;
     }
-    gameSetup->AcquireCLIEarly(this);
+    if (!gameSetup->AcquireCLIEarly(this)) {
+      return false;
+    }
     if (!gameSetup->LoadMapSync()) {
       if (searchType == SEARCH_TYPE_ANY) {
         ctx->ErrorReply("Input does not refer to a valid map, config, or URL.");

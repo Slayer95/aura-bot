@@ -47,6 +47,7 @@
 
 #include "../util.h"
 #include "../socket.h"
+#include "../game_stat.h"
 
 #include <utility>
 
@@ -1061,34 +1062,21 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_STARTADVEX3(const Version& war3Version, uint8_t state, const uint32_t mapGameType, const uint32_t mapFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const array<uint8_t, 20>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+  vector<uint8_t> SEND_SID_STARTADVEX3(const Version& war3Version, uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
   {
-    string HostCounterString = ToHexString(hostCounter);
+    string hostCounterString = ToHexString(hostCounter);
+    if (hostCounterString.size() < 8) {
+      hostCounterString.insert(static_cast<size_t>(0), static_cast<size_t>(8) - hostCounterString.size(), '0');
+    }
 
-    if (HostCounterString.size() < 8)
-      HostCounterString.insert(static_cast<size_t>(0), static_cast<size_t>(8) - HostCounterString.size(), '0');
+    hostCounterString = string(hostCounterString.rbegin(), hostCounterString.rend());
+    assert(hostCounterString.size() == 8 && "hostCounterString should be 8 ASCII characters long");
 
-    HostCounterString = string(HostCounterString.rbegin(), HostCounterString.rend());
-
+    GameStat gameStat(gameFlags, ByteArrayToUInt16(mapWidth, false), ByteArrayToUInt16(mapHeight, false), mapPath, hostName, mapBlizzHash, mapSHA1);
+    vector<uint8_t> statString = gameStat.Encode();
     vector<uint8_t> packet;
 
-    // make the stat string
-
-    vector<uint8_t> StatString;
-    AppendByteArray(StatString, mapFlags, false);
-    StatString.push_back(0);
-    AppendByteArrayFast(StatString, mapWidth);
-    AppendByteArrayFast(StatString, mapHeight);
-    AppendByteArrayFast(StatString, mapBlizzHash);
-    AppendByteArrayString(StatString, mapPath, true);
-    AppendByteArrayString(StatString, hostName, true);
-    StatString.push_back(0);
-    if (war3Version >= GAMEVER(1u, 23u)) {
-      AppendByteArrayFast(StatString, mapSHA1);
-    }
-    StatString = EncodeStatString(StatString);
-
-    if (!gameName.empty() && !hostName.empty() && !mapPath.empty() && HostCounterString.size() == 8)
+    if (!gameName.empty() && !hostName.empty() && !mapPath.empty())
     {
       // make the rest of the packet
 
@@ -1110,8 +1098,8 @@ namespace BNETProtocol
       AppendByteArrayString(packet, gameName, true);         // Game Name
       packet.push_back(0);                                   // Game Password is empty
       packet.push_back(86 + maxSupportedSlots);              // Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of UID's Warcraft III will allocate
-      AppendByteArrayString(packet, HostCounterString, false); // Host Counter - exclude null terminator
-      AppendByteArrayFast(packet, StatString);               // Stat String
+      AppendByteArrayString(packet, hostCounterString, false); // Host Counter - exclude null terminator
+      AppendByteArrayFast(packet, statString);               // Stat String
       packet.push_back(0);                                   // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
       AssignLength(packet);
     } else {

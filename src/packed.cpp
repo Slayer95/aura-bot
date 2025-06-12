@@ -195,9 +195,9 @@ void CPacked::Decompress(const bool allBlocks)
 	}
 
 	if (allBlocks) {
-		Print("[PACKED] reading " + to_string(m_NumBlocks) + " blocks");
+		DPRINT_IF(LogLevel::kTrace, "[PACKED] reading " + to_string(m_NumBlocks) + " blocks")
   } else {
-		Print("[PACKED] reading 1/" + to_string(m_NumBlocks) + " blocks");
+		DPRINT_IF(LogLevel::kTrace, "[PACKED] reading 1/" + to_string(m_NumBlocks) + " blocks")
   }
 
 	// read blocks
@@ -225,7 +225,7 @@ void CPacked::Decompress(const bool allBlocks)
 		ISS.read((char*)CompressedData, BlockCompressed);
 
 		if (ISS.fail()) {
-			Print("[PACKED] failed to read block data");
+			PRINT_IF(LogLevel::kWarning, "[PACKED] failed to read block data")
 			delete[] DecompressedData;
 			delete[] CompressedData;
 			m_Valid = false;
@@ -297,7 +297,7 @@ void CPacked::Compress(const bool TFT)
 		int Result = compress(CompressedData, &BlockCompressedLong, (const Bytef *)Padded.c_str() + Position, 8192);
 
 		if (Result != Z_OK) {
-			Print("[PACKED] compress error " + to_string(Result));
+      PRINT_IF(LogLevel::kWarning, "[PACKED] compress error " + to_string(Result));
 			delete[] CompressedData;
 			m_Valid = false;
 			return;

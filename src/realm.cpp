@@ -456,6 +456,10 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               PRINT_IF(LogLevel::kWarning, GetLogPrefix() + "hostgame memory allocation failure")
               break;
             }
+            if (!gameSetup->GetHasGameVersion()) {
+              PRINT_IF(LogLevel::kWarning, GetLogPrefix() + "game version missing - cannot host")
+              break;
+            }
             if (!gameSetup->GetMapLoaded()) {
               PRINT_IF(LogLevel::kWarning, GetLogPrefix() + "map is invalid")
               break;
@@ -1609,8 +1613,12 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
     m_GameBroadcastStartTicks = Ticks;
   }
 
-  string hostName = m_Config.m_UserName;
   Version version = GetGameVersion();
+  optional<array<uint8_t, 20>> mapSHA1;
+  if (version >= GAMEVER(1u, 23u)) {
+    mapSHA1 = game->GetMapSHA1(version);
+  }
+  string hostName = m_Config.m_UserName;
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
     GetGameVersion(),
     game->GetDisplayMode(),
@@ -1623,7 +1631,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
     game->GetUptime(),
     game->GetSourceFilePath(),
     game->GetSourceFileHashBlizz(version),
-    game->GetMapSHA1(version),
+    mapSHA1,
     hostCounter,
     game->GetMap()->GetVersionMaxSlots()
   ));

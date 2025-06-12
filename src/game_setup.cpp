@@ -29,6 +29,7 @@
 #include "command.h"
 #include "file_util.h"
 #include "game.h"
+#include "game_user.h"
 #include "protocol/game_protocol.h"
 #include "hash.h"
 #include "integration/irc.h"
@@ -219,6 +220,14 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_ExitingSoon(false),
     m_DeleteMe(false)
 {
+  if (auto gameUser = nCtx->GetGameUser()) {
+    m_GameVersion = gameUser->GetGameVersion();
+  } else if (auto sourceRealm = nCtx->GetSourceRealm()) {
+    m_GameVersion = sourceRealm->GetGameVersion();
+  }
+  if ((!m_GameVersion.has_value() || m_GameVersion->first == 0) && m_Aura->m_GameDefaultConfig->m_GameVersion.has_value()) {
+    m_GameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
+  }
   m_Map = GetBaseMapFromConfig(nMapCFG, false);
 }
 
@@ -262,6 +271,14 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_DeleteMe(false)
     
 {
+  if (auto gameUser = nCtx->GetGameUser()) {
+    m_GameVersion = gameUser->GetGameVersion();
+  } else if (auto sourceRealm = nCtx->GetSourceRealm()) {
+    m_GameVersion = sourceRealm->GetGameVersion();
+  }
+  if ((!m_GameVersion.has_value() || m_GameVersion->first == 0) && m_Aura->m_GameDefaultConfig->m_GameVersion.has_value()) {
+    m_GameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
+  }
 }
 
 std::string CGameSetup::GetInspectName() const
@@ -1366,18 +1383,31 @@ void CGameSetup::SetActive()
 
 bool CGameSetup::RestoreFromSaveFile()
 {
+  if (!m_GameVersion.has_value()) {
+    m_Ctx->ErrorReply("Game version not specified", CHAT_SEND_SOURCE_ALL);
+    return false;
+  }
   m_RestoredGame = make_shared<CSaveGame>(m_Aura, m_SaveFile);
   if (!m_RestoredGame->Load()) return false;
   bool success = m_RestoredGame->Parse();
   m_RestoredGame->Unload();
-  if (!CaseInsensitiveEquals(
-    // Not using FileNameEquals because these are client paths
-    ParseFileName(m_RestoredGame->GetClientMapPath()),
-    ParseFileName(m_Map->GetClientPath())
-  )) {
-    m_Ctx->ErrorReply("Requires map [" + m_RestoredGame->GetClientMapPath() + "]", CHAT_SEND_SOURCE_ALL);
-    return false;
+
+  const GameStat& gameStat = m_RestoredGame->GetGameStat();
+  vector<string> mismatchReasons;
+  if (!m_Map->MatchMapScriptsBlizz(*m_GameVersion, gameStat.GetMapScriptsBlizzHash()).value_or(true)) {
+    mismatchReasons.push_back("maps are different");
   }
+  if (gameStat.GetHasSHA1() && !m_Map->MatchMapScriptsSHA1(*m_GameVersion, gameStat.GetMapScriptsSHA1()).value_or(true)) {
+    mismatchReasons.push_back("maps are different (sha1)");
+  }
+  if (!CaseInsensitiveEquals(m_Map->GetClientFileName(), gameStat.GetMapClientFileName())) {
+    mismatchReasons.push_back("filenames are different (save file: [" + gameStat.GetMapClientFileName() + "] vs game: [" + m_Map->GetClientFileName() + "]");
+  }
+  if (!mismatchReasons.empty()) {
+    Print("[GAMESETUP] Save file is not valid, because " + JoinStrings(mismatchReasons, false));
+    success = false;
+  }
+
   return success;
 }
 
@@ -1591,7 +1621,7 @@ string CGameSetup::NormalizeGameName(const string& baseGameName)
   return gameName;
 }
 
-void CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
+bool CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
 {
   if (nCLI->m_GameSavedPath.has_value()) SetGameSavedFile(nCLI->m_GameSavedPath.value());
   // CPR timeouts are int32_t - signed!
@@ -1600,6 +1630,15 @@ void CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
   WriteOpt(m_GameVersion) << nCLI->m_GameVersion;
   WriteOpt(m_GameLocaleMod) << nCLI->m_GameLocaleMod;
   WriteOpt(m_GameLocaleLangID) << nCLI->m_GameLocaleLangID;
+
+  if (!m_GameVersion.has_value()) {
+    if (!m_Aura->m_GameDefaultConfig->m_GameVersion.has_value()) {
+      Print("[GAMESETUP] Failed to resolve game version. You must use any of --game-version or <hosting.game_versions.main>");
+      return false;
+    }
+    m_GameVersion = m_Aura->m_GameDefaultConfig->m_GameVersion.value();
+  }
+  return true;
 }
 
 void CGameSetup::AcquireHost(const CCLI* nCLI, const optional<string>& mpName)
