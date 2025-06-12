@@ -123,6 +123,7 @@ OBJS = $(OBJDIR)lib/base64/base64.o \
        $(OBJDIR)src/protocol/vlan_protocol.o \
        $(OBJDIR)src/config/config.o \
        $(OBJDIR)src/config/config_bot.o \
+       $(OBJDIR)src/config/config_db.o \
        $(OBJDIR)src/config/config_realm.o \
        $(OBJDIR)src/config/config_commands.o \
        $(OBJDIR)src/config/config_game.o \

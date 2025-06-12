@@ -574,6 +574,7 @@
     <ClCompile Include="config\config_realm.cpp" />
     <ClCompile Include="config\config_commands.cpp" />
     <ClCompile Include="config\config_bot.cpp" />
+    <ClCompile Include="config\config_db.cpp" />
     <ClCompile Include="config\config_game.cpp" />
     <ClCompile Include="config\config_irc.cpp" />
     <ClCompile Include="config\config_discord.cpp" />
@@ -641,6 +642,7 @@
     <ClInclude Include="config\config_realm.h" />
     <ClInclude Include="config\config_commands.h" />
     <ClInclude Include="config\config_bot.h" />
+    <ClInclude Include="config\config_db.h" />
     <ClInclude Include="config\config_game.h" />
     <ClInclude Include="config\config_irc.h" />
     <ClInclude Include="config\config_discord.h" />

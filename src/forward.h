@@ -103,6 +103,7 @@ namespace dpp
 
 struct CBotConfig;
 struct CCommandConfig;
+struct CDataBaseConfig;
 struct CDiscordConfig;
 struct CGameConfig;
 struct CIRCConfig;

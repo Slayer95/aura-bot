@@ -230,7 +230,7 @@ namespace GameProtocol
     // 4 bytes					-> Reason
 
     if (ValidateLength(data) && data.size() >= 8)
-      return ByteArrayToUInt32(data, false, 4);
+      return ByteArrayToUInt32(data, false, 4);                     
 
     return 0;
   }
@@ -383,10 +383,10 @@ namespace GameProtocol
   // SEND FUNCTIONS //
   ////////////////////
 
-  std::vector<uint8_t> SEND_W3GS_PING_FROM_HOST()
+  std::vector<uint8_t> SEND_W3GS_PING_FROM_HOST(const int64_t ticks)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::PING_FROM_HOST, 8, 0};
-    AppendByteArray(packet, GetTicks(), false); // ping value
+    AppendByteArray(packet, ticks, false); // ping value
     return packet;
   }
 
@@ -491,47 +491,8 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(const Version& version, uint8_t UID, const string& name)
   {
-    if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
-      Print("[GAMEPROTO] Invalid player name");
-      return std::vector<uint8_t>();
-    }
-
-    std::vector<uint8_t> packet;
-
-    const uint8_t PlayerJoinCounter[] = {2, 0, 0, 0};
-    const uint8_t Zeros[]             = {0, 0, 0, 0};
-
-    packet.push_back(GameProtocol::Magic::W3GS_HEADER);                         // W3GS header constant
-    packet.push_back(GameProtocol::Magic::PLAYERINFO);              // W3GS_PLAYERINFO
-    packet.push_back(0);                                            // packet length will be assigned later
-    packet.push_back(0);                                            // packet length will be assigned later
-    AppendByteArray(packet, PlayerJoinCounter, 4);                  // player join counter
-    packet.push_back(UID);                                          // UID
-    AppendByteArrayString(packet, name, true);                      // player name
-    if (version >= GAMEVER(1u, 31u)) {
-      packet.push_back(2);                                          // ???
-      packet.push_back(0);                                          // ???
-    } else {
-      packet.push_back(1);                                          // ???
-    }
-    packet.push_back(0);                                            // ???
-    packet.push_back(2);                                            // AF_INET
-    packet.push_back(0);                                            // AF_INET continued...
-    packet.push_back(0);                                            // port
-    packet.push_back(0);                                            // port continued...
-    AppendByteArray(packet, Zeros, 4);	                            // external IP hidden
-    AppendByteArray(packet, Zeros, 4);                              // ???
-    AppendByteArray(packet, Zeros, 4);                              // ???
-    packet.push_back(2);                                            // AF_INET
-    packet.push_back(0);                                            // AF_INET continued...
-    packet.push_back(0);                                            // port
-    packet.push_back(0);                                            // port continued...
-    AppendByteArray(packet, Zeros, 4);	                            // internal IP hidden
-    AppendByteArray(packet, Zeros, 4);                              // ???
-    AppendByteArray(packet, Zeros, 4);                              // ???
-    AssignLength(packet);
-
-    return packet;
+    array<uint8_t, 4> Zeros = {0, 0, 0, 0};
+    return SEND_W3GS_PLAYERINFO(version, UID, name, Zeros, Zeros);
   }
 
   std::vector<uint8_t> SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t UID, uint32_t leftCode)
@@ -696,7 +657,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_START_LAG(vector<GameUser::CGameUser*> users)
+  std::vector<uint8_t> SEND_W3GS_START_LAG(const vector<GameUser::CGameUser*>& users, const int64_t ticks)
   {
     if (users.empty()) {
       Print("[GAMEPROTO] no laggers passed to SEND_W3GS_START_LAG");
@@ -706,17 +667,17 @@ namespace GameProtocol
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::START_LAG, 0u, 0u, static_cast<uint8_t>(users.size())};
     for (auto& player : users) {
       packet.push_back((player)->GetUID());
-      AppendByteArray(packet, GetTicks() - player->GetStartedLaggingTicks(), false);
+      AppendByteArray(packet, ticks - player->GetStartedLaggingTicks(), false);
     }
 
     AssignLength(packet);
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user)
+  std::vector<uint8_t> SEND_W3GS_STOP_LAG(const GameUser::CGameUser* user, const int64_t ticks)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::STOP_LAG, 9, 0, user->GetUID()};
-    AppendByteArray(packet, GetTicks() - user->GetStartedLaggingTicks(), false);
+    AppendByteArray(packet, ticks - user->GetStartedLaggingTicks(), false);
     return packet;
   }
 
@@ -842,7 +803,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz)
+  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::optional<array<uint8_t, 20>>& mapScriptsHashSHA1)
   {
     if (mapPath.empty()) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
@@ -854,23 +815,9 @@ namespace GameProtocol
     AppendByteArray(packet, mapSize, false); // <map.size>
     AppendByteArrayFast(packet, mapCRC32); // <map.file_hash.crc32>
     AppendByteArrayFast(packet, mapScriptsHashBlizz);  // <map.scripts_hash.blizz>
-    AssignLength(packet);
-    return packet;
-  }
-
-  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::array<uint8_t, 20>& mapScriptsHashSHA1)
-  {
-    if (mapPath.empty()) {
-      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
-      return std::vector<uint8_t>();  
+    if (mapScriptsHashSHA1.has_value()) {
+      AppendByteArrayFast(packet, *mapScriptsHashSHA1); // <map.scripts_hash.sha1>
     }
-
-    std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::MAPCHECK, 0, 0, 1, 0, 0, 0};
-    AppendByteArrayString(packet, mapPath, true); // <map.path>
-    AppendByteArray(packet, mapSize, false); // <map.size>
-    AppendByteArrayFast(packet, mapCRC32); // <map.file_hash.crc32>
-    AppendByteArrayFast(packet, mapScriptsHashBlizz);  // <map.scripts_hash.blizz>
-    AppendByteArrayFast(packet, mapScriptsHashSHA1); // <map.scripts_hash.sha1>
     AssignLength(packet);
     return packet;
   }

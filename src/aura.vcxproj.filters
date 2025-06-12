@@ -48,6 +48,9 @@
     <ClCompile Include="config\config_bot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="config\config_db.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="config\config_realm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -243,6 +246,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config\config_bot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config\config_db.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config\config_realm.h">

@@ -70,10 +70,10 @@ bool GameSearchQuery::GetIsMatch(const Version& gameVersion, const NetworkGameIn
   if (m_Map) {
     vector<string> mismatchReasons;
     if (!m_Map->MatchMapScriptsBlizz(gameVersion, gameInfo.GetMapScriptsBlizzHash()).value_or(true)) {
-      mismatchReasons.push_back("maps are different");
+      mismatchReasons.push_back("maps are different (registry expects blizz hash: " + ByteArrayToDecString(gameInfo.GetMapScriptsBlizzHash()) + ")");
     }
     if (gameInfo.GetHasSHA1() && !m_Map->MatchMapScriptsSHA1(gameVersion, gameInfo.GetMapScriptsSHA1()).value_or(true)) {
-      mismatchReasons.push_back("maps are different (sha1)");
+      mismatchReasons.push_back("maps are different (registry expects sha1 hash: " + ByteArrayToDecString(gameInfo.GetMapScriptsSHA1()) + ")");
     }
     if (!CaseInsensitiveEquals(m_Map->GetClientFileName(), gameInfo.GetMapClientFileName())) {
       mismatchReasons.push_back("filenames are different (registry: [" + gameInfo.GetMapClientFileName() + "] vs local: [" + m_Map->GetClientFileName() + "]");

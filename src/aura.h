@@ -106,8 +106,9 @@ public:
   uint64_t                                           m_HistoryGameID;
   size_t                                             m_MaxGameNameSize;
 
+  CDataBaseConfig*                                   m_DataBaseConfig;
+  CGameConfig*                                       m_GameDefaultConfig;  
   CRealmConfig*                                      m_RealmDefaultConfig;
-  CGameConfig*                                       m_GameDefaultConfig;
   CCommandConfig*                                    m_CommandDefaultConfig;
 
   CAuraDB*                                           m_DB;                         // database
@@ -228,6 +229,7 @@ public:
 
   [[nodiscard]] bool ReloadConfigs();
   void TryReloadConfigs();
+  bool LoadDataBaseConfig(CConfig& CFG);
   bool LoadDefaultConfigs(CConfig& CFG, CNetConfig* netConfig);
   bool LoadAllConfigs(CConfig& CFG);
   void OnLoadConfigs();

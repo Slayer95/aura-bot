@@ -1614,9 +1614,9 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
   }
 
   Version version = GetGameVersion();
-  optional<array<uint8_t, 20>> mapSHA1;
+  optional<array<uint8_t, 20>> maybeSHA1;
   if (version >= GAMEVER(1u, 23u)) {
-    mapSHA1 = game->GetMapSHA1(version);
+    maybeSHA1 = game->GetMapSHA1(version);
   }
   string hostName = m_Config.m_UserName;
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
@@ -1630,7 +1630,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
     game->GetUptime(),
     game->GetSourceFilePath(),
     game->GetSourceFileHashBlizz(version),
-    mapSHA1,
+    maybeSHA1,
     hostCounter,
     game->GetMap()->GetVersionMaxSlots()
   ));

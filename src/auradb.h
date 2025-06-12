@@ -47,6 +47,7 @@
 #define AURA_AURADB_H_
 
 #include "includes.h"
+#include "config/config_db.h"
 
 #include <filesystem>
 
@@ -246,63 +247,23 @@ constexpr int64_t SchemaNumber = 3;
 #define SCHEMA_CHECK_LEGACY_INCOMPATIBLE 4u
 #define SCHEMA_CHECK_LEGACY_UPGRADEABLE 5u
 
-#define JOURNAL_MODE_DELETE 0u
-#define JOURNAL_MODE_TRUNCATE 1u
-#define JOURNAL_MODE_PERSIST 2u
-#define JOURNAL_MODE_MEMORY 3u
-#define JOURNAL_MODE_WAL 4u
-#define JOURNAL_MODE_OFF 5u
-#define JOURNAL_MODE_LAST 6u
-#define JOURNAL_MODE_INVALID 0xFFu
-
-#define SYNCHRONOUS_OFF 0u
-#define SYNCHRONOUS_NORMAL 1u
-#define SYNCHRONOUS_FULL 2u
-#define SYNCHRONOUS_EXTRA 3u
-#define SYNCHRONOUS_LAST 4u
-#define SYNCHRONOUS_INVALID 0xFFu
-
 class CAuraDB
 {
 public:
   enum class SchemaStatus : uint8_t
   {
-    OK                          = SCHEMA_CHECK_OK,
-    INCOMPATIBLE                = SCHEMA_CHECK_INCOMPATIBLE,
-    LEGACY_INCOMPATIBLE         = SCHEMA_CHECK_LEGACY_INCOMPATIBLE,
-    LEGACY_UPGRADEABLE          = SCHEMA_CHECK_LEGACY_UPGRADEABLE,
-    NONE                        = SCHEMA_CHECK_NONE,
-    ERRORED                     = SCHEMA_CHECK_ERRORED
-  };
-
-  enum class JournalMode : uint8_t
-  {
-    DEL                         = JOURNAL_MODE_DELETE,
-    TRUNCATE                    = JOURNAL_MODE_TRUNCATE,
-    PERSIST                     = JOURNAL_MODE_PERSIST,
-    MEMORY                      = JOURNAL_MODE_MEMORY,
-    WAL                         = JOURNAL_MODE_WAL,
-    OFF                         = JOURNAL_MODE_OFF,
-    LAST                        = JOURNAL_MODE_LAST,
-    INVALID                     = JOURNAL_MODE_INVALID
-  };
-
-  enum class SynchronousMode : uint8_t
-  {
-    OFF                         = SYNCHRONOUS_OFF,
-    NORMAL                      = SYNCHRONOUS_NORMAL,
-    FULL                        = SYNCHRONOUS_FULL,
-    EXTRA                       = SYNCHRONOUS_EXTRA,
-    LAST                        = SYNCHRONOUS_LAST,
-    INVALID                     = SYNCHRONOUS_INVALID,
+    kOk                          = SCHEMA_CHECK_OK,
+    kIncompatible                = SCHEMA_CHECK_INCOMPATIBLE,
+    kLegacyIncompatible          = SCHEMA_CHECK_LEGACY_INCOMPATIBLE,
+    kLegacyUpgradeable           = SCHEMA_CHECK_LEGACY_UPGRADEABLE,
+    kNone                        = SCHEMA_CHECK_NONE,
+    kErrored                     = SCHEMA_CHECK_ERRORED
   };
 
 private:
+  CAura*                          m_Aura;
+  CDataBaseConfig                 m_Config;
   CSQLITE3*                       m_DB;
-  CAuraDB::JournalMode            m_JournalMode;
-  CAuraDB::SynchronousMode        m_Synchronous;
-  std::filesystem::path           m_File;
-  std::filesystem::path           m_TWRPGFile;
   bool                            m_FirstRun;
   bool                            m_HasError;
   std::string                     m_Error;
@@ -316,7 +277,7 @@ private:
   std::map<uint8_t, CSearchableMapData*> m_SearchableMapData;
 
 public:
-  explicit CAuraDB(CConfig& CFG);
+  explicit CAuraDB(CAura* nAura, CDataBaseConfig* dbConfig);
   ~CAuraDB();
   CAuraDB(CAuraDB&) = delete;
 
@@ -327,7 +288,7 @@ public:
   void                                        PreCompileStatements();
   [[nodiscard]] inline bool                   HasError() const { return m_HasError; }
   [[nodiscard]] inline std::string            GetError() const { return m_Error; }
-  [[nodiscard]] inline std::filesystem::path  GetFile() const { return m_File; }
+  [[nodiscard]] std::filesystem::path         GetFile() const;
   [[nodiscard]] uint64_t                      GetLatestHistoryGameId();
   void                                        UpdateLatestHistoryGameId(uint64_t gameId);
 
@@ -392,22 +353,6 @@ public:
 #undef SCHEMA_CHECK_INCOMPATIBLE
 #undef SCHEMA_CHECK_LEGACY_INCOMPATIBLE
 #undef SCHEMA_CHECK_LEGACY_UPGRADEABLE
-
-#undef JOURNAL_MODE_DELETE
-#undef JOURNAL_MODE_TRUNCATE
-#undef JOURNAL_MODE_PERSIST
-#undef JOURNAL_MODE_MEMORY
-#undef JOURNAL_MODE_WAL
-#undef JOURNAL_MODE_OFF
-#undef JOURNAL_MODE_LAST
-#undef JOURNAL_MODE_INVALID
-
-#undef SYNCHRONOUS_OFF
-#undef SYNCHRONOUS_NORMAL
-#undef SYNCHRONOUS_FULL
-#undef SYNCHRONOUS_EXTRA
-#undef SYNCHRONOUS_LAST
-#undef SYNCHRONOUS_INVALID
 
 //
 // CDBBan

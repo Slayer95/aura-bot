@@ -55,6 +55,7 @@
 #include <csvparser/csvparser.h>
 #include "config/config.h"
 #include "config/config_bot.h"
+#include "config/config_db.h"
 #include "config/config_realm.h"
 #include "config/config_game.h"
 #include "config/config_irc.h"
@@ -492,11 +493,12 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_HistoryGameID(0u),
     m_MaxGameNameSize(MAX_GAME_NAME_SIZE),
 
-    m_RealmDefaultConfig(nullptr),
+    m_DataBaseConfig(nullptr),
     m_GameDefaultConfig(nullptr),
+    m_RealmDefaultConfig(nullptr),
     m_CommandDefaultConfig(new CCommandConfig()),
 
-    m_DB(new CAuraDB(CFG)),
+    m_DB(nullptr),
     //m_GameSetup(nullptr),
     //m_AutoRehostGameSetup(nullptr),
 
@@ -523,20 +525,22 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     Print("[AURA] Aura version " + m_Version + " - 64 bits");
   }
 
+  if (!CFG.GetSuccess() || !LoadDefaultConfigs(CFG, &m_Net.m_Config) || !LoadDataBaseConfig(CFG)) {
+    Print("[CONFIG] Error: Critical errors found in " + PathToString(m_ConfigPath.filename()));
+    m_Ready = false;
+    return;
+  }
+
+  nCLI.OverrideConfig(this);
+  OnLoadConfigs();
+  
+  m_DB = new CAuraDB(this, m_DataBaseConfig);
   if (m_DB->HasError()) {
     Print("[CONFIG] Error: Critical errors found in [" + PathToString(m_DB->GetFile()) + "]: " + m_DB->GetError());
     m_Ready = false;
     return;
   }
   m_HistoryGameID = m_DB->GetLatestHistoryGameId();
-
-  if (!CFG.GetSuccess() || !LoadDefaultConfigs(CFG, &m_Net.m_Config)) {
-    Print("[CONFIG] Error: Critical errors found in " + PathToString(m_ConfigPath.filename()));
-    m_Ready = false;
-    return;
-  }
-  nCLI.OverrideConfig(this);
-  OnLoadConfigs();
 
   // Eagerly install as shell extension.
   if (m_DB->GetIsFirstRun()) {
@@ -820,8 +824,9 @@ CAura::~CAura()
   m_SudoContext.reset();
   m_ReloadContext.reset();
 
-  delete m_RealmDefaultConfig;
+  delete m_DataBaseConfig;
   delete m_GameDefaultConfig;
+  delete m_RealmDefaultConfig;
   delete m_CommandDefaultConfig;
 
   ClearAutoRehost();
@@ -1604,6 +1609,7 @@ bool CAura::ReloadConfigs()
     Print("[CONFIG] error - realms misconfigured: not reloaded");
     success = false;
   }
+  CDataBaseConfig{CFG}; // suppress warnings for invalid DB keys
   vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
     Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinStrings(invalidKeys, false));
@@ -1675,6 +1681,12 @@ void CAura::TryReloadConfigs()
     }
   }
   m_ReloadContext.reset();
+}
+
+bool CAura::LoadDataBaseConfig(CConfig& CFG)
+{
+  m_DataBaseConfig = new CDataBaseConfig(CFG);
+  return CFG.GetSuccess();
 }
 
 bool CAura::LoadDefaultConfigs(CConfig& CFG, CNetConfig* netConfig)

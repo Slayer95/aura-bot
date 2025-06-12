@@ -1395,10 +1395,10 @@ bool CGameSetup::RestoreFromSaveFile()
   const GameStat& gameStat = m_RestoredGame->GetGameStat();
   vector<string> mismatchReasons;
   if (!m_Map->MatchMapScriptsBlizz(*m_GameVersion, gameStat.GetMapScriptsBlizzHash()).value_or(true)) {
-    mismatchReasons.push_back("maps are different");
+    mismatchReasons.push_back("maps are different (save expects blizz hash: " + ByteArrayToDecString(gameStat.GetMapScriptsBlizzHash()) + ")");
   }
   if (gameStat.GetHasSHA1() && !m_Map->MatchMapScriptsSHA1(*m_GameVersion, gameStat.GetMapScriptsSHA1()).value_or(true)) {
-    mismatchReasons.push_back("maps are different (sha1)");
+    mismatchReasons.push_back("maps are different (save expects sha1 hash: " + ByteArrayToDecString(gameStat.GetMapScriptsSHA1()) + ")");
   }
   if (!CaseInsensitiveEquals(m_Map->GetClientFileName(), gameStat.GetMapClientFileName())) {
     mismatchReasons.push_back("filenames are different (save file: [" + gameStat.GetMapClientFileName() + "] vs game: [" + m_Map->GetClientFileName() + "]");

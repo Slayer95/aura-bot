@@ -150,7 +150,7 @@ namespace GameProtocol
 
   // send functions
 
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PING_FROM_HOST();
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PING_FROM_HOST(const int64_t ticks);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, const std::string& Name);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::array<uint8_t, 2>& port, const std::array<uint8_t, 4>& externalIP, const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REJECTJOIN(uint32_t reason);
@@ -168,15 +168,14 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view message);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(std::vector<GameUser::CGameUser*> users);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(GameUser::CGameUser* user);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(const std::vector<GameUser::CGameUser*>& users, const int64_t ticks);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(const GameUser::CGameUser* user, const int64_t ticks);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CREATEGAME(const bool isExpansion, const Version& war3Version, const uint32_t hostCounter);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REFRESHGAME(const uint32_t hostCounter, const uint32_t players, const uint32_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_DECREATEGAME(const uint32_t hostCounter);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::array<uint8_t, 20>& mapScriptsHashSHA1);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::optional<std::array<uint8_t, 20>>& mapScriptsHashSHA1);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const FileChunkTransient& mapFileChunk);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const SharedByteArray& mapFileContents);

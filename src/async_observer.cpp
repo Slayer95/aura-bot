@@ -344,7 +344,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
   }
 
   if (m_LastPingTicks + 5000 <= Ticks) {
-    Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
+    Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks()));
     m_LastPingTicks = Ticks;
   }
 
@@ -579,8 +579,9 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
       !realm || !(commandCFG->m_RequireVerified && !GetIsRealmVerified())
     );
     bool isCommand = false;
-    const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
-    cmdHistory->ClearSmartCommand();
+    // TODO: CAsyncObserver smart commands
+    //const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
+    //cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
       const string message = incomingChatMessage.GetMessage();
       string cmdToken, command, target;
@@ -627,7 +628,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
           shouldRelay = false;
         }
         /*
-        // TODO: SmartCommands
+        // TODO: CAsyncObserver smart commands
         if (!game->CheckSmartCommands(this, message, activeSmartCommand, commandCFG) && !GetCommandHistory()->GetSentAutoCommandsHelp()) {
           bool anySentCommands = false;
           for (const auto& otherPlayer : m_Users) {

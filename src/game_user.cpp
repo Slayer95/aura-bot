@@ -650,7 +650,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
               if (!GetIsRTTMeasuredConsistent()) {
                 // Measure player's ping as fast as possible, by chaining new pings to pongs received.
-                Send(GameProtocol::SEND_W3GS_PING_FROM_HOST());
+                Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks()));
               }
             }
 

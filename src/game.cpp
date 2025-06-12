@@ -1547,7 +1547,7 @@ void CGame::UpdateLoaded()
         if (!laggingPlayers.empty()) {
           // start the lag screen
           DLOG_APP_IF(LogLevel::kTrace, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
-          SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
+          SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers, m_Aura->GetLoopTicks()));
           ResetDropVotes();
 
           m_IsLagging = true;
@@ -1620,13 +1620,13 @@ void CGame::UpdateLoaded()
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
         DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
-        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user, m_Aura->GetLoopTicks()));
         LOG_APP_IF(LogLevel::kInfo, "lagging user disconnected [" + user->GetName() + "]")
       } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
         ++playersLaggingCounter;
       } else {
         DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
-        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+        SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user, m_Aura->GetLoopTicks()));
         user->SetLagging(false);
         user->SetStartedLaggingTicks(0);
         LOG_APP_IF(LogLevel::kInfo, "user no longer lagging [" + user->GetName() + "] (" + user->GetDelayText(true) + ")")
@@ -1718,7 +1718,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
 
-    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST();
+    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks());
     for (auto& user : m_Users) {
       // Avoid ping-spamming GProxy-reconnected players
       if (!user->GetDisconnected()) {
@@ -3333,11 +3333,11 @@ void CGame::SendMapAndVersionCheck(CConnection* user, const Version& version) co
   if (clampedMapSize < m_Map->GetMapSize()) {
     DLOG_APP_IF(LogLevel::kTrace, "map requires bypass for v" + ToVersionString(version) + " - size " + ToFormattedString((float)clampedMapSize / (float)(1024. * 1024.)) + " MB")
   }
+  optional<array<uint8_t, 20>> maybeSHA1;
   if (version >= GAMEVER(1u, 23u)) {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizzHash(version), GetMapSHA1(version)));
-  } else {
-    user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizzHash(version)));
+    maybeSHA1 = GetMapSHA1(version);
   }
+  user->Send(GameProtocol::SEND_W3GS_MAPCHECK(m_MapPath, clampedMapSize, m_Map->GetMapCRC32(), m_Map->GetMapScriptsBlizzHash(version), maybeSHA1));
 }
 
 void CGame::SendIncomingPlayerInfo(GameUser::CGameUser* user) const
@@ -4490,7 +4490,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
   if (!user->GetLeftMessageSent()) {
     if (user->GetIsLagging()) {
       DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
-      SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user));
+      SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user, m_Aura->GetLoopTicks()));
     }
     SendLeftMessage(user, (m_GameLoaded && !user->GetIsObserver()) || (!user->GetIsLeaver() && user->GetAnyKicked()));
     if (m_GameLoaded) m_IsSinglePlayer = GetIsSinglePlayerMode();
@@ -4675,7 +4675,7 @@ void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
       laggingPlayer->ClearStalePings();
     }
     DLOG_APP_IF(LogLevel::kTrace, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
-    SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
+    SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers, m_Aura->GetLoopTicks()));
   }
 }
 
@@ -5802,7 +5802,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     }
     if (m_IsLagging) {
       DLOG_APP_IF(LogLevel::kTrace, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
-      Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers));
+      Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers, m_Aura->GetLoopTicks()));
       LogApp("[LoadInGame] Waiting for " + to_string(laggingPlayers.size()) + " other players to load the game...", LOG_C);
 
       if (laggingPlayers.size() >= 3) {
@@ -9328,7 +9328,7 @@ void CGame::RemoveFromLagScreens(GameUser::CGameUser* user) const
       continue;
     }
     DLOG_APP_IF(LogLevel::kTrace, "@[" + otherUser->GetName() + "] lagger update (-" + user->GetName() + ")")
-    Send(otherUser, GameProtocol::SEND_W3GS_STOP_LAG(user));
+    Send(otherUser, GameProtocol::SEND_W3GS_STOP_LAG(user, m_Aura->GetLoopTicks()));
   }
 }
 
@@ -9338,7 +9338,7 @@ void CGame::ResetLagScreen()
   if (laggingPlayers.empty()) {
     return;
   }
-  const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(laggingPlayers);
+  const vector<uint8_t> startLagPacket = GameProtocol::SEND_W3GS_START_LAG(laggingPlayers, m_Aura->GetLoopTicks());
   const bool anyUsingGProxy = GetAnyUsingGProxy();
 
   if (m_GameLoading) {
@@ -9350,7 +9350,7 @@ void CGame::ResetLagScreen()
       for (auto& otherUser : m_Users) {
         if (!otherUser->GetIsLagging()) continue;
         DLOG_APP_IF(LogLevel::kTrace, "@[" + user->GetName() + "] lagger update (-" + otherUser->GetName() + ")")
-        Send(user, GameProtocol::SEND_W3GS_STOP_LAG(otherUser));
+        Send(user, GameProtocol::SEND_W3GS_STOP_LAG(otherUser, m_Aura->GetLoopTicks()));
       }
 
       Send(user, GameProtocol::GetEmptyAction());

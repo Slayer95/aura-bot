@@ -43,6 +43,7 @@
 
  */
 
+#include "aura.h"
 #include "auradb.h"
 #include "game_controller_data.h"
 #include "json.h"
@@ -174,8 +175,10 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
 // CAuraDB
 //
 
-CAuraDB::CAuraDB(CConfig& CFG)
-  : m_FirstRun(false),
+CAuraDB::CAuraDB(CAura* nAura, CDataBaseConfig* dbConfig)
+  : m_Aura(nAura),
+    m_Config(*dbConfig),
+    m_FirstRun(false),
     m_HasError(false),
     m_LatestGameId(0)
 {
@@ -183,33 +186,16 @@ CAuraDB::CAuraDB(CConfig& CFG)
   uint8_t i = STMT_CACHE_SIZE;
   while (i--) m_StmtCache[i] = nullptr;
 
-  m_TWRPGFile = CFG.GetPath("game_data.twrpg_path", CFG.GetHomeDir() / filesystem::path("twrpg.json"));
   InitMapData();
 
-  m_File = CFG.GetPath("db.storage_file", CFG.GetHomeDir() / filesystem::path("aura.db"));
-
-  m_JournalMode = CFG.GetEnum<JournalMode>("db.journal_mode", TO_ARRAY("delete", "truncate", "persist", "memory", "wal", "off"), JournalMode::DEL);
-  if (CFG.GetErrorLast()) {
-    m_JournalMode = JournalMode::INVALID;
-    Print("[SQLITE3] invalid <db.journal_mode> (delete, truncate, persist, memory, wal, off are allowed - case sensitive)");
-  }
-
-  m_Synchronous = CFG.GetEnum<SynchronousMode>("db.synchronous", TO_ARRAY("off", "normal", "full", "extra"), SynchronousMode::FULL);
-  if (CFG.GetErrorLast()) {
-    m_Synchronous = SynchronousMode::INVALID;
-    Print("[SQLITE3] invalid <db.synchronous> (off, normal, full, extra are allowed - case sensitive)");
-  }
-
-  uint16_t journalWALInterval = CFG.GetUint16("db.wal_autocheckpoint", 1000);
-
-  Print("[SQLITE3] opening database [" + PathToString(m_File) + "]");
-  m_DB = new CSQLITE3(m_File);
+  PRINT_IF(LogLevel::kInfo, "[SQLITE3] opening database [" + PathToString(m_Config.m_File) + "]")
+  m_DB = new CSQLITE3(m_Config.m_File);
 
   if (!m_DB->GetReady()) {
     // setting m_HasError to true indicates there's been a critical error and we want Aura to shutdown
     // this is okay here because we're in the constructor so we're not dropping any games or players
 
-    Print(string("[SQLITE3] error opening database [" + PathToString(m_File) + "] - ") + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error opening database [" + PathToString(m_Config.m_File) + "] - " + m_DB->GetError())
     m_HasError = true;
     m_Error    = "error opening database";
     return;
@@ -218,25 +204,25 @@ CAuraDB::CAuraDB(CConfig& CFG)
   int64_t schemaNumber = 0;
   switch (GetSchemaStatus(schemaNumber))
   {
-    case SchemaStatus::OK:
+    case SchemaStatus::kOk:
       // do nothing
       break;
-    case SchemaStatus::INCOMPATIBLE:
-    case SchemaStatus::LEGACY_INCOMPATIBLE:
-      Print("[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(SchemaNumber) + ")");
-      Print("[SQLITE3] please start over with a clean [aura.db] file to run this Aura version");
-      Print("[SQLITE3] you SHOULD backup your old [aura.db] file to another folder");
+    case SchemaStatus::kIncompatible:
+    case SchemaStatus::kLegacyIncompatible:
+      PRINT_IF(LogLevel::kError, "[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(SchemaNumber) + ")")
+      PRINT_IF(LogLevel::kNotice, "[SQLITE3] please start over with a clean [aura.db] file to run this Aura version")
+      PRINT_IF(LogLevel::kNotice, "[SQLITE3] you SHOULD backup your old [aura.db] file to another folder")
       m_HasError = true;
       m_Error    = "incompatible database format";
       break;
-    case SchemaStatus::LEGACY_UPGRADEABLE:
+    case SchemaStatus::kLegacyUpgradeable:
       UpdateSchema(schemaNumber);
       break;
-    case SchemaStatus::NONE:
+    case SchemaStatus::kNone:
       m_FirstRun = true;
       Initialize();
       break;
-    case SchemaStatus::ERRORED:
+    case SchemaStatus::kErrored:
       m_HasError = true;
       if (m_Error.empty()) {
         m_Error = "schema check error";
@@ -245,49 +231,43 @@ CAuraDB::CAuraDB(CConfig& CFG)
   }
 
   if (!m_HasError) {
-    switch (m_JournalMode) {
-      case JournalMode::DEL:
+    switch (m_Config.m_JournalMode) {
+      case CDataBaseConfig::JournalMode::kDel:
         m_DB->Exec("PRAGMA journal_mode = DELETE");
         break;
-      case JournalMode::TRUNCATE:
+      case CDataBaseConfig::JournalMode::kTruncate:
         m_DB->Exec("PRAGMA journal_mode = TRUNCATE");
         break;
-      case JournalMode::PERSIST:
+      case CDataBaseConfig::JournalMode::kPersist:
         m_DB->Exec("PRAGMA journal_mode = PERSIST");
         break;
-      case JournalMode::MEMORY:
+      case CDataBaseConfig::JournalMode::kMemory:
         m_DB->Exec("PRAGMA journal_mode = MEMORY");
         break;
-      case JournalMode::WAL:
+      case CDataBaseConfig::JournalMode::kWal:
         m_DB->Exec("PRAGMA journal_mode = WAL");
-        m_DB->Exec("PRAGMA wal_autocheckpoint = " + to_string(journalWALInterval));
+        m_DB->Exec("PRAGMA wal_autocheckpoint = " + to_string(m_Config.m_WALInterval));
         break;
-      case JournalMode::OFF:
+      case CDataBaseConfig::JournalMode::kOff:
         m_DB->Exec("PRAGMA journal_mode = OFF");
         break;
-      case JournalMode::INVALID:
-        // do nothing
-        break;
-      IGNORE_ENUM_LAST(JournalMode)
+      IGNORE_ENUM_LAST(CDataBaseConfig::JournalMode)
     }
 
-    switch (m_Synchronous) {
-      case SynchronousMode::OFF:
+    switch (m_Config.m_Synchronous) {
+      case CDataBaseConfig::SynchronousMode::kOff:
         m_DB->Exec("PRAGMA synchronous = OFF");
         break;
-      case SynchronousMode::NORMAL:
+      case CDataBaseConfig::SynchronousMode::kNormal:
         m_DB->Exec("PRAGMA synchronous = NORMAL");
         break;
-      case SynchronousMode::FULL:
+      case CDataBaseConfig::SynchronousMode::kFull:
         m_DB->Exec("PRAGMA synchronous = FULL");
         break;
-      case SynchronousMode::EXTRA:
+      case CDataBaseConfig::SynchronousMode::kExtra:
         m_DB->Exec("PRAGMA synchronous = EXTRA");
         break;
-      case SynchronousMode::INVALID:
-        // do nothing
-        break;
-      IGNORE_ENUM_LAST(SynchronousMode)
+      IGNORE_ENUM_LAST(CDataBaseConfig::SynchronousMode)
     }
 
     PreCompileStatements();
@@ -296,14 +276,13 @@ CAuraDB::CAuraDB(CConfig& CFG)
 
 CAuraDB::~CAuraDB()
 {
-  Print("[SQLITE3] closing database [" + PathToString(m_File.filename()) + "]");
+  PRINT_IF(LogLevel::kInfo, "[SQLITE3] closing database [" + PathToString(m_Config.m_File.filename()) + "]")
 
   uint8_t i = STMT_CACHE_SIZE;
   while (i--) {
     if (m_StmtCache[i]) m_DB->Finalize(m_StmtCache[i]);
   }
   delete m_DB;
-
   delete m_SearchableMapData[MAP_TYPE_TWRPG];
 }
 
@@ -314,7 +293,7 @@ CAuraDB::SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
 
   if (!Statement) {
     // no such table: config
-    return SchemaStatus::NONE;
+    return SchemaStatus::kNone;
   }
 
   sqlite3_bind_text(Statement, 1, "schema_number", -1, SQLITE_TRANSIENT);
@@ -327,29 +306,29 @@ CAuraDB::SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
     } else {
       m_HasError = true;
       m_Error    = "schema number missing - no columns found";
-      return SchemaStatus::ERRORED;
+      return SchemaStatus::kErrored;
     }
   } else if (RC == SQLITE_ERROR) {
     m_HasError = true;
     m_Error    = m_DB->GetError();
-    return SchemaStatus::ERRORED;
+    return SchemaStatus::kErrored;
   }
 
   m_DB->Finalize(Statement);
 
   // I am using 3 as int64.
   if (schemaNumber == SchemaNumber) {
-    return SchemaStatus::OK;
+    return SchemaStatus::kOk;
   }
 
   // Other legacy schemas are not supported,
   // including Josko's original schema (1, but text).
 
   if (schemaNumber != 0) {
-    return SchemaStatus::LEGACY_INCOMPATIBLE;
+    return SchemaStatus::kLegacyIncompatible;
   }
 
-  return SchemaStatus::NONE;
+  return SchemaStatus::kNone;
 }
 
 void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
@@ -376,32 +355,32 @@ void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
 
 void CAuraDB::Initialize()
 {
-  Print("[SQLITE3] initializing database");
+  PRINT_IF(LogLevel::kNotice, "[SQLITE3] initializing database")
 
   if (m_DB->Exec(R"(CREATE TABLE moderators ( name TEXT NOT NULL, server TEXT NOT NULL DEFAULT '', PRIMARY KEY ( name, server ) ))") != SQLITE_OK)
-    Print("[SQLITE3] error creating moderators table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating moderators table - " + m_DB->GetError())
 
   if (m_DB->Exec("CREATE TABLE bans ( name TEXT NOT NULL, server TEXT NOT NULL, authserver TEXT NOT NULL, ip TEXT NOT NULL, date TEXT NOT NULL, expiry TEXT NOT NULL, permanent INTEGER DEFAULT 0, moderator TEXT NOT NULL, reason TEXT, PRIMARY KEY ( name, server, authserver ) )") != SQLITE_OK)
-    Print("[SQLITE3] error creating bans table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating bans table - " + m_DB->GetError())
 
   if (m_DB->Exec("CREATE TABLE players ( name TEXT NOT NULL, server TEXT not NULL, initialip TEXT NOT NULL, latestip TEXT NOT NULL, initialreport TEXT, reports INTEGER DEFAULT 0, latestgame INTEGER DEFAULT 0, games INTEGER DEFAULT 0, dotas INTEGER DEFAULT 0, loadingtime INTEGER DEFAULT 0, duration INTEGER DEFAULT 0, left INTEGER DEFAULT 0, wins INTEGER DEFAULT 0, losses INTEGER DEFAULT 0, kills INTEGER DEFAULT 0, deaths INTEGER DEFAULT 0, creepkills INTEGER DEFAULT 0, creepdenies INTEGER DEFAULT 0, assists INTEGER DEFAULT 0, neutralkills INTEGER DEFAULT 0, towerkills INTEGER DEFAULT 0, raxkills INTEGER DEFAULT 0, courierkills INTEGER DEFAULT 0, PRIMARY KEY ( name, server ) )") != SQLITE_OK)
-    Print("[SQLITE3] error creating players table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating players table - " + m_DB->GetError())
 
   // crc32 here is the true CRC32 hash of the map file (i.e. <map.file_hash.crc32> in the map ini, NOT <map.crc>, NOR legacy <map_crc>)
   if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, playernames TEXT NOT NULL, playerids TEXT NOT NULL, saveids TEXT )") != SQLITE_OK)
-    Print("[SQLITE3] error creating games table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating games table - " + m_DB->GetError())
 
   if (m_DB->Exec("CREATE TABLE config ( name TEXT NOT NULL PRIMARY KEY, value INTEGER )") != SQLITE_OK)
-    Print("[SQLITE3] error creating config table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating config table - " + m_DB->GetError())
 
   if (m_DB->Exec("CREATE TABLE iptocountry ( ip1 INTEGER NOT NULL, ip2 INTEGER NOT NULL, country TEXT NOT NULL, PRIMARY KEY ( ip1, ip2 ) )") != SQLITE_OK)
-    Print("[SQLITE3] error creating iptocountry table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating iptocountry table - " + m_DB->GetError())
 
   if (m_DB->Exec("CREATE TABLE aliases ( alias TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL )") != SQLITE_OK)
-    Print("[SQLITE3] error creating aliases table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating aliases table - " + m_DB->GetError())
 
   if (m_DB->Exec("CREATE TABLE commands ( command TEXT NOT NULL, scope TEXT NOT NULL, type TEXT NOT NULL, action TEXT NOT NULL, PRIMARY KEY ( command, scope ) )") != SQLITE_OK)
-    Print("[SQLITE3] error creating commands table - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error creating commands table - " + m_DB->GetError())
 
   // Insert schema number
   sqlite3_stmt* Statement = nullptr;
@@ -410,7 +389,7 @@ void CAuraDB::Initialize()
     sqlite3_bind_int64(Statement, 1, SchemaNumber);
     const int32_t RC = m_DB->Step(Statement);
     if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error inserting schema number [" + to_string(SchemaNumber) + "] - " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error inserting schema number [" + to_string(SchemaNumber) + "] - " + m_DB->GetError())
     }
     m_DB->Finalize(Statement);
   }
@@ -452,6 +431,11 @@ void CAuraDB::PreCompileStatements()
   );
 }
 
+filesystem::path CAuraDB::GetFile() const
+{
+  return m_Config.m_File;
+}
+
 uint64_t CAuraDB::GetLatestHistoryGameId()
 {
   sqlite3_stmt* Statement = nullptr;
@@ -459,7 +443,7 @@ uint64_t CAuraDB::GetLatestHistoryGameId()
 
   bool success = false;
   if (!Statement) {
-    Print("[SQLITE3] prepare errors GetLatestHistoryGameId()");
+    //PRINT_IF(LogLevel::kError, "[SQLITE3] prepare errors GetLatestHistoryGameId()")
     return 0;
   }
 
@@ -485,7 +469,7 @@ uint64_t CAuraDB::GetLatestHistoryGameId()
 void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
 {
   if (gameId < m_LatestGameId) {
-    Print("[SQLITE3] game ID " + to_string(gameId) + " skipped (" + to_string(m_LatestGameId) + " already started)");
+    //PRINT_IF(LogLevel::kDebug, "[SQLITE3] game ID " + to_string(gameId) + " skipped (" + to_string(m_LatestGameId) + " already started)");
     return;
   }
 
@@ -494,7 +478,7 @@ void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
   }
 
   if (!m_StmtCache[LATEST_GAME_IDX]) {
-    Print("[SQLITE3] prepare error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError());
+    //Print("[SQLITE3] prepare error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError());
     return;
   }
 
@@ -504,10 +488,11 @@ void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
 
   int32_t RC = m_DB->Step(m_StmtCache[LATEST_GAME_IDX]);
 
-  if (RC == SQLITE_DONE)
+  if (RC == SQLITE_DONE) {
     Success = true;
-  else if (RC == SQLITE_ERROR)
-    Print("[SQLITE3] error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError());
+  } else if (RC == SQLITE_ERROR) {
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError())
+  }
 
   m_DB->Reset(m_StmtCache[LATEST_GAME_IDX]);
 
@@ -522,21 +507,21 @@ uint32_t CAuraDB::ModeratorCount(const string& server)
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare("SELECT COUNT(*) FROM moderators WHERE server=?", reinterpret_cast<void**>(&Statement));
 
-  if (Statement)
-  {
+  if (Statement) {
     sqlite3_bind_text(Statement, 1, server.c_str(), -1, SQLITE_TRANSIENT);
 
     const int32_t RC = m_DB->Step(Statement);
 
-    if (RC == SQLITE_ROW)
+    if (RC == SQLITE_ROW) {
       Count = sqlite3_column_int(Statement, 0);
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error counting moderators [" + server + "] - " + m_DB->GetError());
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error counting moderators [" + server + "] - " + m_DB->GetError())
+    }
 
     m_DB->Finalize(Statement);
-  }
-  else
+  } else {
     Print("[SQLITE3] prepare error counting moderators [" + server + "] - " + m_DB->GetError());
+  }
 
   return Count;
 }
@@ -559,10 +544,11 @@ bool CAuraDB::ModeratorCheck(const string& server, const string& rawName)
 
     // we're just checking to see if the query returned a row, we don't need to check the row data itself
 
-    if (RC == SQLITE_ROW)
+    if (RC == SQLITE_ROW) {
       IsAdmin = true;
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking moderators [" + server + " : " + user + "] - " + m_DB->GetError());
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking moderators [" + server + " : " + user + "] - " + m_DB->GetError())
+    }
 
     m_DB->Reset(m_StmtCache[MODERATOR_CHECK_IDX]);
   }
@@ -587,10 +573,11 @@ bool CAuraDB::ModeratorAdd(const string& server, const string& rawName)
 
     const int32_t RC = m_DB->Step(Statement);
 
-    if (RC == SQLITE_DONE)
+    if (RC == SQLITE_DONE) {
       Success = true;
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error adding moderators [" + server + " : " + user + "] - " + m_DB->GetError());
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error adding moderators [" + server + " : " + user + "] - " + m_DB->GetError())
+    }
 
     m_DB->Finalize(Statement);
   }
@@ -614,10 +601,11 @@ bool CAuraDB::ModeratorRemove(const string& server, const string& rawName)
 
     const int32_t RC = m_DB->Step(Statement);
 
-    if (RC == SQLITE_DONE)
+    if (RC == SQLITE_DONE) {
       Success = true;
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error removing moderators [" + server + " : " + user + "] - " + m_DB->GetError());
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error removing moderators [" + server + " : " + user + "] - " + m_DB->GetError())
+    }
 
     m_DB->Finalize(Statement);
   }
@@ -664,10 +652,11 @@ uint32_t CAuraDB::BanCount(const string& authserver)
 
     const int32_t RC = m_DB->Step(Statement);
 
-    if (RC == SQLITE_ROW)
+    if (RC == SQLITE_ROW) {
       Count = sqlite3_column_int(Statement, 0);
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error counting bans [" + authserver + "] - " + m_DB->GetError());
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error counting bans [" + authserver + "] - " + m_DB->GetError())
+    }
 
     m_DB->Finalize(Statement);
   }
@@ -694,8 +683,7 @@ CDBBan* CAuraDB::UserBanCheck(const string& rawName, const string& server, const
 
     const int32_t RC = m_DB->Step(m_StmtCache[USER_BAN_CHECK_IDX]);
 
-    if (RC == SQLITE_ROW)
-    {
+    if (RC == SQLITE_ROW) {
       if (sqlite3_column_count(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX])) == 9)
       {
         string Name       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 0));
@@ -712,9 +700,9 @@ CDBBan* CAuraDB::UserBanCheck(const string& rawName, const string& server, const
       }
       else
         Print("[SQLITE3] error checking ban [" + server + " : " + user + "] - row doesn't have 9 columns");
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking ban [" + server + " : " + user + "] - " + m_DB->GetError())
     }
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking ban [" + server + " : " + user + "] - " + m_DB->GetError());
 
     m_DB->Reset(m_StmtCache[USER_BAN_CHECK_IDX]);
   }
@@ -739,8 +727,7 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
 
     const int32_t RC = m_DB->Step(m_StmtCache[IP_BAN_CHECK_IDX]);
 
-    if (RC == SQLITE_ROW)
-    {
+    if (RC == SQLITE_ROW) {
       if (sqlite3_column_count(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX])) == 9)
       {
         string Name       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 0));
@@ -757,9 +744,9 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
       }
       else
         Print("[SQLITE3] error checking ban [" + ip + "] - row doesn't have 9 columns");
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking ban [" + ip + "] - " + m_DB->GetError())
     }
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking ban [" + ip + "] - " + m_DB->GetError());
 
     m_DB->Reset(m_StmtCache[IP_BAN_CHECK_IDX]);
   }
@@ -811,7 +798,7 @@ bool CAuraDB::BanAdd(const string& rawName, const string& server, const string& 
       Success = true;
       Print("[SQLITE3] new ban added [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + " : " + ip + "]");
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error adding ban [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + " : " + ip + "] - " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error adding ban [" + user + "@" + server + " : " + moderator + "@" + authserver + " : " + reason + " : " + ip + "] - " + m_DB->GetError())
     }
 
     m_DB->Finalize(Statement);
@@ -853,10 +840,11 @@ bool CAuraDB::BanRemove(const string& rawName, const string& server, const strin
 
     const int32_t RC = m_DB->Step(Statement);
 
-    if (RC == SQLITE_DONE)
+    if (RC == SQLITE_DONE) {
       Success = true;
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error removing ban [" + server + " : " + user + "] - " + m_DB->GetError());
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error removing ban [" + server + " : " + user + "] - " + m_DB->GetError())
+    }
 
     m_DB->Finalize(Statement);
   }
@@ -925,7 +913,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGa
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 
   if (RC != SQLITE_DONE) {
-    Print("[SQLITE3] error initializing gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error initializing gameuser [" + lowerName + "@" + server + "] - " + m_DB->GetError())
   }
 
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_IDX]);
@@ -974,7 +962,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGame
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 
   if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error updating gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error updating gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError())
 
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 }
@@ -995,8 +983,7 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, con
 
     const int32_t RC = m_DB->Step(m_StmtCache[PLAYER_SUMMARY_IDX]);
 
-    if (RC == SQLITE_ROW)
-    {
+    if (RC == SQLITE_ROW) {
       if (sqlite3_column_count(m_StmtCache[PLAYER_SUMMARY_IDX]) == 4)
       {
         const uint32_t TotalGames  = sqlite3_column_int(m_StmtCache[PLAYER_SUMMARY_IDX], 0);
@@ -1014,9 +1001,9 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, con
       }
       else
         Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - row doesn't have 4 columns");
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError())
     }
-    else if (RC == SQLITE_ERROR)
-      Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
 
     m_DB->Reset(m_StmtCache[PLAYER_SUMMARY_IDX]);
   }
@@ -1089,7 +1076,7 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
 
   if (Success == false)
   {
-    Print("[SQLITE3] error adding dotaplayer [" + lowerName + "@" + server + "] - no existing row");
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding dotaplayer [" + lowerName + "@" + server + "] - no existing row")
     return;
   }
 
@@ -1119,7 +1106,7 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
   RC = m_DB->Step(Statement);
 
   if (RC != SQLITE_DONE)
-    Print("[SQLITE3] error adding dotaplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding dotaplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError())
 
   m_DB->Finalize(Statement);
 }
@@ -1163,6 +1150,8 @@ CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(const string& rawName, con
       }
       else
         Print("[SQLITE3] error checking dotaplayersummary [" + name + "@" + server + "] - row doesn't have 12 columns");
+    } else if (RC == SQLITE_ERROR) {
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking dotaplayersummary [" + name + "@" + server + "] - " + m_DB->GetError())
     }
 
     m_DB->Finalize(Statement);
@@ -1194,7 +1183,7 @@ string CAuraDB::GetInitialIP(const string& rawName, const string& server)
         Print("[SQLITE3] error checking initial ip [" + name + "@" + server + "] - row doesn't have 1 column");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking initial ip [" + name + "@" + server + "] - " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking initial ip [" + name + "@" + server + "] - " + m_DB->GetError())
     }
     m_DB->Finalize(Statement);
   } else {
@@ -1225,7 +1214,7 @@ string CAuraDB::GetLatestIP(const string& rawName, const string& server)
         Print("[SQLITE3] error checking latest ip [" + name + "@" + server + "] - row doesn't have 1 column");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking latest ip [" + name + "@" + server + "] - " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking latest ip [" + name + "@" + server + "] - " + m_DB->GetError())
     }
     m_DB->Finalize(Statement);
   } else {
@@ -1259,7 +1248,7 @@ vector<string> CAuraDB::GetIPs(const string& rawName, const string& server)
         Print("[SQLITE3] error checking ips [" + name + "@" + server + "] - row doesn't have 1 column");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking ips [" + name + "@" + server + "] - " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking ips [" + name + "@" + server + "] - " + m_DB->GetError())
     }
     m_DB->Finalize(Statement);
   } else {
@@ -1308,7 +1297,7 @@ vector<string> CAuraDB::GetAlts(const string& addressLiteral)
         Print("[SQLITE3] error checking alts [" + addressLiteral + "] - row doesn't have 2 columns");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking alts [" + addressLiteral + "] - " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking alts [" + addressLiteral + "] - " + m_DB->GetError())
     }
     m_DB->Finalize(Statement);
   } else {
@@ -1350,10 +1339,11 @@ bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
 
   const int32_t RC = m_DB->Step(m_StmtCache[GAME_ADD_IDX]);
 
-  if (RC == SQLITE_DONE)
+  if (RC == SQLITE_DONE) {
     Success = true;
-  else if (RC == SQLITE_ERROR)
-    Print("[SQLITE3] error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
+  } else if (RC == SQLITE_ERROR) {
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError())
+  }
 
   m_DB->Reset(m_StmtCache[GAME_ADD_IDX]);
   return Success;
@@ -1453,7 +1443,7 @@ CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
         Print("[SQLITE3] error checking game [" + to_string(gameId) + "] - row doesn't have 2 columns");
       }
     } else if (RC == SQLITE_ERROR) {
-      Print("[SQLITE3] error checking game [" + to_string(gameId) + "] " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking game [" + to_string(gameId) + "] " + m_DB->GetError())
     } else {
       Print("[SQLITE3] error checking game return code " + to_string(RC));
     }
@@ -1496,7 +1486,7 @@ string CAuraDB::FromCheck(uint32_t ip)
       Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - row doesn't have 1 column");
   }
   else if (RC == SQLITE_ERROR)
-    Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError())
 
   m_DB->Reset(m_StmtCache[FROM_CHECK_IDX]);
 
@@ -1530,7 +1520,7 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
   if (RC == SQLITE_DONE)
     Success = true;
   else if (RC == SQLITE_ERROR)
-    Print("[SQLITE3] error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError())
 
   m_DB->Reset(m_StmtCache[FROM_ADD_IDX]);
 
@@ -1561,7 +1551,7 @@ bool CAuraDB::AliasAdd(const string& alias, const string& target)
   if (RC == SQLITE_DONE)
     Success = true;
   else if (RC == SQLITE_ERROR)
-    Print("[SQLITE3] error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError())
 
   m_DB->Reset(m_StmtCache[ALIAS_ADD_IDX]);
 
@@ -1589,7 +1579,7 @@ string CAuraDB::AliasCheck(const string& alias)
   const int32_t RC = m_DB->Step(m_StmtCache[ALIAS_CHECK_IDX]);
 
   if (RC == SQLITE_ERROR) {
-    Print("[SQLITE3] error checking alias [" + alias + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error checking alias [" + alias + "] - " + m_DB->GetError())
     return value;
   }
 
@@ -1609,7 +1599,7 @@ string CAuraDB::AliasCheck(const string& alias)
 void CAuraDB::InitMapData()
 {
   m_SearchableMapData[MAP_TYPE_TWRPG] = new CSearchableMapData(MAP_TYPE_TWRPG);
-  m_SearchableMapData[MAP_TYPE_TWRPG]->LoadData(m_TWRPGFile);
+  m_SearchableMapData[MAP_TYPE_TWRPG]->LoadData(m_Config.m_TWRPGFile);
 }
 
 CSearchableMapData* CAuraDB::GetMapData(uint8_t mapType) const
