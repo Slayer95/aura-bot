@@ -1620,7 +1620,6 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
   }
   string hostName = m_Config.m_UserName;
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
-    GetGameVersion(),
     game->GetDisplayMode(),
     game->GetGameType(),
     game->GetGameFlags(),

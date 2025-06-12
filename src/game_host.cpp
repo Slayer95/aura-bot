@@ -169,8 +169,7 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   copy_n(gameStat.begin() + 1, 8, hostCounterRaw.begin());
   m_Host.SetIdentifier(ASCIIHexToNum(hostCounterRaw, true));
   
-  size_t cursor = 9;
-  const uint8_t* encStatStringStart = reinterpret_cast<const uint8_t*>(gameStat.c_str()) + cursor;
+  const uint8_t* encStatStringStart = reinterpret_cast<const uint8_t*>(gameStat.c_str()) + 9;
   const uint8_t* encStatStringEnd = FindNullDelimiterOrEnd(encStatStringStart, infoEnd);
   string encStatString = GetStringAddressRange(encStatStringStart, encStatStringEnd);
   GameStat statData = GameStat::Parse(encStatString);
@@ -186,7 +185,16 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   copy_n(statData.m_MapScriptsBlizzHash.begin() + 9, 4, m_Info.m_MapScriptsBlizzHash.begin());
   m_Info.m_MapPath = statData.m_MapPath;
   m_HostName = statData.m_HostName;
-  if (statData.m_MapScriptsSHA1.has_value()) {
+
+  const bool needsSHA1 = war3Version >= GAMEVER(1u, 23u);
+  const bool hasSHA1 = statData.m_MapScriptsSHA1.has_value();
+  if (needsSHA1 != hasSHA1) {
+    //Print("[BNETPROTO] SHA1 must be included in stat string for bnet games since v1.23);
+    m_IsValid = false;
+    return false;
+  }
+
+  if (hasSHA1) {
     m_Info.m_MapScriptsSHA1.emplace();
     copy_n(statData.m_MapScriptsSHA1->begin(), 20, m_Info.m_MapScriptsSHA1->begin());
   }

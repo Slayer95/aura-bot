@@ -1062,7 +1062,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_STARTADVEX3(const Version& war3Version, uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
   {
     string hostCounterString = ToHexString(hostCounter);
     if (hostCounterString.size() < 8) {

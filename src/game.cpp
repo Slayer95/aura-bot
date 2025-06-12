@@ -3076,7 +3076,7 @@ optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const
   return result;
 }
 
-Version CGame::GuessIncomingPlayerVersion(const CConnection* /*user*/, const CIncomingJoinRequest& joinRequest, shared_ptr<const CRealm> fromRealm) const
+Version CGame::GuessIncomingPlayerVersion(const CConnection* /*user*/, const CIncomingJoinRequest& joinRequest, shared_ptr<const CRealm> /*fromRealm*/) const
 {
   string lowerName = ToLowerCase(joinRequest.GetName());
   auto versionErrors = m_VersionErrors.find(lowerName);
