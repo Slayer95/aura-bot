@@ -182,14 +182,15 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   m_Info.m_GameFlags = statData.m_GameFlags;
   m_Info.m_MapWidth = statData.m_MapWidth;
   m_Info.m_MapHeight = statData.m_MapHeight;
-  copy_n(statData.m_MapScriptsBlizzHash.begin() + 9, 4, m_Info.m_MapScriptsBlizzHash.begin());
+  copy_n(statData.m_MapScriptsBlizzHash.begin(), 4, m_Info.m_MapScriptsBlizzHash.begin());
   m_Info.m_MapPath = statData.m_MapPath;
   m_HostName = statData.m_HostName;
 
-  const bool needsSHA1 = war3Version >= GAMEVER(1u, 23u);
+  const bool mayHaveSHA1 = war3Version >= GAMEVER(1u, 23u);
   const bool hasSHA1 = statData.m_MapScriptsSHA1.has_value();
-  if (needsSHA1 != hasSHA1) {
-    //Print("[BNETPROTO] SHA1 must be included in stat string for bnet games since v1.23);
+  if (!mayHaveSHA1 && hasSHA1) {
+    //Ideally, all hosts SHOULD include them. But there are bots that don't.
+    //Print("[BNETPROTO] SHA1 may only be included in stat strings for bnet games since v1.23");
     m_IsValid = false;
     return false;
   }

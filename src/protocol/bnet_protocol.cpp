@@ -120,7 +120,7 @@ namespace BNETProtocol
       string gameName = GetStringAddressRange(data, cursor, cursorEnd);
       if (gameName.empty()) {
         //Print("[BNETPROTO] Game name was empty #" + to_string(gameIndex + 1) + " at " + gameInfo.GetHostDetails());
-        return games/*vector<NetworkGameInfo>()*/;
+        return games;
       }
       //Print("[BNETPROTO] Got game #" + to_string(gameIndex + 1) + " name <" + gameName + "> at " + gameInfo.GetHostDetails());
       gameInfo.SetGameName(gameName);
@@ -135,7 +135,7 @@ namespace BNETProtocol
       string gameStat = GetStringAddressRange(data, cursor, cursorEnd);
       if (gameStat.empty()) {
         //Print("[BNETPROTO] Game info was empty");
-        return games/*vector<NetworkGameInfo>()*/;
+        return games;
       }
       gameInfo.SetBNETGameInfo(gameStat, war3Version);
       cursor += gameStat.size() + 1;
@@ -1062,7 +1062,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& maybeSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
   {
     string hostCounterString = ToHexString(hostCounter);
     if (hostCounterString.size() < 8) {
@@ -1072,7 +1072,7 @@ namespace BNETProtocol
     hostCounterString = string(hostCounterString.rbegin(), hostCounterString.rend());
     assert(hostCounterString.size() == 8 && "hostCounterString should be 8 ASCII characters long");
 
-    GameStat gameStat(gameFlags, ByteArrayToUInt16(mapWidth, false), ByteArrayToUInt16(mapHeight, false), mapPath, hostName, mapBlizzHash, mapSHA1);
+    GameStat gameStat(gameFlags, ByteArrayToUInt16(mapWidth, false), ByteArrayToUInt16(mapHeight, false), mapPath, hostName, mapBlizzHash, maybeSHA1);
     vector<uint8_t> statString = gameStat.Encode();
     vector<uint8_t> packet;
 

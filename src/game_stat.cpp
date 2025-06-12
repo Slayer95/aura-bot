@@ -39,7 +39,7 @@ GameStat::GameStat()
   m_MapScriptsBlizzHash.fill(0);
 }
 
-GameStat::GameStat(uint32_t gameFlags, uint16_t mapWidth, uint16_t mapHeight, const string& mapPath, const string& hostName, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& mapSHA1)
+GameStat::GameStat(uint32_t gameFlags, uint16_t mapWidth, uint16_t mapHeight, const string& mapPath, const string& hostName, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& maybeSHA1)
 : m_IsValid(true),
   m_GameFlags(gameFlags),
   m_MapWidth(mapWidth),
@@ -50,9 +50,9 @@ GameStat::GameStat(uint32_t gameFlags, uint16_t mapWidth, uint16_t mapHeight, co
   m_MapScriptsBlizzHash.fill(0);
   copy_n(mapBlizzHash.begin(), 4, m_MapScriptsBlizzHash.begin());
 
-  if (mapSHA1.has_value()) {
+  if (maybeSHA1.has_value() && !IsAllZeroes(maybeSHA1->data(), maybeSHA1->data() + 20)) {
     m_MapScriptsSHA1.emplace();
-    copy_n(mapSHA1->begin(), 4, m_MapScriptsSHA1->begin());
+    copy_n(maybeSHA1->begin(), 20, m_MapScriptsSHA1->begin());
   }
 }
 
