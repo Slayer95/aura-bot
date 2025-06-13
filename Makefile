@@ -30,7 +30,7 @@ INSTALL_DIR = /usr
 CC ?= gcc
 CXX ?= g++
 CCFLAGS += -fno-builtin
-CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -fno-builtin -fno-rtti -MMD -MP
+CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -Wpedantic -fno-builtin -fno-rtti -MMD -MP
 DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 
