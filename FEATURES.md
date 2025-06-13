@@ -40,6 +40,7 @@
 - Supports assigning exclusive referees: demotes other referees, preventing them
 from chatting with players.
 - Improved game lobby commands to modify not only AI properties, but also other players.
+- Command arguments now using commas instead of whitespace as separator
 - Commands accept player names in addition to game slots
 - Player races, color, and AI difficulty can be typed in English
 - Shorthand commands for adding or removing computers (defaults to Insane)
@@ -98,6 +99,7 @@ in Aura's console.
 - Higher modularization
 - Statically analyzed with clang-analyzer and cppcheck
 - Using aggressive optimizations
+- Using pedantic warnings
 - IPv6 supported
 - Unified commands system
 - Stricter chat queue system
