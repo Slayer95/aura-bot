@@ -104,9 +104,9 @@ CW3MMD::CW3MMD(shared_ptr<CGame> nGame)
     m_LastValueID(0)
     //m_NextCheckID(0)
 {
-  m_ResultVerbs[GAME_RESULT_LOSER] = "lost";
-  m_ResultVerbs[GAME_RESULT_DRAWER] = "drew";
-  m_ResultVerbs[GAME_RESULT_WINNER] = "won";
+  m_ResultVerbs[(uint8_t)GamePlayerResult::kLoser] = "lost";
+  m_ResultVerbs[(uint8_t)GamePlayerResult::kDrawer] = "drew";
+  m_ResultVerbs[(uint8_t)GamePlayerResult::kWinner] = "won";
 }
 
 CW3MMD::~CW3MMD()
@@ -380,7 +380,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       Print(GetLogPrefix() + "FlagP [" + action->GetName() + "] has undefined SID [" + ToDecString(action->GetSID()) + "], ignoring");
       return false;
     }
-    uint8_t result = 0xFFu;
+    GamePlayerResult result = GamePlayerResult::kUndecided;
     switch (action->GetSubType()) {
       case MMD_FLAG_LEAVER: {
         m_FlagsLeaver[action->GetSID()] = true;
@@ -391,19 +391,19 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
         break;
       }
       case MMD_FLAG_DRAWER: {
-        result = GAME_RESULT_DRAWER;
+        result = GamePlayerResult::kDrawer;
         break;
       }
       case MMD_FLAG_WINNER: {
-        result = GAME_RESULT_WINNER;
+        result = GamePlayerResult::kWinner;
         break;
       }
       default: {
-        result = GAME_RESULT_LOSER;
+        result = GamePlayerResult::kLoser;
         break;
       }
     }
-    if (result == 0xFFu) {
+    if (result == GamePlayerResult::kUndecided) {
       return true;
     }
     auto previousResultIt = m_GameResults.find(action->GetSID());
@@ -412,16 +412,16 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
         return true;
       }
       Print(
-        GetLogPrefix() + "previous flag [" + to_string(previousResultIt->second) + "] would be overriden with new flag [" +
-        ToDecString(result) + "] for SID [" + ToDecString(action->GetSID()) + "] - ignoring"
+        GetLogPrefix() + "previous flag [" + ToDecString((uint8_t)previousResultIt->second) + "] would be overriden with new flag [" +
+        ToDecString((uint8_t)result) + "] for SID [" + ToDecString(action->GetSID()) + "] - ignoring"
       );
       return false;
     }
     m_GameResults[action->GetSID()] = result;
-    if (result == GAME_RESULT_WINNER) {
+    if (result == GamePlayerResult::kWinner) {
       m_GameOver = true;
     }
-    LogMetaData(action->GetRecvTicks(), GetStoredPlayerName(action->GetSID()) + " " + m_ResultVerbs[result] + " the game.");
+    LogMetaData(action->GetRecvTicks(), GetStoredPlayerName(action->GetSID()) + " " + m_ResultVerbs[(uint8_t)result] + " the game.");
     return true;
   } else if (action->GetType() == MMD_ACTION_TYPE_VAR) {
     if (m_DefVarPs.find(action->GetName()) == m_DefVarPs.end()) {
@@ -681,15 +681,15 @@ GameResultTeamAnalysis CW3MMD::GetGameResultTeamAnalysis() const
         IGNORE_ENUM_LAST(GameControllerType)
       }
     } else {
-      uint8_t result = match->second;
+      GamePlayerResult result = match->second;
       switch (result) {
-        case GAME_RESULT_WINNER:
+        case GamePlayerResult::kWinner:
           targetBitSet = &analysis.winnerTeams;
           break;
-        case GAME_RESULT_LOSER:
+        case GamePlayerResult::kLoser:
           targetBitSet = &analysis.loserTeams;
           break;
-        case GAME_RESULT_DRAWER:
+        case GamePlayerResult::kDrawer:
           targetBitSet = &analysis.drawerTeams;
           break;
       }
@@ -723,20 +723,20 @@ optional<GameResults> CW3MMD::GetGameResults(const GameResultConstraints& constr
     */
     const auto& match = m_GameResults.find(entry.first);
     vector<CGameController*>* resultGroup = nullptr;
-    uint8_t result = GAME_RESULT_UNDECIDED;
+    GamePlayerResult result = GamePlayerResult::kUndecided;
     if (match == m_GameResults.end()) {
       result = m_Game.get().ResolveUndecidedController(controllerData, constraints, teamAnalysis);
     } else {
       result = match->second;
     }
     switch (result) {
-      case GAME_RESULT_WINNER:
+      case GamePlayerResult::kWinner:
         resultGroup = &gameResults->winners;
         break;
-      case GAME_RESULT_LOSER:
+      case GamePlayerResult::kLoser:
         resultGroup = &gameResults->losers;
         break;
-      case GAME_RESULT_DRAWER:
+      case GamePlayerResult::kDrawer:
         resultGroup = &gameResults->drawers;
         break;
       default:

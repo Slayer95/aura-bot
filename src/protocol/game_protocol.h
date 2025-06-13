@@ -207,24 +207,20 @@ namespace GameProtocol
     }
   }
 
-  [[nodiscard]] inline std::optional<uint8_t> LeftCodeToResult(const uint32_t leftCode)
+  [[nodiscard]] inline GamePlayerResult LeftCodeToResult(const uint32_t leftCode)
   {
-    std::optional<uint8_t> result;
     switch (leftCode) {
       case PLAYERLEAVE_DISCONNECT:
       case PLAYERLEAVE_LOST:
       case PLAYERLEAVE_LOSTBUILDINGS:
       case PLAYERLEAVE_GPROXY:
-        result = GAME_RESULT_LOSER;
-        break;
+        return GamePlayerResult::kLoser;
       case PLAYERLEAVE_DRAW:
-        result = GAME_RESULT_DRAWER;
-        break;
+        return GamePlayerResult::kDrawer;
       case PLAYERLEAVE_WON:
-        result = GAME_RESULT_WINNER;
-        break;
+        return GamePlayerResult::kWinner;
     }
-    return result;
+    return GamePlayerResult::kUndecided;
   } 
 };
 

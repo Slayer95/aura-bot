@@ -79,10 +79,10 @@ GameResultConstraints::GameResultConstraints()
     // A "winner team" is a team with at least 1 winner
     m_CanTeamWithLeaverWin(false),
     m_RequireTeamWinExceptLeaver(false),
-    m_UndecidedVirtualHandler(GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO),
-    m_UndecidedUserHandler(GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF),
-    m_UndecidedComputerHandler(GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO),
-    m_ConflictHandler(GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_VOID),
+    m_UndecidedVirtualHandler(GameResultVirtualUndecidedHandler::kAuto),
+    m_UndecidedUserHandler(GameResultUserUndecidedHandler::kLoserSelf),
+    m_UndecidedComputerHandler(GameResultComputerUndecidedHandler::kAuto),
+    m_ConflictHandler(GameResultConflictHandler::kMajorityOrVoid),
     m_SourceOfTruth(GameResultSourceSelect::kNone),
 
     m_MinPlayers(2),
@@ -113,10 +113,10 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
     // A "winner team" is a team with at least 1 winner
     m_CanTeamWithLeaverWin(false),
     m_RequireTeamWinExceptLeaver(false),
-    m_UndecidedVirtualHandler(GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO),
-    m_UndecidedUserHandler(GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF),
-    m_UndecidedComputerHandler(GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO),
-    m_ConflictHandler(GAME_RESULT_CONFLICT_HANDLER_MAJORITY_OR_VOID),
+    m_UndecidedVirtualHandler(GameResultVirtualUndecidedHandler::kAuto),
+    m_UndecidedUserHandler(GameResultUserUndecidedHandler::kLoserSelf),
+    m_UndecidedComputerHandler(GameResultComputerUndecidedHandler::kAuto),
+    m_ConflictHandler(GameResultConflictHandler::kMajorityOrVoid),
     m_SourceOfTruth(map->GetMMDEnabled() ? GameResultSourceSelect::kPreferMMD : GameResultSourceSelect::kOnlyLeaveCode),
 
     m_MinPlayers(2),
@@ -144,36 +144,36 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
   }
 
   // Generic
-  vector<string> undecidedVirtualHandlers = {"none", "loser-self", "auto"};
+  array<string, 3> undecidedVirtualHandlers = {"none", "loser-self", "auto"};
   if (CFG.Exists("map.game_result.resolution.undecided_handler.virtual")) {
-    m_UndecidedVirtualHandler = CFG.GetStringIndex("map.game_result.resolution.undecided_handler.virtual", undecidedVirtualHandlers, m_UndecidedVirtualHandler);
+    m_UndecidedVirtualHandler = CFG.GetEnum<GameResultVirtualUndecidedHandler>("map.game_result.resolution.undecided_handler.virtual", undecidedVirtualHandlers, m_UndecidedVirtualHandler);
   } else {
-    CFG.SetString("map.game_result.resolution.undecided_handler.virtual", undecidedVirtualHandlers[m_UndecidedVirtualHandler]);
+    CFG.SetString("map.game_result.resolution.undecided_handler.virtual", undecidedVirtualHandlers[(uint8_t)m_UndecidedVirtualHandler]);
   }
 
   // Generic
-  vector<string> undecidedUserHandlers = {"none", "loser-self", "loser-self-and-non-user-allies"};
+  array<string, 3> undecidedUserHandlers = {"none", "loser-self", "loser-self-and-non-user-allies"};
   if (CFG.Exists("map.game_result.resolution.undecided_handler.user")) {
-    m_UndecidedUserHandler = CFG.GetStringIndex("map.game_result.resolution.undecided_handler.user", undecidedUserHandlers, m_UndecidedUserHandler);
+    m_UndecidedUserHandler = CFG.GetEnum<GameResultUserUndecidedHandler>("map.game_result.resolution.undecided_handler.user", undecidedUserHandlers, m_UndecidedUserHandler);
   } else {
-    CFG.SetString("map.game_result.resolution.undecided_handler.user", undecidedUserHandlers[m_UndecidedUserHandler]);
+    CFG.SetString("map.game_result.resolution.undecided_handler.user", undecidedUserHandlers[(uint8_t)m_UndecidedUserHandler]);
   }
 
   // Generic
-  vector<string> undecidedComputerHandlers = {"none", "loser-self", "auto"};
+  array<string, 3> undecidedComputerHandlers = {"none", "loser-self", "auto"};
   if (CFG.Exists("map.game_result.resolution.undecided_handler.computer")) {
-    m_UndecidedComputerHandler = CFG.GetStringIndex("map.game_result.resolution.undecided_handler.computer", undecidedComputerHandlers, m_UndecidedComputerHandler);
+    m_UndecidedComputerHandler = CFG.GetEnum<GameResultComputerUndecidedHandler>("map.game_result.resolution.undecided_handler.computer", undecidedComputerHandlers, m_UndecidedComputerHandler);
   } else {
-    CFG.SetString("map.game_result.resolution.undecided_handler.computer", undecidedComputerHandlers[m_UndecidedComputerHandler]);
+    CFG.SetString("map.game_result.resolution.undecided_handler.computer", undecidedComputerHandlers[(uint8_t)m_UndecidedComputerHandler]);
   }
 
   // MMD-specific
-  const vector<string> conflictHandlerOptions = {"void", "pessimistic", "optimistic", "majority-or-void", "majority-or-pessimistic", "majority-or-optimistic"};
+  const array<string, 6> conflictHandlerOptions = {"void", "pessimistic", "optimistic", "majority-or-void", "majority-or-pessimistic", "majority-or-optimistic"};
     if (CFG.Exists("map.game_result.resolution.conflict_handler")) {
-    m_ConflictHandler = CFG.GetStringIndex("map.game_result.resolution.conflict_handler", conflictHandlerOptions, m_ConflictHandler);
+    m_ConflictHandler = CFG.GetEnum<GameResultConflictHandler>("map.game_result.resolution.conflict_handler", conflictHandlerOptions, m_ConflictHandler);
     CFG.FailIfErrorLast();
   } else {
-    CFG.SetString("map.game_result.resolution.conflict_handler", conflictHandlerOptions[m_ConflictHandler]);
+    CFG.SetString("map.game_result.resolution.conflict_handler", conflictHandlerOptions[(uint8_t)m_ConflictHandler]);
   }
 
   if (CFG.Exists("map.game_result.constraints.draw.allowed")) {
@@ -291,9 +291,9 @@ GameResultConstraints::GameResultConstraints(const CMap* map, CConfig& CFG)
   CFG.SetStrictMode(wasStrict);
 
   if (
-    m_UndecidedUserHandler == GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES && (
-      m_UndecidedVirtualHandler != GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO ||
-      m_UndecidedComputerHandler != GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO
+    m_UndecidedUserHandler == GameResultUserUndecidedHandler::kLoserSelfAndAllies && (
+      m_UndecidedVirtualHandler != GameResultVirtualUndecidedHandler::kAuto ||
+      m_UndecidedComputerHandler != GameResultComputerUndecidedHandler::kAuto
     )
   ) {
     Print("[MAP] <map.game_result.resolution.undecided_handler.user = loser-self-and-non-user-allies> requires other handlers set to auto");

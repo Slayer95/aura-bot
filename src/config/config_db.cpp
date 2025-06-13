@@ -43,6 +43,15 @@ CDataBaseConfig::CDataBaseConfig(CConfig& CFG)
   CFG.SetStrictMode(wasStrict);
 }
 
+CDataBaseConfig::CDataBaseConfig(const CDataBaseConfig& other)
+{
+  m_File = other.m_File;
+  m_TWRPGFile = other.m_TWRPGFile;
+  m_JournalMode = other.m_JournalMode;
+  m_Synchronous = other.m_Synchronous;
+  m_WALInterval = other.m_WALInterval;
+}
+
 bool CDataBaseConfig::operator==(const CDataBaseConfig& other) const
 {
   return (
@@ -63,6 +72,8 @@ CDataBaseConfig& CDataBaseConfig::operator=(const CDataBaseConfig& other)
     m_Synchronous = other.m_Synchronous;
     m_WALInterval = other.m_WALInterval;
   }
+
+  return *this;
 }
 
 CDataBaseConfig::~CDataBaseConfig()

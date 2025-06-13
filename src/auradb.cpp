@@ -177,7 +177,7 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
 
 CAuraDB::CAuraDB(CAura* nAura, CDataBaseConfig* dbConfig)
   : m_Aura(nAura),
-    m_Config(*dbConfig),
+    m_Config(CDataBaseConfig(*dbConfig)),
     m_FirstRun(false),
     m_HasError(false),
     m_LatestGameId(0)
@@ -927,7 +927,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGa
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 }
 
-void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint64_t durationSeconds)
+void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t /*gamePersistentId*/, const CGameController* controllerData, const uint64_t durationSeconds)
 {
   if (!controllerData || controllerData->GetType() != GameControllerType::kUser || controllerData->GetIsObserver()) {
     return;

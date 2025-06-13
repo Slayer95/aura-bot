@@ -54,7 +54,10 @@
     CheckServiceType(T);\
   } while (0);
 #else
-#define CHECK_SERVICE_TYPE(T)
+#define CHECK_SERVICE_TYPE(T) \
+  do {\
+    UNREFERENCED_PARAMETER(T);\
+  } while (0);
 #endif
 
 using namespace std;
@@ -796,7 +799,7 @@ void CCommandContext::SendPrivateReply(const string& message, const uint8_t ctxF
   switch (GetServiceSourceType()) {
     case ServiceType::kRealm:
       if (sourceRealm) {
-        sourceRealm->TryQueueChat(message, GetSender(), true, shared_from_this(), ctxFlags);
+        sourceRealm->TryQueueChatReply(message, GetSender(), true, shared_from_this(), ctxFlags);
       }
       break;
     case ServiceType::kIRC:
@@ -830,7 +833,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       }
     }
     if (targetRealm) {
-      targetRealm->TryQueueChat(message, GetSender(), false, shared_from_this(), ctxFlags);
+      targetRealm->TryQueueChatReply(message, GetSender(), false, shared_from_this(), ctxFlags);
       if (targetRealm == sourceRealm) {
         AllSourceSuccess = true;
       }
@@ -843,7 +846,7 @@ void CCommandContext::SendReplyCustomFlags(const string& message, const uint8_t 
       AllSourceSuccess = true;
     }
     if (sourceRealm && !AllSourceSuccess) {
-      sourceRealm->TryQueueChat(message, GetSender(), false, shared_from_this(), ctxFlags);
+      sourceRealm->TryQueueChatReply(message, GetSender(), false, shared_from_this(), ctxFlags);
       AllSourceSuccess = true;
     }
     if (GetServiceSourceType() == ServiceType::kIRC) {

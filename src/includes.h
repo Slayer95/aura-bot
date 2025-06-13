@@ -126,6 +126,10 @@ std::string::size_type constexpr GetStringLength(const char* str)
 
 #define IGNORE_ENUM_LAST(EnumType) IGNORE_CASE(EnumType::LAST)
 
+#ifndef UNREFERENCED_PARAMETER
+#define UNREFERENCED_PARAMETER(P) (P)
+#endif
+
 #define PRINT_IF(T, U) \
     static_assert(T < LogLevel::LAST, "Use DPRINT_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\

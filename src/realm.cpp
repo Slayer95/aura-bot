@@ -1312,11 +1312,12 @@ CQueuedChatMessage* CRealm::QueueGameChatAnnouncement(shared_ptr<const CGame> ga
   return m_ChatQueueJoinCallback;
 }
 
-void CRealm::TryQueueChat(const string& message, const string& user, bool isPrivate, shared_ptr<CCommandContext> fromCtx, const uint8_t ctxFlags)
+void CRealm::TryQueueChatReply(const string& message, const string& user, bool isPrivate, shared_ptr<CCommandContext> /*fromCtx*/, const uint8_t /*ctxFlags*/)
 {
   // don't respond to non admins if there are more than 25 messages already in the queue
   // this prevents malicious users from filling up the bot's chat queue and crippling the bot
-  // in some cases the queue may be full of legitimate messages but we don't really care if the bot ignores one of these commands once in awhile
+  // in some cases the queue may be full of legitimate messages but we don't really care
+  // if the bot does not reply to a command once in awhile
   // e.g. when several users join a game at the same time and cause multiple /whois messages to be queued at once
 
   if (m_ChatQueueMain.size() >= 25 && !(GetIsFloodImmune() || GetIsModerator(user) || GetIsAdmin(user) || GetIsSudoer(user))) {

@@ -624,25 +624,25 @@ enum class GameResultVirtualUndecidedHandler : uint8_t {
 // Note: We ignore "leaver" flag and just treat them as undecided
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_NONE = 0u;
 constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF = 1u;
+constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES = 2u; // causes allied computers/virtual users to lose
 
 enum class GameResultUserUndecidedHandler : uint8_t {
   kNone = 0,
   kLoserSelf = 1,
-  LAST = 2,
+  kLoserSelfAndAllies = 2,
+  LAST = 3,
 };
-
-constexpr uint8_t GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES = 2u; // causes allied computers/virtual users to lose
 
 constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_NONE = 0u;
 constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_LOSER_SELF = 1u;
+constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO = 2u; // can win!
 
 enum class GameResultComputerUndecidedHandler : uint8_t {
   kNone = 0,
-  kLoserself = 1,
-  LAST = 2,
+  kLoserSelf = 1,
+  kAuto = 2,
+  LAST = 3,
 };
-
-constexpr uint8_t GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO = 2u; // can win!
 
 constexpr uint8_t GAME_RESULT_LOSER = 0u;
 constexpr uint8_t GAME_RESULT_DRAWER = 1u;

@@ -852,8 +852,8 @@ public:
   bool SetLayoutHumansVsAI(const uint8_t humanTeam, const uint8_t computerTeam);
   bool SetLayoutCompact();
 
-  [[nodiscard]] uint8_t ResolveUndecidedComputerOrVirtualAuto(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis);
-  [[nodiscard]] uint8_t ResolveUndecidedController(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis);
+  [[nodiscard]] GamePlayerResult ResolveUndecidedComputerOrVirtualAuto(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis);
+  [[nodiscard]] GamePlayerResult ResolveUndecidedController(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis);
   [[nodiscard]] GameResultTeamAnalysis GetGameResultTeamAnalysis() const;
   [[nodiscard]] std::optional<GameResults> GetGameResultsMMD();
   [[nodiscard]] std::optional<GameResults> GetGameResultsLeaveCode();

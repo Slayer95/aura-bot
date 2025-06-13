@@ -62,6 +62,7 @@ struct CDataBaseConfig
   uint16_t                                m_WALInterval;
 
   explicit CDataBaseConfig(CConfig& CFG);
+  CDataBaseConfig(const CDataBaseConfig& other);
   bool operator==(const CDataBaseConfig& other) const;
   CDataBaseConfig& operator=(const CDataBaseConfig& other);
   ~CDataBaseConfig();

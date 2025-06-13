@@ -99,7 +99,7 @@ namespace GameProtocol
     return ActionSizes[actionType];
   }
 
-  size_t GetNextActionPosCacheUnitInner(const vector<uint8_t>& action, size_t actionStartPos, size_t cacheUnitStartPos)
+  size_t GetNextActionPosCacheUnitInner(const vector<uint8_t>& /*action*/, size_t actionStartPos, size_t /*cacheUnitStartPos*/)
   {
     // TODO: ACTION_GAME_CACHE_UNIT
     return actionStartPos;

@@ -3910,7 +3910,7 @@ std::string CGame::GetShortNameLAN() const
 
 string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
 {
-  bool isSpectator = m_GameLoading || m_GameLoaded; // TODO: CGame::GetAnnounceText for spectator case
+  bool isSpectator = !GetIsLobbyOrMirror();
   Version version = GetVersion();
   if (realm) {
     version = realm->GetGameVersion();
@@ -3939,11 +3939,16 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
     typeWord = "Game";
   }
 
-  if (m_IsMirror) {
-    return versionPrefix + typeWord + " mirrored: " + m_Map->GetServerFileName() + startedPhrase;
+  string capabilityWord;
+  if (isSpectator) {
+    capabilityWord = " watchable: ";
+  } else if (m_IsMirror) {
+    capabilityWord = " mirrored: ";
   } else {
-    return versionPrefix + typeWord + " hosted: " + m_Map->GetServerFileName() + startedPhrase;
+    capabilityWord = " mirrored: ";
   }
+
+  return versionPrefix + typeWord + capabilityWord + m_Map->GetServerFileName() + startedPhrase;
 }
 
 uint16_t CGame::CalcHostPortFromType(const uint8_t type) const
@@ -10729,56 +10734,70 @@ uint32_t CGame::GetSyncLimitSafe() const
   return m_Config.m_SyncLimitSafe;
 }
 
-uint8_t CGame::ResolveUndecidedComputerOrVirtualAuto(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis)
+GamePlayerResult CGame::ResolveUndecidedComputerOrVirtualAuto(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis)
 {
   if (teamAnalysis.undecidedUserTeams.test(controllerData->GetTeam())) {
-    if (constraints.GetUndecidedUserHandler() == GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES) {
-      return GAME_RESULT_LOSER;
+    if (constraints.GetUndecidedUserHandler() == GameResultUserUndecidedHandler::kLoserSelfAndAllies) {
+      return GamePlayerResult::kLoser;
     }
   } else if (teamAnalysis.winnerTeams.none() && GetNumTeams() == 2) {
-    return GAME_RESULT_WINNER;
+    return GamePlayerResult::kWinner;
   }
-  return GAME_RESULT_LOSER;
+  return GamePlayerResult::kLoser;
 }
 
-uint8_t CGame::ResolveUndecidedController(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis)
+GamePlayerResult CGame::ResolveUndecidedController(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis)
 {
   switch (controllerData->GetType()) {
     case GameControllerType::kVirtual: {
       switch (constraints.GetUndecidedVirtualHandler()) {
-        case GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_NONE:
-          return GAME_RESULT_UNDECIDED;
-        case GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_LOSER_SELF:
-          return GAME_RESULT_LOSER;
-        case GAME_RESULT_VIRTUAL_UNDECIDED_HANDLER_AUTO:
+        case GameResultVirtualUndecidedHandler::kNone:
+          return GamePlayerResult::kUndecided;
+        case GameResultVirtualUndecidedHandler::kLoserSelf:
+          return GamePlayerResult::kLoser;
+        case GameResultVirtualUndecidedHandler::kAuto:
           return ResolveUndecidedComputerOrVirtualAuto(controllerData, constraints, teamAnalysis);
+        case GameResultVirtualUndecidedHandler::LAST:
+          UNREACHABLE();
+          return GamePlayerResult::kUndecided;
       }
     }
+
     case GameControllerType::kUser: {
       switch (constraints.GetUndecidedUserHandler()) {
-        case GAME_RESULT_USER_UNDECIDED_HANDLER_NONE:
-          return GAME_RESULT_UNDECIDED;
-        case GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF:
-        case GAME_RESULT_USER_UNDECIDED_HANDLER_LOSER_SELF_AND_ALLIES:
-          return GAME_RESULT_LOSER;
+        case GameResultUserUndecidedHandler::kNone:
+          return GamePlayerResult::kUndecided;
+        case GameResultUserUndecidedHandler::kLoserSelf:
+        case GameResultUserUndecidedHandler::kLoserSelfAndAllies:
+          return GamePlayerResult::kLoser;
+        case GameResultUserUndecidedHandler::LAST:
+          UNREACHABLE();
+          return GamePlayerResult::kUndecided;
       }
     }
+
     case GameControllerType::kComputer: {
       switch (constraints.GetUndecidedComputerHandler()) {
-        case GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_NONE:
-          return GAME_RESULT_UNDECIDED;
-        case GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_LOSER_SELF:
-          return GAME_RESULT_LOSER;
-        case GAME_RESULT_COMPUTER_UNDECIDED_HANDLER_AUTO:
+        case GameResultComputerUndecidedHandler::kNone:
+          return GamePlayerResult::kUndecided;
+        case GameResultComputerUndecidedHandler::kLoserSelf:
+          return GamePlayerResult::kLoser;
+        case GameResultComputerUndecidedHandler::kAuto:
           return ResolveUndecidedComputerOrVirtualAuto(controllerData, constraints, teamAnalysis);
+        case GameResultComputerUndecidedHandler::LAST:
+          UNREACHABLE();
+          return GamePlayerResult::kUndecided;
       }
-      break;
     }
-    IGNORE_ENUM_LAST(GameControllerType)
+
+    case GameControllerType::LAST: {
+      UNREACHABLE();
+      return GamePlayerResult::kUndecided;
+    }
   }
 
-  LOG_APP_IF(LogLevel::kDebug, "ResolveUndecidedController unhandled path");
-  return GAME_RESULT_UNDECIDED;
+  UNREACHABLE();
+  return GamePlayerResult::kUndecided;
 }
 
 GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
@@ -10787,21 +10806,23 @@ GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
 
   for (const auto& controllerData : m_GameControllers) {
     if (!controllerData || controllerData->GetIsObserver()) continue;
-    uint8_t result = GAME_RESULT_UNDECIDED;
+    GamePlayerResult result = GamePlayerResult::kUndecided;
     if (controllerData->GetHasClientLeftCode()) {
-      optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
-      if (maybeResult.has_value()) result = maybeResult.value();
+      GamePlayerResult maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
+      if (maybeResult != GamePlayerResult::kUndecided) {
+        result = maybeResult;
+      }
     }
 
     bitset<MAX_SLOTS_MODERN>* targetBitSet = nullptr;
     switch (result) {
-      case GAME_RESULT_WINNER:
+      case GamePlayerResult::kWinner:
         targetBitSet = &analysis.winnerTeams;
         break;
-      case GAME_RESULT_LOSER:
+      case GamePlayerResult::kLoser:
         targetBitSet = &analysis.loserTeams;
         break;
-      case GAME_RESULT_DRAWER:
+      case GamePlayerResult::kDrawer:
         targetBitSet = &analysis.drawerTeams;
         break;
       default: {
@@ -10854,26 +10875,28 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
 
   for (const auto& controllerData : m_GameControllers) {
     if (!controllerData || controllerData->GetIsObserver()) continue;
-    uint8_t result = GAME_RESULT_UNDECIDED;
+    GamePlayerResult result = GamePlayerResult::kUndecided;
     if (controllerData->GetHasClientLeftCode()) {
-      optional<uint8_t> maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
-      if (maybeResult.has_value()) result = maybeResult.value();
+      GamePlayerResult maybeResult = GameProtocol::LeftCodeToResult(controllerData->GetClientLeftCode());
+      if (maybeResult != GamePlayerResult::kUndecided) {
+        result = maybeResult;
+      }
     }
-    if (result == GAME_RESULT_UNDECIDED) {
+    if (result == GamePlayerResult::kUndecided) {
       result = ResolveUndecidedController(controllerData, m_Map->GetGameResultConstraints(), teamAnalysis);
     }
     vector<CGameController*>* resultGroup = nullptr;
     switch (result) {
-      case GAME_RESULT_WINNER:
+      case GamePlayerResult::kWinner:
         resultGroup = &gameResults->winners;
         break;
-      case GAME_RESULT_LOSER:
+      case GamePlayerResult::kLoser:
         resultGroup = &gameResults->losers;
         break;
-      case GAME_RESULT_DRAWER:
+      case GamePlayerResult::kDrawer:
         resultGroup = &gameResults->drawers;
         break;
-      case GAME_RESULT_UNDECIDED:
+      case GamePlayerResult::kUndecided:
         resultGroup = &gameResults->undecided;
         break;
     }

@@ -79,10 +79,10 @@ struct GameResultConstraints
   bool m_CanTeamWithLeaverWin;
   bool m_RequireTeamWinExceptLeaver;
 
-  uint8_t m_UndecidedVirtualHandler;
-  uint8_t m_UndecidedUserHandler; // Note: We ignore "leaver" flag and just treat them as undecided
-  uint8_t m_UndecidedComputerHandler;
-  uint8_t m_ConflictHandler;
+  GameResultVirtualUndecidedHandler m_UndecidedVirtualHandler;
+  GameResultUserUndecidedHandler m_UndecidedUserHandler; // Note: We ignore "leaver" flag and just treat them as undecided
+  GameResultComputerUndecidedHandler m_UndecidedComputerHandler;
+  GameResultConflictHandler m_ConflictHandler;
   GameResultSourceSelect m_SourceOfTruth;
 
   uint8_t m_MinPlayers;
@@ -114,10 +114,10 @@ struct GameResultConstraints
   [[nodiscard]] inline bool GetCanTeamWithLeaverWin() const { return m_CanTeamWithLeaverWin; }
   [[nodiscard]] inline bool GetRequireTeamWinExceptLeaver() const { return m_RequireTeamWinExceptLeaver; }
 
-  [[nodiscard]] inline uint8_t GetUndecidedVirtualHandler() const { return m_UndecidedVirtualHandler; }
-  [[nodiscard]] inline uint8_t GetUndecidedUserHandler() const { return m_UndecidedUserHandler; }
-  [[nodiscard]] inline uint8_t GetUndecidedComputerHandler() const { return m_UndecidedComputerHandler; }
-  [[nodiscard]] inline uint8_t GetConflictHandler() const { return m_ConflictHandler; }
+  [[nodiscard]] inline GameResultVirtualUndecidedHandler GetUndecidedVirtualHandler() const { return m_UndecidedVirtualHandler; }
+  [[nodiscard]] inline GameResultUserUndecidedHandler GetUndecidedUserHandler() const { return m_UndecidedUserHandler; }
+  [[nodiscard]] inline GameResultComputerUndecidedHandler GetUndecidedComputerHandler() const { return m_UndecidedComputerHandler; }
+  [[nodiscard]] inline GameResultConflictHandler GetConflictHandler() const { return m_ConflictHandler; }
   [[nodiscard]] inline GameResultSourceSelect GetSourceOfTruth() const { return m_SourceOfTruth; }
 };
 
