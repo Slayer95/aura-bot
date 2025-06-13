@@ -208,10 +208,10 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
-  uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
+  const uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
   if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
-    m_MaxLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
-    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>. It cannot exceed " + maxDeductedLineLength + " characters because of flood quota.");
+    m_MaxLineLength = maxDeductedLineLength;
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>. It cannot exceed " + to_string(maxDeductedLineLength) + " characters because of flood quota.");
   }
 
   m_WhisperErrorReply      = CFG.GetString(m_CFGKeyPrefix + "protocol.whisper.error_reply", string());
@@ -533,9 +533,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
-  uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
+  const uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
   if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
-    m_MaxLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
+    m_MaxLineLength = maxDeductedLineLength;
     // PvPGN defaults make no sense: 40x5=200 seems logical, but in fact the 5th line is not allowed.
     Print("[CONFIG] using <" + m_CFGKeyPrefix + "flood.max_size = " + to_string(m_MaxLineLength) + ">");
   }

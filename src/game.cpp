@@ -3945,7 +3945,7 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
   } else if (m_IsMirror) {
     capabilityWord = " mirrored: ";
   } else {
-    capabilityWord = " mirrored: ";
+    capabilityWord = " hosted: ";
   }
 
   return versionPrefix + typeWord + capabilityWord + m_Map->GetServerFileName() + startedPhrase;
