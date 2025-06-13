@@ -185,7 +185,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5) - 1;
   m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", 5);
   m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", 40);
-  m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", 200);
+  m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", 160);
   m_FloodImmune            = CFG.GetBool(m_CFGKeyPrefix + "flood.immune", m_FloodImmune);
 
   if (0 == m_FloodQuotaLines) {
@@ -208,9 +208,10 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
-  if (static_cast<uint32_t>(m_MaxLineLength) > static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines)) {
+  uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
+  if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
     m_MaxLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
-    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
+    Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>. It cannot exceed " + maxDeductedLineLength + " characters because of flood quota.");
   }
 
   m_WhisperErrorReply      = CFG.GetString(m_CFGKeyPrefix + "protocol.whisper.error_reply", string());
@@ -532,9 +533,10 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
-  if (static_cast<uint32_t>(m_MaxLineLength) > static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines)) {
+  uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
+  if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
     m_MaxLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
-    // PvPGN defaults make no sense: 40x5=200 seem logical, but in fact the 5th line is not allowed.
+    // PvPGN defaults make no sense: 40x5=200 seems logical, but in fact the 5th line is not allowed.
     Print("[CONFIG] using <" + m_CFGKeyPrefix + "flood.max_size = " + to_string(m_MaxLineLength) + ">");
   }
 
