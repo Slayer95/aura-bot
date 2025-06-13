@@ -88,6 +88,7 @@ in Aura's console.
 - Uses DotA stats automatically according to maps' file names
 - APM tracking is integrated with stages of MicroTraining map
 - Identifies Evergreen maps automatically according to maps' file names
+- Implements informational command !twrpg for "The World RPG" items
 - Many commands were implemented. See the full list at [3]
 
 # Technical changes:

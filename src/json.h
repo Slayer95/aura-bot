@@ -36,6 +36,9 @@
 
 namespace JSONAPI
 {
+  [[nodiscard]] std::optional<std::string> GetMaybeString(const nlohmann::json& data);
+  [[nodiscard]] std::optional<std::vector<std::string>> GetMaybeStringArray(const nlohmann::json& data);
+
   [[nodiscard]] std::optional<std::string> ParseString(const std::string& encoded);
   [[nodiscard]] std::optional<std::vector<std::string>> ParseStringArray(const std::string& encoded);
   [[nodiscard]] std::optional<std::vector<uint64_t>> ParseUnsignedIntArray(const std::string& encoded);

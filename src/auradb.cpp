@@ -155,17 +155,53 @@ void CSearchableMapData::LoadData(filesystem::path sourceFile)
   if (twrpgFile.fail()) {
     Print("[AURA] warning - [" + PathToString(sourceFile) + "] not found");
   } else {
-    try {
-      nlohmann::json data = nlohmann::json::parse(twrpgFile);
-      for (const auto& element : data["items"].items()) {
-        m_Items.push_back(string(element.key()));
-        m_Data[MAP_DATA_TYPE_ITEM][string(element.key())] = vector<string>(element.value().begin(), element.value().end());
+    nlohmann::json data = nlohmann::json::parse(twrpgFile, nullptr, false, false);
+    if (!data.is_discarded() && data.type() == nlohmann::json::value_t::object) {
+      auto itemsIt = data.find("items");
+      auto aliasesIt = data.find("aliases");
+      if (itemsIt != data.end() && aliasesIt != data.end()) {
+        const nlohmann::json& items = data.at("items");
+        const nlohmann::json& aliases = data.at("aliases");
+        if (
+          items.type() == nlohmann::json::value_t::object &&
+          aliases.type() == nlohmann::json::value_t::object
+        ) {
+          m_Items.reserve(items.size());
+          for (auto& [key, jsonValue] : items.items()) {
+            optional<vector<string>> maybeValue = JSONAPI::GetMaybeStringArray(jsonValue);
+            if (!maybeValue.has_value()) {
+              Print("[AURA] error loading [" + PathToString(sourceFile) + "] - item [" + key + "] is not a valid array of strings");
+              continue;
+            }
+            m_Items.push_back(key);
+            m_Data[MAP_DATA_TYPE_ITEM][key] = *maybeValue;
+          }
+          for (auto& [key, jsonValue] : aliases.items()) {
+            string target;
+            if (
+              jsonValue.type() != nlohmann::json::value_t::array || jsonValue.size() != 2 ||
+              !jsonValue.at(0).is_number_unsigned() || !jsonValue.at(1).is_string()
+            ) {
+              Print("[AURA] error loading [" + PathToString(sourceFile) + "] - alias [" + key + "] must match schema [number, string]");
+              continue;
+            }
+            uint64_t targetType = 0;
+            jsonValue.at(0).get_to(targetType);
+            jsonValue.at(1).get_to(target);
+            if (/*targetType > 0xFF || */targetType != 2) {
+              //Print("[AURA] error loading [" + PathToString(sourceFile) + "] - alias [" + key + "] must point to an item");
+              continue;
+            }
+            m_Aliases[key] = make_pair((uint8_t)targetType, target);
+          }
+        } else {
+          Print("[AURA] error loading [" + PathToString(sourceFile) + "] - 'items' and 'aliases' must be JSON objects");
+        }
+      } else {
+        Print("[AURA] error loading [" + PathToString(sourceFile) + "] - expected 'items' and 'aliases' keys");
       }
-      for (const auto& element : data["aliases"].items()) {
-        m_Aliases[string(element.key())] = make_pair((uint8_t)(element.value()[0]), string(element.value()[1]));
-      }
-    } catch (nlohmann::json::exception& e) {
-      Print("[AURA] error loading [" + PathToString(sourceFile) + "] - " + string(e.what()));
+    } else {
+      Print("[AURA] error loading [" + PathToString(sourceFile) + "] - cannot parse as JSON or not an object.");
     }
     twrpgFile.close();
   }
@@ -337,18 +373,22 @@ void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
     /*
     Print("[AURA] Updating database schema...");
 
-    if (m_DB->Exec(R"(ALTER TABLE bans ADD COLUMN ip TEXT NOT NULL DEFAULT ''; ALTER TABLE bans ADD COLUMN expiry TEXT NOT NULL DEFAULT ''; ALTER TABLE bans RENAME COLUMN moderators moderator; ALTER TABLE bans ADD COLUMN authserver TEXT NOT NULL default ''))") != SQLITE_OK)
+    if (m_DB->Exec(R"(ALTER TABLE bans ADD COLUMN ip TEXT NOT NULL DEFAULT ''; ALTER TABLE bans ADD COLUMN expiry TEXT NOT NULL DEFAULT ''; ALTER TABLE bans RENAME COLUMN moderators moderator; ALTER TABLE bans ADD COLUMN authserver TEXT NOT NULL default ''))") != SQLITE_OK) {
       Print("[SQLITE3] error widening bans table - " + m_DB->GetError());
+    }
 
-    if (m_DB->Exec(R"(ALTER TABLE players ADD COLUMN server TEXT NOT NULL DEFAULT ''; ALTER TABLE players ADD COLUMN initialip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN latestip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN initialreport TEXT NOT NULL DEFAULT ''; ALTER TABLE players ADD COLUMN reports INTEGER DEFAULT 0; ALTER TABLE players ADD COLUMN latestgame INTEGER DEFAULT 0))") != SQLITE_OK)
+    if (m_DB->Exec(R"(ALTER TABLE players ADD COLUMN server TEXT NOT NULL DEFAULT ''; ALTER TABLE players ADD COLUMN initialip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN latestip TEXT NOT NULL DEFAULT "::ffff:0:0"; ALTER TABLE players ADD COLUMN initialreport TEXT NOT NULL DEFAULT ''; ALTER TABLE players ADD COLUMN reports INTEGER DEFAULT 0; ALTER TABLE players ADD COLUMN latestgame INTEGER DEFAULT 0))") != SQLITE_OK) {
       Print("[SQLITE3] error widening players table - " + m_DB->GetError());
+    }
 
     // crc32 here is the true CRC32 hash of the map file (i.e. <map.file_hash.crc32> in the map ini, NOT <map.scripts_hash.blizz>, NOR legacy <map_crc>)
-    if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, players TEXT NOT NULL)") != SQLITE_OK)
+    if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, players TEXT NOT NULL)") != SQLITE_OK) {
       Print("[SQLITE3] error creating games table - " + m_DB->GetError());
+    }
 
-    if (m_DB->Exec("CREATE TABLE commands ( command TEXT NOT NULL, scope TEXT NOT NULL, type TEXT NOT NULL, action TEXT NOT NULL, PRIMARY KEY ( command, scope ) )") != SQLITE_OK)
+    if (m_DB->Exec("CREATE TABLE commands ( command TEXT NOT NULL, scope TEXT NOT NULL, type TEXT NOT NULL, action TEXT NOT NULL, PRIMARY KEY ( command, scope ) )") != SQLITE_OK) {
       Print("[SQLITE3] error creating commands table - " + m_DB->GetError());
+    }
     */
   }
 }

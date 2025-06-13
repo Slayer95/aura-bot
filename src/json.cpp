@@ -30,10 +30,9 @@ using namespace std;
 
 namespace JSONAPI
 {
-  optional<string> ParseString(const string& encoded)
+  optional<string> GetMaybeString(const nlohmann::json& data)
   {
     optional<string> result;
-    nlohmann::json data = nlohmann::json::parse(encoded, nullptr, false, false);
     if (data.is_discarded() || data.type() != nlohmann::json::value_t::string) {
       return result;
     }
@@ -42,10 +41,9 @@ namespace JSONAPI
     return result;
   }
 
-  optional<vector<string>> ParseStringArray(const string& encoded)
+  optional<vector<string>> GetMaybeStringArray(const nlohmann::json& data)
   {
     optional<vector<string>> result;
-    nlohmann::json data = nlohmann::json::parse(encoded, nullptr, false, false);
     if (data.is_discarded() || data.type() != nlohmann::json::value_t::array) {
       return result;
     }
@@ -62,6 +60,18 @@ namespace JSONAPI
     }
     result = entries;
     return result;
+  }
+
+  optional<string> ParseString(const string& encoded)
+  {
+    nlohmann::json data = nlohmann::json::parse(encoded, nullptr, false, false);
+    return JSONAPI::GetMaybeString(data);
+  }
+
+  optional<vector<string>> ParseStringArray(const string& encoded)
+  {
+    nlohmann::json data = nlohmann::json::parse(encoded, nullptr, false, false);
+    return JSONAPI::GetMaybeStringArray(data);
   }
 
   // The parser will use number_unsigned_t for all positive integers (including 0) if they fit into 64 bits.
