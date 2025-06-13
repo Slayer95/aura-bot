@@ -127,7 +127,7 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #define IGNORE_ENUM_LAST(EnumType) IGNORE_CASE(EnumType::LAST)
 
 #ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(P) (P)
+#define UNREFERENCED_PARAMETER(P) p = p
 #endif
 
 #define PRINT_IF(T, U) \

@@ -10761,6 +10761,7 @@ GamePlayerResult CGame::ResolveUndecidedController(CGameController* controllerDa
           UNREACHABLE();
           return GamePlayerResult::kUndecided;
       }
+      break;
     }
 
     case GameControllerType::kUser: {
@@ -10774,6 +10775,7 @@ GamePlayerResult CGame::ResolveUndecidedController(CGameController* controllerDa
           UNREACHABLE();
           return GamePlayerResult::kUndecided;
       }
+      break;
     }
 
     case GameControllerType::kComputer: {
@@ -10788,6 +10790,7 @@ GamePlayerResult CGame::ResolveUndecidedController(CGameController* controllerDa
           UNREACHABLE();
           return GamePlayerResult::kUndecided;
       }
+      break;
     }
 
     case GameControllerType::LAST: {
