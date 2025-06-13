@@ -357,30 +357,38 @@ void CAuraDB::Initialize()
 {
   PRINT_IF(LogLevel::kNotice, "[SQLITE3] initializing database")
 
-  if (m_DB->Exec(R"(CREATE TABLE moderators ( name TEXT NOT NULL, server TEXT NOT NULL DEFAULT '', PRIMARY KEY ( name, server ) ))") != SQLITE_OK)
+  if (m_DB->Exec(R"(CREATE TABLE moderators ( name TEXT NOT NULL, server TEXT NOT NULL DEFAULT '', PRIMARY KEY ( name, server ) ))") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating moderators table - " + m_DB->GetError())
+  }
 
-  if (m_DB->Exec("CREATE TABLE bans ( name TEXT NOT NULL, server TEXT NOT NULL, authserver TEXT NOT NULL, ip TEXT NOT NULL, date TEXT NOT NULL, expiry TEXT NOT NULL, permanent INTEGER DEFAULT 0, moderator TEXT NOT NULL, reason TEXT, PRIMARY KEY ( name, server, authserver ) )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE bans ( name TEXT NOT NULL, server TEXT NOT NULL, authserver TEXT NOT NULL, ip TEXT NOT NULL, date TEXT NOT NULL, expiry TEXT NOT NULL, permanent INTEGER DEFAULT 0, moderator TEXT NOT NULL, reason TEXT, PRIMARY KEY ( name, server, authserver ) )") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating bans table - " + m_DB->GetError())
+  }
 
-  if (m_DB->Exec("CREATE TABLE players ( name TEXT NOT NULL, server TEXT not NULL, initialip TEXT NOT NULL, latestip TEXT NOT NULL, initialreport TEXT, reports INTEGER DEFAULT 0, latestgame INTEGER DEFAULT 0, games INTEGER DEFAULT 0, dotas INTEGER DEFAULT 0, loadingtime INTEGER DEFAULT 0, duration INTEGER DEFAULT 0, left INTEGER DEFAULT 0, wins INTEGER DEFAULT 0, losses INTEGER DEFAULT 0, kills INTEGER DEFAULT 0, deaths INTEGER DEFAULT 0, creepkills INTEGER DEFAULT 0, creepdenies INTEGER DEFAULT 0, assists INTEGER DEFAULT 0, neutralkills INTEGER DEFAULT 0, towerkills INTEGER DEFAULT 0, raxkills INTEGER DEFAULT 0, courierkills INTEGER DEFAULT 0, PRIMARY KEY ( name, server ) )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE players ( name TEXT NOT NULL, server TEXT not NULL, initialip TEXT NOT NULL, latestip TEXT NOT NULL, initialreport TEXT, reports INTEGER DEFAULT 0, latestgame INTEGER DEFAULT 0, games INTEGER DEFAULT 0, dotas INTEGER DEFAULT 0, loadingtime INTEGER DEFAULT 0, duration INTEGER DEFAULT 0, left INTEGER DEFAULT 0, wins INTEGER DEFAULT 0, losses INTEGER DEFAULT 0, kills INTEGER DEFAULT 0, deaths INTEGER DEFAULT 0, creepkills INTEGER DEFAULT 0, creepdenies INTEGER DEFAULT 0, assists INTEGER DEFAULT 0, neutralkills INTEGER DEFAULT 0, towerkills INTEGER DEFAULT 0, raxkills INTEGER DEFAULT 0, courierkills INTEGER DEFAULT 0, PRIMARY KEY ( name, server ) )") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating players table - " + m_DB->GetError())
+  }
 
   // crc32 here is the true CRC32 hash of the map file (i.e. <map.file_hash.crc32> in the map ini, NOT <map.crc>, NOR legacy <map_crc>)
-  if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, playernames TEXT NOT NULL, playerids TEXT NOT NULL, saveids TEXT )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE games ( id INTEGER PRIMARY KEY, creator TEXT, mapcpath TEXT NOT NULL, mapspath TEXT NOT NULL, crc32 TEXT NOT NULL, replay TEXT, playernames TEXT NOT NULL, playerids TEXT NOT NULL, saveids TEXT )") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating games table - " + m_DB->GetError())
+  }
 
-  if (m_DB->Exec("CREATE TABLE config ( name TEXT NOT NULL PRIMARY KEY, value INTEGER )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE config ( name TEXT NOT NULL PRIMARY KEY, value INTEGER )") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating config table - " + m_DB->GetError())
+  }
 
-  if (m_DB->Exec("CREATE TABLE iptocountry ( ip1 INTEGER NOT NULL, ip2 INTEGER NOT NULL, country TEXT NOT NULL, PRIMARY KEY ( ip1, ip2 ) )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE iptocountry ( ip1 INTEGER NOT NULL, ip2 INTEGER NOT NULL, country TEXT NOT NULL, PRIMARY KEY ( ip1, ip2 ) )") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating iptocountry table - " + m_DB->GetError())
+  }
 
-  if (m_DB->Exec("CREATE TABLE aliases ( alias TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE aliases ( alias TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL )") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating aliases table - " + m_DB->GetError())
+  }
 
-  if (m_DB->Exec("CREATE TABLE commands ( command TEXT NOT NULL, scope TEXT NOT NULL, type TEXT NOT NULL, action TEXT NOT NULL, PRIMARY KEY ( command, scope ) )") != SQLITE_OK)
+  if (m_DB->Exec("CREATE TABLE commands ( command TEXT NOT NULL, scope TEXT NOT NULL, type TEXT NOT NULL, action TEXT NOT NULL, PRIMARY KEY ( command, scope ) )") != SQLITE_OK) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error creating commands table - " + m_DB->GetError())
+  }
 
   // Insert schema number
   sqlite3_stmt* Statement = nullptr;
@@ -961,8 +969,9 @@ void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGame
 
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 
-  if (RC != SQLITE_DONE)
+  if (RC != SQLITE_DONE) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error updating gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError())
+  }
 
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 }
@@ -1105,8 +1114,9 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
 
   RC = m_DB->Step(Statement);
 
-  if (RC != SQLITE_DONE)
+  if (RC != SQLITE_DONE) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error adding dotaplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError())
+  }
 
   m_DB->Finalize(Statement);
 }
@@ -1485,8 +1495,9 @@ string CAuraDB::FromCheck(uint32_t ip)
     else
       Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - row doesn't have 1 column");
   }
-  else if (RC == SQLITE_ERROR)
+  else if (RC == SQLITE_ERROR) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError())
+  }
 
   m_DB->Reset(m_StmtCache[FROM_CHECK_IDX]);
 
@@ -1517,10 +1528,11 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
 
   int32_t RC = m_DB->Step(m_StmtCache[FROM_ADD_IDX]);
 
-  if (RC == SQLITE_DONE)
+  if (RC == SQLITE_DONE) {
     Success = true;
-  else if (RC == SQLITE_ERROR)
+  } else if (RC == SQLITE_ERROR) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError())
+  }
 
   m_DB->Reset(m_StmtCache[FROM_ADD_IDX]);
 
@@ -1548,10 +1560,11 @@ bool CAuraDB::AliasAdd(const string& alias, const string& target)
 
   int32_t RC = m_DB->Step(m_StmtCache[ALIAS_ADD_IDX]);
 
-  if (RC == SQLITE_DONE)
+  if (RC == SQLITE_DONE) {
     Success = true;
-  else if (RC == SQLITE_ERROR)
+  } else if (RC == SQLITE_ERROR) {
     PRINT_IF(LogLevel::kError, "[SQLITE3] error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError())
+  }
 
   m_DB->Reset(m_StmtCache[ALIAS_ADD_IDX]);
 
