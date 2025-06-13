@@ -73,8 +73,8 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
             // or not, we won't try that again for the given file.
             //
 
-            AllocateSectorChecksums(hf, true);
-            hf->bLoadedSectorCRCs = true;
+            if(AllocateSectorChecksums(hf, true) == ERROR_SUCCESS)
+                hf->bLoadedSectorCRCs = true;
         }
 
         // TODO: If the raw data MD5s are not loaded yet, load them now
@@ -194,6 +194,13 @@ static DWORD ReadMpqSectors(TMPQFile * hf, LPBYTE pbBuffer, DWORD dwByteOffset, 
                         dwErrCode = ERROR_FILE_CORRUPT;
                         break;
                     }
+
+                    // Special case (MPQ_2024_v1_300TK2.09p.w3x, file File00010254.blp):
+                    // Extracted less than required. Fill the rest with zeros
+                    if((DWORD)(cbOutSector) < dwBytesInThisSector)
+                    {
+                        memset(pbOutSector + cbOutSector, 0, dwBytesInThisSector - cbOutSector);
+                    }
                 }
                 else
                 {
@@ -254,6 +261,8 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
     // If the file sector is not loaded yet, do it
     if(hf->dwSectorOffs != 0)
     {
+        DWORD cbRawData = hf->dwDataSize;
+
         // Is the file compressed?
         if(pFileEntry->dwFlags & MPQ_FILE_COMPRESS_MASK)
         {
@@ -261,11 +270,14 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
             pbCompressed = STORM_ALLOC(BYTE, pFileEntry->dwCmpSize);
             if(pbCompressed == NULL)
                 return ERROR_NOT_ENOUGH_MEMORY;
+            
+            // Redirect reading
             pbRawData = pbCompressed;
+            cbRawData = pFileEntry->dwCmpSize;
         }
 
         // Load the raw (compressed, encrypted) data
-        if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, pFileEntry->dwCmpSize))
+        if(!FileStream_Read(ha->pStream, &RawFilePos, pbRawData, cbRawData))
         {
             STORM_FREE(pbCompressed);
             return GetLastError();
@@ -298,7 +310,7 @@ static DWORD ReadMpqFileSingleUnit(TMPQFile * hf, void * pvBuffer, DWORD dwFileP
             // deDE\DBFilesClient\MountCapability.dbc  0x93->0x77  0x77     0x77     No
             //
 
-            if(pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE)
+            if(pFileEntry->dwFlags & MPQ_FILE_PATCH_FILE && cbInBuffer > sizeof(TPatchInfo))
                 cbInBuffer = cbInBuffer - sizeof(TPatchInfo);
 
             // Is the file compressed by Blizzard's multiple compression ?

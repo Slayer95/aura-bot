@@ -78,7 +78,7 @@ static void CreateNameWithSuffix(LPTSTR szBuffer, size_t cchMaxChars, LPCTSTR sz
         *szBuffer++ = '.';
 
     // Append the number
-    IntToString(szBuffer, szBufferEnd - szBuffer + 1, nValue);
+    SMemIntToStr(szBuffer, szBufferEnd - szBuffer + 1, nValue);
 }
 
 //-----------------------------------------------------------------------------
@@ -1198,7 +1198,7 @@ static bool FlatStream_LoadBitmap(TBlockStream * pStream)
             BSWAP_ARRAY32_UNSIGNED((LPDWORD)(&Footer), sizeof(FILE_BITMAP_FOOTER));
 
             // Verify if there is actually a footer
-            if(Footer.Signature == ID_FILE_BITMAP_FOOTER && Footer.Version == 0x03)
+            if(Footer.Signature == ID_FILE_BITMAP_FOOTER && Footer.Version == 0x03 && Footer.BlockSize != 0)
             {
                 // Get the offset of the bitmap, number of blocks and size of the bitmap
                 ByteOffset = MAKE_OFFSET64(Footer.MapOffsetHi, Footer.MapOffsetLo);
@@ -1765,7 +1765,7 @@ static void PartStream_Close(TBlockStream * pStream)
 
         // Make sure that the header is properly BSWAPed
         BSWAP_ARRAY32_UNSIGNED(&PartHeader, sizeof(PART_FILE_HEADER));
-        IntToString(PartHeader.GameBuildNumber, _countof(PartHeader.GameBuildNumber), pStream->BuildNumber);
+        SMemIntToStr(PartHeader.GameBuildNumber, _countof(PartHeader.GameBuildNumber), pStream->BuildNumber);
 
         // Write the part header
         pStream->BaseWrite(pStream, &ByteOffset, &PartHeader, sizeof(PART_FILE_HEADER));

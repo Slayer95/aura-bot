@@ -22,6 +22,31 @@
 //-----------------------------------------------------------------------------
 // Local functions
 
+#ifndef IMAGE_DOS_SIGNATURE
+
+#define IMAGE_DOS_SIGNATURE                 0x5A4D      // MZ
+#define IMAGE_FILE_DLL                      0x2000  // File is a DLL.
+
+typedef struct _IMAGE_DOS_HEADER
+{
+    USHORT e_magic;
+    USHORT dummy[0x1D];
+    DWORD  e_lfanew;
+} IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;
+
+typedef struct _IMAGE_FILE_HEADER
+{
+    USHORT  Machine;
+    USHORT  NumberOfSections;
+    DWORD   TimeDateStamp;
+    DWORD   PointerToSymbolTable;
+    DWORD   NumberOfSymbols;
+    USHORT  SizeOfOptionalHeader;
+    USHORT  Characteristics;
+} IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;
+#endif
+
+
 static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHeaderBuffer)
 {
     LPDWORD HeaderInt32 = (LPDWORD)pbHeaderBuffer;
@@ -64,11 +89,26 @@ static MTYPE CheckMapType(LPCTSTR szFileName, LPBYTE pbHeaderBuffer, size_t cbHe
 
     // MIX files are DLL files that contain MPQ in overlay.
     // Only Warcraft III is able to load them, so we consider them Warcraft III maps
-    if(cbHeaderBuffer > 0x200 && pbHeaderBuffer[0] == 'M' && pbHeaderBuffer[1] == 'Z')
+    // Do not include EXE files, because they may be World of Warcraft patches
+    if(cbHeaderBuffer > sizeof(IMAGE_DOS_HEADER))
     {
-        // Check the value of IMAGE_DOS_HEADER::e_lfanew at offset 0x3C
-        if(0 < HeaderInt32[0x0F] && HeaderInt32[0x0F] < 0x10000)
-            return MapTypeWarcraft3;
+        PIMAGE_FILE_HEADER pFileHeader;
+        PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)(pbHeaderBuffer);
+        size_t dwMaxAllowedSize = cbHeaderBuffer - sizeof(DWORD) - sizeof(IMAGE_FILE_HEADER);
+
+        // Verify the header of EXE/DLL files
+        if((pDosHeader->e_magic == IMAGE_DOS_SIGNATURE) && (0 < pDosHeader->e_lfanew && pDosHeader->e_lfanew < 0x10000))
+        {
+            // Is the file an EXE?
+            if((size_t)pDosHeader->e_lfanew <= dwMaxAllowedSize)
+            {
+                pFileHeader = (PIMAGE_FILE_HEADER)(pbHeaderBuffer + pDosHeader->e_lfanew + sizeof(DWORD));
+                if(pFileHeader->Characteristics & IMAGE_FILE_DLL)
+                {
+                    return MapTypeWarcraft3;
+                }
+            }
+        }
     }
 
     // No special map type recognized
@@ -228,7 +268,7 @@ bool WINAPI SFileOpenArchive(
     DWORD dwFlags,
     HANDLE * phMpq)
 {
-    TMPQUserData * pUserData;
+    TMPQUserData * pUserData = NULL;
     TFileStream * pStream = NULL;       // Open file stream
     TMPQArchive * ha = NULL;            // Archive handle
     TFileEntry * pFileEntry;
@@ -268,7 +308,9 @@ bool WINAPI SFileOpenArchive(
     // Allocate the MPQhandle
     if(dwErrCode == ERROR_SUCCESS)
     {
-        if((ha = STORM_ALLOC(TMPQArchive, 1)) == NULL)
+        if((ha = STORM_ALLOC(TMPQArchive, 1)) != NULL)
+            memset(ha, 0, sizeof(TMPQArchive));
+        else
             dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
     }
 
@@ -290,7 +332,6 @@ bool WINAPI SFileOpenArchive(
         DWORD dwHeaderID;
         bool bSearchComplete = false;
 
-        memset(ha, 0, sizeof(TMPQArchive));
         ha->dwValidFileFlags = MPQ_FILE_VALID_FLAGS;
         ha->pfnHashString = HashStringSlash;
         ha->pStream = pStream;
@@ -354,18 +395,25 @@ bool WINAPI SFileOpenArchive(
                 {
                     if(ha->pUserData == NULL && dwHeaderID == ID_MPQ_USERDATA)
                     {
+                        // Copy the eventual user data to the separate buffer
+                        memcpy(&ha->UserData, ha->HeaderData, sizeof(TMPQUserData));
+
                         // Verify if this looks like a valid user data
-                        pUserData = IsValidMpqUserData(ByteOffset, FileSize, ha->HeaderData);
+                        pUserData = IsValidMpqUserData(ByteOffset, FileSize, &ha->UserData);
                         if(pUserData != NULL)
                         {
-                            // Fill the user data header
-                            ha->UserDataPos = ByteOffset;
-                            ha->pUserData = &ha->UserData;
-                            memcpy(ha->pUserData, pUserData, sizeof(TMPQUserData));
+                            // Set the byte offset to the loaded user data
+                            ULONGLONG TempByteOffset = ByteOffset + pUserData->dwHeaderOffs;
 
-                            // Continue searching from that position
-                            ByteOffset += ha->pUserData->dwHeaderOffs;
-                            break;
+                            // Read the eventual MPQ header from the position where the user data points
+                            if(!FileStream_Read(ha->pStream, &TempByteOffset, ha->HeaderData, sizeof(ha->HeaderData)))
+                            {
+                                dwErrCode = GetLastError();
+                                break;
+                            }
+
+                            // Re-initialize the header ID
+                            dwHeaderID = BSWAP_INT32_UNSIGNED(ha->HeaderData[0]);
                         }
                     }
                 }
@@ -405,12 +453,24 @@ bool WINAPI SFileOpenArchive(
 
                 // Move the pointers
                 ByteOffset += 0x200;
+                pUserData = NULL;
             }
         }
 
         // Did we identify one of the supported headers?
         if(dwErrCode == ERROR_SUCCESS)
         {
+            // If we retrieved the offset from the user data offset, initialize the user data
+            if(pUserData != NULL)
+            {
+                // Fill the user data header
+                ha->pUserData = &ha->UserData;
+                ha->UserDataPos = ByteOffset;
+
+                // Set the real byte offset
+                ByteOffset = ByteOffset + pUserData->dwHeaderOffs;
+            }
+
             // Set the user data position to the MPQ header, if none
             if(ha->pUserData == NULL)
                 ha->UserDataPos = ByteOffset;
@@ -482,10 +542,14 @@ bool WINAPI SFileOpenArchive(
                 break;
         }
 
-        // Set the size of file sector
-        ha->dwSectorSize = (0x200 << ha->pHeader->wSectorSize);
+        // Set the size of file sector. Be sure to check for integer overflow
+        if((ha->dwSectorSize = (0x200 << ha->pHeader->wSectorSize)) == 0)
+            dwErrCode = ERROR_FILE_CORRUPT;
+    }
 
-        // Verify if any of the tables doesn't start beyond the end of the file
+    // Verify if any of the tables doesn't start beyond the end of the file
+    if(dwErrCode == ERROR_SUCCESS)
+    {
         dwErrCode = VerifyMpqTablePositions(ha, FileSize);
     }
 

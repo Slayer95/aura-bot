@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /* StormLib.h                        Copyright (c) Ladislav Zezula 1999-2017 */
 /*---------------------------------------------------------------------------*/
-/* StormLib library v 9.22                                                   */
+/* StormLib library v 9.30                                                   */
 /*                                                                           */
 /* Author : Ladislav Zezula                                                  */
 /* E-mail : ladik@zezula.net                                                 */
@@ -74,6 +74,7 @@
 /* 12.12.16  9.21  Lad  Release 9.21                                         */
 /* 10.11.17  9.22  Lad  Release 9.22                                         */
 /* 28.09.22  9.24  Lad  lcLocale -> lcFileLocale, also contains platform     */
+/* 01.11.24  9.30  Lad  Added conversion from UTF-8 to file name and back    */
 /*****************************************************************************/
 
 #ifndef __STORMLIB_H__
@@ -101,11 +102,11 @@ extern "C" {
 //  Z - S for static-linked CRT library, D for multithreaded DLL CRT library
 //
 
-#if defined(__STORMLIB_SELF__) && !defined(STORMLIB_NO_AUTO_LINK)
-#define STORMLIB_NO_AUTO_LINK // Define this if you don't want to link using pragmas when using msvc
+#if defined(__STORMLIB_SELF__) && !defined(__STORMLIB_NO_STATIC_LINK__)
+#define __STORMLIB_NO_STATIC_LINK__ // Define this if you don't want to link using pragmas when using msvc
 #endif
 
-#if defined(_MSC_VER) && !defined(STORMLIB_NO_AUTO_LINK)
+#if defined(_MSC_VER) && !defined(__STORMLIB_NO_STATIC_LINK__)
   #ifndef WDK_BUILD
     #ifdef _DEBUG                                 // DEBUG VERSIONS
       #ifndef _UNICODE
@@ -143,8 +144,8 @@ extern "C" {
 //-----------------------------------------------------------------------------
 // Defines
 
-#define STORMLIB_VERSION                0x0919  // Current version of StormLib
-#define STORMLIB_VERSION_STRING         "9.25"  // Current version of StormLib as string
+#define STORMLIB_VERSION                0x091E  // Current version of StormLib
+#define STORMLIB_VERSION_STRING         "9.30"  // Current version of StormLib as string
 
 #define ID_MPQ                      0x1A51504D  // MPQ archive header ID ('MPQ\x1A')
 #define ID_MPQ_USERDATA             0x1B51504D  // MPQ userdata entry ('MPQ\x1B')
@@ -162,6 +163,7 @@ extern "C" {
 #define ERROR_UNKNOWN_FILE_NAMES         10007  // A name of at least one file is unknown
 #define ERROR_CANT_FIND_PATCH_PREFIX     10008  // StormLib was unable to find patch prefix for the patches
 #define ERROR_FAKE_MPQ_HEADER            10009  // The header at this position is fake header
+#define ERROR_FILE_DELETED               10010  // The file is present but contains delete marker
 
 // Values for SFileCreateArchive
 #define HASH_TABLE_SIZE_MIN         0x00000004  // Verified: If there is 1 file, hash table size is 4
@@ -276,7 +278,7 @@ extern "C" {
 #define MPQ_COMPRESSION_ZLIB              0x02  // ZLIB compression
 #define MPQ_COMPRESSION_PKWARE            0x08  // PKWARE DCL compression
 #define MPQ_COMPRESSION_BZIP2             0x10  // BZIP2 compression (added in Warcraft III)
-#define MPQ_COMPRESSION_SPARSE            0x20  // Sparse compression (added in Starcraft 2)
+#define MPQ_COMPRESSION_SPARSE            0x20  // Run-length (sparse) compression (added in Starcraft 2)
 #define MPQ_COMPRESSION_ADPCM_MONO        0x40  // IMA ADPCM compression (mono)
 #define MPQ_COMPRESSION_ADPCM_STEREO      0x80  // IMA ADPCM compression (stereo)
 #define MPQ_COMPRESSION_LZMA              0x12  // LZMA compression. Added in Starcraft 2. This value is NOT a combination of flags.
@@ -1130,6 +1132,30 @@ int    WINAPI SCompExplode    (void * pvOutBuffer, int * pcbOutBuffer, void * pv
 int    WINAPI SCompCompress   (void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer, unsigned uCompressionMask, int nCmpType, int nCmpLevel);
 int    WINAPI SCompDecompress (void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer);
 int    WINAPI SCompDecompress2(void * pvOutBuffer, int * pcbOutBuffer, void * pvInBuffer, int cbInBuffer);
+
+//-----------------------------------------------------------------------------
+// Conversion of UTF-8 (MPQ listfiles) into file name safe strings
+
+#define SFILE_UTF8_ALLOW_INVALID_CHARS  0x01        // If set, then the function will treat invalid chars like like MultiByteToWideChar
+#define SFILE_UTF8_INVALID_CHARACTER    0xFFFD      // Marker of an invalid character
+#define SFILE_UNICODE_MAX               0x10FFFF    // The highest valid UNICODE char
+
+// Conversion of MPQ file name to file-name-safe string
+DWORD  WINAPI SMemUTF8ToFileName(
+    TCHAR * szBuffer,               // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    size_t ccBuffer,                // Length of the output buffer (must include EOS)
+    const void * lpString,          // Pointer to the begin of the string
+    const void * lpStringEnd,       // Pointer to the end of string. If NULL, it's assumed to be zero-terminated
+    DWORD dwFlags,                  // Additional flags
+    size_t * pOutLength);           // Pointer to a variable that receives the needed length (optional)
+
+DWORD  WINAPI SMemFileNameToUTF8(
+    void * lpBuffer,                // Pointer to the output buffer. If NULL, the function will calulate the needed length
+    size_t ccBuffer,                // Length of the output buffer (must include EOS)
+    const TCHAR * szString,         // Pointer to the begin of the string
+    const TCHAR * szStringEnd,      // Pointer to the end of string. If NULL, it's assumed to be zero-terminated
+    DWORD dwFlags,                  // Reserved
+    size_t * pOutLength);           // Pointer to a variable that receives the needed length in bytes (optional)
 
 //-----------------------------------------------------------------------------
 // Non-Windows support for SetLastError/GetLastError

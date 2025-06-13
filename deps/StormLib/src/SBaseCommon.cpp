@@ -30,7 +30,7 @@ LCID  g_lcFileLocale = 0;                       // Compound of file locale and p
 
 // Converts ASCII characters to lowercase
 // Converts slash (0x2F) to backslash (0x5C)
-unsigned char AsciiToLowerTable[256] =
+const unsigned char AsciiToLowerTable[256] =
 {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
@@ -52,7 +52,7 @@ unsigned char AsciiToLowerTable[256] =
 
 // Converts ASCII characters to uppercase
 // Converts slash (0x2F) to backslash (0x5C)
-unsigned char AsciiToUpperTable[256] =
+const unsigned char AsciiToUpperTable[256] =
 {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
@@ -135,7 +135,7 @@ void StringCreatePseudoFileName(char * szBuffer, size_t cchMaxChars, unsigned in
     szBuffer = StringCopy(szBuffer, (szBufferEnd - szBuffer), "File");
 
     // Number
-    szBuffer = IntToString(szBuffer, szBufferEnd - szBuffer + 1, nIndex, 8);
+    szBuffer = SMemIntToStr(szBuffer, szBufferEnd - szBuffer + 1, nIndex, 8);
 
     // Dot
     if(szBuffer < szBufferEnd)
@@ -1026,21 +1026,24 @@ void * LoadMpqTable(
         // and the table is loaded from the current file offset
         if(ByteOffset == SFILE_INVALID_POS)
             FileStream_GetPos(ha->pStream, &ByteOffset);
+        FileStream_GetSize(ha->pStream, &FileSize);
 
-        // On archives v 1.0, hash table and block table can go beyond EOF.
+        // Is the sector table within the file?
+        if(ByteOffset >= FileSize)
+        {
+            STORM_FREE(pbMpqTable);
+            return NULL;
+        }
+
+        // The hash table and block table can go beyond EOF.
         // Storm.dll reads as much as possible, then fills the missing part with zeros.
         // Abused by Spazzler map protector which sets hash table size to 0x00100000
         // Abused by NP_Protect in MPQs v4 as well
-        if(ha->pHeader->wFormatVersion == MPQ_FORMAT_VERSION_1)
+        if((ByteOffset + dwBytesToRead) > FileSize)
         {
-            // Cut the table size
-            FileStream_GetSize(ha->pStream, &FileSize);
-            if((ByteOffset + dwBytesToRead) > FileSize)
-            {
-                // Fill the extra data with zeros
-                dwBytesToRead = (DWORD)(FileSize - ByteOffset);
-                memset(pbMpqTable + dwBytesToRead, 0, (dwTableSize - dwBytesToRead));
-            }
+            // Fill the extra data with zeros
+            dwBytesToRead = (DWORD)(FileSize - ByteOffset);
+            memset(pbMpqTable + dwBytesToRead, 0, (dwTableSize - dwBytesToRead));
         }
 
         // Give the caller information that the table was cut
@@ -1272,8 +1275,11 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
             // Append the length of the patch info, if any
             if(hf->pPatchInfo != NULL)
             {
-                if((RawFilePos + hf->pPatchInfo->dwLength) < RawFilePos)
+                if((RawFilePos + hf->pPatchInfo->dwLength) < RawFilePos) {
+                    STORM_FREE(hf->SectorOffsets);
+                    hf->SectorOffsets = NULL;
                     return ERROR_FILE_CORRUPT;
+                }
                 RawFilePos += hf->pPatchInfo->dwLength;
             }
 
@@ -1360,10 +1366,16 @@ DWORD AllocateSectorOffsets(TMPQFile * hf, bool bLoadFromFile)
             {
                 // MPQ protectors put some ridiculous values there. We must limit the extra bytes
                 if(hf->SectorOffsets[0] > (dwSectorOffsLen + 0x400))
+                {
+                    STORM_FREE(hf->SectorOffsets);
+                    hf->SectorOffsets = NULL;
                     return ERROR_FILE_CORRUPT;
+                }
+
+                // The new length of the sector offset must be aligned to DWORD
+                dwSectorOffsLen = (hf->SectorOffsets[0] & 0xFFFFFFFC);
 
                 // Free the old sector offset table
-                dwSectorOffsLen = hf->SectorOffsets[0];
                 STORM_FREE(hf->SectorOffsets);
                 goto __LoadSectorOffsets;
             }
@@ -1972,3 +1984,29 @@ void ConvertTMPQHeader(void *header, uint16_t version)
 }
 
 #endif  // STORMLIB_LITTLE_ENDIAN
+
+//-----------------------------------------------------------------------------
+// Debug support
+
+/*
+#include <strsafe.h>
+
+#if defined(STORMLIB_WINDOWS) && defined(_DEBUG)
+void SFileLog(const char * format, ...)
+{
+    va_list argList;
+    char * szBuffer;
+    size_t nLength = 0x1000;
+
+    if((szBuffer = STORM_ALLOC(char, 0x1000)) != NULL)
+    {
+        va_start(argList, format);
+        StringCchVPrintfA(szBuffer, nLength, format, argList);
+        va_end(argList);
+
+        OutputDebugStringA(szBuffer);
+        STORM_FREE(szBuffer);
+    }
+}
+#endif
+*/

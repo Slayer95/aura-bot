@@ -106,7 +106,7 @@ typedef struct _TEST_EXTRA_HASHVAL
 
 typedef struct _TEST_EXTRA_HASHVALS
 {
-    EXTRA_TYPE Type;                        // Must be PatchList
+    EXTRA_TYPE Type;                        // Must be HashValues
     TEST_EXTRA_HASHVAL Items[2];
 } TEST_EXTRA_HASHVALS, *PTEST_EXTRA_HASHVALS;
 
@@ -155,16 +155,18 @@ typedef struct _WAVE_FILE_HEADER
 //------------------------------------------------------------------------------
 // Local variables
 
-#ifdef STORMLIB_WINDOWS
-#define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
-#endif
+#ifndef WORK_PATH_ROOT
+  #ifdef STORMLIB_WINDOWS
+  #define WORK_PATH_ROOT _T("\\Multimedia\\MPQs")
+  #endif
 
-#ifdef STORMLIB_LINUX
-#define WORK_PATH_ROOT "/media/ladik/MPQs"
-#endif
+  #ifdef STORMLIB_LINUX
+  #define WORK_PATH_ROOT "/media/ladik/MPQs"
+  #endif
 
-#ifdef STORMLIB_HAIKU
-#define WORK_PATH_ROOT "~/StormLib/test"
+  #ifdef STORMLIB_HAIKU
+  #define WORK_PATH_ROOT "~/StormLib/test"
+  #endif
 #endif
 
 // Definition of the path separator
@@ -275,6 +277,21 @@ static SFILE_MARKERS MpqMarkers[] =
 static TCHAR szMpqDirectory[MAX_PATH+1];
 size_t cchMpqDirectory = 0;
 
+inline bool AssertTrue(bool bCondition)
+{
+    if(!bCondition)
+    {
+#ifdef STORMLIB_WINDOWS
+        __debugbreak();
+#else
+        assert(false);
+#endif        
+    }
+    return bCondition;
+}
+
+#define ASSERT_TRUE(condition)      { if(!AssertTrue(condition)) { return false; } }
+
 static EXTRA_TYPE GetExtraType(const void * pExtra)
 {
     if(pExtra != NULL)
@@ -326,30 +343,6 @@ LPCTSTR GetRelativePath(LPCTSTR szFullPath)
         }
     }
     return _T("");
-}
-
-// Converts binary array to string.
-// The caller must ensure that the buffer has at least ((cbBinary * 2) + 1) characters
-template <typename xchar>
-xchar * StringFromBinary(LPBYTE pbBinary, size_t cbBinary, xchar * szBuffer)
-{
-    const char * IntToHexChar = "0123456789abcdef";
-    xchar * szSaveBuffer = szBuffer;
-
-    // Verify the binary pointer
-    if(pbBinary && cbBinary)
-    {
-        // Convert the bytes to string array
-        for(size_t i = 0; i < cbBinary; i++)
-        {
-            *szBuffer++ = IntToHexChar[pbBinary[i] >> 0x04];
-            *szBuffer++ = IntToHexChar[pbBinary[i] & 0x0F];
-        }
-    }
-
-    // Terminate the string
-    *szBuffer = 0;
-    return szSaveBuffer;
 }
 
 const char * GetFileText(PFILE_DATA pFileData)
@@ -582,16 +575,16 @@ static void CreateFullPathName(char * szBuffer, size_t cchBuffer, LPCTSTR szSubD
 static DWORD CalculateFileHash(TLogHelper * pLogger, LPCTSTR szFullPath, LPTSTR szFileHash)
 {
     TFileStream * pStream;
-    unsigned char file_hash[SHA256_DIGEST_SIZE];
-    LPCTSTR szShortPlainName = GetShortPlainName(szFullPath);
     hash_state sha256_state;
     ULONGLONG ByteOffset = 0;
     ULONGLONG FileSize = 0;
-    LPCTSTR szHashingFormat = _T("Hashing %s " fmt_X_of_Y_a);
+    LPCTSTR szShortPlainName = GetShortPlainName(szFullPath);
+    LPCTSTR szHashingFormat = _T("Hashing %s ") fmt_X_of_Y_t;
     LPBYTE pbFileBlock;
     DWORD cbBytesToRead;
     DWORD cbFileBlock = 0x100000;
     DWORD dwErrCode = ERROR_SUCCESS;
+    BYTE file_hash[SHA256_DIGEST_SIZE];
 
     // Notify the user
     pLogger->PrintProgress(_T("Hashing %s ..."), szShortPlainName);
@@ -1047,7 +1040,10 @@ static DWORD GetFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFileN
     }
     else
     {
-        pLogger->PrintError("Open failed: %s", szFileName);
+        if(GetLastError() != ERROR_FILE_DELETED)
+        {
+            pLogger->PrintError("Open failed: %s", szFileName);
+        }
     }
 
     return nPatchCount;
@@ -1058,7 +1054,7 @@ static DWORD VerifyFilePatchCount(TLogHelper * pLogger, HANDLE hMpq, LPCSTR szFi
     DWORD dwPatchCount = 0;
 
     // Retrieve the patch count
-    pLogger->PrintProgress(_T("Verifying patch count for %s ..."), szFileName);
+    pLogger->PrintProgress("Verifying patch count for %s ...", szFileName);
     dwPatchCount = GetFilePatchCount(pLogger, hMpq, szFileName);
 
     // Check if there are any patches at all
@@ -1440,9 +1436,12 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
     DWORD dwBytesRead;
     DWORD dwCrc32 = 0;
     DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szSafeName[1024];
 
-    // Do nothing if the file name is invalid
-    Logger.PrintProgress("Loading file %s ...", GetShortPlainName(szFileName));
+    // Print the file name to the console.
+    // Prevent bad UTF-8 sequences to go through
+    SMemUTF8ToFileName(szSafeName, _countof(szSafeName), szFileName, NULL, 0, NULL);
+    Logger.PrintProgress(_T("Loading file %s ..."), GetShortPlainName(szSafeName));
 
 #if defined(_MSC_VER) && defined(_DEBUG)
     //if(!_stricmp(szFileName, "(signature)"))
@@ -1451,6 +1450,7 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
 
     // Make sure that we open the proper locale file
     SFileSetLocale(lcFileLocale);
+    *ppFileData = NULL;
 
     // Open the file from MPQ
     if(SFileOpenFileEx(hMpq, szFileName, 0, &hFile))
@@ -1519,7 +1519,7 @@ static DWORD LoadMpqFile(TLogHelper & Logger, HANDLE hMpq, LPCSTR szFileName, LC
     }
     else
     {
-        if((dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) == 0)
+        if((dwSearchFlags & SEARCH_FLAG_IGNORE_ERRORS) == 0 && GetLastError() != ERROR_FILE_DELETED)
         {
             dwErrCode = Logger.PrintError("Open failed: %s", szFileName);
         }
@@ -1646,13 +1646,14 @@ static DWORD SearchArchive(
     DWORD dwFileCount = 0;
     hash_state md5state;
     TCHAR szListFile[MAX_PATH] = _T("");
-    char szMostPatched[MAX_PATH] = "";
     DWORD dwErrCode = ERROR_SUCCESS;
     bool bFound = true;
 
     // Construct the full name of the listfile
     CreateFullPathName(szListFile, _countof(szListFile), szListFileDir, _T("ListFile_Blizzard.txt"));
-    // fp = fopen("E:\\mpq-listing.txt", "wt");
+
+    // Create the log file with file sizes and CRCs
+    //fp = fopen("C:\\mpq-listing.txt", "wt");
 
     // Prepare hashing
     md5_init(&md5state);
@@ -1695,8 +1696,22 @@ static DWORD SearchArchive(
                 if(fp != NULL)
                 {
                     pFileData->dwCrc32 = crc32(0, pFileData->FileData, pFileData->dwFileSize);
-                    fprintf(fp, "%08x: %s                   \n", pFileData->dwCrc32, sf.cFileName);
+                    fprintf(fp, "%08x:%08x: %s                   \n", pFileData->dwFileSize, pFileData->dwCrc32, sf.cFileName);
                 }
+
+                // Also write the content of the file to the test directory
+                //if(fp != NULL)
+                //{
+                //    FILE * fp2;
+                //    char szFullPath[MAX_PATH] = "C:\\test\\";
+
+                //    strcat(szFullPath, sf.cFileName);
+                //    if((fp2 = fopen(szFullPath, "wb")) != NULL)
+                //    {
+                //        fwrite(pFileData->FileData, 1, pFileData->dwFileSize, fp2);
+                //        fclose(fp2);
+                //    }
+                //}
 
                 // Free the loaded file data
                 STORM_FREE(pFileData);
@@ -1749,7 +1764,7 @@ static DWORD VerifyDataChecksum(TLogHelper & Logger, HANDLE hMpq, DWORD dwSearch
         // Check the MD5 hash, if given
         if(IS_VALID_STRING(szNameHash))
         {
-            StringFromBinary(NameHash, MD5_DIGEST_SIZE, szNameHash);
+            SMemBinToStr(szNameHash, _countof(szNameHash), NameHash, MD5_DIGEST_SIZE);
             if(_stricmp(szNameHash, szExpectedHash))
             {
                 Logger.PrintMessage("Extracted files MD5 mismatch (expected: %s, obtained: %s)", szExpectedHash, szNameHash);
@@ -3770,34 +3785,102 @@ static DWORD TestReplaceFile(LPCTSTR szMpqPlainName, LPCTSTR szFilePlainName, LP
     return dwErrCode;
 }
 
+static bool TestUtfConversion(const void * lpString)
+{
+    LPTSTR szBuffer;
+    LPBYTE pbBuffer;
+    size_t nLength1 = 0;
+    size_t nLength2 = 0;
+    DWORD dwErrCode1;
+    DWORD dwErrCode2;
+    TCHAR szWideBuffer[1];
+    BYTE szByteBuffer[1];
+    int nResult;
+
+    // Get the number of bytes of the buffer while the output buffer is 0
+    dwErrCode1 = SMemUTF8ToFileName(NULL, 0, lpString, NULL, 0, &nLength1);
+
+    // Check the number of bytes when the buffer is non-NULL, but buffer length is insufficient
+    dwErrCode2 = SMemUTF8ToFileName(szWideBuffer, _countof(szWideBuffer), lpString, NULL, 0, &nLength2);
+    ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+    ASSERT_TRUE(nLength2 == nLength1);
+
+    // Check the number of bytes when the buffer is non-NULL, and buffer length is sufficient
+    if((szBuffer = STORM_ALLOC(TCHAR, nLength1)) != NULL)
+    {
+        dwErrCode2 = SMemUTF8ToFileName(szBuffer, nLength1, lpString, NULL, 0, &nLength2);
+        ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+        ASSERT_TRUE(nLength2 == nLength1);
+
+        // Get the number of bytes of the buffer while the output buffer is 0
+        dwErrCode1 = SMemFileNameToUTF8(NULL, 0, szBuffer, NULL, 0, &nLength1);
+
+        // Check the number of bytes when the buffer is non-NULL, but buffer length is insufficient
+        dwErrCode2 = SMemFileNameToUTF8(szByteBuffer, _countof(szByteBuffer), szBuffer, NULL, 0, &nLength2);
+        ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+        ASSERT_TRUE(nLength2 == nLength1);
+
+        // Check the conversion into a buffer large enough
+        if((pbBuffer = STORM_ALLOC(BYTE, nLength1)) != NULL)
+        {
+            dwErrCode2 = SMemFileNameToUTF8(pbBuffer, nLength1, szBuffer, NULL, 0, &nLength2);
+            ASSERT_TRUE(dwErrCode2 == dwErrCode1);
+            ASSERT_TRUE(nLength2 == nLength1);
+
+            nResult = memcmp(pbBuffer, lpString, nLength1);
+            ASSERT_TRUE(nResult == 0);
+
+            STORM_FREE(pbBuffer);
+        }
+
+        STORM_FREE(szBuffer);
+    }
+    return true;
+}
+
+static DWORD TestUtf8Conversions(const BYTE * szTestString, const TCHAR * szListFile)
+{
+    SFILE_FIND_DATA sf;
+    HANDLE hFind;
+    TCHAR szFullPath[MAX_PATH];
+
+    // Check conversion of the invalid UTF8 string
+    TestUtfConversion(szTestString);
+
+    // Create full path of the listfile
+    CreateFullPathName(szFullPath, _countof(szFullPath), szListFileDir, szListFile);
+
+    // Test all file names in the Chinese listfile
+    hFind = SListFileFindFirstFile(NULL, szFullPath, "*", &sf);
+    if(hFind != NULL)
+    {
+        while(SListFileFindNextFile(hFind, &sf))
+        {
+            if(!TestUtfConversion(sf.cFileName))
+            {
+                return ERROR_INVALID_DATA;
+            }
+        }
+        SListFileFindClose(hFind);
+    }
+
+    return ERROR_SUCCESS;
+}
+
 static void Test_PlayingSpace()
 {
 /*
-    // Check opening of a MPQ
-    LPCTSTR szArchiveName = _T("e:\\MPQ_2023_v1_Lusin2Rpg1.28.w3x");
-    LPBYTE pbBuffer = NULL;
-    HANDLE hFile = NULL;
-    HANDLE hMpq = NULL;
-    DWORD dwFileSize;
-    DWORD dwInt32;
+    HANDLE hMpq;
+    HANDLE hFile;
 
-    if(SFileOpenArchive(szArchiveName, 0, 0, &hMpq))
+    if(SFileOpenArchive(_T("e:\\Ladik\\Incoming\\WoW-1.11.2.5464-to-1.12.0.5595-enUS-patch.exe"), 0, 0, &hMpq))
     {
-        if(SFileOpenFileEx(hMpq, "File00002875.blp", 0, &hFile))
+        if(SFileOpenFileEx(hMpq, "AccountLogin.xml", 0, &hFile))
         {
-            SFileGetFileInfo(hFile, SFileInfoNameHash1, &dwInt32, sizeof(dwInt32), NULL);
-            SFileGetFileInfo(hFile, SFileInfoNameHash2, &dwInt32, sizeof(dwInt32), NULL);
+            DWORD dwBytesRead = 0;
+            BYTE Buffer[1024];
 
-            if((dwFileSize = SFileGetFileSize(hFile, NULL)) != NULL)
-            {
-                if((pbBuffer = STORM_ALLOC(BYTE, dwFileSize)) != NULL)
-                {
-                    DWORD dwBytesRead = 0;
-
-                    SFileReadFile(hFile, pbBuffer, dwFileSize, &dwBytesRead, NULL);
-                    STORM_FREE(pbBuffer);
-                }
-            }
+            SFileReadFile(hFile, Buffer, sizeof(Buffer), &dwBytesRead, NULL);
             SFileCloseFile(hFile);
         }
         SFileCloseArchive(hMpq);
@@ -3809,21 +3892,71 @@ static void Test_PlayingSpace()
 // Tables
 
 static LPCTSTR szSigned1 = _T("STANDARD.SNP");
-static LPCTSTR szSigned2 = _T("War2Patch_202.exe");
-static LPCTSTR szSigned3 = _T("WoW-1.2.3.4211-enUS-patch.exe");
+static LPCTSTR szSigned2 = _T("StarDat.mpq");
+static LPCTSTR szSigned3 = _T("War2Patch_202.exe");
 static LPCTSTR szSigned4 = _T("(10)DustwallowKeys.w3m");
+static LPCTSTR szSigned5 = _T("WoW-1.2.3.4211-enUS-patch.exe");
+static LPCTSTR szSigned6 = _T("WoW-1.11.2.5464-to-1.12.0.5595-enUS-patch.exe");
+static LPCTSTR szSigned7 = _T("WoW-3.0.1.8337-to-3.0.1.8392-enGB-patch.exe");
+static LPCTSTR szSigned8 = _T("wow-final.MPQ");
 
 static LPCTSTR szDiabdatMPQ = _T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ");
 
 static const TEST_EXTRA_ONEFILE  LfBliz = {ListFile, _T("ListFile_Blizzard.txt")};
 static const TEST_EXTRA_ONEFILE  LfWotI = {ListFile, _T("ListFile_WarOfTheImmortals.txt")};
+static const TEST_EXTRA_ONEFILE  LfBad1 = {ListFile, _T("ListFile_UTF8_Bad.txt")};
 
 static const BYTE szMpqFileNameUTF8[] = {0x4D, 0x50, 0x51, 0x5F, 0x32, 0x30, 0x32, 0x34, 0x5F, 0x76, 0x31, 0x5F, 0xE6, 0x9D, 0x82, 0xE9, 0xB1, 0xBC, 0xE5, 0x9C, 0xB0, 0xE7, 0x89, 0xA2, 0x5F, 0x30, 0x2E, 0x30, 0x38, 0x34, 0x62, 0x65, 0x74, 0x61, 0x34, 0x36, 0x2E, 0x77, 0x33, 0x78, 0x00};
 static const BYTE szLstFileNameUTF8[] = {0x4C, 0x69, 0x73, 0x74, 0x46, 0x69, 0x6C, 0x65, 0x5F, 0xE6, 0x9D, 0x82, 0xE9, 0xB1, 0xBC, 0xE5, 0x9C, 0xB0, 0xE7, 0x89, 0xA2, 0x5F, 0x30, 0x2E, 0x30, 0x38, 0x34, 0x62, 0x65, 0x74, 0x61, 0x34, 0x36, 0x2E, 0x74, 0x78, 0x74, 0x00};
-static const TEST_EXTRA_UTF8     MpqUtf8 = {Utf8File, szMpqFileNameUTF8, szLstFileNameUTF8};
 
-static const TEST_EXTRA_TWOFILES TwoFilesD1 = {TwoFiles, "music\\dintro.wav", "File00000023.xxx"};
-static const TEST_EXTRA_TWOFILES TwoFilesD2 = {TwoFiles, "waitingroombkgd.dc6"};
+static const BYTE FileNameInvalidUTF8[] =
+{
+//  Hexadecimal                    Binary                                   UTF-16      String
+//  ----                           ---------------------------------        ------      ------
+    0x7c,                   // --> 01111100                             --> 0x007c      %u[7cb7]
+    0xb7,                   // --> 10110111(bad)                        --> 0xfffd
+    0xc9, 0xb7,             // --> 11001001 10110111                    --> 0x0277      \x0277
+    0xc9, /* ca */          // --> 11001001 11001010(bad)               --> 0xfffd      %u[c9cac0bde7]
+    0xca, /* c0 */          // --> 11001010 11000000(bad)               --> 0xfffd
+    0xc0, /* bd */          // --> 11000000 10111101(bad)               --> 0x003d(bad)
+    0xbd,                   // --> 10111101(bad)                        --> 0xfffd
+    0xe7, /* c4 */          // --> 11100111 11000100(bad)               --> 0xfffd
+    0xc4, 0xa7,             // --> 11000100 10100111                    --> 0x0127      \x0127
+    0xca, /* de */          // --> 11001010 11011110(bad)               --> 0xfffd      %ca
+    0xde, 0xbb,             // --> 11011110 10111011                    --> 0x07bb      \x07bb
+    0xb6,                   // --> 10110110(bad)                        --> 0xfffd      %b6
+    0xd3, 0xad,             // --> 11010011 10101101                    --> 0x04ed      \x04ed
+    0xc4, /* fa */          // --> 11000100 11111010(bad)               --> 0xfffd      %u[c4fa]
+    0xfa, /* 5f */          // --> 11111010 01011111(bad)               --> 0xfffd
+    0x5f,                   // --> 01011111                             --> 0x005f      _
+    0xa1,                   // --> 10100001(bad)                        --> 0xfffd      %u[a1eea1f0a1ef]
+    0xee, /* a1 f0 */       // --> 11101110 10100001 11110000(bad)      --> 0xfffd
+    0xa1,                   // --> 10100001(bad)                        --> 0xfffd
+    0xf0, /* a1 ef */       // --> 11110000 10100001 11101111(bad)      --> 0xfffd
+    0xa1,                   // --> 10100001(bad)                        --> 0xfffd
+    0xef, /* 5f */          // --> 11101111 01011111(bad)               --> 0xfffd
+    0x5f,                   // --> 01011111                             --> 0x005f      _
+    0xf0, /* 80 80 80 */    // --> 11110000 10000000 10000000 10000000  --> 0x0000(bad) %u[f0808080]
+    0x80,                   // --> 10000000(bad)                        --> 0xfffd
+    0x80,                   // --> 10000000(bad)                        --> 0xfffd
+    0x80,                   // --> 10000000(bad)                        --> 0xfffd
+    0xe9, 0xa3, 0x9e,       // --> 11101001 10100011 10011110           --> 0x98de      \x98de
+    0xe4, 0xb8, 0x96,       // --> 11100100 10111000 10010110           --> 0x4e16      \x4e16
+    0xe7, 0x95, 0x8c,       // --> 11100111 10010101 10001100           --> 0x754c      \x754c
+    0xe9, 0xad, 0x94,       // --> 11101001 10101101 10010100           --> 0x9b54      \x9b54
+    0xe5, 0x85, 0xbd,       // --> 11100101 10000101 10111101           --> 0x517d      \x517d
+    0xe6, 0xac, 0xa2,       // --> 11100110 10101100 10100010           --> 0x6b22      \x6b22
+    0xe8, 0xbf, 0x8e,       // --> 11101000 10111111 10001110           --> 0x8fce      \x8fce
+    0xe6, 0x82, 0xa8,       // --> 11100110 10000010 10101000           --> 0x60a8      \x60a8
+    0x2e,                   // --> 00101110                             --> 0x002e      \x002e
+    0x6d, 0x64, 0x78,       // --> 01101101 01100100 01111000           --> ".mdx"
+    0x00                    // --> 00000000                             --> EOS
+};
+
+static const TEST_EXTRA_UTF8 MpqUtf8 = {Utf8File, szMpqFileNameUTF8, szLstFileNameUTF8};
+
+static const TEST_EXTRA_TWOFILES TwoFilesD1  = {TwoFiles, "music\\dintro.wav", "File00000023.xxx"};
+static const TEST_EXTRA_TWOFILES TwoFilesD2  = {TwoFiles, "waitingroombkgd.dc6"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3M = {TwoFiles, "file00000002.blp"};
 static const TEST_EXTRA_TWOFILES TwoFilesW3X = {TwoFiles, "BlueCrystal.mdx"};
 
@@ -3843,6 +3976,15 @@ static const TEST_EXTRA_PATCHES PatchSC1 =
     "music\\terran1.wav",
     0
 };
+
+static const TEST_EXTRA_PATCHES PatchBETA =
+{
+    PatchList,
+    _T("wow-08-beta-patch.mpq\0"),
+    "Creature\\GnomeSpidertank\\FlameLickSmallBlue.blp",
+    0
+};
+
 
 static const TEST_EXTRA_PATCHES Patch13286 =
 {
@@ -4006,6 +4148,26 @@ static const TEST_INFO1 TestList_MasterMirror[] =
 
 static const TEST_INFO1 Test_OpenMpqs[] =
 {
+
+    // PoC's by Gabe Sherman, tinh0.
+    {_T("pocs/MPQ_2024_01_HeapOverrun.mpq"),                    NULL, "7008f95dcbc4e5d840830c176dec6969",    14},
+    {_T("pocs/MPQ_2024_02_StackOverflow.mpq"),                  NULL, "7093fcbcc9674b3e152e74e8e8a937bb",     4},
+    {_T("pocs/MPQ_2024_03_TooBigAlloc.mpq"),                    NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_04_HeapOverflow.mpq"),                   NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_05_HeapOverflow.mpq"),                   NULL, "0539ae020719654a0ea6e2627a8195f8",    14},
+    {_T("pocs/MPQ_2024_06_HeapOverflowReadFile.mpq"),           NULL, "d41d8cd98f00b204e9800998ecf8427e",     1},
+    {_T("pocs/MPQ_2024_07_InvalidBitmapFooter.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_08_InvalidSectorSize.mpq"),              NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_09_InvalidSectorSize.mpq"),              NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_10_HuffDecompressError.mpq"),            NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_10_SparseDecompressError.mpq"),          NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2024_11_HiBlockTablePosInvalid.mpq"),         NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_01_SectorTableBeyondEOF.mpq"),           NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_02_SectorOffsetSizeNotAligned.mpq"),     NULL, "0cc175b9c0f1b6a831c399e269772661",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_03_InvalidPatchInfo.mpq"),               NULL, "93b885adfe0da089cdf634904fd59f71",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_04_InvalidArchiveSize64.mpq"),           NULL, "--------------------------------",     TFLG_WILL_FAIL},
+    {_T("pocs/MPQ_2025_05_AddFileError.mpq"),                   NULL, "ce9b8afed4221a53663d391f10691ba6",     TFLG_WILL_FAIL},
+
     // Correct or damaged archives
     {_T("MPQ_1997_v1_Diablo1_DIABDAT.MPQ"),                     NULL, "554b538541e42170ed41cb236483489e",  2910, &TwoFilesD1},  // Base MPQ from Diablo 1
     {_T("MPQ_1997_v1_patch_rt_SC1B.mpq"),                       NULL, "43fe7d362955be68a708486e399576a7",    10},               // From Starcraft 1 BETA
@@ -4021,7 +4183,6 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2002_v1_BlockTableCut.MPQ"),                       NULL, "a9499ab74d939303d8cda7c397c36275",   287},               // Truncated archive
     {_T("MPQ_2010_v2_HasUserData.s2ma"),                        NULL, "feff9e2c86db716b6ff5ffc906181200",    52},               // MPQ that actually has user data
     {_T("MPQ_2014_v1_AttributesOneEntryLess.w3x"),              NULL, "90451b7052eb0f1d6f4bf69b2daff7f5",   116},               // Warcraft III map whose "(attributes)" file has (BlockTableSize-1) entries
-    {_T("MPQ_2020_v1_AHF04patch.mix"),                          NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
     {_T("MPQ_2010_v3_expansion-locale-frFR.MPQ"),               NULL, "0c8fc921466f07421a281a05fad08b01",    53},               // MPQ archive v 3.0 (the only one I know)
     {_T("mpqe-file://MPQ_2011_v2_EncryptedMpq.MPQE"),           NULL, "10e4dcdbe95b7ad731c563ec6b71bc16",    82},               // Encrypted archive from Starcraft II installer
     {_T("part-file://MPQ_2010_v2_HashTableCompressed.MPQ.part"),NULL, "d41d8cd98f00b204e9800998ecf8427e", 14263},               // Partial MPQ with compressed hash table
@@ -4031,9 +4192,11 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2023_v1_BroodWarMap.scx"),                         NULL, "dd3afa3c2f5e562ce3ca91c0c605a71f",     3},               // Brood War map from StarCraft: Brood War 1.16
     {_T("MPQ_2023_v1_Volcanis.scm"),                            NULL, "522c89ca96d6736427b01f7c80dd626f",     3},               // Map modified with unusual file compression: ZLIB+Huffman
     {_T("MPQ_2023_v4_UTF8.s2ma"),                               NULL, "97b7a686650f3307d135e1d1b017a36a",    67},               // Map contaning files with Chinese names (UTF8-encoded)
-    {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "477af4ddf11eead1412d7c87cb81b530",  2004},               // Corrupt sector checksum table in file #A0
+    {_T("MPQ_2023_v1_GreenTD.w3x"),                             NULL, "a8d91fc4e52d7c21ff7feb498c74781a",  2004},               // Corrupt sector checksum table in file #A0
+
     {_T("MPQ_2023_v4_1F644C5A.SC2Replay"),                      NULL, "b225828ffbf5037553e6a1290187caab",    17},               // Corrupt patch info of the "(attributes)" file
     {_T("<Chinese MPQ name>"),                                  NULL, "67faeffd0c0aece205ac8b7282d8ad8e",  4697, &MpqUtf8},     // Chinese name of the MPQ
+    {_T("MPQ_2024_v1_BadUtf8_5.0.2.w3x"),                       NULL, "be34f9862758f021a1c6c77df3cd4f05",  6393, &LfBad1},      // Bad UTF-8 sequences in file names
 
     // Protected archives
     {_T("MPQ_2002_v1_ProtectedMap_InvalidUserData.w3x"),        NULL, "b900364cc134a51ddeca21a13697c3ca",    79},
@@ -4066,11 +4229,13 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     {_T("MPQ_2022_v1_Sniper.scx"),                              NULL, "2e955271b70b79344ad85b698f6ce9d8",    64},               // Multiple items in hash table for staredit\scenario.chk (locale=0, platform=0)
     {_T("MPQ_2022_v1_OcOc_Bound_2.scx"),                        NULL, "25cad16a2fb4e883767a1f512fc1dce7",    16},
     {_T("MPQ_2023_v1_Lusin2Rpg1.28.w3x"),                       NULL, "9c21352f06cf763fcf05e8a2691e6194", 10305, &HashVals},
+    {_T("MPQ_2024_v1_300TK2.09p.w3x"),                          NULL, "e442e3d2e7d457b9ba544544013b791f", 32588},               // Fake MPQ User data, fake MPQ header at offset 0x200
 
     // ASI plugins
-    {_T("MPQ_2020_v1_HS0.1.asi"),                               NULL, "50cba7460a6e6d270804fb9776a7ec4f",  6022},
-    {_T("MPQ_2022_v1_hs0.8.asi"),                               NULL, "6a40f733428001805bfe6e107ca9aec1", 11352},               // Items in hash table have platform = 0xFF
-    {_T("MPQ_2022_v1_MoeMoeMod.asi"),                           NULL, "89b923c7cde06de48815844a5bbb0ec4",  2578},
+    {_T("mix-mpq/AHF04patch.mix"),                              NULL, "d3c6aac48bc12813ef5ce4ad113e58bf",  2891},               // MIX file
+    {_T("mix-mpq/hs0.1.asi"),                                   NULL, "50cba7460a6e6d270804fb9776a7ec4f",  6022},
+    {_T("mix-mpq/hs0.8.asi"),                                   NULL, "6a40f733428001805bfe6e107ca9aec1", 11352},               // Items in hash table have platform = 0xFF
+    {_T("mix-mpq/MoeMoeMod.asi"),                               NULL, "89b923c7cde06de48815844a5bbb0ec4",  2578},
 
     // MPQ modifications from Chinese games
     {_T("MPx_2013_v1_LongwuOnline.mpk"),                        NULL, "548f7db88284097f7e94c95a08c5bc24",   469},               // MPK archive from Longwu online
@@ -4081,6 +4246,7 @@ static const TEST_INFO1 Test_OpenMpqs[] =
 
     // Patched MPQs
     {_T("MPQ_1998_v1_StarCraft.mpq"),                           NULL, "5ecef2f41c5fd44c264e269416de9495",   1943, &PatchSC1},   // Patched MPQ from StarCraft I
+    {_T("MPQ_2005_v1_texture.MPQ"),                             NULL, "f95f44bfd8e6dde30508bfec2d4cb842",  45533, &PatchBETA},  // WoW BETA:  Patched "texture.MPQ"
     {_T("MPQ_2012_v4_OldWorld.MPQ"),                            NULL, "07643ec62864b4dd4fc8f8a6a16ce006",  71439, &Patch13286}, // WoW 13286: Patched "OldWorld.MPQ"
     {_T("MPQ_2013_v4_world.MPQ"),                               NULL, "af9baeceab20139bbf94d03f99170ae0",  48930, &Patch15050}, // WoW 15050: Patched "world.MPQ"
     {_T("MPQ_2013_v4_locale-enGB.MPQ"),                         NULL, "d39e743aaf6dad51d643d65e6e564804",  14349, &Patch16965}, // WoW 16965: Patched "locale-enGB.MPQ"
@@ -4094,11 +4260,14 @@ static const TEST_INFO1 Test_OpenMpqs[] =
 
     // Signed archives
     {_T("MPQ_1997_v1_Diablo1_STANDARD.SNP"),               szSigned1, "5ef18ef9a26b5704d8d46a344d976c89",      2 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned2, "c1084033d0bd5f7e2b9b78b600c0bba8",     24 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_2003_v1_WeakSignatureEmpty.exe"),             szSigned3, "97580f9f6d98ffc50191c2f07773e818",  12259 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_1998_v1_StarDat.mpq"),                        szSigned2, "2530cb937565fd41b1dc0443697096a2",   2925 | TFLG_SIGN_ARCHIVE | TFLG_SIGCHECK_AFTER},
+    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned3, "c1084033d0bd5f7e2b9b78b600c0bba8",     24 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned3, "807fe2e4d38eccf5ee6bc88f5ee5940d",     25 | TFLG_SIGCHECK_BEFORE | TFLG_MODIFY | TFLG_SIGCHECK_AFTER},
     {_T("MPQ_2002_v1_StrongSignature.w3m"),                szSigned4, "7b725d87e07a2173c42fe2314b95fa6c",     17 | TFLG_SIGCHECK_BEFORE},
-    {_T("MPQ_1998_v1_StarDat.mpq"),    _T("MPQ_1998_v1_StarDat.mpq"), "2530cb937565fd41b1dc0443697096a2",   2925 | TFLG_SIGN_ARCHIVE | TFLG_SIGCHECK_AFTER},
-    {_T("MPQ_1999_v1_WeakSignature.exe"),                  szSigned2, "807fe2e4d38eccf5ee6bc88f5ee5940d",     25 | TFLG_SIGCHECK_BEFORE | TFLG_MODIFY | TFLG_SIGCHECK_AFTER},
+    {_T("MPQ_2003_v1_WeakSignatureEmpty.exe"),             szSigned5, "1e24a80dafa5285a0aee9470263e5b7c",  12259 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2006_v1_WoW-1.11.2.5464-patch.exe_"),         szSigned6, "6d1ccbfc344b6a2bc4ddf14867e45fea",    952 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2007_v2_StrongSignature1.exe"),               szSigned7, "c553320a2f841ccb86c0643f58d8488a",     23 | TFLG_SIGCHECK_BEFORE},
+    {_T("MPQ_2007_v2_StrongSignature2.MPQ"),               szSigned8, "53cedaf7ba8c67b2e2ca95d5eb2b9380",   1622 | TFLG_SIGCHECK_BEFORE},
 
     // Multi-file archive with wrong prefix to see how StormLib deals with it
     {_T("flat-file://streaming/model.MPQ.0"),              _T("flat-file://model.MPQ.0"),           NULL,      0 | TFLG_WILL_FAIL},
@@ -4113,6 +4282,7 @@ static const TEST_INFO1 Test_OpenMpqs[] =
     // Check the GetFileInfo operations
     {_T("MPQ_2002_v1_StrongSignature.w3m"),                 NULL,     "7b725d87e07a2173c42fe2314b95fa6c",    17 | TFLG_GET_FILE_INFO},
     {_T("MPQ_2013_v4_SC2_EmptyMap.SC2Map"),                 NULL,     "88e1b9a88d56688c9c24037782b7bb68",    33 | TFLG_GET_FILE_INFO},
+
 };
 
 static const TEST_INFO1 Test_ReopenMpqs[] =
@@ -4194,6 +4364,7 @@ static const LPCSTR Test_CreateMpq_Localized[] =
 #define TEST_REPLACE_FILE
 #define TEST_VERIFY_HASHES
 #define TEST_CREATE_MPQS
+#define TEST_MISC_MPQS
 
 int _tmain(int argc, TCHAR * argv[])
 {
@@ -4210,10 +4381,13 @@ int _tmain(int argc, TCHAR * argv[])
     // Placeholder function for various testing purposes
     Test_PlayingSpace();
 
+    // Test the UTF-8 conversions
+    TestUtf8Conversions(FileNameInvalidUTF8, LfBad1.szFile);
+
 #ifdef TEST_COMMAND_LINE
     // Test-open MPQs from the command line. They must be plain name
     // and must be placed in the Test-MPQs folder
-    for(int i = 1; i < argc; i++)
+    for(int i = 2; i < argc; i++)
     {
         TestOpenArchive(argv[i], NULL, NULL, 0, &LfBliz);
     }
@@ -4221,10 +4395,9 @@ int _tmain(int argc, TCHAR * argv[])
 
 #ifdef TEST_LOCAL_LISTFILE      // Tests on a local listfile
     if(dwErrCode == ERROR_SUCCESS)
-    {
-        TestOnLocalListFile(_T("FLAT-MAP:listfile-test.txt"));
+        dwErrCode = TestOnLocalListFile(_T("FLAT-MAP:listfile-test.txt"));
+    if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestOnLocalListFile(_T("listfile-test.txt"));
-    }
 #endif  // TEST_LOCAL_LISTFILE
 
 #ifdef TEST_STREAM_OPERATIONS   // Test file stream operations
@@ -4327,6 +4500,7 @@ int _tmain(int argc, TCHAR * argv[])
     }
 #endif
 
+#ifdef TEST_MISC_MPQS
     // Test creating of an archive the same way like MPQ Editor does
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_TestGaps(_T("StormLibTest_GapsTest.mpq"));
@@ -4374,6 +4548,7 @@ int _tmain(int argc, TCHAR * argv[])
     // Open a MPQ (add custom user data to it)
     if(dwErrCode == ERROR_SUCCESS)
         dwErrCode = TestCreateArchive_BigArchive(_T("StormLibTest_BigArchive_v4.mpq"));
+#endif  // TEST_MISC_MPQS
 
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
