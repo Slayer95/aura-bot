@@ -692,6 +692,9 @@ GameResultTeamAnalysis CW3MMD::GetGameResultTeamAnalysis() const
         case GamePlayerResult::kDrawer:
           targetBitSet = &analysis.drawerTeams;
           break;
+        case GamePlayerResult::kUndecided:
+          break;
+        IGNORE_ENUM_LAST(GamePlayerResult)
       }
     }
     targetBitSet->set(controllerData->GetTeam());

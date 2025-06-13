@@ -56,7 +56,7 @@
 #else
 #define CHECK_SERVICE_TYPE(T) \
   do {\
-    UNREFERENCED_PARAMETER(T);\
+    T = T;\
   } while (0);
 #endif
 
