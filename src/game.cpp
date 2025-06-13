@@ -10902,6 +10902,7 @@ optional<GameResults> CGame::GetGameResultsLeaveCode()
       case GamePlayerResult::kUndecided:
         resultGroup = &gameResults->undecided;
         break;
+      IGNORE_ENUM_LAST(GamePlayerResult)
     }
     resultGroup->push_back(controllerData);
   }
