@@ -189,22 +189,33 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   const bool mayHaveSHA1 = war3Version >= GAMEVER(1u, 23u);
   const bool hasSHA1 = statData.m_MapScriptsSHA1.has_value();
   if (!mayHaveSHA1 && hasSHA1) {
-    //Ideally, all hosts SHOULD include them. But there are bots that don't.
     //Print("[BNETPROTO] SHA1 may only be included in stat strings for bnet games since v1.23");
     m_IsValid = false;
     return false;
   }
 
+  /*
+  if (mayHaveSHA1 && !hasSHA1) {
+    // Ideally, all hosts SHOULD include them. But there are bots that don't.
+    // The game client is happy with them, so we shall be happy with them as well.
+    // m_IsValid = false;
+    // return false;
+  }
+  */
+
   if (hasSHA1) {
     m_Info.m_MapScriptsSHA1.emplace();
     copy_n(statData.m_MapScriptsSHA1->begin(), 20, m_Info.m_MapScriptsSHA1->begin());
   }
-  //Print("[BNETPROTO] Host: <" + m_HostName + ">");
-  //Print("[BNETPROTO] Dimensions: " + to_string(m_Info.m_MapWidth) + "x" + to_string(m_Info.m_MapHeight));
-  //Print("[BNETPROTO] Blizz Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsBlizzHash) + ">");
-  //if (m_Info.m_MapScriptsSHA1.has_value()) {
-  //  Print("[BNETPROTO] SHA1 Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsSHA1.value()) + ">");
-  //}
+
+  /*
+  Print("[BNETPROTO] Host: <" + m_HostName + ">");
+  Print("[BNETPROTO] Dimensions: " + to_string(m_Info.m_MapWidth) + "x" + to_string(m_Info.m_MapHeight));
+  Print("[BNETPROTO] Blizz Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsBlizzHash) + ">");
+  if (m_Info.m_MapScriptsSHA1.has_value()) {
+    Print("[BNETPROTO] SHA1 Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsSHA1.value()) + ">");
+  }
+  //*/
   return true;
 }
 
