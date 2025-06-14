@@ -131,7 +131,7 @@ When using MSVC, follow this table to enable/disable components.
 | D++ | ``DISABLE_DPP`` | ``dpp.lib`` | ``dpp.dll;libcrypto-1.1.dll,libssl-1_1.dll,opus.dll,zlib1.dll`` |
 | D++ (x64) | ``DISABLE_DPP`` | ``dpp.lib`` | ``dpp.dll;libcrypto-1.1-x64.dll,libssl-1_1-x64.dll,opus.dll,zlib1.dll`` |
 | pjass | ``DISABLE_PJASS`` | ``pjass.lib`` | None |
-| MDNS (Bonjour Ⓡ) | ``DISABLE_MDNS`` | ``bonjour.lib`` | ``dnssd.dll`` (*) |
+| MDNS (Bonjour Ⓡ) | ``DISABLE_MDNS`` | ``bonjour.lib`` | ``dnssd.dll`` |
 
 **Note**: `dpp.dll` and other libraries required by DPP are available in DPP releases [6].
 
