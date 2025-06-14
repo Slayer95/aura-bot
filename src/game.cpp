@@ -10757,9 +10757,7 @@ GamePlayerResult CGame::ResolveUndecidedController(CGameController* controllerDa
           return GamePlayerResult::kLoser;
         case GameResultVirtualUndecidedHandler::kAuto:
           return ResolveUndecidedComputerOrVirtualAuto(controllerData, constraints, teamAnalysis);
-        case GameResultVirtualUndecidedHandler::LAST:
-          UNREACHABLE();
-          return GamePlayerResult::kUndecided;
+        IGNORE_ENUM_LAST(GameResultVirtualUndecidedHandler)
       }
       break;
     }
@@ -10771,9 +10769,7 @@ GamePlayerResult CGame::ResolveUndecidedController(CGameController* controllerDa
         case GameResultUserUndecidedHandler::kLoserSelf:
         case GameResultUserUndecidedHandler::kLoserSelfAndAllies:
           return GamePlayerResult::kLoser;
-        case GameResultUserUndecidedHandler::LAST:
-          UNREACHABLE();
-          return GamePlayerResult::kUndecided;
+        IGNORE_ENUM_LAST(GameResultUserUndecidedHandler)
       }
       break;
     }
@@ -10786,20 +10782,15 @@ GamePlayerResult CGame::ResolveUndecidedController(CGameController* controllerDa
           return GamePlayerResult::kLoser;
         case GameResultComputerUndecidedHandler::kAuto:
           return ResolveUndecidedComputerOrVirtualAuto(controllerData, constraints, teamAnalysis);
-        case GameResultComputerUndecidedHandler::LAST:
-          UNREACHABLE();
-          return GamePlayerResult::kUndecided;
+        IGNORE_ENUM_LAST(GameResultComputerUndecidedHandler)
       }
       break;
     }
 
-    case GameControllerType::LAST: {
-      UNREACHABLE();
-      return GamePlayerResult::kUndecided;
-    }
+    IGNORE_ENUM_LAST(GameControllerType)
   }
 
-  UNREACHABLE();
+  //UNREACHABLE();
   return GamePlayerResult::kUndecided;
 }
 
@@ -10828,7 +10819,7 @@ GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
       case GamePlayerResult::kDrawer:
         targetBitSet = &analysis.drawerTeams;
         break;
-      default: {
+      case GamePlayerResult::kUndecided: {
         switch (controllerData->GetType()) {
           case GameControllerType::kVirtual:
             targetBitSet = &analysis.undecidedVirtualTeams;
@@ -10842,6 +10833,7 @@ GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
           IGNORE_ENUM_LAST(GameControllerType)
         }
       }
+      IGNORE_ENUM_LAST(GamePlayerResult)
     }
 
     targetBitSet->set(controllerData->GetTeam());
