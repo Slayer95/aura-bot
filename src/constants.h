@@ -176,7 +176,7 @@ constexpr size_t MAX_GAME_NAME_SIZE = 31u;
 
 constexpr uint8_t APP_FOUND_DEPS_NONE = 0u;
 constexpr uint8_t APP_FOUND_DEPS_DPP = (1 << 0);
-constexpr uint8_t APP_FOUND_DEPS_BONJOUR = (1 << 1);
+constexpr uint8_t APP_FOUND_DEPS_MDNS = (1 << 1);
 
 // parser.h
 

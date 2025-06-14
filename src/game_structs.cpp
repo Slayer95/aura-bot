@@ -23,7 +23,7 @@
 
  */
 
-#include "bonjour.h"
+#include "mdns.h"
 #include "game_structs.h"
 #include "game_controller_data.h"
 #include "game_user.h"
@@ -232,8 +232,8 @@ GameDiscoveryInterface::~GameDiscoveryInterface()
 {
 }
 
-void GameDiscoveryInterface::AddBonjour(CAura* nAura, const CGame* game, const Version& version)
+void GameDiscoveryInterface::AddMDNS(CAura* nAura, const CGame* game, const Version& version)
 {
-  SetBonjour(version, make_shared<CBonjour>(nAura, game, type, port, version));
+  SetMDNS(version, make_shared<CMDNS>(nAura, game, type, port, version));
 }
 

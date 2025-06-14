@@ -229,7 +229,7 @@ template <typename T>
   return ToDecString(version.first) + "." + ToDecString(version.second);
 }
 
-[[nodiscard]] inline uint32_t ToVersionFlattened(const Version& version) // Bonjour protocol
+[[nodiscard]] inline uint32_t ToVersionFlattened(const Version& version) // MDNS protocol
 {
   return 10000u + 100u * (uint32_t)(version.first - 1) + (uint32_t)(version.second);
 }

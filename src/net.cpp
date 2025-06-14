@@ -387,7 +387,7 @@ bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
 CNet::CNet(CConfig& nCFG)
   : m_Aura(nullptr),
     m_Config(CNetConfig(nCFG)),
-    m_Bonjour(nullptr),
+    m_MDNS(nullptr),
     m_SupportUDPOverIPv6(false),
     m_UDPMainServerEnabled(false),
     m_UDPMainServer(nullptr),
@@ -509,7 +509,7 @@ bool CNet::Init()
     m_VLANServer = GetOrCreateTCPServer(m_VLANPort, "VLAN Server");
   }
 
-  m_Bonjour = CBonjour::CreateManager();
+  m_MDNS = CMDNS::CreateManager();
 
 #ifdef DISABLE_CPR
   QueryIPAddress();
@@ -2132,7 +2132,7 @@ CNet::~CNet()
   FlushOutgoingThrottles();
   m_HealthCheckContext.reset();
 
-  CBonjour::Destroy(m_Bonjour);
+  CMDNS::Destroy(m_MDNS);
 
   if (m_Aura->MatchLogLevel(LogLevel::kDebug)) {
     Print("[NET] shutdown ok");

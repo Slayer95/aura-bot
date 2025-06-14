@@ -96,7 +96,7 @@ public:
   std::optional<Version>                             m_GameDataVersion;
   bool                                               m_SupportsModernSlots;
 
-  OptionalDependencyMode                             m_BonjourDependency;
+  OptionalDependencyMode                             m_MDNSDependency;
   OptionalDependencyMode                             m_DPPDependency;
   uint8_t                                            m_FoundDeps;
 

@@ -21,7 +21,7 @@ Windows users must use VS2019 or later. Visual Studio 2019 Community edition wor
 you may manually disable troublesome components in the project ``"Configuration Properties"``. Find instructions below. [4] 
 
 **Note**: Support for game versions v1.30 onwards requires manual installation of the [Bonjour SDK for Windows][2]. Make sure that your 
-`%BONJOUR_SDK_HOME%` environment variable is correctly setup, then build aura with the ``Release-mDNS`` configuration.
+`%BONJOUR_SDK_HOME%` environment variable is correctly setup, then build aura with the ``Experimental`` configuration.
 
 **Note**: For the optional component D++, version 10.0.31 is the latest version supporting Windows 7. 
 By default, the MSVC solution provided uses DPP 10.1. For an Aura version supporting Windows 7, see the ``w7`` branch. [5]
@@ -122,26 +122,32 @@ Now proceed by following the [steps for Linux users](#steps) and omit StormLib i
 When using Makefile and setting the appropriate environment variables to disable components, as described in the
 Linux build steps, this section will be automatically taken care of.
 
-When using MSVC, follow these steps to disable components.
+When using MSVC, follow this table to enable/disable components.
 
-- **pjass** is disabled with the preprocessor directive ``DISABLE_PJASS``. The following linked libraries must be removed:
+|Component|Preprocessor directive (OFF)|Linked libraries (ON)|Dynamic libraries (.dll) (ON) |
+|:---:| :--- | :--- |
+| C++ Requests | ``DISABLE_CPR`` | ``cpr.lib;libcurl.lib;Crypt32.lib;Wldap32.lib`` | None |
+| MiniUPnP | ``DISABLE_MINIUPNP`` | ``miniupnpc.lib`` | None |
+| D++ | ``DISABLE_DPP`` | ``dpp.lib`` | ``dpp.dll;libcrypto-1.1.dll,libssl-1_1.dll,opus.dll,zlib1.dll`` |
+| D++ (x64) | ``DISABLE_DPP`` | ``dpp.lib`` | ``dpp.dll;libcrypto-1.1-x64.dll,libssl-1_1-x64.dll,opus.dll,zlib1.dll`` |
+| pjass | ``DISABLE_PJASS`` | ``pjass.lib`` | None |
+| MDNS (Bonjour Ⓡ) | ``DISABLE_MDNS`` | ``bonjour.lib`` | ``dnssd.dll`` (*) |
 
-  Windows: pjass.lib
+**Note**: `dpp.dll` and other libraries required by DPP are available in DPP releases [6].
 
-- **C++ Requests** (CPR) is disabled with the preprocessor directive ``DISABLE_CPR``. The following linked libraries must be removed:
+**Note**: `dnssd.dll` and other components required by MDNS must be installed separately [2].
 
-  Windows: cpr.lib;libcurl.lib;Crypt32.lib;Wldap32.lib
+The following MSVC configurations are already supported out of the box.
 
-- **MiniUPnP** is disabled with the preprocessor directive ``DISABLE_MINIUPNP``. The following linked libraries must be removed:
-
-  Windows: miniupnpc.lib
-  
-- **D++** is disabled with the preprocessor directive ``DISABLE_DPP``. The following linked libraries must be removed:
-
-  Windows: dpp.lib
+|Configuration|Components|
+|:---| :--- |
+|ReleaseLite|None|
+|Release|C++ Requests, MiniUPnP, D++|
+|Experimental|C++ Requests, MiniUPnP, D++, pjass, MDNS|
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://developer.apple.com/bonjour
 [3]: https://github.com/libcpr/cpr
 [4]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components
 [5]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7
+[6]: https://github.com/brainboxdotcc/DPP/releases

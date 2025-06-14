@@ -1,18 +1,18 @@
 
-#ifndef AURA_BONJOUR_H
-#define AURA_BONJOUR_H
+#ifndef AURA_MDNS_H
+#define AURA_MDNS_H
 
 #include "includes.h"
 #include "game.h"
-#include <bonjour/dns_sd.h>
+#include <mdns/dns_sd.h>
 #include <vector>
 #include <tuple>
 
 //
-// CBonjour
+// CMDNS
 //
 
-class CBonjour
+class CMDNS
 {
 public:
   CAura*                      m_Aura;
@@ -23,10 +23,10 @@ public:
   bool                        m_GameIsExpansion;
   Version                     m_GameVersion;
 
-  CBonjour(CAura* nAura, const CGame* nGame, uint8_t interfaceType, uint16_t port, const Version& version);
-  ~CBonjour();
+  CMDNS(CAura* nAura, const CGame* nGame, uint8_t interfaceType, uint16_t port, const Version& version);
+  ~CMDNS();
 
-#ifdef DISABLE_BONJOUR
+#ifdef DISABLE_MDNS
   inline DNSServiceRef static CreateManager() { return nullptr; }
   inline void static Destroy(void* /*ptr*/) {}
 #else
@@ -34,7 +34,7 @@ public:
   void static Destroy(DNSServiceRef service);
 #endif
 
-#ifndef DISABLE_BONJOUR
+#ifndef DISABLE_MDNS
   void PushRecord(std::shared_ptr<const CGame> nGame);
   std::vector<uint8_t> GetGameBroadcastData(std::shared_ptr<const CGame> nGame, const std::string& gameName);
 #endif
@@ -44,4 +44,4 @@ public:
   std::string static ErrorCodeToString(DNSServiceErrorType errCode); // DNSServiceErrorType is simply int32_t
 };
 
-#endif // AURA_BONJOUR_H
+#endif // AURA_MDNS_H

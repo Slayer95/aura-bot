@@ -28,7 +28,7 @@
 
 #include "includes.h"
 #include "socket.h"
-#include "bonjour.h"
+#include "mdns.h"
 #include "config/config_net.h"
 
 #pragma once
@@ -95,10 +95,10 @@ public:
 
   CAura*                                                      m_Aura;
   CNetConfig                                                  m_Config;
-#ifndef DISABLE_BONJOUR
-  DNSServiceRef                                               m_Bonjour;                                                 
+#ifndef DISABLE_MDNS
+  DNSServiceRef                                               m_MDNS;                                                 
 #else
-  void*                                                       m_Bonjour;
+  void*                                                       m_MDNS;
 #endif
 
   // == SECTION START ==

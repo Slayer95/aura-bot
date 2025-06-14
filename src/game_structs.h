@@ -215,19 +215,19 @@ struct GameDiscoveryInterface
 {
   uint8_t type;
   uint16_t port;
-  std::map<Version, std::shared_ptr<CBonjour>> bonjours;
+  std::map<Version, std::shared_ptr<CMDNS>> mdns;
 
   GameDiscoveryInterface();
   GameDiscoveryInterface(uint8_t nType, uint16_t nPort);
   ~GameDiscoveryInterface();
 
   [[nodiscard]] inline uint8_t GetType() const { return type; }
-  [[nodiscard]] inline std::shared_ptr<CBonjour> GetBonjour(const Version& version) { return bonjours[version]; }
-  inline void SetBonjour(const Version& version, std::shared_ptr<CBonjour> nBonjour) { bonjours[version] = nBonjour; }
+  [[nodiscard]] inline std::shared_ptr<CMDNS> GetMDNS(const Version& version) { return mdns[version]; }
+  inline void SetMDNS(const Version& version, std::shared_ptr<CMDNS> nMDNS) { mdns[version] = nMDNS; }
   inline void SetType(uint8_t nType) { type = nType; }
   inline void SetPort(uint16_t nPort) { port = nPort; }
 
-  void AddBonjour(CAura* nAura, const CGame* nGame, const Version& version);
+  void AddMDNS(CAura* nAura, const CGame* nGame, const Version& version);
 };
 
 #endif // AURA_GAME_STRUCTS_H_

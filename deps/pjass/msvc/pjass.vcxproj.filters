@@ -84,4 +84,8 @@
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\token.l" />
+    <CustomBuild Include="..\grammar.y" />
+  </ItemGroup>
 </Project>

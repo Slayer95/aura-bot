@@ -99,7 +99,7 @@
     <ClCompile Include="bncsutil_interface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bonjour.cpp">
+    <ClCompile Include="mdns.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="json.cpp">
@@ -197,7 +197,7 @@
     <ClInclude Include="..\lib\base64\base64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lib\bonjour\dns_sd.h">
+    <ClInclude Include="..\lib\mdns\dns_sd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\lib\crc32\crc32.h">
@@ -320,7 +320,7 @@
     <ClInclude Include="bncsutil_interface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bonjour.h">
+    <ClInclude Include="mdns.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="json.h">

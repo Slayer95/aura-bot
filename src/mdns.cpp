@@ -1,13 +1,13 @@
 #include <base64/base64.h>
 
 #include "aura.h"
-#include "bonjour.h"
+#include "mdns.h"
 #include "game.h"
 #include "os_util.h"
 
 using namespace std;
 
-CBonjour::CBonjour(CAura* nAura, const CGame* game, uint8_t interfaceType, uint16_t port, const Version& gameVersion)
+CMDNS::CMDNS(CAura* nAura, const CGame* game, uint8_t interfaceType, uint16_t port, const Version& gameVersion)
  : m_Aura(nAura),
    m_Service(nullptr),
    m_Record(nullptr),
@@ -16,7 +16,7 @@ CBonjour::CBonjour(CAura* nAura, const CGame* game, uint8_t interfaceType, uint1
    m_GameIsExpansion(game->GetIsExpansion()),
    m_GameVersion(gameVersion)
 {
-#ifndef DISABLE_BONJOUR
+#ifndef DISABLE_MDNS
   string regType = GetRegisterType();
   string gameName = game->GetDiscoveryNameLAN();
   DPRINT_IF(LogLevel::kTrace, "[MDNS] Initializing for <" + gameName + "> [" + ToVersionString(m_GameVersion) + "] ...");
@@ -34,7 +34,7 @@ CBonjour::CBonjour(CAura* nAura, const CGame* game, uint8_t interfaceType, uint1
    * it's a copy of an existing DNSServiceRef whose connection information should be reused.
    */
 
-  m_Service = nAura->m_Net.m_Bonjour;
+  m_Service = nAura->m_Net.m_MDNS;
   DNSServiceErrorType err = DNSServiceRegister(
     &m_Service, kDNSServiceFlagsShareConnection, interface, gameName.c_str(),
     regType.c_str(), "local", nullptr /* host */, htons(m_Port),
@@ -42,7 +42,7 @@ CBonjour::CBonjour(CAura* nAura, const CGame* game, uint8_t interfaceType, uint1
   );
 
   if (err) {
-    Print("[MDNS] DNSServiceRegister ERR: " + CBonjour::ErrorCodeToString(err));
+    Print("[MDNS] DNSServiceRegister ERR: " + CMDNS::ErrorCodeToString(err));
     m_Service = nullptr;
   } else {
     DPRINT_IF(LogLevel::kTrace, "[MDNS] DNSServiceRegister OK for <" + gameName + "> [" + ToVersionString(m_GameVersion) + "]");
@@ -50,35 +50,35 @@ CBonjour::CBonjour(CAura* nAura, const CGame* game, uint8_t interfaceType, uint1
 #endif
 }
 
-CBonjour::~CBonjour()
+CMDNS::~CMDNS()
 {
-#ifndef DISABLE_BONJOUR
+#ifndef DISABLE_MDNS
   DNSServiceRefDeallocate(m_Service);
   m_Service = nullptr;
 #endif
 }
 
-#ifndef DISABLE_BONJOUR
-DNSServiceRef CBonjour::CreateManager()
+#ifndef DISABLE_MDNS
+DNSServiceRef CMDNS::CreateManager()
 {
   DNSServiceRef manager = nullptr;
   DNSServiceErrorType err = DNSServiceCreateConnection(&manager);
   if (err) {
-    Print("[MDNS] Failed to initialize Bonjour service: " + CBonjour::ErrorCodeToString(err));
+    Print("[MDNS] Failed to initialize MDNS service: " + CMDNS::ErrorCodeToString(err));
     return nullptr;
   }
-  Print("[MDNS] Bonjour service initialized");
+  Print("[MDNS] MDNS service initialized");
   return manager;
 }
 
-void CBonjour::Destroy(DNSServiceRef service)
+void CMDNS::Destroy(DNSServiceRef service)
 {
   if (service) {
     DNSServiceRefDeallocate(service);
   }
 }
 
-vector<uint8_t> CBonjour::GetGameBroadcastData(shared_ptr<const CGame> game, const string& gameName)
+vector<uint8_t> CMDNS::GetGameBroadcastData(shared_ptr<const CGame> game, const string& gameName)
 {
   uint8_t slotsOff = static_cast<uint8_t>(game->GetNumSlots() == game->GetSlotsOpen() ? game->GetNumSlots() : game->GetSlotsOpen() + 1);
   uint32_t slotsTotal = game->GetNumSlots();
@@ -189,7 +189,7 @@ vector<uint8_t> CBonjour::GetGameBroadcastData(shared_ptr<const CGame> game, con
   return w66;
 }
 
-void CBonjour::PushRecord(shared_ptr<const CGame> game)
+void CMDNS::PushRecord(shared_ptr<const CGame> game)
 {
   string gameName = game->GetDiscoveryNameLAN();
   vector<uint8_t> broadcastData = GetGameBroadcastData(game, gameName);
@@ -197,10 +197,10 @@ void CBonjour::PushRecord(shared_ptr<const CGame> game)
   DNSServiceErrorType err = 0;
   if (m_Record) {
     err = DNSServiceUpdateRecord(m_Service, m_Record, kDNSServiceFlagsForce /* deprecated, see also kDNSServiceFlagsKnownUnique */, (uint16_t)broadcastData.size(), reinterpret_cast<const char*>(broadcastData.data()), 0);
-    if (err) Print("[MDNS] DNSServiceUpdateRecord ERR: " + CBonjour::ErrorCodeToString(err));
+    if (err) Print("[MDNS] DNSServiceUpdateRecord ERR: " + CMDNS::ErrorCodeToString(err));
   } else {
     err = DNSServiceAddRecord(m_Service, &m_Record, 0, 66 /* rrtype */, (uint16_t)broadcastData.size(), reinterpret_cast<const char*>(broadcastData.data()), 0);
-    if (err) Print("[MDNS] DNSServiceAddRecord ERR: " + CBonjour::ErrorCodeToString(err));
+    if (err) Print("[MDNS] DNSServiceAddRecord ERR: " + CMDNS::ErrorCodeToString(err));
   }
   if (!err) {
     PRINT_IF(LogLevel::kInfo, "[MDNS] Recorded <" + gameName + ">")
@@ -209,13 +209,13 @@ void CBonjour::PushRecord(shared_ptr<const CGame> game)
 
 #endif
 
-bool CBonjour::CheckLibrary()
+bool CMDNS::CheckLibrary()
 {
-  PLATFORM_STRING_TYPE serviceName = PLATFORM_STRING("Bonjour");
+  PLATFORM_STRING_TYPE serviceName = PLATFORM_STRING("MDNS");
   return CheckDynamicLibrary(PLATFORM_STRING("dnssd"), serviceName);
 }
 
-string CBonjour::GetRegisterType()
+string CMDNS::GetRegisterType()
 {
   string regType;
   regType.reserve(24);
@@ -229,7 +229,7 @@ string CBonjour::GetRegisterType()
   return regType;
 }
 
-string CBonjour::ErrorCodeToString(DNSServiceErrorType errCode)
+string CMDNS::ErrorCodeToString(DNSServiceErrorType errCode)
 {
   switch (errCode) {
     case kDNSServiceErr_NoError:

@@ -51,7 +51,7 @@
 #include <crc32/crc32.h>
 #include <sha1/sha1.h>
 #include "auradb.h"
-#include "bonjour.h"
+#include "mdns.h"
 #include <csvparser/csvparser.h>
 #include "config/config.h"
 #include "config/config_bot.h"
@@ -483,7 +483,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
     m_StartedFastPollingTicks(APP_MIN_TICKS),
     m_SupportsModernSlots(false),
-    m_BonjourDependency(OptionalDependencyMode::kUnknown),
+    m_MDNSDependency(OptionalDependencyMode::kUnknown),
     m_DPPDependency(OptionalDependencyMode::kUnknown),
     m_FoundDeps(APP_FOUND_DEPS_NONE),
 
@@ -1816,16 +1816,16 @@ void CAura::OnLoadConfigs()
   m_SupportsModernSlots = false;
 
   for (const auto& version : m_Config.m_SupportedGameVersions) {
-    if (version >= GAMEVER(1u, 30u) && m_BonjourDependency != OptionalDependencyMode::kRequired) {
-      m_BonjourDependency = OptionalDependencyMode::kOptEnhancement;
+    if (version >= GAMEVER(1u, 30u) && m_MDNSDependency != OptionalDependencyMode::kRequired) {
+      m_MDNSDependency = OptionalDependencyMode::kOptEnhancement;
     }
     if (version >= GAMEVER(1u, 29u)) {
       m_SupportsModernSlots = true;
     }
   }
 
-  if (m_BonjourDependency == OptionalDependencyMode::kUnknown) {
-    m_BonjourDependency = OptionalDependencyMode::kNotUseful;
+  if (m_MDNSDependency == OptionalDependencyMode::kUnknown) {
+    m_MDNSDependency = OptionalDependencyMode::kNotUseful;
   }
   m_DPPDependency = m_Discord.m_Config.m_Enabled ? OptionalDependencyMode::kOptEnhancement : OptionalDependencyMode::kNotUseful;
 
@@ -2160,18 +2160,18 @@ void CAura::GracefulExit()
 bool CAura::CheckDependencies()
 {
   bool success = true;
-  if (m_BonjourDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_BONJOUR)) {
-#ifndef DISABLE_BONJOUR
-    bool foundBonjour = CBonjour::CheckLibrary();
-    if (foundBonjour) {
-      m_FoundDeps |= APP_FOUND_DEPS_BONJOUR;
+  if (m_MDNSDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_MDNS)) {
+#ifndef DISABLE_MDNS
+    bool foundMDNS = CMDNS::CheckLibrary();
+    if (foundMDNS) {
+      m_FoundDeps |= APP_FOUND_DEPS_MDNS;
     } else {
       success = false;
-      m_FoundDeps &= ~APP_FOUND_DEPS_BONJOUR;
+      m_FoundDeps &= ~APP_FOUND_DEPS_MDNS;
 #ifdef _WIN32
-      Print("[AURA] warning - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards: https://support.apple.com/en-us/106380");
+      Print("[AURA] warning - MDNS not found. Install MDNS to enable LAN support for v1.30 onwards: https://support.apple.com/en-us/106380");
 #else
-      Print("[AURA] warning - Bonjour not found. Install Bonjour to enable LAN support for v1.30 onwards.");
+      Print("[AURA] warning - MDNS not found. Install MDNS to enable LAN support for v1.30 onwards.");
 #endif
     }
 #else

@@ -541,23 +541,23 @@ bool CGame::InitNet()
   }
 
   for (auto& entry : interfaces) {
-    // Bonjour doesn't distinguish between IPv4 and IPv6.
+    // MDNS doesn't distinguish between IPv4 and IPv6.
     GameDiscoveryInterface& interface = entry.second;
     if (interface.GetType() == GAME_DISCOVERY_INTERFACE_IPV6) continue;
-    InitBonjour(interface);
+    InitMDNS(interface);
   }
 
   m_NetInterfaces = FlatMap<uint8_t, GameDiscoveryInterface>(move(interfaces));
   return true;
 }
 
-void CGame::InitBonjour(GameDiscoveryInterface& interface)
+void CGame::InitMDNS(GameDiscoveryInterface& interface)
 {
   Version version = std::max(m_SupportedGameVersionsMin, GAMEVER(1u, 30u));
   while (version <= m_SupportedGameVersionsMax) {
     if (!GetIsSupportedGameVersion(version)) continue;
     // called from the constructor, so can't use shared_from_this
-    interface.AddBonjour(m_Aura, this, version);
+    interface.AddMDNS(m_Aura, this, version);
     version = GetNextVersion(version);
   }
 }
@@ -4374,10 +4374,10 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 
 void CGame::SendGameDiscoveryInfoMDNS() const
 {
-#ifndef DISABLE_BONJOUR
+#ifndef DISABLE_MDNS
   for (const auto& intEntry : m_NetInterfaces.get()) {
     const GameDiscoveryInterface& interface = intEntry.second;
-    for (const auto& bonEntry : interface.bonjours) {
+    for (const auto& bonEntry : interface.mdns) {
       bonEntry.second->PushRecord(shared_from_this());
     }
   }

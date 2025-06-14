@@ -35,7 +35,7 @@
 class CAsyncObserver;
 class CAura;
 class CAuraDB;
-class CBonjour;
+class CMDNS;
 class CBNCSUtilInterface;
 class CCLI;
 class CCommandContext;

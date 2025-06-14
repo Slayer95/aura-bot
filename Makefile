@@ -63,7 +63,7 @@ else
 endif
 
 CPPFLAGS += -DDISABLE_PJASS
-CPPFLAGS += -DDISABLE_BONJOUR
+CPPFLAGS += -DDISABLE_MDNS
 
 ifeq ($(AURABUILD_PJASS),1)
 $(error AURABUILD_PJASS is not yet supported. Please set AURABUILD_PJASS=0)
@@ -133,7 +133,7 @@ OBJS = $(OBJDIR)lib/base64/base64.o \
        $(OBJDIR)src/proxy/tcp_proxy.o \
        $(OBJDIR)src/auradb.o \
        $(OBJDIR)src/bncsutil_interface.o \
-       $(OBJDIR)src/bonjour.o \
+       $(OBJDIR)src/mdns.o \
        $(OBJDIR)src/file_util.o \
        $(OBJDIR)src/json.o \
        $(OBJDIR)src/os_util.o \

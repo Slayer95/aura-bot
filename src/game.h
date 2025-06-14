@@ -665,7 +665,7 @@ public:
   // Initialization
   void                                InitSlots();
   bool                                InitNet();
-  void                                InitBonjour(GameDiscoveryInterface& interface);
+  void                                InitMDNS(GameDiscoveryInterface& interface);
 
 
   // Map transfer
