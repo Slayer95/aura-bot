@@ -133,10 +133,6 @@ When using MSVC, follow this table to enable/disable components.
 | pjass | ``DISABLE_PJASS`` | ``pjass.lib`` | None |
 | MDNS (Bonjour Ⓡ) | ``DISABLE_MDNS`` | ``bonjour.lib`` | ``dnssd.dll`` |
 
-**Note**: `dpp.dll` and other libraries required by DPP are available in DPP releases [6].
-
-**Note**: `dnssd.dll` and other components required by MDNS must be installed separately [2].
-
 The following MSVC configurations are already supported out of the box.
 
 |Configuration|Components|
@@ -144,6 +140,10 @@ The following MSVC configurations are already supported out of the box.
 |ReleaseLite|None|
 |Release|C++ Requests, MiniUPnP, D++|
 |Experimental|C++ Requests, MiniUPnP, D++, pjass, MDNS|
+
+**Note**: `dpp.dll` and other libraries required by DPP are available in DPP releases [6].
+
+**Note**: `dnssd.dll` and other components required by MDNS must be installed separately [2].
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://developer.apple.com/bonjour
