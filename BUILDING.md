@@ -125,7 +125,7 @@ Linux build steps, this section will be automatically taken care of.
 When using MSVC, follow this table to enable/disable components.
 
 |Component|Preprocessor directive (OFF)|Linked libraries (ON)|Dynamic libraries (.dll) (ON) |
-|:---:| :--- | :--- |
+|:---:| :--- | :--- | :--- |
 | C++ Requests | ``DISABLE_CPR`` | ``cpr.lib;libcurl.lib;Crypt32.lib;Wldap32.lib`` | None |
 | MiniUPnP | ``DISABLE_MINIUPNP`` | ``miniupnpc.lib`` | None |
 | D++ | ``DISABLE_DPP`` | ``dpp.lib`` | ``dpp.dll;libcrypto-1.1.dll,libssl-1_1.dll,opus.dll,zlib1.dll`` |
