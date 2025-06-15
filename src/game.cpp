@@ -10832,6 +10832,7 @@ GameResultTeamAnalysis CGame::GetGameResultTeamAnalysis() const
             break;
           IGNORE_ENUM_LAST(GameControllerType)
         }
+        break;
       }
       IGNORE_ENUM_LAST(GamePlayerResult)
     }
@@ -10931,16 +10932,19 @@ GameResultSource CGame::RunGameResults()
   const GameResultSourceSelect sourceOfTruth = GetGameResultSourceOfTruth();
 
   if (sourceOfTruth == GameResultSourceSelect::kOnlyMMD) {
+    LOG_APP_IF(LogLevel::kDebug, "Resolving game results with method only-mmd")
     optional<GameResults> results = GetGameResultsMMD();
     return TryConfirmResults(results, GameResultSource::kMMD);
   }
 
   if (sourceOfTruth == GameResultSourceSelect::kOnlyLeaveCode) {
+    LOG_APP_IF(LogLevel::kDebug, "Resolving game results with method only-exit")
     optional<GameResults> results = GetGameResultsLeaveCode();
     return TryConfirmResults(results, GameResultSource::kLeaveCode);
   }
 
   if (sourceOfTruth == GameResultSourceSelect::kPreferMMD) {
+    LOG_APP_IF(LogLevel::kDebug, "Resolving game results with method prefer-mmd")
     optional<GameResults> results = GetGameResultsMMD();
     if (TryConfirmResults(results, GameResultSource::kMMD) != GameResultSource::kNone) {
       return m_GameResultsSource;
@@ -10950,6 +10954,7 @@ GameResultSource CGame::RunGameResults()
   }
 
   if (sourceOfTruth == GameResultSourceSelect::kPreferLeaveCode) {
+    LOG_APP_IF(LogLevel::kDebug, "Resolving game results with method prefer-exit")
     optional<GameResults> results = GetGameResultsLeaveCode();
     if (TryConfirmResults(results, GameResultSource::kLeaveCode) != GameResultSource::kNone) {
       return m_GameResultsSource;
