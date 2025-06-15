@@ -35,14 +35,18 @@ When installing Visual Studio, select in the `Desktop development with C++` cate
 
 **Note**: The recommended configuration is `Release-x64`. However, if you have trouble building it, 
 you may fall back to the ``ReleaseLite`` configuration instead. Alternatively, you may manually disable troublesome components 
-in the project ``"Configuration Properties"``, according to the instructions below [5].
-
-**Note**: Support for game versions v1.30 onwards requires the MDNS component (which by default is available in the `Experimental` 
-configurations). Make sure that your `%BONJOUR_SDK_HOME%` environment variable is correctly setup, then build aura with the `Experimental` configuration.
+in the project ``"Configuration Properties"``, according to the [Optional Components section](#optional-components).
 
 **Note**: For the component D++, v10.0.31 is the latest version supporting Windows 7. 
 By default, Aura (including the `Release` configuration) is built with D++ v10.1, which is NOT supported in Windows 7.
-For an Aura version supporting Windows 7, check out the ``w7`` branch. [6]
+For an Aura version supporting Windows 7, check out the ``w7`` branch. [5]
+
+**Note**: In order to use the `Release` or `Experimental` configurations, several dynamic libraries must be installed 
+(or placed next to the `aura` executable). Find the full list of DLLs in the [Optional Components section](#optional-components). 
+They can be downloaded from the official `D++` releases [7]
+
+**Note**: Support for game versions v1.30 onwards requires the `MDNS` component (which by default is available in the `Experimental` 
+configurations). Make sure that your `%BONJOUR_SDK_HOME%` environment variable is correctly setup, then build aura with the `Experimental` configuration.
 
 ### Linux
 
@@ -91,7 +95,7 @@ Afterwards, [C++ Requests][4]
 
   (Or disable it by setting an environment variable: ``export AURABUILD_CPR=0``)
 
-Optionally, [D++][8] for Discord integration. Note that this step can take around half an hour.
+Optionally, [D++][7] for Discord integration. Note that this step can take around half an hour.
 
 	cd ../../
 	git clone https://github.com/brainboxdotcc/DPP.git dpp-src
@@ -165,22 +169,21 @@ The following software must be installed as a requirement for some components.
 | MiniUPnP | None | None |
 | D++ | None | Dynamic libraries from previous table |
 | D++ (x64) | None | Dynamic libraries from previous table |
-| pjass | `flex` and `bison` [9] | None |
+| pjass | `flex` and `bison` [8] | None |
 | MDNS (Bonjour Ⓡ) | Bonjour SDK for Windows [2] | Bonjour Printer Services for Windows [3] |
 
 
-**Note**: (Release/Custom) `dpp.dll` and other libraries required in runtime by `D++` are available in DPP releases [8].
+**Note**: (Release/Custom) `dpp.dll` and other libraries required in runtime by `D++` are available in DPP releases [7].
 
-**Note**: (Experimental/Custom) `dnssd.dll` and other components required by `mdns` must be preinstalled as a requirement to [2].
+**Note**: (Experimental/Custom) `dnssd.dll` and other components required by `MDNS` must be preinstalled as a requirement to [2].
 
-**Note**: (Experimental/Custom) `flex` and `bison` are required by `pjass` and must be installed separately [9].
+**Note**: (Experimental/Custom) `flex` and `bison` are required by `pjass` and must be installed separately [8].
 
 [1]: https://gitlab.com/ivojulca/aura-bot
 [2]: https://developer.apple.com/download/all/?q=Bonjour%20SDK%20for%20Windows
 [3]: https://support.apple.com/en-us/106380
 [4]: https://github.com/libcpr/cpr
-[5]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components
-[6]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7
-[7]: https://github.com/brainboxdotcc/DPP
-[8]: https://github.com/brainboxdotcc/DPP/releases
-[9]: https://github.com/lexxmark/winflexbison
+[5]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7
+[6]: https://github.com/brainboxdotcc/DPP
+[7]: https://github.com/brainboxdotcc/DPP/releases
+[8]: https://github.com/lexxmark/winflexbison
