@@ -4,7 +4,7 @@
 
 ## Overview
 
-[Aura][1] is a modern cross-platform hosting bot for Warcraft III The Frozen Throne Ⓡ.
+[Aura][1] is a modern cross-platform hosting bot for Warcraft III Ⓡ.
 It's based on [GHost++][2] by Trevor Hogan. After several overhauls across 
 the entire code base, it now has excellent performance, and extensive networking, 
 configuration, and input capabilities, making it very easy to use not only by players, 

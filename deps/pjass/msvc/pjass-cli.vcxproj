@@ -72,28 +72,28 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(Configuration)\</OutDir>
-    <IntDir>build\cli\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectName)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectName)\build\$(Configuration)\</IntDir>
     <TargetName>pjass</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>build\cli\$(Configuration)\</IntDir>
-    <OutDir>$(Configuration)\</OutDir>
+    <IntDir>$(ProjectName)\build\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectName)\$(Configuration)\</OutDir>
     <CustomBuildBeforeTargets>
     </CustomBuildBeforeTargets>
     <TargetName>pjass</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(Configuration)-x64\</OutDir>
-    <IntDir>build\cli\$(Configuration)-x64\</IntDir>
+    <OutDir>$(ProjectName)\$(Configuration)-x64\</OutDir>
+    <IntDir>$(ProjectName)\build\$(Configuration)-x64\</IntDir>
     <TargetName>pjass</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>build\cli\$(Configuration)-x64\</IntDir>
-    <OutDir>$(Configuration)-x64\</OutDir>
+    <IntDir>$(ProjectName)\build\$(Configuration)-x64\</IntDir>
+    <OutDir>$(ProjectName)\$(Configuration)-x64\</OutDir>
     <TargetName>pjass</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

@@ -6,25 +6,43 @@ Get the source code from the project [repository][1] at Gitlab.
 ### Windows
 
 Windows users must use VS2019 or later. Visual Studio 2019 Community edition works.
+When installing Visual Studio, select in the `Desktop development with C++` category the `Windows 8.1 SDK` or `Windows 10 SDK` 
+(depending on your OS version). Additionally, the `MSVC v142 - VS 2019 C++ x64/x86 build tools (v14.29)`
 
-#### Steps
+#### Steps for Windows
 
-- Open `aura.sln` with VS2019.
-- Choose the ``Release`` configuration, and Win32 or x64 as the platform.
+- Open the solution file `aura.sln` with VS2019.
+- Choose one of the supported configurations according to the following table
+
+|Configuration|Extra Components|
+|:---| :--- |
+|ReleaseLite|None|
+|Release|C++ Requests, MiniUPnP, D++|
+|Experimental|C++ Requests, MiniUPnP, D++, pjass, MDNS|
+
+- Choose Win32 or x64 as the platform.
 - Compile the solution.
-- Find the generated binary in the `.msvc\Release` folder.
+- Find the generated binary in the `.msvc\Release` folder or an alternative according to your chosen configuration.
 
-**Note**: When installing Visual Studio select in the `Desktop development with C++` category the `Windows 8.1 SDK` or `Windows 10 SDK` 
-(depending on your OS version), and, if running with VS2019 or newer, also the `MSVC v142 - VS 2019 C++ x64/x86 build tools (v14.29)`.
+|Configuration|Platform|Output folder|
+|:---| :--- | :--- |
+|ReleaseLite|Win32|`.msvc\ReleaseLite`|
+|ReleaseLite|x64|`.msvc\ReleaseLite-x64`|
+|Release|Win32|`.msvc\Release`|
+|Release|x64|`.msvc\Release-x64`|
+|Experimental|Win32|`.msvc\Experimental`|
+|Experimental|x64|`.msvc\Experimental-x64`|
 
-**Note**: If you have trouble getting some components to build, you may use the ``ReleaseLite`` configuration instead. Alternatively, 
-you may manually disable troublesome components in the project ``"Configuration Properties"``. Find instructions below. [4] 
+**Note**: The recommended configuration is `Release-x64`. However, if you have trouble building it, 
+you may fall back to the ``ReleaseLite`` configuration instead. Alternatively, you may manually disable troublesome components 
+in the project ``"Configuration Properties"``, according to the instructions below [5].
 
-**Note**: Support for game versions v1.30 onwards requires manual installation of the [Bonjour SDK for Windows][2]. Make sure that your 
-`%BONJOUR_SDK_HOME%` environment variable is correctly setup, then build aura with the ``Experimental`` configuration.
+**Note**: Support for game versions v1.30 onwards requires the MDNS component (which by default is available in the `Experimental` 
+configurations). Make sure that your `%BONJOUR_SDK_HOME%` environment variable is correctly setup, then build aura with the `Experimental` configuration.
 
-**Note**: For the optional component D++, version 10.0.31 is the latest version supporting Windows 7. 
-By default, the MSVC solution provided uses DPP 10.1. For an Aura version supporting Windows 7, see the ``w7`` branch. [5]
+**Note**: For the component D++, v10.0.31 is the latest version supporting Windows 7. 
+By default, Aura (including the `Release` configuration) is built with D++ v10.1, which is NOT supported in Windows 7.
+For an Aura version supporting Windows 7, check out the ``w7`` branch. [6]
 
 ### Linux
 
@@ -33,7 +51,7 @@ Linux users will probably need some packages for it to build:
 * Debian/Ubuntu -- `apt-get install git build-essential m4 libgmp3-dev libssl-dev cmake libbz2-dev zlib1g-dev libcurl4-openssl-dev curl`
 * Arch Linux -- `pacman -S base-devel cmake libssl-dev libgmp3-dev curl libssl-dev`
 
-#### Steps
+#### Steps for Linux
 
 For building StormLib execute the following commands (line by line):
 
@@ -60,7 +78,7 @@ Continue building miniupnpc
 
   (Or disable it by setting an environment variable: ``export AURABUILD_MINIUPNP=0``)
   
-Afterwards, [C++ Requests][3]
+Afterwards, [C++ Requests][4]
 
 	cd ../..
 	git clone https://github.com/libcpr/cpr.git cpr-src
@@ -73,7 +91,7 @@ Afterwards, [C++ Requests][3]
 
   (Or disable it by setting an environment variable: ``export AURABUILD_CPR=0``)
 
-Optionally, D++ for Discord integration. Note that this step can take around half an hour.
+Optionally, [D++][8] for Discord integration. Note that this step can take around half an hour.
 
 	cd ../../
 	git clone https://github.com/brainboxdotcc/DPP.git dpp-src
@@ -103,6 +121,8 @@ on some distros such as Arch or CentOS.
 
 ### OS X
 
+**Warning**: These instructions for OS X haven't been tested.
+
 #### Requirements
 
 * OSX ≥10.15 (Catalina) or higher.
@@ -115,14 +135,18 @@ You can use [Homebrew](http://brew.sh/) to get `libgmp`. When you are at it, you
 	brew install gmp
 	brew install stormlib   # optional
 
-Now proceed by following the [steps for Linux users](#steps) and omit StormLib in case you installed it using `brew`.
+Now proceed by following the [steps for Linux users](#steps-for-linux) and omit StormLib in case you installed it using `brew`.
 
 ### Optional components
+
+#### Makefile
 
 When using Makefile and setting the appropriate environment variables to disable components, as described in the
 Linux build steps, this section will be automatically taken care of.
 
-When using MSVC, follow this table to enable/disable components.
+#### MSVC
+
+Follow this table to enable/disable components.
 
 |Component|Preprocessor directive (OFF)|Linked libraries (ON)|Dynamic libraries (.dll) (ON) |
 |:---:| :--- | :--- | :--- |
@@ -133,21 +157,30 @@ When using MSVC, follow this table to enable/disable components.
 | pjass | ``DISABLE_PJASS`` | ``pjass.lib`` | None |
 | MDNS (Bonjour Ⓡ) | ``DISABLE_MDNS`` | ``bonjour.lib`` | ``dnssd.dll`` |
 
-The following MSVC configurations are already supported out of the box.
+The following software must be installed as a requirement for some components.
 
-|Configuration|Components|
-|:---| :--- |
-|ReleaseLite|None|
-|Release|C++ Requests, MiniUPnP, D++|
-|Experimental|C++ Requests, MiniUPnP, D++, pjass, MDNS|
+|Component|Build|Runtime|
+|:---:| :--- | :--- |
+| C++ Requests | None | None |
+| MiniUPnP | None | None |
+| D++ | None | Dynamic libraries from previous table |
+| D++ (x64) | None | Dynamic libraries from previous table |
+| pjass | `flex` and `bison` [9] | None |
+| MDNS (Bonjour Ⓡ) | Bonjour SDK for Windows [2] | Bonjour Printer Services for Windows [3] |
 
-**Note**: `dpp.dll` and other libraries required by DPP are available in DPP releases [6].
 
-**Note**: `dnssd.dll` and other components required by MDNS must be installed separately [2].
+**Note**: (Release/Custom) `dpp.dll` and other libraries required in runtime by `D++` are available in DPP releases [8].
+
+**Note**: (Experimental/Custom) `dnssd.dll` and other components required by `mdns` must be preinstalled as a requirement to [2].
+
+**Note**: (Experimental/Custom) `flex` and `bison` are required by `pjass` and must be installed separately [9].
 
 [1]: https://gitlab.com/ivojulca/aura-bot
-[2]: https://developer.apple.com/bonjour
-[3]: https://github.com/libcpr/cpr
-[4]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components
-[5]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7
-[6]: https://github.com/brainboxdotcc/DPP/releases
+[2]: https://developer.apple.com/download/all/?q=Bonjour%20SDK%20for%20Windows
+[3]: https://support.apple.com/en-us/106380
+[4]: https://github.com/libcpr/cpr
+[5]: https://gitlab.com/ivojulca/aura-bot/BUILDING.md?ref_type=heads#optional-components
+[6]: https://gitlab.com/ivojulca/aura-bot/-/tree/w7
+[7]: https://github.com/brainboxdotcc/DPP
+[8]: https://github.com/brainboxdotcc/DPP/releases
+[9]: https://github.com/lexxmark/winflexbison
