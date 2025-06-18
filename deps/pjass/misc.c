@@ -129,7 +129,9 @@ void yyerrorline (enum errortype type, int line, const char *s)
 
     haderrors++;
 
-    if(out_size < max_out_size){
+    if(output == NULL){
+      printf("%s:%d: %s\n", curfile, line, s);
+    } else if(out_size < max_out_size){
       out_size += _snprintf_s(output + out_size, max_out_size - out_size + 1, max_out_size - out_size, "%s:%d: %s\n", curfile, line, s);
     } else {
       abort_parse = 1;

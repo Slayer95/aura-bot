@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef PJASS_STANDALONE
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,4 +21,5 @@ int _cdecl parse_jass_custom_s(char *output, int n_max_out_size, int *n_out_size
 
 #ifdef __cplusplus
 }
+#endif
 #endif // PJASS_EXPORT_H
