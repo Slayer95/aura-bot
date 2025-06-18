@@ -139,7 +139,7 @@ GameSource::GameSource(GameUser::CGameUser* nUser)
 }
 
 GameSource::GameSource(CAsyncObserver* nSpectator)
- : userType(GameCommandSource::kSpectator),
+ : userType(spectator->GetGame() ? GameCommandSource::kSpectator : GameCommandSource::kReplay),
    game(nSpectator->GetGame()),
    spectator(nSpectator)
 {
