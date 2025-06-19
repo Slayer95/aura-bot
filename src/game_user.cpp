@@ -973,7 +973,11 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
   if (m_LastDisconnectTicks.has_value()) {
     m_TotalDisconnectTicks += GetTicks() - m_LastDisconnectTicks.value();
   }
-  m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
+  if (GetGProxyExtended()) {
+    m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxyDLL!");
+  } else {
+    m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
+  }
   if (m_Game.get().m_Aura->MatchLogLevel(LogLevel::kNotice)) {
     Print(m_Game.get().GetLogPrefix() + "user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
   }
