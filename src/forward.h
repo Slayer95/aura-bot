@@ -89,6 +89,11 @@ namespace GameUser
   class CGameUser;
 };
 
+namespace GameProtocol
+{
+  struct PacketWrapper;
+};
+
 namespace Dota
 {
   class CDotaStats;

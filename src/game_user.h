@@ -49,6 +49,7 @@
 #include "includes.h"
 #include "command_history.h"
 #include "connection.h"
+#include "protocol/game_protocol.h"
 #include "game_structs.h"
 #include "rate_limiter.h"
 #include "map.h"
@@ -79,7 +80,8 @@ namespace GameUser
     std::vector<uint32_t>            m_RTTValues;                    // store the last few (10) pings received so we can take an average
     OptionalTimedUint32              m_MeasuredRTT;
     std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
-    std::queue<std::vector<uint8_t>> m_GProxyBuffer;                 // buffer with data used with GProxy++
+    std::queue<GameProtocol::PacketWrapper>        m_GProxyBuffer;                 // buffer with data used with GProxy++
+    size_t                           m_GProxyBufferSize;
     std::string                      m_LeftReason;                   // the reason the player left the game
     uint32_t                         m_RealmInternalId;
     std::string                      m_RealmHostName;                // the realm the player joined on (probable, can be spoofed)
@@ -431,6 +433,7 @@ namespace GameUser
 
     void Send(const std::vector<uint8_t>& data) final;
 
+    void EventGProxyAck(const size_t lastPacket);
     void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
     void EventGProxyReconnectInvalid();
     void RotateGProxyReconnectKey() const;

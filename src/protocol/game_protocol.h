@@ -167,6 +167,18 @@ namespace GameProtocol
     return count;
   }
 
+  struct PacketWrapper
+  {
+    size_t count;
+    std::vector<uint8_t> data;
+
+    PacketWrapper(const std::vector<uint8_t>& nData, const size_t nCount);
+    ~PacketWrapper();
+
+    void Remove(size_t count);
+    [[nodiscard]] inline bool GetIsEmpty() const { return count == 0; }
+  };
+
   // receive functions
 
   [[nodiscard]] CIncomingJoinRequest RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);

@@ -184,6 +184,29 @@ namespace GameProtocol
     }
   }
 
+  PacketWrapper::PacketWrapper(const std::vector<uint8_t>& nData, const size_t nCount)
+  : count(nCount),
+    data(nData)
+  {
+  };
+
+  PacketWrapper::~PacketWrapper()
+  {
+  };
+
+  void PacketWrapper::Remove(size_t removeCount)
+  {
+    size_t cursor = 0;
+    removeCount = min(removeCount, count);
+    while (0 < removeCount && cursor + 4 <= data.size()) {
+      assert((data[cursor] == GameProtocol::Magic::W3GS_HEADER) && "PacketWrapper should only contain W3GS packets.");
+      size_t thisSize = ByteArrayToUInt16(data, false, cursor + 2);
+      assert(thisSize >= 4 && "PacketWrapper should only contain valid-sized W3GS packets.");
+      cursor += thisSize;
+    }
+    data.erase(data.begin(), data.begin() + cursor);
+  }
+
   ///////////////////////
   // RECEIVE FUNCTIONS //
   ///////////////////////

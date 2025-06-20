@@ -101,6 +101,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
   : CConnection(*connection),
     m_Game(ref(*nGame)),
     m_IPv4Internal(std::move(nInternalIP)),
+    m_GProxyBufferSize(0),
     m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
@@ -707,22 +708,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
       }
       else if (Bytes[0] == GPSProtocol::Magic::GPS_HEADER && m_Game.get().GetIsProxyReconnectable()) {
         if (Bytes[1] == GPSProtocol::Magic::ACK && Length == 8) {
-          const size_t LastPacket               = ByteArrayToUInt32(Data, false, 4);
-          const size_t PacketsAlreadyUnqueued   = m_TotalPacketsSent - m_GProxyBuffer.size();
-
-          if (LastPacket > PacketsAlreadyUnqueued)
-          {
-            size_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
-
-            if (PacketsToUnqueue > m_GProxyBuffer.size())
-              PacketsToUnqueue = m_GProxyBuffer.size();
-
-            while (PacketsToUnqueue > 0)
-            {
-              m_GProxyBuffer.pop();
-              --PacketsToUnqueue;
-            }
-          }
+          EventGProxyAck(ByteArrayToUInt32(Data, false, 4));
         } else if (Bytes[1] == GPSProtocol::Magic::INIT) {
           InitGProxy(Length >= 8 ? ByteArrayToUInt32(Bytes, false, 4) : 0);
         } else if (Bytes[1] == GPSProtocol::Magic::SUPPORT_EXTENDED && Length >= 8) {
@@ -845,8 +831,9 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
 
   if (m_GProxy && m_Game.get().GetGameLoaded()) {
     // we can avoid buffering packets until we know the client is using GProxy++ since that'll be determined before the game starts
-    // this prevents us from buffering packets for non-GProxy++ clients
-    m_GProxyBuffer.push(data);
+    // this prevents us from buffering packets for non-reconnectable clients
+    m_GProxyBuffer.push(GameProtocol::PacketWrapper(data, count));
+    m_GProxyBufferSize += count;
   }
 
   if (!m_Disconnected && !m_Socket->HasError()) {
@@ -925,7 +912,29 @@ void CGameUser::CheckGProxyExtendedStartHandShake() const
   }
 }
 
-void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket)
+void CGameUser::EventGProxyAck(const size_t lastPacket)
+{
+  const size_t alreadyUnqueued = m_TotalPacketsSent - m_GProxyBufferSize;
+  if (lastPacket <= alreadyUnqueued) return;
+
+  size_t pendingUnqueue = min(m_GProxyBufferSize, lastPacket - alreadyUnqueued);
+  size_t thisUnqueue = 0;
+  size_t frontCount = 0;
+  while (pendingUnqueue > 0) {
+    GameProtocol::PacketWrapper& frontPackets = m_GProxyBuffer.front();
+    frontCount = frontPackets.count;
+    thisUnqueue = min(frontCount, pendingUnqueue);
+    if (thisUnqueue == frontCount) {
+      m_GProxyBuffer.pop();
+    } else {
+      frontPackets.Remove(thisUnqueue);
+    }
+    pendingUnqueue -= thisUnqueue;
+    m_GProxyBufferSize -= thisUnqueue;
+  }
+}
+
+void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t lastPacket)
 {
   // prevent potential session hijackers from stealing sudo access
   GetCommandHistory()->SudoModeEnd(m_Game.get().m_Aura, GetGame(), GetName());
@@ -940,37 +949,22 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t Las
 
   m_Socket->SetLogErrors(true);
   m_Socket->PutBytes(GPSProtocol::SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
+  EventGProxyAck(lastPacket);
 
-  const size_t PacketsAlreadyUnqueued = m_TotalPacketsSent - m_GProxyBuffer.size();
-
-  if (LastPacket > PacketsAlreadyUnqueued)
   {
-    size_t PacketsToUnqueue = LastPacket - PacketsAlreadyUnqueued;
-
-    if (PacketsToUnqueue > m_GProxyBuffer.size())
-      PacketsToUnqueue = m_GProxyBuffer.size();
-
-    while (PacketsToUnqueue > 0)
-    {
+    // send remaining packets from buffer,
+    // but preserve buffer in case the client disconnects again
+    queue<GameProtocol::PacketWrapper> tempBuffer;
+    while (!m_GProxyBuffer.empty()) {
+      m_Socket->PutBytes(m_GProxyBuffer.front().data);
+      tempBuffer.push(move(m_GProxyBuffer.front()));
       m_GProxyBuffer.pop();
-      --PacketsToUnqueue;
     }
-  }
-
-  // send remaining packets from buffer, preserve buffer
-
-  queue<std::vector<uint8_t>> TempBuffer;
-
-  while (!m_GProxyBuffer.empty())
-  {
-    m_Socket->PutBytes(m_GProxyBuffer.front());
-    TempBuffer.push(m_GProxyBuffer.front());
-    m_GProxyBuffer.pop();
+    m_GProxyBuffer.swap(tempBuffer);
   }
 
   m_Disconnected = false;
   m_StartedLaggingTicks = GetTicks();
-  m_GProxyBuffer = TempBuffer;
   m_GProxyDisconnectNoticeSent = false;
   m_LastGProxyWaitNoticeSentTime = 0;
   if (m_LastDisconnectTicks.has_value()) {
@@ -1175,6 +1169,7 @@ void CGameUser::DisableReconnect()
   m_GProxyPort = 0;
   m_GProxyCheckGameID = false;
   m_GProxyVersion = 0;
+  m_GProxyBufferSize = 0;
   */
 }
 
