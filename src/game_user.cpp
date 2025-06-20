@@ -838,13 +838,16 @@ uint8_t CGameUser::NextSendMap()
 void CGameUser::Send(const std::vector<uint8_t>& data)
 {
   // must start counting packet total from beginning of connection
-  // but we can avoid buffering packets until we know the client is using GProxy++ since that'll be determined before the game starts
-  // this prevents us from buffering packets for non-GProxy++ clients
+  // accepting fragmented packets should not make an observable difference,
+  // but it's the safest behavior, just in case something weird is going on in the caller side.
+  size_t count = GameProtocol::GetPacketCount<GameProtocol::FragmentPolicy::kAccept>(data);
+  m_TotalPacketsSent += count;
 
-  ++m_TotalPacketsSent;
-
-  if (m_GProxy && m_Game.get().GetGameLoaded())
+  if (m_GProxy && m_Game.get().GetGameLoaded()) {
+    // we can avoid buffering packets until we know the client is using GProxy++ since that'll be determined before the game starts
+    // this prevents us from buffering packets for non-GProxy++ clients
     m_GProxyBuffer.push(data);
+  }
 
   if (!m_Disconnected && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);
