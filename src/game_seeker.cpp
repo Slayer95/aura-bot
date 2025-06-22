@@ -201,6 +201,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
   } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
+    PRINT_IF(LogLevel::kDebug, "Game seeker timed out after " + to_string(timeout) + " ms")
     return GameSeekerStatus::kDestroy;
   }
 

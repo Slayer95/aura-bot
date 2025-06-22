@@ -651,7 +651,7 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
   }
 
   for (auto& serverConnections : m_GameSeekers) {
-    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
+    int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_SEEKER_CONNECTION_MAX_TIMEOUT, (float)GAME_SEEKER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CGameSeeker
       GameSeekerStatus result = (*i)->Update(fd, send_fd, timeout);
@@ -1981,6 +1981,7 @@ void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
 {
   CStreamIOSocket* socket = connection->GetSocket();
   if (!socket) return;
+  DPRINT_IF(LogLevel::kTrace, "[NET] registering game seeker from " + connection->GetIPString() + " (type " + ToDecString(nType) + ")")
   CGameSeeker* seeker = new CGameSeeker(connection, nType);
   m_GameSeekers[seeker->GetPort()].push_back(seeker);
   connection->SetSocket(nullptr);
