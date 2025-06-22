@@ -203,6 +203,7 @@ namespace GameProtocol
       size_t thisSize = ByteArrayToUInt16(data, false, cursor + 2);
       assert(thisSize >= 4 && "PacketWrapper should only contain valid-sized W3GS packets.");
       cursor += thisSize;
+      --removeCount;
     }
     data.erase(data.begin(), data.begin() + cursor);
   }
