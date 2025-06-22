@@ -115,10 +115,12 @@ enum class AppActionStatus : uint8_t {
 };
 
 enum class AppActionType : uint8_t {
-  kUPnP = 0,
-  kHostActiveMirror = 1,
-  kCommand = 2,
+  kHostActiveMirror = 0,
+  kCommand = 1,
+#ifndef DISABLE_MINIUPNP
+  kUPnP = 2,
   //LAST = 3,
+#endif
 };
 
 enum class AppActionMode : uint8_t {

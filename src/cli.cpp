@@ -851,6 +851,13 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     ConditionalRequireError("--exec", "--exec-as", m_ExecCommands.empty());
   }
 
+#ifdef DISABLE_MINIUPNP
+  if (!m_PortForwardTCP.empty() || !m_PortForwardUDP.empty()) {
+    Print("[AURA] --port-forward-tcp and --port-forward-udp are not available in this Aura distribution");
+    m_ParseResult = CLIResult::kError;
+  }
+#endif
+
   // Hosted games
 
   if (m_GameOwnerLess.value_or(false) && m_GameOwner.has_value()) {
@@ -983,6 +990,7 @@ void CCLI::OverrideConfig(CAura* nAura) const
 
 bool CCLI::QueueActions(CAura* nAura) const
 {
+#ifndef DISABLE_MINIUPNP
   for (const auto& port : m_PortForwardTCP) {
     AppAction upnpAction = AppAction(AppActionType::kUPnP, AppActionMode::kTCP, port, port);
     nAura->m_PendingActions.push(upnpAction);
@@ -992,6 +1000,7 @@ bool CCLI::QueueActions(CAura* nAura) const
     AppAction upnpAction = AppAction(AppActionType::kUPnP, AppActionMode::kUDP, port, port);
     nAura->m_PendingActions.push(upnpAction);
   }
+#endif
 
   if (m_SearchTarget.has_value()) {
     CGameExtraOptions options;
