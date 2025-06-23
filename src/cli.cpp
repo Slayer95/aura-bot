@@ -918,6 +918,100 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   return m_ParseResult;
 }
 
+void CCLI::ConditionalRequireError(const string& gateName, const string& subName, bool isConverse)
+{
+  if (isConverse) {
+    Print("[AURA] " + subName + " cannot be provided unless " + gateName + " is also provided.");
+  } else {
+    Print("[AURA] " + gateName + " requires " + subName + " to also be provided.");
+  }
+  m_ParseResult = CLIResult::kError;
+}
+
+void CCLI::ConditionalRequireOppositeError(const string& gateName, const string& subName, bool isConverse)
+{
+  if (isConverse) {
+    Print("[AURA] " + subName + " cannot be provided if " + gateName + " is also provided.");
+  } else {
+    Print("[AURA] " + gateName + " requires " + subName + " to NOT be provided.");
+  }
+  m_ParseResult = CLIResult::kError;
+}
+
+template<typename T, typename U>
+void CCLI::ConditionalRequire(const string& gateName, const optional<T>& gate, const string& subName, const optional<U>& sub, bool isBiDi)
+{
+  // Flags and options are treated separately.
+  // For completeness, all CLI options are wrapped in std::optional.
+  // However, in practice, empty std::optional<bool> 
+  // are treated as false by the conditional requirements checker.
+  //
+  // This behavior is tailored to --mirror and related options that can
+  // only be configured from the CLI. This excludes e.g. --mirror-timeout.
+  bool gateTestResult, subTestResult;
+  if constexpr (is_same_v<T, bool>) {
+    gateTestResult = gate.value_or(false);
+  } else {
+    gateTestResult = gate.has_value();
+  }
+  if constexpr (is_same_v<U, bool>) {
+    subTestResult = sub.value_or(false);
+  } else {
+    subTestResult = sub.has_value();
+  }
+  if (gateTestResult) {
+    if (!subTestResult) {
+      ConditionalRequireError(gateName, subName, false);
+    }
+  } else if (isBiDi && subTestResult) {
+    ConditionalRequireError(gateName, subName, true);
+  }
+}
+
+template void CCLI::ConditionalRequire(const string& gateName, const optional<filesystem::path>& gate, const string& subName, const optional<bool>& sub, bool isBiDi);
+template void CCLI::ConditionalRequire(const string& gateName, const optional<bool>& gate, const string& subName, const optional<string>& sub, bool isBiDi);
+template void CCLI::ConditionalRequire(const string& gateName, const optional<bool>& gate, const string& subName, const optional<MirrorSourceType>& sub, bool isBiDi);
+template void CCLI::ConditionalRequire(const string& gateName, const optional<string>& gate, const string& subName, const optional<bool>& sub, bool isBiDi);
+template void CCLI::ConditionalRequire(const string& gateName, const optional<uint8_t>&, const string& subName, const optional<bool>& sub, bool isBiDi);
+template void CCLI::ConditionalRequire(const string& gateName, const optional<uint32_t>&, const string& subName, const optional<uint8_t>&, bool isBiDi);
+template void CCLI::ConditionalRequire(const string& gateName, const optional<bool>& gate, const string& subName, const optional<bool>& sub, bool isBiDi);
+
+template<typename T, typename U>
+void CCLI::ConditionalRequireOpposite(const string& gateName, const optional<T>& gate, const string& subName, const optional<U>& sub, bool isBiDi)
+{
+  bool gateTestResult, subTestResult;
+  if constexpr (is_same_v<T, bool>) {
+    gateTestResult = gate.value_or(false);
+  } else {
+    gateTestResult = gate.has_value();
+  }
+  if constexpr (is_same_v<U, bool>) {
+    subTestResult = sub.value_or(false);
+  } else {
+    subTestResult = sub.has_value();
+  }
+  if (gateTestResult) {
+    if (subTestResult) {
+      ConditionalRequireOppositeError(gateName, subName, false);
+    }
+  } else if (isBiDi && !subTestResult) {
+    ConditionalRequireOppositeError(gateName, subName, true);
+  }
+}
+
+template void CCLI::ConditionalRequireOpposite(const string& gateName, const optional<filesystem::path>& gate, const string& subName, const optional<bool>& sub, bool isBiDi);
+
+template<typename T, typename U, typename F>
+void CCLI::MapOpt(const string& optName, const optional<T>& operand, F&& mapFn, optional<U>& result)
+{
+  if (!operand.has_value()) return;
+  result = move(mapFn(*operand));
+  if (!result.has_value()) {
+    Print("[AURA] <" + optName + "> - invalid CLI usage - please see CLI.md");
+    m_ParseResult = CLIResult::kError;
+  }
+}
+
 bool CCLI::RunGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
 {
   if (!gameSetup->RestoreFromSaveFile()) {

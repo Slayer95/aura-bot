@@ -219,89 +219,17 @@ public:
   //CLI::Validator GetIsFullyQualifiedUserValidator();
   CLIResult Parse(const int argc, char** argv);
 
-  void ConditionalRequireError(const std::string& gateName, const std::string& subName, bool isConverse = false)
-  {
-    if (isConverse) {
-      Print("[AURA] " + subName + " cannot be provided unless " + gateName + " is also provided.");
-    } else {
-      Print("[AURA] " + gateName + " requires " + subName + " to also be provided.");
-    }
-    m_ParseResult = CLIResult::kError;
-  }
-
-  void ConditionalRequireOppositeError(const std::string& gateName, const std::string& subName, bool isConverse = false)
-  {
-    if (isConverse) {
-      Print("[AURA] " + subName + " cannot be provided if " + gateName + " is also provided.");
-    } else {
-      Print("[AURA] " + gateName + " requires " + subName + " to NOT be provided.");
-    }
-    m_ParseResult = CLIResult::kError;
-  }
+  void ConditionalRequireError(const std::string& gateName, const std::string& subName, bool isConverse = false);
+  void ConditionalRequireOppositeError(const std::string& gateName, const std::string& subName, bool isConverse = false);
 
   template<typename T, typename U>
-  void ConditionalRequire(const std::string& gateName, const std::optional<T>& gate, const std::string& subName, const std::optional<U>& sub, bool isBiDi = false)
-  {
-    // Flags and options are treated separately.
-    // For completeness, all CLI options are wrapped in std::optional.
-    // However, in practice, empty std::optional<bool> 
-    // are treated as false by the conditional requirements checker.
-    //
-    // This behavior is tailored to --mirror and related options that can
-    // only be configured from the CLI. This excludes e.g. --mirror-timeout.
-    bool gateTestResult, subTestResult;
-    if constexpr (std::is_same_v<T, bool>) {
-      gateTestResult = gate.value_or(false);
-    } else {
-      gateTestResult = gate.has_value();
-    }
-    if constexpr (std::is_same_v<U, bool>) {
-      subTestResult = sub.value_or(false);
-    } else {
-      subTestResult = sub.has_value();
-    }
-    if (gateTestResult) {
-      if (!subTestResult) {
-        ConditionalRequireError(gateName, subName, false);
-      }
-    } else if (isBiDi && subTestResult) {
-      ConditionalRequireError(gateName, subName, true);
-    }
-  }
+  void ConditionalRequire(const std::string& gateName, const std::optional<T>& gate, const std::string& subName, const std::optional<U>& sub, bool isBiDi = false);
 
   template<typename T, typename U>
-  void ConditionalRequireOpposite(const std::string& gateName, const std::optional<T>& gate, const std::string& subName, const std::optional<U>& sub, bool isBiDi = false)
-  {
-    bool gateTestResult, subTestResult;
-    if constexpr (std::is_same_v<T, bool>) {
-      gateTestResult = gate.value_or(false);
-    } else {
-      gateTestResult = gate.has_value();
-    }
-    if constexpr (std::is_same_v<U, bool>) {
-      subTestResult = sub.value_or(false);
-    } else {
-      subTestResult = sub.has_value();
-    }
-    if (gateTestResult) {
-      if (subTestResult) {
-        ConditionalRequireOppositeError(gateName, subName, false);
-      }
-    } else if (isBiDi && !subTestResult) {
-      ConditionalRequireOppositeError(gateName, subName, true);
-    }
-  }
+  void ConditionalRequireOpposite(const std::string& gateName, const std::optional<T>& gate, const std::string& subName, const std::optional<U>& sub, bool isBiDi = false);
 
   template<typename T, typename U, typename F>
-  void MapOpt(const std::string& optName, const std::optional<T>& operand, F&& mapFn, std::optional<U>& result)
-  {
-    if (!operand.has_value()) return;
-    result = std::move(mapFn(*operand));
-    if (!result.has_value()) {
-      Print("[AURA] <" + optName + "> - invalid CLI usage - please see CLI.md");
-      m_ParseResult = CLIResult::kError;
-    }
-  }
+  void MapOpt(const std::string& optName, const std::optional<T>& operand, F&& mapFn, std::optional<U>& result);
 
   [[nodiscard]] bool RunGameLoadParameters(std::shared_ptr<CGameSetup> nGameSetup) const;
 
