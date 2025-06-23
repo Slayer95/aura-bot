@@ -29,8 +29,8 @@ ARCH = $(shell uname -m)
 INSTALL_DIR = /usr
 CC ?= gcc
 CXX ?= g++
-CCFLAGS += -fno-builtin
-CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -Wpedantic -fno-builtin -fno-rtti -MMD -MP
+CCFLAGS += -fno-builtin -fno-fat-lto-objects
+CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -Wpedantic -fno-builtin -fno-fat-lto-objects -fno-rtti -MMD -MP
 DFLAGS = -DNDEBUG
 OFLAGS = -O3 -flto
 
