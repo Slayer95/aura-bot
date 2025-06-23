@@ -581,6 +581,7 @@
     <ClCompile Include="config\config_net.cpp" />
     <ClCompile Include="proxy\tcp_proxy.cpp" />
     <ClCompile Include="optional.cpp" />
+    <ClCompile Include="util.cpp" />
     <ClCompile Include="file_util.cpp" />
     <ClCompile Include="os_util.cpp" />
     <ClCompile Include="socket.cpp" />

@@ -2424,7 +2424,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       string name = target;
       uint8_t matchType = m_Aura->m_DB->FindData(MAP_TYPE_TWRPG, MAP_DATA_TYPE_ANY, name, false);
       if (matchType == MAP_DATA_TYPE_NONE) {
-        vector<string> words = Tokenize(name, ' ');
+        vector<string> words = SplitTokens(name, ' ');
         if (words.size() <= 1) {
           ErrorReply("[" + target + "] not found.");
           break;

@@ -28,6 +28,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <utf8/utf8.h>
 
 using namespace std;
 

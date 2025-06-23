@@ -245,7 +245,7 @@ void CIRC::ExtractPackets()
 
   // separate packets using the CRLF delimiter
 
-  vector<string> Packets = Tokenize(*Recv, '\n');
+  vector<string> Packets = SplitTokens(*Recv, '\n');
 
   for (auto& Packets_Packet : Packets)
   {
@@ -285,7 +285,7 @@ void CIRC::ExtractPackets()
     // the delimiter is space
     // we use a std::vector so we can check its number of tokens
 
-    const vector<string> Tokens = Tokenize(Packets_Packet, ' ');
+    const vector<string> Tokens = SplitTokens(Packets_Packet, ' ');
 
     // privmsg packet
     // in:  :nickname!~username@hostname PRIVMSG #channel :message
