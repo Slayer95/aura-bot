@@ -1961,17 +1961,20 @@ void CAura::InitContextMenu()
   wstring scenario = L"WorldEdit.Scenario";
   wstring scenarioEx = L"WorldEdit.ScenarioEx";
 
-  wstring openWithAuraCommand = L"\"";
-  openWithAuraCommand += GetExePath().wstring();
-  openWithAuraCommand += L"\" \"%1\" --stdpaths";
+  wstring openBaseWithAuraCommand = L"\"";
+  openBaseWithAuraCommand += GetExePath().wstring();
+  openBaseWithAuraCommand += L"\" \"%1\" --stdpaths";
 
-  wstring openWithAuraCommandROC = openWithAuraCommand + L" --roc";
+  wstring openROCWithAuraCommand = openBaseWithAuraCommand + L" --roc";
+
+  wstring openBaseWithAuraPoECommand = L"cmd.exe /c \"" + openBaseWithAuraCommand + L" || pause\"";
+  wstring openROCWithAuraPoECommand = L"cmd.exe /c \"" + openROCWithAuraCommand + L" || pause\"";
 
   SetUserRegistryKey(L"Software\\Classes\\.w3m", L"", scenario.c_str());
   SetUserRegistryKey(L"Software\\Classes\\.w3x", L"", scenarioEx.c_str());
-  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
-  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura - RoC\\command", L"", openWithAuraCommandROC.c_str());
-  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.ScenarioEx\\shell\\Host with Aura\\command", L"", openWithAuraCommand.c_str());
+  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura\\command", L"", openBaseWithAuraPoECommand.c_str());
+  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.Scenario\\shell\\Host with Aura - RoC\\command", L"", openROCWithAuraPoECommand.c_str());
+  SetUserRegistryKey(L"Software\\Classes\\WorldEdit.ScenarioEx\\shell\\Host with Aura\\command", L"", openBaseWithAuraPoECommand.c_str());
   Print("[AURA] Installed to context menu.");
 #endif
 }
