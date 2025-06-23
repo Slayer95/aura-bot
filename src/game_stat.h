@@ -49,10 +49,7 @@ struct GameStat
   std::string GetMapClientFileName() const;
 
   template <typename Container>
-  [[nodiscard]] static GameStat Parse(const Container& statString) {
-    std::vector<uint8_t> decoded = DecodeStatString(statString);
-    return GameStat(decoded.data(), decoded.size());
-  }
+  [[nodiscard]] static GameStat Parse(const Container& statString);
 
   [[nodiscard]] static GameStat Read(const std::vector<uint8_t>& rawData) {
     return GameStat(rawData.data(), rawData.size());

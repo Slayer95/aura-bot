@@ -113,6 +113,17 @@ ServiceUser& ServiceUser::operator=(const ServiceUser& other)
   return *this;
 }
 
+template <typename T>
+shared_ptr<T> ServiceUser::GetService() const
+{
+  return static_pointer_cast<T>(servicePtr.lock());
+}
+
+template shared_ptr<CGame> ServiceUser::GetService() const;
+template shared_ptr<CRealm> ServiceUser::GetService() const;
+template shared_ptr<const CGame> ServiceUser::GetService() const;
+template shared_ptr<const CRealm> ServiceUser::GetService() const;
+
 //
 // GameSource
 //

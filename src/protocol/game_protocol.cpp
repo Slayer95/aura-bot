@@ -184,6 +184,32 @@ namespace GameProtocol
     }
   }
 
+  template <GameProtocol::FragmentPolicy checkFragments>
+  size_t GetPacketCount(const std::vector<uint8_t>& data)
+  {
+    size_t count = 0;
+    size_t size = data.size();
+    size_t cursor = 0;
+    size_t packetSize = 0;
+    while (cursor + 4 <= size) {
+      if (data[cursor] == GameProtocol::Magic::W3GS_HEADER) {
+        ++count;
+      }
+      packetSize = ByteArrayToUInt16(data, false, cursor + 2);
+      if (packetSize < 4) break; // Protocol error
+      cursor += packetSize;
+    }
+    if constexpr (checkFragments == GameProtocol::FragmentPolicy::kAccept) {
+      if (cursor < size && data[cursor] == GameProtocol::Magic::W3GS_HEADER) {
+        ++count;
+      }
+    }
+    return count;
+  }
+
+  template size_t GetPacketCount<GameProtocol::FragmentPolicy::kIgnore>(const std::vector<uint8_t>& data);
+  template size_t GetPacketCount<GameProtocol::FragmentPolicy::kAccept>(const std::vector<uint8_t>& data);
+
   PacketWrapper::PacketWrapper(const std::vector<uint8_t>& nData, const size_t nCount)
   : count(nCount),
     data(nData)

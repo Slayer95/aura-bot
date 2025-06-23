@@ -122,104 +122,10 @@ struct FileChunkTransient
 [[nodiscard]] std::uintmax_t FileSize(const std::filesystem::path& filePath) noexcept;
 
 template <typename Container>
-[[nodiscard]] bool FileRead(const std::filesystem::path& filePath, Container& container, const size_t maxSize) noexcept
-{
-  std::ifstream IS;
-  container.clear();
-  IS.open(filePath.native().c_str(), std::ios::binary | std::ios::in);
-
-  if (IS.fail())  {
-    Print("[FILE] warning - unable to read file [" + PathToString(filePath) + "]");
-    return false;
-  }
-
-  // get length of file
-  IS.seekg(0, std::ios::end);
-  size_t fileSize = static_cast<long unsigned int>(IS.tellg());
-  if (fileSize > maxSize) {
-    Print("[FILE] error - refusing to load huge file [" + PathToString(filePath) + "]");
-    return false;
-  }
-
-  // read data
-  IS.seekg(0, std::ios::beg);
-  try {
-    container.reserve(fileSize);
-    container.resize(fileSize);
-  } catch (...) {
-    container.clear();
-    try {
-      container.shrink_to_fit();
-    } catch (...) {}
-    Print("[FILE] error - insufficient memory for loading file [" + PathToString(filePath) + "]");
-    return false;
-  }
-  IS.read(reinterpret_cast<char*>(container.data()), fileSize);
-  std::streamsize gCount = IS.gcount();
-  if (gCount < 0 || static_cast<size_t>(gCount) < fileSize) {
-    container.clear();
-    try {
-      container.shrink_to_fit();
-    } catch (...) {}
-    Print("[FILE] error - stream failed to read all data from file [" + PathToString(filePath) + "]");
-    return false;
-  }
-  return true;
-}
+[[nodiscard]] bool FileRead(const std::filesystem::path& filePath, Container& container, const size_t maxSize) noexcept;
 
 template <typename Container>
-[[nodiscard]] bool FileReadPartial(const std::filesystem::path& filePath, Container& container, const size_t start, size_t maxReadSize, size_t* fileSize, size_t* actualReadSize) noexcept
-{
-  std::ifstream IS;
-  container.clear();
-  IS.open(filePath.native().c_str(), std::ios::binary | std::ios::in);
-
-  if (IS.fail())  {
-    Print("[FILE] warning - unable to read file [" + PathToString(filePath) + "]");
-    return false;
-  }
-
-  // get length of file
-  IS.seekg(0, std::ios::end);
-  *fileSize = static_cast<long unsigned int>(IS.tellg());
-  if (start >= *fileSize) {
-    Print("[FILE] error - cannot read pos (" + std::to_string(start) + " >= " + std::to_string(*fileSize) + ") from file [" + PathToString(filePath) + "]");
-    return false;
-  }
-  if (maxReadSize > *fileSize - start) {
-    maxReadSize = *fileSize - start;
-  }
-
-  // read data
-  IS.seekg(start, std::ios::beg);
-  try {
-    container.reserve(maxReadSize);
-    container.resize(maxReadSize);
-  } catch (...) {
-    container.clear();
-    try {
-      container.shrink_to_fit();
-    } catch (...) {}
-    Print("[FILE] error - insufficient memory for loading " + std::to_string(maxReadSize / 1024) + " KB chunk from file [" + PathToString(filePath) + "]");
-    return false;
-  }
-  IS.read(reinterpret_cast<char*>(container.data()), maxReadSize);
-  std::streamsize gCount = IS.gcount();
-  if (gCount < 0 ) {
-    Print("[FILE] error - read stream internal error");
-    return false;
-  }
-  *actualReadSize = static_cast<size_t>(gCount);
-  if (*actualReadSize < maxReadSize) {
-    container.clear();
-    try {
-      container.shrink_to_fit();
-    } catch (...) {}
-    Print("[FILE] error - stream failed to read all data (" + std::to_string(maxReadSize / 1024) + " KB) from file [" + PathToString(filePath) + "]");
-    return false;
-  }
-  return true;
-}
+[[nodiscard]] bool FileReadPartial(const std::filesystem::path& filePath, Container& container, const size_t start, size_t maxReadSize, size_t* fileSize, size_t* actualReadSize) noexcept;
 
 bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileAppend(const std::filesystem::path& file, const uint8_t* data, size_t length);
@@ -233,51 +139,7 @@ void CloseMPQArchive(void* MPQ);
 std::optional<uint32_t> GetMPQFileSize(void* MPQ, const char* packedFileName, const uint16_t locale);
 
 template <typename Container>
-bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, const uint16_t locale)
-{
-  container.clear();
-  SFileSetLocale((uint32_t)locale);
-
-  void* subFile = nullptr;
-  if (SFileOpenFileEx(MPQ, packedFileName, 0, &subFile)) {
-    const uint32_t fileLength = SFileGetFileSize(subFile, nullptr);
-
-    if (fileLength > 0 && fileLength < MAX_READ_FILE_SIZE) {
-      try {
-        container.reserve(fileLength);
-        container.resize(fileLength);
-      } catch (...) {
-        container.clear();
-        try {
-          container.shrink_to_fit();
-        } catch (...) {}
-        SFileCloseFile(subFile);
-        Print("[FILE] error - insufficient memory for loading from archive [" + std::string(packedFileName) + "]");
-        return false;
-      }
-#ifdef _WIN32
-      unsigned long bytesRead = 0;
-#else
-      uint32_t bytesRead = 0;
-#endif
-
-      if (SFileReadFile(subFile, container.data(), fileLength, &bytesRead, nullptr)) {
-        if (bytesRead < fileLength) {
-          Print("[FILE] error reading " + std::string(packedFileName) + " - bytes read is " + std::to_string(bytesRead) + "; file length is " + std::to_string(fileLength));
-          container.clear();
-          try {
-            container.shrink_to_fit();
-          } catch (...) {}
-          SFileCloseFile(subFile);
-          return false;
-        }
-      }
-    }
-
-    SFileCloseFile(subFile);
-  }
-  return true;
-}
+bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, const uint16_t locale);
 
 bool ExtractMPQFile(void* MPQ, const char* packedFileName, const std::filesystem::path& outPath, const uint16_t locale = 0);
 

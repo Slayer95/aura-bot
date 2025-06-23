@@ -1478,6 +1478,15 @@ void CGameSetup::AcquireCreator()
   m_Creator = m_Ctx->GetServiceSource();
 }
 
+template <typename T>
+std::shared_ptr<T> CGameSetup::GetCreatedFrom() const
+{
+  return m_Creator.GetService<T>();
+}
+
+template shared_ptr<CGame> CGameSetup::GetCreatedFrom() const;
+template shared_ptr<CRealm> CGameSetup::GetCreatedFrom() const;
+
 bool CGameSetup::MatchesCreatedFrom(const ServiceType fromType) const
 {
   return m_Creator.GetServiceType() == fromType;

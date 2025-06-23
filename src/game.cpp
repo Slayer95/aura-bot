@@ -885,6 +885,15 @@ CGame::~CGame()
   }
 }
 
+template <typename T>
+shared_ptr<T> CGame::GetCreatedFrom() const
+{
+  return m_Creator.GetService<T>();
+}
+
+template shared_ptr<CGame> CGame::GetCreatedFrom() const;
+template shared_ptr<CRealm> CGame::GetCreatedFrom() const;
+
 bool CGame::MatchesCreatedFrom(const ServiceType fromType) const
 {
   return m_Creator.GetServiceType() == fromType;

@@ -1052,7 +1052,7 @@ enum class W3HMCRequest : uint8_t {
 constexpr uint8_t W3HMC_PROCEDURE_SET_ARGS = 1;
 constexpr uint8_t W3HMC_PROCEDURE_EXEC = 2;
 
-enum class W3hmcProcedure : uint8_t {
+enum class W3HMCProcedure : uint8_t {
   kSetArgs = 1,
   kExec = 2,
   LAST = 3,
@@ -1068,7 +1068,7 @@ constexpr uint8_t W3HMC_ARG_CURL_APPENDNAME = 7;
 constexpr uint8_t W3HMC_ARG_CURL_ADDHEADER = 8;
 constexpr uint8_t W3HMC_ARG_CURL_FOLLOWLOC = 9;
 
-enum class W3hmcArgCurl : uint8_t {
+enum class W3HMCArgCurl : uint8_t {
   kUrl = 1,
   kPost = 2,
   kNoReply = 3,

@@ -165,10 +165,8 @@ struct ServiceUser
   ~ServiceUser();
 
   template <typename T>
-  [[nodiscard]] inline std::shared_ptr<T> GetService() const
-  {
-    return std::static_pointer_cast<T>(servicePtr.lock());
-  }
+  [[nodiscard]] std::shared_ptr<T> GetService() const;
+
   inline bool GetIsEmpty() const { return serviceType == ServiceType::kNone; }
   inline bool GetIsAnonymous() const { return userName.empty(); }
   inline bool GetIsExpired() const { return servicePtr.expired(); }

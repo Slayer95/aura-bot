@@ -145,27 +145,7 @@ namespace GameProtocol
   [[nodiscard]] size_t GetNextActionPos(const std::vector<uint8_t>& action, size_t pos);
 
   template <GameProtocol::FragmentPolicy checkFragments>
-  [[nodiscard]] size_t GetPacketCount(const std::vector<uint8_t>& data)
-  {
-    size_t count = 0;
-    size_t size = data.size();
-    size_t cursor = 0;
-    size_t packetSize = 0;
-    while (cursor + 4 <= size) {
-      if (data[cursor] == GameProtocol::Magic::W3GS_HEADER) {
-        ++count;
-      }
-      packetSize = ByteArrayToUInt16(data, false, cursor + 2);
-      if (packetSize < 4) break; // Protocol error
-      cursor += packetSize;
-    }
-    if constexpr (checkFragments == GameProtocol::FragmentPolicy::kAccept) {
-      if (cursor < size && data[cursor] == GameProtocol::Magic::W3GS_HEADER) {
-        ++count;
-      }
-    }
-    return count;
-  }
+  [[nodiscard]] size_t GetPacketCount(const std::vector<uint8_t>& data);
 
   struct PacketWrapper
   {

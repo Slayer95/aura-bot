@@ -298,10 +298,7 @@ public:
   inline bool                                            GetCanJoinInProgress() const { return m_JoinInProgressVirtualUser.has_value(); }
 
   template <typename T>
-  [[nodiscard]] inline std::shared_ptr<T> GetCreatedFrom() const
-  {
-    return m_Creator.GetService<T>();
-  }
+  [[nodiscard]]                                           std::shared_ptr<T> GetCreatedFrom() const;
 
   [[nodiscard]]                                          bool MatchesCreatedFrom(const ServiceType fromType) const;
   [[nodiscard]]                                          bool MatchesCreatedFrom(const ServiceType fromType, std::shared_ptr<const void> fromThing) const;

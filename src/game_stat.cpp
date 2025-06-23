@@ -141,3 +141,12 @@ string GameStat::GetMapClientFileName() const
   }
   return m_MapPath.substr(LastSlash + 1);
 }
+
+template <typename Container>
+static GameStat GameStat::Parse(const Container& statString) {
+  std::vector<uint8_t> decoded = DecodeStatString(statString);
+  return GameStat(decoded.data(), decoded.size());
+}
+
+template GameStat GameStat::Parse(const vector<uint8_t>& statString);
+template GameStat GameStat::Parse(const string& statString);

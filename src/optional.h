@@ -33,28 +33,11 @@ class OptReader {
   std::reference_wrapper<const std::optional<T>> source;
 
 public:
-  void operator>>(T& target) const
-  {
-    const std::optional<T>& optSource = source.get();
-    if (!optSource.has_value()) return;
-    target = *optSource;
-  }
+  OptReader(const std::optional<T>& nSource);
+  ~OptReader();
 
-  void operator>>(std::optional<T>& target) const
-  {
-    const std::optional<T>& optSource = source.get();
-    if (!optSource.has_value()) return;
-    target = *optSource;
-  }
-
-  OptReader(const std::optional<T>& nSource)
-   : source(ref(nSource))
-  {
-  };
-
-  ~OptReader()
-  {
-  };
+  void operator>>(T& target) const;
+  void operator>>(std::optional<T>& target) const;
 };
 
 template<typename T>
@@ -62,37 +45,17 @@ class OptWriter {
   std::reference_wrapper<std::optional<T>> target;
 
 public:
-  void operator<<(const T& source)
-  {
-    std::optional<T>& optTarget = target.get();
-    optTarget = source;
-  }
+  OptWriter(std::optional<T>& nTarget);
+  ~OptWriter();
 
-  void operator<<(const std::optional<T>& source)
-  {
-    if (!source.has_value()) return;
-    std::optional<T>& optTarget = target.get();
-    optTarget = *source;
-  }
-
-  OptWriter(std::optional<T>& nTarget)
-   : target(ref(nTarget))
-  {
-  };
-
-  ~OptWriter()
-  {
-  };
+  void operator<<(const T& source);
+  void operator<<(const std::optional<T>& source);
 };
 
 template<typename T>
-OptReader<T> ReadOpt(const std::optional<T>& opt) {
-  return {opt};
-}
+OptReader<T> ReadOpt(const std::optional<T>& opt);
 
 template<typename T>
-OptWriter<T> WriteOpt(std::optional<T>& value) {
-  return {value};
-}
+OptWriter<T> WriteOpt(std::optional<T>& value);
 
 #endif // AURA_OPTIONAL_H_
