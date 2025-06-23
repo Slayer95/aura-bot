@@ -128,6 +128,8 @@ Assemble:
   - export AURABUILD_MINIUPNP=1
   # Not yet supported in Linux
   - export AURABUILD_PJASS=0
+  - make WFLAGS="-Wall -Wextra"
+  - make OFLAGS="-O1"
   - make && make install
   - unset AURABUILD_CPR
   - unset AURABUILD_DPP

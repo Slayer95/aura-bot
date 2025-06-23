@@ -1,3 +1,4 @@
+AURABUILD_CI ?= 0
 AURABUILD_STATIC ?= 0
 AURABUILD_CPR ?= 1
 AURABUILD_DPP ?= 1
@@ -5,6 +6,7 @@ AURABUILD_MDNS ?= 0
 AURABUILD_MINIUPNP ?= 1
 AURABUILD_PJASS ?= 0
 
+AURABUILD_CI := $(strip $(AURABUILD_CI))
 AURABUILD_STATIC := $(strip $(AURABUILD_STATIC))
 AURABUILD_CPR := $(strip $(AURABUILD_CPR))
 AURABUILD_DPP := $(strip $(AURABUILD_DPP))
@@ -27,12 +29,14 @@ SHELL = /bin/sh
 SYSTEM = $(shell uname)
 ARCH = $(shell uname -m)
 INSTALL_DIR = /usr
+
+DFLAGS ?= -DNDEBUG
+OFLAGS ?= -O3 -flto -fno-fat-lto-objects
+
 CC ?= gcc
 CXX ?= g++
-CCFLAGS += -fno-builtin -fno-fat-lto-objects
-CXXFLAGS += -g -std=c++17 -pipe -pthread -Wall -Wextra -Wpedantic -fno-builtin -fno-fat-lto-objects -fno-rtti -MMD -MP
-DFLAGS = -DNDEBUG
-OFLAGS = -O3 -flto
+CCFLAGS += -fno-builtin
+CXXFLAGS += -g0 -std=c++17 -pipe -pthread $(WFLAGS) -fno-builtin -fno-rtti -MMD -MP
 
 LDLIBS_CORE = -lstorm -lbncsutil -lgmp -lbz2 -lz
 LDLIBS_SYS = 
