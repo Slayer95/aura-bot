@@ -9,27 +9,32 @@ image: ubuntu:24.04
 stages:
   - build
 
+variables:
+  CCACHE_DIR: "/tmp/ccache/$CI_PROJECT_NAME"
+  CCACHE_BASEDIR: "$CI_PROJECT_DIR"
+  CCACHE_COMPRESS: "true"
+
 cache:
-  key: "$CI_COMMIT_REF_SLUG"
+  key: "ccache-$CI_COMMIT_REF_SLUG"
   paths:
-    - build/
-    - jass/
-    - cpr-src/build/
-    - dpp-src/build/
-    - deps/**/build/
+    - /tmp/ccache/$CI_PROJECT_NAME
 
 # Build
 Assemble:
   stage: build
   artifacts:
     paths:
-      - dist/
-  script:
+    - dist/
+  before_script:
   # Packages
+  - apt-get update && apt-get install -y build-essential git libssl-dev libgmp3-dev libbz2-dev zlib1g-dev libcurl4-openssl-dev curl cmake ccache
+  script:
   - cd $CI_PROJECT_DIR
-  - apt-get update && apt-get install -y build-essential git libssl-dev libgmp3-dev libbz2-dev zlib1g-dev libcurl4-openssl-dev curl cmake
   - gcc --version
   - cmake --version
+  - export PATH="/usr/lib/ccache:$PATH"
+  - export CC="ccache gcc"
+  - export CXX="ccache g++"
   - mkdir -p jass dist/bin-static dist/bin-shared
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "jass/blizzard.j"
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "jass/common.j"
@@ -130,7 +135,10 @@ Assemble:
   - export AURABUILD_PJASS=0
   - make WFLAGS="-Wall -Wextra"
   - make OFLAGS="-O1"
-  - make && make install
+  - ccache -z
+  - make
+  - ccache -s
+  - make install
   - unset AURABUILD_CPR
   - unset AURABUILD_DPP
   - unset AURABUILD_MDNS
